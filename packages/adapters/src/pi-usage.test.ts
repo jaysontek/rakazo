@@ -375,6 +375,64 @@ describe("Pi usage accounting", () => {
       ).totalTokens,
     ).toBeNull();
   });
+  it("derives totalTokens from input+output when cache buckets are unmeasured", () => {
+    expect(
+      normalizePiUsage(
+        {
+          input: 100,
+          output: 20,
+          cacheRead: 0,
+          cacheWrite: 0,
+          totalTokens: 0,
+          cost: { input: 0.1, output: 0.04, cacheRead: 0, cacheWrite: 0, total: 0.14 },
+        },
+        model,
+      ),
+    ).toMatchObject({
+      inputTokens: 100,
+      outputTokens: 20,
+      cacheReadTokens: null,
+      cacheWriteTokens: null,
+      totalTokens: 120,
+      usageSource: "pi-normalized",
+    });
+  });
+  it("prefers a reported totalTokens over a derived bucket sum", () => {
+    const reported = new Set<keyof AgentUsage>(["totalTokens"]);
+    expect(
+      normalizePiUsage(
+        {
+          input: 100,
+          output: 20,
+          cacheRead: 0,
+          cacheWrite: 0,
+          totalTokens: 150,
+        },
+        model,
+        reported,
+      ),
+    ).toMatchObject({ totalTokens: 150, usageSource: "provider-reported-via-pi" });
+  });
+  it("keeps totalTokens unknown when every measured bucket is absent", () => {
+    expect(
+      normalizePiUsage(
+        {
+          input: 0,
+          output: 0,
+          cacheRead: 0,
+          cacheWrite: 0,
+          totalTokens: 0,
+        },
+        model,
+      ),
+    ).toMatchObject({
+      inputTokens: null,
+      outputTokens: null,
+      cacheReadTokens: null,
+      cacheWriteTokens: null,
+      totalTokens: null,
+    });
+  });
   it("keeps fractional or unsafe token counts unknown", () => {
     expect(
       normalizePiUsage({ input: 1.5, output: Number.MAX_SAFE_INTEGER + 1 }, model),

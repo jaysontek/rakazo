@@ -50,11 +50,14 @@ export function normalizePiUsage(
   const cacheWriteTokens = token(usage?.cacheWrite, "cacheWriteTokens");
   const rawTotal = reportedValues.get(reported)?.get("totalTokens");
   const buckets = [inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens];
-  const derivedTotal = buckets.every((value) => value !== null)
-    ? buckets.reduce<number>((sum, value) => sum + value!, 0)
+  // Providers such as Google/Gemini never fill cache buckets. Treat missing cache
+  // (and any other unmeasured bucket) as 0 once at least one bucket is measured,
+  // so Tokens/Cost UI can show numbers instead of dashes.
+  const derivedTotal = buckets.some((value) => value !== null)
+    ? buckets.reduce<number>((sum, value) => sum + (value ?? 0), 0)
     : null;
   // Pi synthesizes totals using zero placeholders for absent cache measurements.
-  // Trust a reported total, or derive one only from a complete measured breakdown.
+  // Trust a reported total; otherwise derive from measured buckets (null cache → 0).
   const totalTokens = reported.has("totalTokens")
     ? token(rawTotal ?? usage?.totalTokens, "totalTokens")
     : derivedTotal !== null && Number.isSafeInteger(derivedTotal)
