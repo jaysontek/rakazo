@@ -397,6 +397,31 @@ describe("Pi usage accounting", () => {
       usageSource: "pi-normalized",
     });
   });
+  it.each([
+    { label: "only input", usage: { input: 100 }, expected: { inputTokens: 100, outputTokens: null } },
+    {
+      label: "only output",
+      usage: { output: 20 },
+      expected: { inputTokens: null, outputTokens: 20 },
+    },
+    {
+      label: "only cacheRead",
+      usage: { cacheRead: 40 },
+      reported: new Set<keyof AgentUsage>(["cacheReadTokens"]),
+      expected: { cacheReadTokens: 40, inputTokens: null, outputTokens: null },
+    },
+    {
+      label: "only cacheWrite",
+      usage: { cacheWrite: 40 },
+      reported: new Set<keyof AgentUsage>(["cacheWriteTokens"]),
+      expected: { cacheWriteTokens: 40, inputTokens: null, outputTokens: null },
+    },
+  ] as const)("keeps totalTokens null for partial buckets ($label)", ({ usage, reported, expected }) => {
+    expect(normalizePiUsage(usage, model, reported ? new Set(reported) : new Set())).toMatchObject({
+      ...expected,
+      totalTokens: null,
+    });
+  });
   it("prefers a reported totalTokens over a derived bucket sum", () => {
     const reported = new Set<keyof AgentUsage>(["totalTokens"]);
     expect(

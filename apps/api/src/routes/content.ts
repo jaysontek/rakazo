@@ -166,23 +166,16 @@ export function contentRoutes(ctx: RouterContext) {
         const runs = new Set(runGroups.map((row) => row.parentRunId ?? row.runId).filter(Boolean))
           .size;
         // A total that skips rows without a count would understate spend, so it reads as unknown.
-        // Older Google/Gemini rows stored null totalTokens while keeping input+output; fall back
-        // so Usage Tokens improve without a backfill once those buckets are complete.
         const completeSums = (group: {
           _sum: Record<keyof typeof sums, number | null>;
           _count: Record<keyof typeof counts, number>;
         }) => {
           const complete = (field: keyof typeof sums) =>
             group._count[field] === group._count._all ? (group._sum[field] ?? 0) : null;
-          const inputTokens = complete("inputTokens");
-          const outputTokens = complete("outputTokens");
-          const totalTokens =
-            complete("totalTokens") ??
-            (inputTokens !== null && outputTokens !== null ? inputTokens + outputTokens : null);
           return {
-            inputTokens,
-            outputTokens,
-            totalTokens,
+            inputTokens: complete("inputTokens"),
+            outputTokens: complete("outputTokens"),
+            totalTokens: complete("totalTokens"),
             costUsd: complete("costUsd"),
             modelCalls: group._count._all,
           };
