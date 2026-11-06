@@ -13,6 +13,13 @@ picks the provider and `PI_DEFAULT_MODEL` the model:
 | `openrouter` (default) | `OPENROUTER_API_KEY` | `anthropic/claude-haiku-5.5` |
 | `anthropic` | `ANTHROPIC_API_KEY` | `claude-sonnet-5` |
 | `deepseek` | `DEEPSEEK_API_KEY` | `deepseek-flash` |
+| `google` | `GEMINI_API_KEY` | `gemini-3.8-flash` |
+
+The deployment key stays in the process environment and is referenced at run time. It is never
+copied into each account's encrypted secret rows, never returned by `me` or models APIs, and never
+logged. Anyone who has not connected a model of their own uses it (including new signups, which
+then skip the onboarding model step). **Settings → Models** remains the escape hatch for a personal
+key. There is no per-account LLM backfill: changing these env vars is enough.
 
 Pick a vision-capable model so screenshot computer tools stay available.
 
@@ -199,6 +206,31 @@ video controls on web and Electron and opened/downloaded through the existing
 native file flow on mobile. No new mobile player or settings screen is required.
 
 ## Voice
+
+### Default self-hosted speech on signup
+
+To give every new account a self-hosted OpenAI-compatible speech connection without showing
+endpoint fields at signup, set:
+
+```env
+MCP_ALLOW_PRIVATE_ENDPOINT=true
+RAKAZO_DEFAULT_VOICE_BASE_URL=http://192.168.140.157:8890/v1
+RAKAZO_DEFAULT_VOICE_TTS_MODEL=kokoro
+RAKAZO_DEFAULT_VOICE_STT_MODEL=whisper-1
+# Optional Bearer for the gateway; omit when the server is keyless.
+# RAKAZO_DEFAULT_VOICE_API_KEY=
+```
+
+Each signup (and each later sign-in while the account still has no voice connection) writes one
+encrypted `openai-compatible` voice credential from those values. **Settings → Voice** stays the
+escape hatch. The optional API key never appears in RPC responses or logs.
+
+For existing active accounts that still have no voice connection, run a one-time backfill:
+
+```bash
+pnpm --filter @rakazo/api backfill-voice --dry-run   # prints wouldTouch=N; writes nothing
+pnpm --filter @rakazo/api backfill-voice             # provisions; skips accounts that already have voice
+```
 
 ### macOS voices
 

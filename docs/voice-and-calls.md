@@ -18,6 +18,10 @@ Then choose a **Voice**, and use **Hear a sample** to check it. **Speech model**
 
 Voice settings apply to every [space](./spaces.md). A space can customize them in its settings.
 
+On a self-hosted server the operator can pre-fill a self-hosted speech connection for new accounts
+with `RAKAZO_DEFAULT_VOICE_*` (see [Models](./self-host-models.md#default-self-hosted-speech-on-signup));
+this page remains how people change it later.
+
 ## Talk instead of typing
 
 Hold the microphone in the composer and speak; release to send. Slide up to lock recording so you
