@@ -74,6 +74,35 @@ describe("resolveDeploymentModel", () => {
     });
   });
 
+  it("uses the shared GEMINI_API_KEY for google without copying it into account rows", () => {
+    expect(
+      resolveDeploymentModel({
+        PI_DEFAULT_PROVIDER: "google",
+        GEMINI_API_KEY: "gemini-shared-key",
+      }),
+    ).toEqual({
+      provider: "google",
+      model: "gemini-3.8-flash",
+      key: "gemini-shared-key",
+      configured: true,
+      hostCredentials: false,
+    });
+    expect(
+      resolveDeploymentModel({
+        PI_DEFAULT_PROVIDER: "google",
+        PI_DEFAULT_MODEL: "gemini-3.8-flash",
+        GEMINI_API_KEY: "gemini-shared-key",
+        OPENROUTER_API_KEY: "or-key",
+      }).key,
+    ).toBe("gemini-shared-key");
+    expect(
+      resolveDeploymentModel({
+        PI_DEFAULT_PROVIDER: "google",
+        OPENROUTER_API_KEY: "or-key",
+      }),
+    ).toMatchObject({ key: undefined, configured: false });
+  });
+
   it("runs a provider that authenticates from the host without a key", () => {
     vi.stubEnv("AWS_CONTAINER_CREDENTIALS_RELATIVE_URI", "/v2/credentials/example");
     const taskRole = {

@@ -192,6 +192,7 @@ import { createMessagingReceipts } from "./messaging-receipts.js";
 import { mountMessagingWebhookRoutes } from "./messaging-webhook.js";
 import { monitoringRoutes } from "./monitoring.js";
 import { pluginSubmissionRoutes } from "./plugin-submissions.js";
+import { provisionDefaultVoiceAfterSignIn } from "./provision-default-voice.js";
 import { sendReferralEmails } from "./referral-email.js";
 import { mountApiRequestBodyLimits, rpcBodyLimit } from "./request-body-limit.js";
 import { createRouter } from "./router.js";
@@ -595,21 +596,30 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
         ),
     },
     onEmailError,
-    afterSignIn:
-      email && env.welcomeEmailEnabled
-        ? (userId, headers) =>
-            sendWelcomeEmail(
-              {
-                prisma,
-                email,
-                origin: env.authUrl,
-                secret: env.authSecret,
-                onError: (error) => getLogger().error("welcome email delivery failed", error),
-              },
-              userId,
-              headers,
-            )
-        : undefined,
+    afterSignIn: async (userId, headers) => {
+      // Idempotent: no-ops when RAKAZO_DEFAULT_VOICE_* is unset or voice is already set.
+      await provisionDefaultVoiceAfterSignIn(
+        {
+          prisma,
+          secrets,
+          allowPrivateEndpoint: env.mcpAllowPrivateEndpoint,
+        },
+        userId,
+      );
+      if (email && env.welcomeEmailEnabled) {
+        await sendWelcomeEmail(
+          {
+            prisma,
+            email,
+            origin: env.authUrl,
+            secret: env.authSecret,
+            onError: (error) => getLogger().error("welcome email delivery failed", error),
+          },
+          userId,
+          headers,
+        );
+      }
+    },
     extraOrigins: MOBILE_AUTH_ORIGINS,
     androidAppCertFingerprints: env.passkeyAndroidCertFingerprints,
     beforeDeleteUser: async (userId) => {

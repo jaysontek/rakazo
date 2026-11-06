@@ -40,11 +40,14 @@ export function resolveDeploymentModel(env: NodeJS.ProcessEnv = process.env) {
     openrouter: env.OPENROUTER_API_KEY,
     anthropic: env.ANTHROPIC_API_KEY,
     deepseek: env.DEEPSEEK_API_KEY,
+    // Shared server secret: referenced at run time, never copied into account rows.
+    google: env.GEMINI_API_KEY,
   };
   const models: Record<string, string> = {
     openrouter: DEFAULT_OPENROUTER_MODEL_ID,
     anthropic: "claude-sonnet-5",
     deepseek: "deepseek-flash",
+    google: "gemini-3.8-flash",
   };
   const explicitModel = env.PI_DEFAULT_MODEL?.trim();
   const key = keys[provider];
