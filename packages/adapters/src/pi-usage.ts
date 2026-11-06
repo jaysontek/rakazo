@@ -32,6 +32,64 @@ const rejectedRequests = new WeakSet<ReportedUsageFields>();
 const sseObserved = new WeakSet<ReportedUsageFields>();
 const reportedCosts = new WeakMap<ReportedUsageFields, number>();
 const reportedValues = new WeakMap<ReportedUsageFields, Map<keyof AgentUsage, number>>();
+
+type CatalogCostRates = NonNullable<Model<Api>["cost"]>;
+
+/**
+ * USD from tokens × catalog rates (/ 1e6), matching Pi `calculateCost` and
+ * `maximumModelCallCost` units. Unmeasured cache buckets are 0 (Gemini never reports them).
+ */
+export function estimateCatalogCostUsd(
+  cost: CatalogCostRates | null | undefined,
+  tokens: {
+    inputTokens: number;
+    outputTokens: number;
+    cacheReadTokens?: number | null;
+    cacheWriteTokens?: number | null;
+    cacheWrite1hTokens?: number | null;
+  },
+): number | null {
+  if (!cost) return null;
+  if (
+    ![cost.input, cost.output, cost.cacheRead, cost.cacheWrite].every(
+      (rate) => Number.isFinite(rate) && rate >= 0,
+    ) ||
+    ![cost.input, cost.output, cost.cacheRead, cost.cacheWrite].some((rate) => rate > 0)
+  )
+    return null;
+  const inputTokens = tokens.inputTokens;
+  const outputTokens = tokens.outputTokens;
+  const cacheReadTokens = tokens.cacheReadTokens ?? 0;
+  const cacheWriteTokens = tokens.cacheWriteTokens ?? 0;
+  const cacheWrite1hTokens = tokens.cacheWrite1hTokens ?? 0;
+  if (
+    ![inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens, cacheWrite1hTokens].every(
+      (value) => Number.isFinite(value) && value >= 0 && Number.isSafeInteger(value),
+    ) ||
+    cacheWrite1hTokens > cacheWriteTokens
+  )
+    return null;
+  const billedInput = inputTokens + cacheReadTokens + cacheWriteTokens;
+  let rates: Pick<CatalogCostRates, "input" | "output" | "cacheRead" | "cacheWrite"> = cost;
+  let matchedThreshold = -1;
+  for (const tier of cost.tiers ?? []) {
+    if (billedInput > tier.inputTokensAbove && tier.inputTokensAbove > matchedThreshold) {
+      rates = tier;
+      matchedThreshold = tier.inputTokensAbove;
+    }
+  }
+  // Anthropic charges 2× base input for 1h cache writes (same as Pi calculateCost).
+  const shortWrite = cacheWriteTokens - cacheWrite1hTokens;
+  return (
+    (rates.input * inputTokens +
+      rates.output * outputTokens +
+      rates.cacheRead * cacheReadTokens +
+      rates.cacheWrite * shortWrite +
+      rates.input * 2 * cacheWrite1hTokens) /
+    1_000_000
+  );
+}
+
 export function normalizePiUsage(
   usage: Partial<Usage> | undefined,
   model: Pick<Model<Api>, "cost">,
@@ -48,6 +106,7 @@ export function normalizePiUsage(
   const outputTokens = token(usage?.output, "outputTokens");
   const cacheReadTokens = token(usage?.cacheRead, "cacheReadTokens");
   const cacheWriteTokens = token(usage?.cacheWrite, "cacheWriteTokens");
+  const cacheWrite1hTokens = token(usage?.cacheWrite1h, "cacheWrite1hTokens");
   const rawTotal = reportedValues.get(reported)?.get("totalTokens");
   // Providers such as Google/Gemini never fill cache buckets. Require measured
   // input and output, then treat missing cache as 0 so Tokens can display.
@@ -62,40 +121,49 @@ export function normalizePiUsage(
     : derivedTotal !== null && Number.isSafeInteger(derivedTotal)
       ? derivedTotal
       : null;
+  // Same null-cache → 0 rule for catalog cost: Gemini omits cache even when rates are > 0.
   const costKnown =
     !!model.cost &&
     [model.cost.input, model.cost.output, model.cost.cacheRead, model.cost.cacheWrite].some(
       (rate) => rate > 0,
     ) &&
     inputTokens !== null &&
-    outputTokens !== null &&
-    (model.cost.cacheRead === 0 || cacheReadTokens !== null) &&
-    (model.cost.cacheWrite === 0 || cacheWriteTokens !== null);
+    outputTokens !== null;
   const rejected = rejectedRequests.has(reported);
   const providerCost = reportedCosts.get(reported);
+  const piTotal =
+    typeof usage?.cost?.total === "number" && Number.isFinite(usage.cost.total)
+      ? usage.cost.total
+      : undefined;
+  const catalogEstimate = costKnown
+    ? estimateCatalogCostUsd(model.cost, {
+        inputTokens: inputTokens!,
+        outputTokens: outputTokens!,
+        cacheReadTokens,
+        cacheWriteTokens,
+        cacheWrite1hTokens,
+      })
+    : null;
+  const estimated = costKnown ? (piTotal ?? catalogEstimate) : null;
   return {
     providerRequestId: reportedRequestIds.get(reported) ?? null,
     inputTokens,
     outputTokens,
     cacheReadTokens,
     cacheWriteTokens,
-    cacheWrite1hTokens: token(usage?.cacheWrite1h, "cacheWrite1hTokens"),
+    cacheWrite1hTokens,
     reasoningTokens: token(usage?.reasoning, "reasoningTokens"),
     totalTokens,
-    costUsd:
-      (rejected ? 0 : providerCost) ??
-      (costKnown && typeof usage?.cost?.total === "number" && Number.isFinite(usage.cost.total)
-        ? usage.cost.total
-        : null),
+    costUsd: (rejected ? 0 : providerCost) ?? estimated,
     costSource: rejected
       ? "provider-rejection"
       : providerCost !== undefined
         ? "provider-reported"
-        : costKnown
+        : estimated !== null
           ? "pi-catalog-estimate"
           : null,
     pricingSnapshot: model.cost ? JSON.parse(JSON.stringify(model.cost)) : null,
-    pricingVersion: providerCost !== undefined ? null : costKnown ? "pi-ai-1.3.0" : null,
+    pricingVersion: providerCost !== undefined ? null : estimated !== null ? "pi-ai-1.3.0" : null,
     usageSource: rejected
       ? "provider-rejected"
       : reported.size

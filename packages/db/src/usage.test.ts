@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Prisma, PrismaClient } from "./generated/prisma/client.js";
-import { recordUsage } from "./usage.js";
+import { completeUsageSums, recordUsage } from "./usage.js";
 
 function client(createMany: ReturnType<typeof vi.fn>) {
   const tx = { usageRecord: { createMany }, modelCreditEntry: { findUnique: async () => null } };
@@ -120,5 +120,31 @@ describe("usage ledger", () => {
       { spaceId: "space-fixture", userId: "user-fixture", runId: "run-fixture" },
     );
     expect(createMany).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("completeUsageSums", () => {
+  it("keeps cost unknown when any row lacks costUsd", () => {
+    expect(
+      completeUsageSums({
+        _sum: { inputTokens: 120, outputTokens: 20, totalTokens: null, costUsd: null },
+        _count: { _all: 2, inputTokens: 2, outputTokens: 2, totalTokens: 0, costUsd: 1 },
+      }),
+    ).toMatchObject({
+      inputTokens: 120,
+      outputTokens: 20,
+      totalTokens: 140,
+      costUsd: null,
+      modelCalls: 2,
+    });
+  });
+
+  it("uses stored totalTokens when every row has one", () => {
+    expect(
+      completeUsageSums({
+        _sum: { inputTokens: 100, outputTokens: 20, totalTokens: 160, costUsd: 0.01 },
+        _count: { _all: 1, inputTokens: 1, outputTokens: 1, totalTokens: 1, costUsd: 1 },
+      }),
+    ).toMatchObject({ totalTokens: 160, costUsd: 0.01 });
   });
 });

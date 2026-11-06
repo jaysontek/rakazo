@@ -114,6 +114,16 @@ describe("current model compatibility", () => {
     const models = builtinModels();
     expect(models.getModel("amazon-bedrock", id)?.cost).toEqual(cost);
   });
+  it.each(["gemini-3.8-flash", "gemini-3.5-flash-lite"] as const)(
+    "ships google/%s with non-zero catalog rates for Usage cost estimates",
+    (id) => {
+      const cost = builtinModels().getModel("google", id)?.cost;
+      expect(cost).toBeDefined();
+      expect(
+        [cost!.input, cost!.output, cost!.cacheRead, cost!.cacheWrite].some((rate) => rate > 0),
+      ).toBe(true);
+    },
+  );
   it.each([
     ["opencode", "claude-haiku-5-5", "claude-haiku-4-5"],
     ["opencode", "claude-sonnet-5-5", "claude-sonnet-5"],

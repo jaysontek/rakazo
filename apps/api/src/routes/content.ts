@@ -4,7 +4,7 @@ import { resolveBotWorkspacePath } from "@rakazo/adapters";
 import type { ExportManifest } from "@rakazo/contracts";
 import { attachmentMaxBytes, resolveBotAvatarSet } from "@rakazo/contracts";
 import { AttachmentValidationError } from "@rakazo/core";
-import { IsolationError, LISTED_ARTIFACT, parseComputerMode } from "@rakazo/db";
+import { completeUsageSums, IsolationError, LISTED_ARTIFACT, parseComputerMode } from "@rakazo/db";
 import {
   ArtifactListCursorError,
   createOwnedArtifact,
@@ -166,28 +166,15 @@ export function contentRoutes(ctx: RouterContext) {
         const runs = new Set(runGroups.map((row) => row.parentRunId ?? row.runId).filter(Boolean))
           .size;
         // A total that skips rows without a count would understate spend, so it reads as unknown.
-        const completeSums = (group: {
-          _sum: Record<keyof typeof sums, number | null>;
-          _count: Record<keyof typeof counts, number>;
-        }) => {
-          const complete = (field: keyof typeof sums) =>
-            group._count[field] === group._count._all ? (group._sum[field] ?? 0) : null;
-          return {
-            inputTokens: complete("inputTokens"),
-            outputTokens: complete("outputTokens"),
-            totalTokens: complete("totalTokens"),
-            costUsd: complete("costUsd"),
-            modelCalls: group._count._all,
-          };
-        };
+        // Historical Gemini rows may lack totalTokens; completeUsageSums derives input+output then.
         return {
-          ...completeSums(result),
+          ...completeUsageSums(result),
           runs,
           models: modelGroups
             .map((group) => ({
               provider: group.provider,
               model: group.model,
-              ...completeSums(group),
+              ...completeUsageSums(group),
             }))
             .sort(
               (a, b) => (b.totalTokens ?? 0) - (a.totalTokens ?? 0) || b.modelCalls - a.modelCalls,
