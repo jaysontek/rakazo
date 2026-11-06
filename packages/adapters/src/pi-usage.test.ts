@@ -10,7 +10,12 @@ import {
   registerOpenAiCompatibleRuntime,
 } from "./pi-openai-compatible-provider.js";
 import { PiAgentRuntime } from "./pi-runtime.js";
-import { normalizePiUsage, observedPiStream, usageReportingFetch } from "./pi-usage.js";
+import {
+  estimateCatalogCostUsd,
+  normalizePiUsage,
+  observedPiStream,
+  usageReportingFetch,
+} from "./pi-usage.js";
 
 const model: Model<Api> = {
   provider: "openrouter",
@@ -397,8 +402,97 @@ describe("Pi usage accounting", () => {
       usageSource: "pi-normalized",
     });
   });
+  it("estimates catalog USD when Gemini-like usage omits cache and Pi leaves cost.total unset", () => {
+    const gemini = {
+      cost: { input: 0.75, output: 3.75, cacheRead: 0.075, cacheWrite: 0 },
+    };
+    expect(
+      normalizePiUsage(
+        { input: 100, output: 20, cacheRead: 0, cacheWrite: 0, totalTokens: 0 },
+        gemini,
+      ),
+    ).toMatchObject({
+      cacheReadTokens: null,
+      cacheWriteTokens: null,
+      totalTokens: 120,
+      costUsd: 0.00015,
+      costSource: "pi-catalog-estimate",
+      pricingVersion: "pi-ai-1.3.0",
+    });
+    expect(
+      estimateCatalogCostUsd(gemini.cost, {
+        inputTokens: 100,
+        outputTokens: 20,
+        cacheReadTokens: null,
+        cacheWriteTokens: null,
+      }),
+    ).toBeCloseTo(0.00015);
+  });
+  it("keeps catalog cost unknown when only one of input/output is measured", () => {
+    expect(
+      normalizePiUsage(
+        { input: 100, cacheRead: 0, cacheWrite: 0 },
+        { cost: { input: 0.75, output: 3.75, cacheRead: 0.075, cacheWrite: 0 } },
+      ),
+    ).toMatchObject({ costUsd: null, costSource: null, totalTokens: null });
+    expect(
+      normalizePiUsage(
+        { output: 20, cacheRead: 0, cacheWrite: 0 },
+        { cost: { input: 0.75, output: 3.75, cacheRead: 0.075, cacheWrite: 0 } },
+      ),
+    ).toMatchObject({ costUsd: null, costSource: null, totalTokens: null });
+  });
+  it("prefers a provider-reported cost over a catalog estimate", async () => {
+    const fields = new Set<keyof AgentUsage>();
+    const wrapped = usageReportingFetch(
+      async () =>
+        new Response(
+          `data: ${JSON.stringify({
+            type: "message_delta",
+            usage: {
+              input_tokens: 100,
+              output_tokens: 20,
+              cost: 0.42,
+              is_byok: false,
+            },
+          })}\n\n`,
+          { headers: { "content-type": "text/event-stream" } },
+        ),
+      fields,
+    );
+    await (await wrapped("https://openrouter.ai/api/v1/messages")).text();
+    expect(
+      normalizePiUsage(
+        { input: 100, output: 20, cacheRead: 0, cacheWrite: 0 },
+        { cost: { input: 0.75, output: 3.75, cacheRead: 0.075, cacheWrite: 0 } },
+        fields,
+      ),
+    ).toMatchObject({
+      costUsd: 0.42,
+      costSource: "provider-reported",
+      pricingVersion: null,
+    });
+  });
+  it("uses Pi usage.cost.total when present instead of recomputing", () => {
+    expect(
+      normalizePiUsage(
+        {
+          input: 100,
+          output: 20,
+          cacheRead: 0,
+          cacheWrite: 0,
+          cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0.001 },
+        },
+        { cost: { input: 0.75, output: 3.75, cacheRead: 0.075, cacheWrite: 0 } },
+      ),
+    ).toMatchObject({ costUsd: 0.001, costSource: "pi-catalog-estimate" });
+  });
   it.each([
-    { label: "only input", usage: { input: 100 }, expected: { inputTokens: 100, outputTokens: null } },
+    {
+      label: "only input",
+      usage: { input: 100 },
+      expected: { inputTokens: 100, outputTokens: null },
+    },
     {
       label: "only output",
       usage: { output: 20 },
@@ -416,12 +510,17 @@ describe("Pi usage accounting", () => {
       reported: new Set<keyof AgentUsage>(["cacheWriteTokens"]),
       expected: { cacheWriteTokens: 40, inputTokens: null, outputTokens: null },
     },
-  ] as const)("keeps totalTokens null for partial buckets ($label)", ({ usage, reported, expected }) => {
-    expect(normalizePiUsage(usage, model, reported ? new Set(reported) : new Set())).toMatchObject({
-      ...expected,
-      totalTokens: null,
-    });
-  });
+  ] as const)(
+    "keeps totalTokens null for partial buckets ($label)",
+    ({ usage, reported, expected }) => {
+      expect(
+        normalizePiUsage(usage, model, reported ? new Set(reported) : new Set()),
+      ).toMatchObject({
+        ...expected,
+        totalTokens: null,
+      });
+    },
+  );
   it("prefers a reported totalTokens over a derived bucket sum", () => {
     const reported = new Set<keyof AgentUsage>(["totalTokens"]);
     expect(

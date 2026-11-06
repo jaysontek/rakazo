@@ -157,6 +157,7 @@ export * from "./pi-runtime.js";
 export { TOOL_RESULT_TEXT_LIMIT } from "./pi-runtime-limits.js";
 export { serializeToolResult } from "./pi-runtime-tools.js";
 export * from "./pi-session.js";
+export { estimateCatalogCostUsd, maximumModelCallCost, normalizePiUsage } from "./pi-usage.js";
 export { shutdownPiTelemetry } from "./pi-telemetry.js";
 export * from "./pipedream-connector.js";
 export * from "./plugin-connectors.js";

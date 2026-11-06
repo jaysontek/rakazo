@@ -14,6 +14,42 @@ export interface UsageAttribution {
   operationKind?: UsageOperationKind;
 }
 
+const USAGE_SUM_FIELDS = ["inputTokens", "outputTokens", "totalTokens", "costUsd"] as const;
+export type UsageSumField = (typeof USAGE_SUM_FIELDS)[number];
+
+/**
+ * Prisma `_sum` is null for a field when any row in the group is null. Treat that as
+ * unknown rather than understating. When `totalTokens` is incomplete but input+output
+ * are complete, derive a display total with unmeasured cache as 0 (same as normalizePiUsage).
+ */
+export function completeUsageSums(group: {
+  _sum: Record<UsageSumField, number | null>;
+  _count: Record<UsageSumField | "_all", number>;
+}): {
+  inputTokens: number | null;
+  outputTokens: number | null;
+  totalTokens: number | null;
+  costUsd: number | null;
+  modelCalls: number;
+} {
+  const complete = (field: UsageSumField) =>
+    group._count[field] === group._count._all ? (group._sum[field] ?? 0) : null;
+  const inputTokens = complete("inputTokens");
+  const outputTokens = complete("outputTokens");
+  const storedTotal = complete("totalTokens");
+  const derivedTotal =
+    storedTotal === null && inputTokens !== null && outputTokens !== null
+      ? inputTokens + outputTokens
+      : null;
+  return {
+    inputTokens,
+    outputTokens,
+    totalTokens: storedTotal ?? derivedTotal,
+    costUsd: complete("costUsd"),
+    modelCalls: group._count._all,
+  };
+}
+
 /** Usage is financial history, independent from message clearing or bot deletion. */
 export async function recordUsage(
   prisma: Pick<PrismaClient, "$transaction">,
