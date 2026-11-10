@@ -184,6 +184,7 @@ import {
 import { SearchQueryOutputSchema } from "./search.js";
 import { SecurityEventListInputSchema, SecurityEventSchema } from "./security-events.js";
 import { SettingsScopeSchema, SpaceSettingSchema, settingsScopeInput } from "./settings-scope.js";
+import { isAllowedWebPushEndpoint } from "./web-push-endpoint.js";
 
 const botId = z.object({ botId: Id });
 const groupId = z.object({ groupId: Id });
@@ -1422,6 +1423,71 @@ export const appContract = {
       )
       .output(z.object({ ok: z.literal(true) })),
     unregisterPush: oc.output(z.object({ ok: z.literal(true) })),
+    /**
+     * Public VAPID key when Web Push is configured. Pass this browser's endpoint
+     * to learn whether the server still holds a registration for it.
+     */
+    webPushStatus: oc
+      .input(
+        z
+          .object({
+            endpoint: z
+              .string()
+              .url()
+              .max(2048)
+              .refine((value) => isAllowedWebPushEndpoint(value), {
+                message: "Subscription endpoint is not allowed.",
+              })
+              .optional(),
+          })
+          .optional(),
+      )
+      .output(
+        z.object({
+          available: z.boolean(),
+          publicKey: z.string().optional(),
+          /** Present when an endpoint was supplied; true only if this user owns it. */
+          registered: z.boolean().optional(),
+        }),
+      ),
+    registerWebPush: oc
+      .input(
+        z.object({
+          endpoint: z
+            .string()
+            .url()
+            .max(2048)
+            .refine((value) => isAllowedWebPushEndpoint(value), {
+              message: "Subscription endpoint is not allowed.",
+            }),
+          keys: z.object({
+            p256dh: z
+              .string()
+              .min(1)
+              .max(256)
+              .regex(/^[A-Za-z0-9_-]+$/),
+            auth: z
+              .string()
+              .min(1)
+              .max(256)
+              .regex(/^[A-Za-z0-9_-]+$/),
+          }),
+        }),
+      )
+      .output(z.object({ ok: z.literal(true) })),
+    unregisterWebPush: oc
+      .input(
+        z.object({
+          endpoint: z
+            .string()
+            .url()
+            .max(2048)
+            .refine((value) => isAllowedWebPushEndpoint(value), {
+              message: "Subscription endpoint is not allowed.",
+            }),
+        }),
+      )
+      .output(z.object({ ok: z.literal(true) })),
   },
   search: {
     query: oc.input(z.object({ q: z.string().max(200) })).output(SearchQueryOutputSchema),

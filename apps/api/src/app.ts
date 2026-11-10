@@ -38,6 +38,7 @@ import {
   ChatSdkMessagingSurface,
   CodexCatalogCache,
   ComposioConnector,
+  composeNotificationProviders,
   contentKeyProviderFromEnv,
   createAgentHomeStore,
   createApnsVoipProvider,
@@ -83,6 +84,7 @@ import {
   PipedreamConnector,
   PostgresRealtimeFanout,
   PrismaPushTokenStore,
+  PrismaWebPushSubscriptionStore,
   pipedreamConfigFromEnv,
   piSessionsRoot,
   RunJobPublisher,
@@ -104,6 +106,7 @@ import {
   userDeviceForwardSecret,
   userDeviceInternalAddress,
   verifyModelServesAgents,
+  WebPushProvider,
   withSecretPersistence,
 } from "@rakazo/adapters";
 import type { DirectoryAccountChange } from "@rakazo/auth";
@@ -536,14 +539,19 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
           sessionRoot: env.piSessionRecording ? piSessionsRoot(env.dataDir) : undefined,
         }));
   const pushTokens = new PrismaPushTokenStore(prisma, env.encryptionKey);
-  const notifications =
-    notificationsOverride ??
-    new ExpoPushProvider(pushTokens, {
-      sessionExpiresAt: (sessionId) => pushSessionExpiresAt(prisma, sessionId),
-      jobs,
-      accessToken: env.expoAccessToken,
-      voip: await createApnsVoipProvider(env.apnsVoip),
-    });
+  const webPushSubscriptions = new PrismaWebPushSubscriptionStore(prisma);
+  const expoPush = new ExpoPushProvider(pushTokens, {
+    sessionExpiresAt: (sessionId) => pushSessionExpiresAt(prisma, sessionId),
+    jobs,
+    accessToken: env.expoAccessToken,
+    voip: await createApnsVoipProvider(env.apnsVoip),
+  });
+  const webPush = env.vapid
+    ? new WebPushProvider(webPushSubscriptions, env.vapid, {
+        sessionExpiresAt: (sessionId) => pushSessionExpiresAt(prisma, sessionId),
+      })
+    : undefined;
+  const notifications = notificationsOverride ?? composeNotificationProviders(expoPush, webPush);
   const userDeviceSecret = userDeviceForwardSecret(env.encryptionKey);
   const userDeviceHub = env.userDevicesEnabled
     ? new UserDeviceHub({ prisma, address: userDeviceInternalAddress(env.apiHost, env.port) })
@@ -649,6 +657,9 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
       await pushTokens
         .endSession(session.userId, session.id)
         .catch((error) => getLogger().error("push token removal failed", error));
+      await webPushSubscriptions
+        .endSession(session.userId, session.id)
+        .catch((error) => getLogger().error("web push removal failed", error));
       await endUserDeviceSession(deviceSessions, session).catch((error) =>
         getLogger().error("user device revocation failed", error),
       );
@@ -657,6 +668,9 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
       await pushTokens
         .endSession(session.userId, previous.id, session.id)
         .catch((error) => getLogger().error("push token session update failed", error));
+      await webPushSubscriptions
+        .endSession(session.userId, previous.id, session.id)
+        .catch((error) => getLogger().error("web push session update failed", error));
       await endUserDeviceSession(deviceSessions, previous, session).catch((error) =>
         getLogger().error("user device session update failed", error),
       );
@@ -753,7 +767,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
     // Every API container runs node as the same pid, and deploys run old and new side by side.
     workerId: `${hostname()}:${process.pid}`,
     runtime,
-    notifications: notifications instanceof ExpoPushProvider ? notifications : undefined,
+    notifications: expoPush,
     secretStore: secrets,
     memoryProviders,
     deploymentModelKey: env.deploymentModelKey,
@@ -861,6 +875,8 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
     prisma,
     notifications,
     pushTokens,
+    webPushSubscriptions,
+    webPush,
     events,
     ticketChanges,
     boardEvents,

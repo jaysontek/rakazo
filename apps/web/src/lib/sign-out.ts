@@ -3,12 +3,39 @@ import { useEffect, useRef, useState } from "react";
 import { authClient } from "./auth";
 import { endCallBeforeSignOut, forgetSignedInUser, sessionChangedUnderPage } from "./call-session";
 import { clearComposerDrafts } from "./composer-draft";
-import { clearSpaceSelection } from "./rpc";
+import { clearSpaceSelection, rpc } from "./rpc";
+import { currentWebPushSubscription, unsubscribeWebPush } from "./web-push";
 
 /** Kept across the reload after a failed sign-out, so the fresh page can say it failed. */
 export const LOG_OUT_FAILED_KEY = "rakazo.logOutFailed";
 /** The reload after a failed sign-out found the user still signed in. */
 let logOutFailed = false;
+
+const WEB_PUSH_UNREGISTER_TIMEOUT_MS = 3_000;
+
+/** Best-effort: drop this browser's Web Push registration while the session still authorizes it. */
+export async function unregisterWebPushBeforeSignOut(
+  timeoutMs = WEB_PUSH_UNREGISTER_TIMEOUT_MS,
+): Promise<void> {
+  const work = (async () => {
+    const subscription = await currentWebPushSubscription();
+    if (!subscription) return;
+    await unsubscribeWebPush(rpc);
+  })();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([
+      work,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("web push unregister timed out")), timeoutMs);
+      }),
+    ]);
+  } catch {
+    // Sign-out continues even if push cleanup fails or times out.
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
 
 /**
  * Signs out, then loads a fresh page whether or not it worked, so no call, microphone, pending
@@ -22,6 +49,8 @@ export async function signOut(destination: string): Promise<void> {
     window.location.reload();
     return;
   }
+  // Drop push while authenticated; Expo tokens are session-bound the same way.
+  await unregisterWebPushBeforeSignOut();
   const result = await authClient.signOut().catch(() => null);
   if (result && !result.error) {
     forgetSignedInUser();

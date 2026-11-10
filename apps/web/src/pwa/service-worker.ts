@@ -13,18 +13,55 @@ type FetchEvent = ExtendableEvent & {
 };
 type MessageEvent = ExtendableEvent & { data: unknown };
 
+type PushEvent = ExtendableEvent & { data: { json(): unknown; text(): Promise<string> } | null };
+type NotificationClickEvent = ExtendableEvent & {
+  notification: {
+    data?: unknown;
+    close(): void;
+  };
+  action?: string;
+};
+
+type WindowClient = {
+  url: string;
+  focused: boolean;
+  focus(): Promise<WindowClient>;
+  navigate?(url: string): Promise<WindowClient>;
+};
+
 export type ServiceWorkerScope = {
   location: { origin: string };
   caches: CacheStorage;
-  clients: { matchAll(options: { type: "window" }): Promise<readonly unknown[]> };
+  clients: {
+    matchAll(options: {
+      type: "window";
+      includeUncontrolled?: boolean;
+    }): Promise<readonly WindowClient[]>;
+    openWindow?(url: string): Promise<WindowClient | null>;
+  };
   registration: {
     waiting: Pick<ServiceWorker, "postMessage" | "addEventListener" | "removeEventListener"> | null;
+    showNotification(
+      title: string,
+      options?: {
+        body?: string;
+        icon?: string;
+        badge?: string;
+        tag?: string;
+        data?: unknown;
+      },
+    ): Promise<void>;
   };
   skipWaiting(): Promise<void>;
   fetch(request: Request): Promise<Response>;
   addEventListener(type: "install" | "activate", listener: (event: ExtendableEvent) => void): void;
   addEventListener(type: "fetch", listener: (event: FetchEvent) => void): void;
   addEventListener(type: "message", listener: (event: MessageEvent) => void): void;
+  addEventListener(type: "push", listener: (event: PushEvent) => void): void;
+  addEventListener(
+    type: "notificationclick",
+    listener: (event: NotificationClickEvent) => void,
+  ): void;
 };
 
 export function bypassesServiceWorker(pathname: string): boolean {
@@ -94,6 +131,44 @@ export function installServiceWorker(
     }
   });
 
+  scope.addEventListener("push", (event) => {
+    event.waitUntil(handlePush(event));
+  });
+
+  scope.addEventListener("notificationclick", (event) => {
+    event.notification.close();
+    event.waitUntil(handleNotificationClick(event));
+  });
+
+  async function handlePush(event: PushEvent): Promise<void> {
+    const payload = readPushPayload(event);
+    await scope.registration.showNotification(payload.title, {
+      body: payload.body,
+      icon: payload.icon,
+      badge: payload.badge,
+      tag: payload.tag,
+      data: payload.data,
+    });
+  }
+
+  async function handleNotificationClick(event: NotificationClickEvent): Promise<void> {
+    const target = sameOriginOpenUrl(scope.location.origin, event.notification.data);
+    const windows = await scope.clients.matchAll({ type: "window", includeUncontrolled: true });
+    for (const client of windows) {
+      if (new URL(client.url).origin !== scope.location.origin) continue;
+      const focused = await client.focus();
+      if (target && typeof focused.navigate === "function") {
+        try {
+          await focused.navigate(target);
+        } catch {
+          // Older clients may not support navigate; focusing is enough.
+        }
+      }
+      return;
+    }
+    if (target) await scope.clients.openWindow?.(target);
+  }
+
   async function navigate(request: Request): Promise<Response> {
     if (await activateWaitingWorker()) {
       return new Response("", { headers: { Refresh: "0" } });
@@ -141,5 +216,56 @@ export function installServiceWorker(
       event.waitUntil(cache.put(event.request, response.clone()).catch(() => undefined));
     }
     return response;
+  }
+}
+
+type PushPayload = {
+  title: string;
+  body: string;
+  icon: string;
+  badge: string;
+  tag?: string;
+  data?: { url?: string };
+};
+
+export function readPushPayload(event: { data: { json(): unknown } | null }): PushPayload {
+  const fallback: PushPayload = {
+    title: "Rakazo",
+    body: "",
+    icon: "/icon-192.png",
+    badge: "/icon-192.png",
+  };
+  if (!event.data) return fallback;
+  try {
+    const parsed = event.data.json();
+    if (!parsed || typeof parsed !== "object") return fallback;
+    const record = parsed as Record<string, unknown>;
+    return {
+      title: typeof record.title === "string" && record.title ? record.title : fallback.title,
+      body: typeof record.body === "string" ? record.body : "",
+      icon: typeof record.icon === "string" && record.icon ? record.icon : fallback.icon,
+      badge: typeof record.badge === "string" && record.badge ? record.badge : fallback.badge,
+      tag: typeof record.tag === "string" ? record.tag : undefined,
+      data:
+        record.data && typeof record.data === "object"
+          ? (record.data as { url?: string })
+          : undefined,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+/** Only same-origin relative or absolute URLs may open from a notification. */
+export function sameOriginOpenUrl(origin: string, data: unknown): string | null {
+  if (!data || typeof data !== "object") return origin + "/";
+  const url = (data as { url?: unknown }).url;
+  if (typeof url !== "string" || !url) return origin + "/";
+  try {
+    const resolved = new URL(url, origin);
+    if (resolved.origin !== origin) return null;
+    return resolved.href;
+  } catch {
+    return null;
   }
 }

@@ -39,9 +39,11 @@ import {
   computersAreUnavailable,
 } from "../components/ComputersUnavailableHint";
 import { DesktopUpdateSection } from "../components/DesktopUpdates";
+import { InstallAppSettings } from "../components/InstallAppSettings";
 import { PasskeySettings } from "../components/PasskeySettings";
 import { SettingsGroup, SettingsRow } from "../components/SettingsRows";
 import { TrustedLinkSitesSettings } from "../components/TrustedLinkSitesSettings";
+import { WebPushSettings } from "../components/WebPushSettings";
 import { authClient } from "../lib/auth";
 import type { BotsSidebarDensity } from "../lib/bots-sidebar-density-pref";
 import {
@@ -285,6 +287,9 @@ export function GeneralSettingsPanels({
           />
         )}
       </SettingsGroup>
+
+      <InstallAppSettings />
+      <WebPushSettings />
 
       <SettingsGroup title={<Trans>Preferences</Trans>}>
         <SettingsRow

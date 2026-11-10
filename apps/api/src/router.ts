@@ -29,6 +29,8 @@ import type {
   RemoteConnectorDependencies,
   TicketChangeNotifier,
   verifyModelServesAgents,
+  WebPushProvider,
+  WebPushSubscriptionStore,
 } from "@rakazo/adapters";
 import type { Auth } from "@rakazo/auth";
 import type { NavLink } from "@rakazo/contracts";
@@ -63,6 +65,9 @@ export { callMarkerClientNonce } from "./routes/threads.js";
 
 export interface RouterDeps {
   pushTokens: PushTokenStore;
+  webPushSubscriptions?: WebPushSubscriptionStore;
+  /** Present when VAPID is configured; clients use it for the public key. */
+  webPush?: WebPushProvider;
   /** Stops a call's ring on the owner's other devices once it is settled. */
   notifications?: NotificationProvider;
   analytics?: ProductAnalytics;

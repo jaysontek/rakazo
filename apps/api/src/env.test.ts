@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { loadEnv } from "./env.js";
 
 const base = {
@@ -290,6 +290,44 @@ describe("loadEnv", () => {
     expect(loadEnv({ ...base, EXPO_ACCESS_TOKEN: " fake-expo-token " }).expoAccessToken).toBe(
       "fake-expo-token",
     );
+  });
+
+  it("loads VAPID only when all three values are set together", () => {
+    expect(loadEnv(base).vapid).toBeUndefined();
+    expect(
+      loadEnv({
+        ...base,
+        VAPID_PUBLIC_KEY: " pub ",
+        VAPID_PRIVATE_KEY: " priv ",
+        VAPID_SUBJECT: " mailto:ops@example.com ",
+      }).vapid,
+    ).toEqual({
+      publicKey: "pub",
+      privateKey: "priv",
+      subject: "mailto:ops@example.com",
+    });
+    expect(() => loadEnv({ ...base, VAPID_PUBLIC_KEY: "pub" })).toThrow(/VAPID_/);
+    expect(() =>
+      loadEnv({
+        ...base,
+        VAPID_PUBLIC_KEY: "pub",
+        VAPID_PRIVATE_KEY: "priv",
+        VAPID_SUBJECT: "ops@example.com",
+      }),
+    ).toThrow(/VAPID_SUBJECT/);
+  });
+
+  it("disables Web Push when keys are set without VAPID_SUBJECT", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    expect(
+      loadEnv({
+        ...base,
+        VAPID_PUBLIC_KEY: "pub",
+        VAPID_PRIVATE_KEY: "priv",
+      }).vapid,
+    ).toBeUndefined();
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
   });
 
   it("loads SMTP configuration and keeps the email emulator out of production", () => {

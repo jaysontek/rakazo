@@ -7,6 +7,9 @@ import {
   loadUserIncomingCalls,
   PushSessionEndedError,
   settleCallRequest,
+  validateWebPushSubscription,
+  WebPushSubscriptionConflictError,
+  WebPushSubscriptionValidationError,
 } from "@rakazo/adapters";
 import type { ActionApprovalRule, Actor, ChatAlert, Me, SettingsScope } from "@rakazo/contracts";
 import {
@@ -476,6 +479,47 @@ export function accountRoutes(ctx: RouterContext) {
         await deps.pushTokens.remove(context.actor.userId);
         return { ok: true as const };
       }),
+      webPushStatus: authed.notifications.webPushStatus.handler(async ({ context, input }) => {
+        if (!deps.webPush || !deps.webPushSubscriptions) return { available: false as const };
+        const endpoint = input?.endpoint?.trim();
+        const registered = endpoint
+          ? await deps.webPushSubscriptions.hasEndpoint(context.actor.userId, endpoint)
+          : undefined;
+        return {
+          available: true as const,
+          publicKey: deps.webPush.publicKey(),
+          ...(endpoint ? { registered: Boolean(registered) } : {}),
+        };
+      }),
+      registerWebPush: authed.notifications.registerWebPush.handler(async ({ context, input }) => {
+        if (!deps.webPush || !deps.webPushSubscriptions) throw new ORPCError("NOT_FOUND");
+        if (!context.sessionId) throw new ORPCError("UNAUTHORIZED");
+        try {
+          const subscription = validateWebPushSubscription(input);
+          await deps.webPushSubscriptions.save(
+            context.actor.userId,
+            subscription,
+            deps.webPush.vapidDigest(),
+            context.sessionId,
+          );
+        } catch (error) {
+          if (error instanceof WebPushSubscriptionValidationError) {
+            throw new ORPCError("BAD_REQUEST", { message: error.message });
+          }
+          if (error instanceof WebPushSubscriptionConflictError) {
+            throw new ORPCError("CONFLICT", { message: error.message });
+          }
+          throw error;
+        }
+        return { ok: true as const };
+      }),
+      unregisterWebPush: authed.notifications.unregisterWebPush.handler(
+        async ({ context, input }) => {
+          if (!deps.webPushSubscriptions) throw new ORPCError("NOT_FOUND");
+          await deps.webPushSubscriptions.remove(context.actor.userId, input.endpoint);
+          return { ok: true as const };
+        },
+      ),
     },
     voice: {
       catalog: authed.voice.catalog.handler(async () =>

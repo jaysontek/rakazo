@@ -53,6 +53,8 @@ describe("PWA build", () => {
       background_color: webDarkTokens.background,
       theme_color: webDarkTokens.background,
     });
-    expect(manifest.icons.filter((icon) => icon.purpose === "maskable")).toHaveLength(2);
+    const maskable = manifest.icons.filter((icon) => icon.purpose === "maskable");
+    expect(maskable).toHaveLength(2);
+    expect(maskable.every((icon) => icon.src.includes("maskable"))).toBe(true);
   });
 });

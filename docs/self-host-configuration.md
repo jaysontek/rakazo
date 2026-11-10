@@ -87,6 +87,23 @@ ceiling because Node's HTTP client stops waiting at that point on its own.
 | `PI_SESSION_RECORDING` | off | `true` records agent sessions as JSONL under `DATA_DIR/pi-sessions`. The files are not encrypted, so do not use it on a shared or multi-tenant install. |
 | `PRIVACY_POLICY_URL` | Rakazo's policy | The privacy policy linked from the AI data-sharing notice. Set it on the API. |
 
+## Web Push (browser background notifications)
+
+Optional. When unset, the web app hides the background-alerts toggle and the API/worker skip
+browser push delivery. Mobile Expo push is separate (`EXPO_ACCESS_TOKEN`).
+
+1. Generate a key pair: `npx web-push generate-vapid-keys`
+2. Set all three on the API and worker:
+
+```env
+VAPID_PUBLIC_KEY=...
+VAPID_PRIVATE_KEY=...
+VAPID_SUBJECT=mailto:you@example.com
+```
+
+`VAPID_SUBJECT` must be a `mailto:` or `https:` contact URI the push service can reach. Never
+commit real keys. After changing keys, browsers must subscribe again (the toggle re-registers).
+
 ## Database roles
 
 Rakazo uses two Postgres logins:

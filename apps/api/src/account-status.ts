@@ -99,6 +99,8 @@ export async function endDeactivatedAccess(deps: AccountStatusDeps, userId: stri
     () => prisma.session.deleteMany({ where: { userId } }),
     () => revokeUserDevices(deps.devices, userId),
     () => deps.pushTokens.remove(userId),
+    // afterDeleteSession never runs: sessions are deleted above, not through auth hooks.
+    () => prisma.webPushSubscription.deleteMany({ where: { userId } }),
     () => prisma.callPushDevice.deleteMany({ where: { userId } }),
     // A pending code would otherwise link a chat app to the account after this.
     () => prisma.messagingLinkCode.deleteMany({ where: { userId } }),
