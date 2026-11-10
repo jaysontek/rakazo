@@ -213,6 +213,7 @@ export * from "./wakeup.js";
 export * from "./web-limits.js";
 export * from "./web-provider-factory.js";
 export * from "./web-push.js";
+export * from "./web-push-endpoint.js";
 export * from "./web-push-payload.js";
 export * from "./web-push-subscription.js";
 export * from "./web-ssrf.js";

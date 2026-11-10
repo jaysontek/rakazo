@@ -4,8 +4,8 @@ import type {
   NotificationMessage,
   NotificationProvider,
 } from "@rakazo/adapter-kit";
-import { canonicalizeWebPushEndpoint } from "@rakazo/contracts";
 import { getLogger } from "@rakazo/logging";
+import { canonicalizeWebPushEndpoint } from "./web-push-endpoint.js";
 import { buildWebPushPayload } from "./web-push-payload.js";
 import type {
   StoredWebPushSubscription,

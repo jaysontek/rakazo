@@ -128,8 +128,14 @@ describe("PrismaWebPushSubscriptionStore cross-user upsert", () => {
         delete: vi.fn(async () => undefined),
       },
     };
+    const txWithLock = {
+      ...tx,
+      $queryRaw: vi.fn(async () => [{ "": "" }]),
+    };
     const prisma = {
-      $transaction: vi.fn(async (fn: (client: typeof tx) => Promise<void>) => fn(tx)),
+      $transaction: vi.fn(async (fn: (client: typeof txWithLock) => Promise<void>) =>
+        fn(txWithLock),
+      ),
       webPushSubscription: tx.webPushSubscription,
     };
     store = new PrismaWebPushSubscriptionStore(prisma as never);

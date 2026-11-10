@@ -26,6 +26,7 @@ describe("ending a deactivated account's access", () => {
     const deps = {
       prisma: {
         session: { deleteMany: step("sessions", true) },
+        webPushSubscription: { deleteMany: step("web pushes") },
         callPushDevice: { deleteMany: step("call pushes") },
         messagingLinkCode: { deleteMany: step("link codes") },
         bot: { updateMany: step("screens") },
@@ -37,7 +38,35 @@ describe("ending a deactivated account's access", () => {
     } as unknown as AccountStatusDeps;
 
     await expect(endDeactivatedAccess(deps, "user-1")).rejects.toThrow(AggregateError);
-    expect(calls).toEqual(["sessions", "pushes", "call pushes", "link codes", "screens", "notify"]);
+    expect(calls).toEqual([
+      "sessions",
+      "pushes",
+      "web pushes",
+      "call pushes",
+      "link codes",
+      "screens",
+      "notify",
+    ]);
+  });
+
+  it("deletes the account's web push subscriptions", async () => {
+    const deleteWebPush = vi.fn(async () => ({ count: 2 }));
+    const deps = {
+      prisma: {
+        session: { deleteMany: vi.fn(async () => ({ count: 0 })) },
+        webPushSubscription: { deleteMany: deleteWebPush },
+        callPushDevice: { deleteMany: vi.fn(async () => ({ count: 0 })) },
+        messagingLinkCode: { deleteMany: vi.fn(async () => ({ count: 0 })) },
+        bot: { updateMany: vi.fn(async () => ({ count: 0 })) },
+        userDevice: { findMany: vi.fn(async () => []) },
+      },
+      devices: { prisma: { userDevice: { findMany: vi.fn(async () => []) } }, devices: {} },
+      pushTokens: { remove: vi.fn(async () => undefined) },
+      events: { notify: vi.fn(async () => undefined) },
+    } as unknown as AccountStatusDeps;
+
+    await endDeactivatedAccess(deps, "user-1");
+    expect(deleteWebPush).toHaveBeenCalledWith({ where: { userId: "user-1" } });
   });
 
   it("disconnects the other computers when one fails", async () => {

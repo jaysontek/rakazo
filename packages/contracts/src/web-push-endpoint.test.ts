@@ -1,5 +1,8 @@
+import { readdir, readFile } from "node:fs/promises";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { canonicalizeWebPushEndpoint, isAllowedWebPushEndpoint } from "./web-push-endpoint.js";
+import { isAllowedWebPushEndpoint, isRfc1123Hostname } from "./web-push-endpoint.js";
 
 describe("isAllowedWebPushEndpoint", () => {
   it("accepts canonical FCM, Mozilla, WNS, and Apple endpoints", () => {
@@ -13,14 +16,6 @@ describe("isAllowedWebPushEndpoint", () => {
     expect(isAllowedWebPushEndpoint("https://db5.notify.windows.com/?token=a%2Bb")).toBe(true);
     expect(isAllowedWebPushEndpoint("https://web.push.apple.com/abc")).toBe(true);
     expect(isAllowedWebPushEndpoint("https://api.push.apple.com/abc")).toBe(true);
-  });
-
-  it("returns the same href from canonicalize for accepted endpoints", () => {
-    const endpoint = "https://fcm.googleapis.com/fcm/send/abc";
-    expect(canonicalizeWebPushEndpoint(endpoint)).toBe(endpoint);
-    expect(canonicalizeWebPushEndpoint("https://db5.notify.windows.com/?token=a%2Bb")).toBe(
-      "https://db5.notify.windows.com/?token=a%2Bb",
-    );
   });
 
   it.each([
@@ -39,6 +34,8 @@ describe("isAllowedWebPushEndpoint", () => {
     ["notify.windows apex", "https://notify.windows.com/x"],
     ["push.apple apex", "https://push.apple.com/abc"],
     ["lookalike mozilla", "https://updates.push.services.mozilla.com.evil.example/x"],
+    ["empty labels", "https://fcm..googleapis.com/x"],
+    ["leading dot host", "https://.fcm.googleapis.com/x"],
     ["empty", ""],
     ["not a url", "not-a-url"],
   ])("rejects %s", (_name, endpoint) => {
@@ -56,6 +53,37 @@ describe("isAllowedWebPushEndpoint", () => {
     ["zero-width space", "https://fcm.googleapis.com\u200b/fcm/send/abc"],
   ])("rejects parser-disagreement bypass: %s", (_name, endpoint) => {
     expect(isAllowedWebPushEndpoint(endpoint)).toBe(false);
-    expect(canonicalizeWebPushEndpoint(endpoint)).toBeNull();
+  });
+});
+
+describe("isRfc1123Hostname", () => {
+  it("rejects empty labels and leading dots", () => {
+    expect(isRfc1123Hostname("fcm.googleapis.com")).toBe(true);
+    expect(isRfc1123Hostname("fcm..googleapis.com")).toBe(false);
+    expect(isRfc1123Hostname(".fcm.googleapis.com")).toBe(false);
+    expect(isRfc1123Hostname("fcm.googleapis.com.")).toBe(false);
+  });
+});
+
+describe("contracts package browser boundary", () => {
+  it("does not import node: modules from packages/contracts/src", async () => {
+    const root = fileURLToPath(new URL(".", import.meta.url));
+    const files: string[] = [];
+    async function walk(dir: string) {
+      for (const entry of await readdir(dir, { withFileTypes: true })) {
+        const path = join(dir, entry.name);
+        if (entry.isDirectory()) await walk(path);
+        else if (entry.name.endsWith(".ts") && !entry.name.endsWith(".test.ts")) files.push(path);
+      }
+    }
+    await walk(root);
+    const offenders: string[] = [];
+    for (const file of files) {
+      const source = await readFile(file, "utf8");
+      if (/\bfrom\s+["']node:/.test(source) || /\bimport\s*\(\s*["']node:/.test(source)) {
+        offenders.push(file.slice(root.length));
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 });

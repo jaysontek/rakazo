@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
-import { canonicalizeWebPushEndpoint } from "@rakazo/contracts";
 import type { PrismaClient } from "@rakazo/db";
 import { runAsSystem, withTransactionRetry } from "@rakazo/db";
+import { canonicalizeWebPushEndpoint } from "./web-push-endpoint.js";
 
 export const MAX_WEB_PUSH_SUBSCRIPTIONS_PER_USER = 20;
 export const MAX_WEB_PUSH_ENDPOINT_CHARS = 2048;
@@ -145,53 +145,57 @@ export class PrismaWebPushSubscriptionStore implements WebPushSubscriptionStore 
       throw new WebPushSubscriptionValidationError("A signed-in session is required.");
     }
     const validated = validateWebPushSubscription(subscription);
-    await runAsSystem("save a web push subscription", async () => {
-      await this.prisma.$transaction(async (tx) => {
-        const existing = await tx.webPushSubscription.findUnique({
-          where: { endpoint: validated.endpoint },
-        });
-        if (existing) {
-          if (
-            existing.userId !== userId &&
-            (existing.p256dh !== validated.keys.p256dh || existing.auth !== validated.keys.auth)
-          ) {
-            throw new WebPushSubscriptionConflictError();
-          }
-          await tx.webPushSubscription.update({
+    await runAsSystem("save a web push subscription", () =>
+      withTransactionRetry(() =>
+        this.prisma.$transaction(async (tx) => {
+          // Same key as Expo push tokens so register cannot race a session replace.
+          await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`push-user:${userId}`}, 0))::text`;
+          const existing = await tx.webPushSubscription.findUnique({
             where: { endpoint: validated.endpoint },
+          });
+          if (existing) {
+            if (
+              existing.userId !== userId &&
+              (existing.p256dh !== validated.keys.p256dh || existing.auth !== validated.keys.auth)
+            ) {
+              throw new WebPushSubscriptionConflictError();
+            }
+            await tx.webPushSubscription.update({
+              where: { endpoint: validated.endpoint },
+              data: {
+                userId,
+                sessionId,
+                p256dh: validated.keys.p256dh,
+                auth: validated.keys.auth,
+                vapidDigest,
+                failureCount: 0,
+                lastSuccessAt: null,
+              },
+            });
+            return;
+          }
+          const count = await tx.webPushSubscription.count({ where: { userId } });
+          if (count >= MAX_WEB_PUSH_SUBSCRIPTIONS_PER_USER) {
+            const oldest = await tx.webPushSubscription.findFirst({
+              where: { userId },
+              orderBy: { createdAt: "asc" },
+              select: { id: true },
+            });
+            if (oldest) await tx.webPushSubscription.delete({ where: { id: oldest.id } });
+          }
+          await tx.webPushSubscription.create({
             data: {
               userId,
               sessionId,
+              endpoint: validated.endpoint,
               p256dh: validated.keys.p256dh,
               auth: validated.keys.auth,
               vapidDigest,
-              failureCount: 0,
-              lastSuccessAt: null,
             },
           });
-          return;
-        }
-        const count = await tx.webPushSubscription.count({ where: { userId } });
-        if (count >= MAX_WEB_PUSH_SUBSCRIPTIONS_PER_USER) {
-          const oldest = await tx.webPushSubscription.findFirst({
-            where: { userId },
-            orderBy: { createdAt: "asc" },
-            select: { id: true },
-          });
-          if (oldest) await tx.webPushSubscription.delete({ where: { id: oldest.id } });
-        }
-        await tx.webPushSubscription.create({
-          data: {
-            userId,
-            sessionId,
-            endpoint: validated.endpoint,
-            p256dh: validated.keys.p256dh,
-            auth: validated.keys.auth,
-            vapidDigest,
-          },
-        });
-      });
-    });
+        }),
+      ),
+    );
   }
 
   async remove(userId: string, endpoint: string): Promise<void> {
@@ -210,6 +214,7 @@ export class PrismaWebPushSubscriptionStore implements WebPushSubscriptionStore 
     await runAsSystem("revoke or retarget a session's web push subscriptions", () =>
       withTransactionRetry(() =>
         this.prisma.$transaction(async (tx) => {
+          await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`push-user:${userId}`}, 0))::text`;
           const where = { userId, sessionId };
           if (!nextSessionId) {
             await tx.webPushSubscription.deleteMany({ where });

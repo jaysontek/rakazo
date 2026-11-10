@@ -1431,7 +1431,14 @@ export const appContract = {
       .input(
         z
           .object({
-            endpoint: z.string().url().max(2048).optional(),
+            endpoint: z
+              .string()
+              .url()
+              .max(2048)
+              .refine((value) => isAllowedWebPushEndpoint(value), {
+                message: "Subscription endpoint is not allowed.",
+              })
+              .optional(),
           })
           .optional(),
       )
