@@ -3,12 +3,24 @@ import { useEffect, useRef, useState } from "react";
 import { authClient } from "./auth";
 import { endCallBeforeSignOut, forgetSignedInUser, sessionChangedUnderPage } from "./call-session";
 import { clearComposerDrafts } from "./composer-draft";
-import { clearSpaceSelection } from "./rpc";
+import { clearSpaceSelection, rpc } from "./rpc";
+import { currentWebPushSubscription, unsubscribeWebPush } from "./web-push";
 
 /** Kept across the reload after a failed sign-out, so the fresh page can say it failed. */
 export const LOG_OUT_FAILED_KEY = "rakazo.logOutFailed";
 /** The reload after a failed sign-out found the user still signed in. */
 let logOutFailed = false;
+
+/** Best-effort: drop this browser's Web Push registration while the session still authorizes it. */
+export async function unregisterWebPushBeforeSignOut(): Promise<void> {
+  try {
+    const subscription = await currentWebPushSubscription();
+    if (!subscription) return;
+    await unsubscribeWebPush(rpc);
+  } catch {
+    // Sign-out continues even if push cleanup fails.
+  }
+}
 
 /**
  * Signs out, then loads a fresh page whether or not it worked, so no call, microphone, pending
@@ -17,6 +29,8 @@ let logOutFailed = false;
 export async function signOut(destination: string): Promise<void> {
   // Hang up while the session still exists, so the server-side hang-up is authorized.
   await endCallBeforeSignOut();
+  // Drop push while authenticated; Expo tokens are session-bound the same way.
+  await unregisterWebPushBeforeSignOut();
   // The account changed while hanging up: signing out now would sign out the other account.
   if (sessionChangedUnderPage()) {
     window.location.reload();

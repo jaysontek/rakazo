@@ -8,6 +8,7 @@ import {
   PushSessionEndedError,
   settleCallRequest,
   validateWebPushSubscription,
+  WebPushSubscriptionConflictError,
   WebPushSubscriptionValidationError,
 } from "@rakazo/adapters";
 import type { ActionApprovalRule, Actor, ChatAlert, Me, SettingsScope } from "@rakazo/contracts";
@@ -484,16 +485,21 @@ export function accountRoutes(ctx: RouterContext) {
       }),
       registerWebPush: authed.notifications.registerWebPush.handler(async ({ context, input }) => {
         if (!deps.webPush || !deps.webPushSubscriptions) throw new ORPCError("NOT_FOUND");
+        if (!context.sessionId) throw new ORPCError("UNAUTHORIZED");
         try {
           const subscription = validateWebPushSubscription(input);
           await deps.webPushSubscriptions.save(
             context.actor.userId,
             subscription,
             deps.webPush.vapidDigest(),
+            context.sessionId,
           );
         } catch (error) {
           if (error instanceof WebPushSubscriptionValidationError) {
             throw new ORPCError("BAD_REQUEST", { message: error.message });
+          }
+          if (error instanceof WebPushSubscriptionConflictError) {
+            throw new ORPCError("CONFLICT", { message: error.message });
           }
           throw error;
         }

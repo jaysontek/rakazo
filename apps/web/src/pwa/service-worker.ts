@@ -33,7 +33,10 @@ export type ServiceWorkerScope = {
   location: { origin: string };
   caches: CacheStorage;
   clients: {
-    matchAll(options: { type: "window"; includeUncontrolled?: boolean }): Promise<readonly WindowClient[]>;
+    matchAll(options: {
+      type: "window";
+      includeUncontrolled?: boolean;
+    }): Promise<readonly WindowClient[]>;
     openWindow?(url: string): Promise<WindowClient | null>;
   };
   registration: {
@@ -55,7 +58,10 @@ export type ServiceWorkerScope = {
   addEventListener(type: "fetch", listener: (event: FetchEvent) => void): void;
   addEventListener(type: "message", listener: (event: MessageEvent) => void): void;
   addEventListener(type: "push", listener: (event: PushEvent) => void): void;
-  addEventListener(type: "notificationclick", listener: (event: NotificationClickEvent) => void): void;
+  addEventListener(
+    type: "notificationclick",
+    listener: (event: NotificationClickEvent) => void,
+  ): void;
 };
 
 export function bypassesServiceWorker(pathname: string): boolean {

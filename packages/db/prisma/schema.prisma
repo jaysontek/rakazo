@@ -144,10 +144,12 @@ model PushToken {
 }
 
 /// Browser Web Push subscriptions. Multiple browsers/devices per account; endpoint is unique.
+/// Bound to the registering session so sign-out stops delivery, matching Expo push tokens.
 model WebPushSubscription {
   id            String    @id @default(cuid())
   userId        String
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId     String
   endpoint      String
   p256dh        String
   auth          String
@@ -159,6 +161,7 @@ model WebPushSubscription {
 
   @@unique([endpoint])
   @@index([userId])
+  @@index([userId, sessionId])
   @@map("web_push_subscriptions")
 }
 

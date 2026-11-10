@@ -4,8 +4,8 @@ import {
   bypassesServiceWorker,
   installServiceWorker,
   readPushPayload,
-  sameOriginOpenUrl,
   SKIP_WAITING,
+  sameOriginOpenUrl,
 } from "./service-worker.js";
 
 const ORIGIN = "https://app.example.com";

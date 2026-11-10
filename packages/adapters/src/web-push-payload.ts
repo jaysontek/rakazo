@@ -53,7 +53,8 @@ export function buildWebPushPayload(
     body,
     icon: options.icon ?? "/icon-192.png",
     badge: options.badge ?? "/icon-192.png",
-    tag: message.threadId,
+    // Match the in-app alert tag so a closed-tab push replaces the same toast.
+    tag: `${message.threadId}:${message.kind}`,
     data: {
       url: webPushOpenPath(message, spaceId),
       kind: message.kind,
@@ -64,7 +65,10 @@ export function buildWebPushPayload(
     },
   });
   let payload = base();
-  while (Buffer.byteLength(JSON.stringify(payload), "utf8") > MAX_WEB_PUSH_PAYLOAD_BYTES && bodyChars > 1) {
+  while (
+    Buffer.byteLength(JSON.stringify(payload), "utf8") > MAX_WEB_PUSH_PAYLOAD_BYTES &&
+    bodyChars > 1
+  ) {
     bodyChars = Math.floor(bodyChars / 2);
     body = capped(message.body, bodyChars);
     payload = base();

@@ -20,6 +20,7 @@ import {
   auditLogConfig,
   ChatSdkMessagingSurface,
   CodexCatalogCache,
+  composeNotificationProviders,
   contentKeyProviderFromEnv,
   createAgentHomeStore,
   createApnsVoipProvider,
@@ -48,7 +49,6 @@ import {
   databaseCapacityBackoffMs,
   deploymentModelUsageLookup,
   ExpoPushProvider,
-  composeNotificationProviders,
   GraphileJobPublisher,
   homeStorageSweeper,
   InMemoryJobQueue,
@@ -67,8 +67,6 @@ import {
   PostgresRealtimeFanout,
   PrismaPushTokenStore,
   PrismaWebPushSubscriptionStore,
-  WebPushProvider,
-  webPushVapidFromEnv,
   pipedreamConfigFromEnv,
   RunJobPublisher,
   RunStarter,
@@ -86,6 +84,8 @@ import {
   shutdownPiTelemetry,
   UserDevices,
   userDeviceForwardSecret,
+  WebPushProvider,
+  webPushVapidFromEnv,
   withRunWorker,
   withSecretPersistence,
 } from "@rakazo/adapters";
@@ -280,7 +280,9 @@ async function main() {
   });
   const vapid = webPushVapidFromEnv(process.env);
   const webPush = vapid
-    ? new WebPushProvider(new PrismaWebPushSubscriptionStore(prisma), vapid)
+    ? new WebPushProvider(new PrismaWebPushSubscriptionStore(prisma), vapid, {
+        sessionExpiresAt: (sessionId) => pushSessionExpiresAt(prisma, sessionId),
+      })
     : undefined;
   const notifications = composeNotificationProviders(expoPush, webPush);
   const executor = createRunExecutor({

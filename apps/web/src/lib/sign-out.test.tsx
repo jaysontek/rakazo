@@ -15,10 +15,13 @@ import { COMPOSER_ENTER_TO_SEND_STORAGE_KEY } from "./composer-enter-to-send-pre
 import { selectedSpaceId, selectSpace } from "./rpc";
 import { LOG_OUT_FAILED_KEY, signOut, syncLogOutFailure, useSignOut } from "./sign-out";
 
-const { requestSignOut, endCallBeforeSignOut } = vi.hoisted(() => ({
-  requestSignOut: vi.fn(),
-  endCallBeforeSignOut: vi.fn(async () => undefined),
-}));
+const { requestSignOut, endCallBeforeSignOut, currentWebPushSubscription, unsubscribeWebPush } =
+  vi.hoisted(() => ({
+    requestSignOut: vi.fn(),
+    endCallBeforeSignOut: vi.fn(async () => undefined),
+    currentWebPushSubscription: vi.fn(async () => ({ endpoint: "https://fcm.googleapis.com/x" })),
+    unsubscribeWebPush: vi.fn(async () => undefined),
+  }));
 
 vi.mock("@lingui/core/macro", () => ({ t: (parts: TemplateStringsArray) => parts.join("") }));
 vi.mock("./auth", () => ({ authClient: { signOut: requestSignOut } }));
@@ -26,6 +29,14 @@ vi.mock("./call-session", async (importOriginal) => ({
   ...(await importOriginal<typeof CallSessionModule>()),
   endCallBeforeSignOut,
 }));
+vi.mock("./web-push", () => ({
+  currentWebPushSubscription,
+  unsubscribeWebPush,
+}));
+vi.mock("./rpc", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./rpc")>();
+  return { ...actual, rpc: {} };
+});
 
 const location = { assign: vi.fn(), reload: vi.fn() };
 
@@ -70,11 +81,23 @@ describe("signOut", () => {
     expect(endCallBeforeSignOut.mock.invocationCallOrder[0]).toBeLessThan(
       requestSignOut.mock.invocationCallOrder[0] ?? 0,
     );
+    expect(unsubscribeWebPush.mock.invocationCallOrder[0]).toBeLessThan(
+      requestSignOut.mock.invocationCallOrder[0] ?? 0,
+    );
     expect(location.assign).toHaveBeenCalledWith("/sign-in");
     expect(location.reload).not.toHaveBeenCalled();
     // Other tabs reload when the signed-in user is cleared.
     expect(localStorage.getItem(SIGNED_IN_USER_KEY)).toBeNull();
     expect(selectedSpaceId()).toBeNull();
+  });
+
+  it("unregisters Web Push before signing out when a subscription exists", async () => {
+    await signOut("/sign-in");
+    expect(currentWebPushSubscription).toHaveBeenCalled();
+    expect(unsubscribeWebPush).toHaveBeenCalled();
+    expect(unsubscribeWebPush.mock.invocationCallOrder[0]).toBeLessThan(
+      requestSignOut.mock.invocationCallOrder[0] ?? 0,
+    );
   });
 
   it("leaves no saved draft for whoever uses this browser next", async () => {

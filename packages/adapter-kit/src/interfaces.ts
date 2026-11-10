@@ -480,6 +480,8 @@ export interface NotificationProvider {
   describe(): AdapterDescriptor<{ push: boolean; email: boolean }>;
   send(message: NotificationMessage, context: AdapterContext): Promise<void>;
   incomingCall?(userId: string, call: IncomingCallNotification): Promise<void>;
+  /** True when at least one live push registration exists for the user. */
+  hasPushRecipient?(userId: string): Promise<boolean>;
 }
 
 /** Outbound account and security email. Product code owns content; adapters own delivery. */

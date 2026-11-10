@@ -14,6 +14,7 @@ import {
   resolveSandboxProvider,
   secretStoreOptionsFromEnv,
   telegramBotsFromEnv,
+  webPushVapidFromEnv,
 } from "@rakazo/adapters";
 import type { OidcConfig } from "@rakazo/auth";
 import type { MinimumClientBuilds, NavLink } from "@rakazo/contracts";
@@ -305,21 +306,7 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
     sendblueSigningSecret: optional(source.SENDBLUE_SIGNING_SECRET),
     sendbluePhoneNumber: optional(source.SENDBLUE_PHONE_NUMBER),
     expoAccessToken: optional(source.EXPO_ACCESS_TOKEN),
-    vapid: (() => {
-      const publicKey = optional(source.VAPID_PUBLIC_KEY);
-      const privateKey = optional(source.VAPID_PRIVATE_KEY);
-      const subject = optional(source.VAPID_SUBJECT);
-      if (!publicKey && !privateKey && !subject) return undefined;
-      if (!publicKey || !privateKey || !subject) {
-        throw new Error(
-          "VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, and VAPID_SUBJECT must be set together (or all left unset).",
-        );
-      }
-      if (!subject.startsWith("mailto:") && !subject.startsWith("https://")) {
-        throw new Error("VAPID_SUBJECT must be a mailto: or https: contact URI.");
-      }
-      return { publicKey, privateKey, subject };
-    })(),
+    vapid: webPushVapidFromEnv(source, console),
     apnsVoip: apnsVoipConfig(source),
     smtpUrl: optional(source.SMTP_URL),
     emailProvider: optional(source.EMAIL_PROVIDER),

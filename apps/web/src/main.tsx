@@ -18,6 +18,7 @@ import { queryClient } from "./lib/query";
 import { captureReferral } from "./lib/referral";
 import { applyUiAppearance, watchSystemAppearance } from "./lib/ui-appearance";
 import { resolveUiLocale } from "./lib/ui-locale";
+import { ensureInstallPromptController } from "./pwa/install-prompt";
 import { registerServiceWorker } from "./pwa/register";
 import { lockStandaloneZoom } from "./pwa/standalone";
 import "./styles.css";
@@ -26,6 +27,8 @@ markOnce("rk:renderer:module-evaluated");
 installPreloadRecovery();
 clientUpdates().install();
 registerServiceWorker();
+// Capture beforeinstallprompt before any Settings mount can miss it.
+ensureInstallPromptController();
 lockStandaloneZoom();
 applyUiDirection(resolveUiLocale());
 applyUiAppearance();

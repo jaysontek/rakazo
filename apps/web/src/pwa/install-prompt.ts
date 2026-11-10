@@ -9,24 +9,24 @@ export type InstallPromptHost = Pick<
   Window,
   "addEventListener" | "removeEventListener" | "matchMedia" | "document"
 > & {
-  navigator: Navigator & { standalone?: boolean };
+  navigator: Navigator & { standalone?: boolean; maxTouchPoints?: number };
   localStorage?: Pick<Storage, "getItem" | "setItem" | "removeItem">;
 };
 
-export type InstallPromptMode =
-  | "hidden"
-  | "install"
-  | "ios-instructions"
-  | "dismissed";
+export type InstallPromptMode = "hidden" | "install" | "ios-instructions" | "dismissed";
 
 const DISMISS_KEY = "rakazo.installPrompt.dismissed";
 
-export function isIosSafari(userAgent: string): boolean {
-  const ua = userAgent;
-  const iOS = /iPad|iPhone|iPod/.test(ua) || (ua.includes("Mac") && ua.includes("Mobile"));
-  const webkit = /WebKit/.test(ua);
-  const notOther = !/CriOS|FxiOS|EdgiOS|OPiOS|Chrome|Firefox|Edg/.test(ua);
-  return iOS && webkit && notOther;
+/**
+ * iPhone/iPad browsers where Add to Home Screen is Share-based (no beforeinstallprompt),
+ * including Safari, Chrome (CriOS), Edge (EdgiOS), and iPadOS desktop-mode.
+ */
+export function isIosSafari(userAgent: string, maxTouchPoints = 0): boolean {
+  const iOS =
+    /iPad|iPhone|iPod/.test(userAgent) ||
+    (/Mac(?:intosh|Intel)/.test(userAgent) && maxTouchPoints > 1);
+  if (!iOS) return false;
+  return /WebKit|CriOS|EdgiOS/.test(userAgent);
 }
 
 export function installPromptMode(input: {
@@ -81,15 +81,22 @@ export type InstallPromptController = {
 
 /**
  * Captures `beforeinstallprompt` and tracks install/dismiss state for settings UI.
+ * Create once at app startup so the event is not missed before Settings mounts.
  */
 export function createInstallPromptController(
   target: InstallPromptHost = window,
-  options: { userAgent?: string; storage?: Pick<Storage, "getItem" | "setItem" | "removeItem"> } = {},
+  options: {
+    userAgent?: string;
+    maxTouchPoints?: number;
+    storage?: Pick<Storage, "getItem" | "setItem" | "removeItem">;
+  } = {},
 ): InstallPromptController {
   const storage = options.storage ?? target.localStorage;
   const userAgent =
-    options.userAgent ??
-    ("userAgent" in target.navigator ? target.navigator.userAgent : "");
+    options.userAgent ?? ("userAgent" in target.navigator ? target.navigator.userAgent : "");
+  const maxTouchPoints =
+    options.maxTouchPoints ??
+    ("maxTouchPoints" in target.navigator ? (target.navigator.maxTouchPoints ?? 0) : 0);
   let deferred: BeforeInstallPromptEventLike | null = null;
   let installed = false;
   let dismissed = readInstallDismissed(storage);
@@ -119,7 +126,7 @@ export function createInstallPromptController(
         standalone: isStandalone(target),
         dismissed,
         canPrompt: Boolean(deferred),
-        iosSafari: isIosSafari(userAgent),
+        iosSafari: isIosSafari(userAgent, maxTouchPoints),
         installed,
       });
     },
@@ -153,4 +160,29 @@ export function createInstallPromptController(
       listeners.clear();
     },
   };
+}
+
+let sharedController: InstallPromptController | null = null;
+
+/** Idempotent: captures beforeinstallprompt as soon as the app boots. */
+export function ensureInstallPromptController(
+  target: InstallPromptHost = window,
+): InstallPromptController | null {
+  if (typeof window === "undefined") return null;
+  // Electron hosts the web UI itself; never show a browser install affordance.
+  if ("rakazoDesktop" in target && (target as { rakazoDesktop?: unknown }).rakazoDesktop) {
+    return null;
+  }
+  sharedController ??= createInstallPromptController(target);
+  return sharedController;
+}
+
+export function getInstallPromptController(): InstallPromptController | null {
+  return sharedController;
+}
+
+/** Test helper to reset the singleton between cases. */
+export function resetInstallPromptControllerForTests(): void {
+  sharedController?.dispose();
+  sharedController = null;
 }

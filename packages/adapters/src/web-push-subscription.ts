@@ -1,10 +1,13 @@
 import { createHash } from "node:crypto";
+import { isAllowedWebPushEndpoint } from "@rakazo/contracts";
 import type { PrismaClient } from "@rakazo/db";
 import { runAsSystem } from "@rakazo/db";
 
 export const MAX_WEB_PUSH_SUBSCRIPTIONS_PER_USER = 20;
 export const MAX_WEB_PUSH_ENDPOINT_CHARS = 2048;
 export const MAX_WEB_PUSH_KEY_CHARS = 256;
+/** Drop a subscription after this many consecutive send failures. */
+export const MAX_WEB_PUSH_FAILURES = 5;
 
 export type WebPushSubscriptionKeys = {
   p256dh: string;
@@ -19,6 +22,7 @@ export type WebPushSubscriptionInput = {
 export type StoredWebPushSubscription = WebPushSubscriptionInput & {
   id: string;
   userId: string;
+  sessionId: string;
   vapidDigest: string;
   failureCount: number;
 };
@@ -30,11 +34,16 @@ export class WebPushSubscriptionValidationError extends Error {
   }
 }
 
+export class WebPushSubscriptionConflictError extends Error {
+  constructor() {
+    super("Push subscription endpoint is already registered.");
+    this.name = "WebPushSubscriptionConflictError";
+  }
+}
+
 const BASE64URL = /^[A-Za-z0-9_-]+$/;
 
-export function validateWebPushSubscription(
-  input: unknown,
-): WebPushSubscriptionInput {
+export function validateWebPushSubscription(input: unknown): WebPushSubscriptionInput {
   if (!input || typeof input !== "object") {
     throw new WebPushSubscriptionValidationError("Subscription is required.");
   }
@@ -43,14 +52,8 @@ export function validateWebPushSubscription(
   if (!endpoint || endpoint.length > MAX_WEB_PUSH_ENDPOINT_CHARS) {
     throw new WebPushSubscriptionValidationError("Subscription endpoint is invalid.");
   }
-  let url: URL;
-  try {
-    url = new URL(endpoint);
-  } catch {
-    throw new WebPushSubscriptionValidationError("Subscription endpoint is invalid.");
-  }
-  if (url.protocol !== "https:") {
-    throw new WebPushSubscriptionValidationError("Subscription endpoint must be HTTPS.");
+  if (!isAllowedWebPushEndpoint(endpoint)) {
+    throw new WebPushSubscriptionValidationError("Subscription endpoint is not allowed.");
   }
   const keys = record.keys;
   if (!keys || typeof keys !== "object") {
@@ -82,10 +85,12 @@ export interface WebPushSubscriptionStore {
     userId: string,
     subscription: WebPushSubscriptionInput,
     vapidDigest: string,
+    sessionId: string,
   ): Promise<void>;
   remove(userId: string, endpoint: string): Promise<void>;
   removeByEndpoint(endpoint: string): Promise<void>;
   recordSuccess(id: string): Promise<void>;
+  /** Increments failureCount; removes the row once it reaches MAX_WEB_PUSH_FAILURES. */
   recordFailure(id: string): Promise<void>;
 }
 
@@ -94,11 +99,15 @@ export class PrismaWebPushSubscriptionStore implements WebPushSubscriptionStore 
 
   async list(userId: string): Promise<StoredWebPushSubscription[]> {
     const rows = await runAsSystem("list web push subscriptions", () =>
-      this.prisma.webPushSubscription.findMany({ where: { userId }, orderBy: { createdAt: "asc" } }),
+      this.prisma.webPushSubscription.findMany({
+        where: { userId },
+        orderBy: { createdAt: "asc" },
+      }),
     );
     return rows.map((row) => ({
       id: row.id,
       userId: row.userId,
+      sessionId: row.sessionId,
       endpoint: row.endpoint,
       keys: { p256dh: row.p256dh, auth: row.auth },
       vapidDigest: row.vapidDigest,
@@ -110,7 +119,11 @@ export class PrismaWebPushSubscriptionStore implements WebPushSubscriptionStore 
     userId: string,
     subscription: WebPushSubscriptionInput,
     vapidDigest: string,
+    sessionId: string,
   ): Promise<void> {
+    if (!sessionId.trim()) {
+      throw new WebPushSubscriptionValidationError("A signed-in session is required.");
+    }
     const validated = validateWebPushSubscription(subscription);
     await runAsSystem("save a web push subscription", async () => {
       await this.prisma.$transaction(async (tx) => {
@@ -118,10 +131,17 @@ export class PrismaWebPushSubscriptionStore implements WebPushSubscriptionStore 
           where: { endpoint: validated.endpoint },
         });
         if (existing) {
+          if (
+            existing.userId !== userId &&
+            (existing.p256dh !== validated.keys.p256dh || existing.auth !== validated.keys.auth)
+          ) {
+            throw new WebPushSubscriptionConflictError();
+          }
           await tx.webPushSubscription.update({
             where: { endpoint: validated.endpoint },
             data: {
               userId,
+              sessionId,
               p256dh: validated.keys.p256dh,
               auth: validated.keys.auth,
               vapidDigest,
@@ -143,6 +163,7 @@ export class PrismaWebPushSubscriptionStore implements WebPushSubscriptionStore 
         await tx.webPushSubscription.create({
           data: {
             userId,
+            sessionId,
             endpoint: validated.endpoint,
             p256dh: validated.keys.p256dh,
             auth: validated.keys.auth,
@@ -175,11 +196,19 @@ export class PrismaWebPushSubscriptionStore implements WebPushSubscriptionStore 
   }
 
   async recordFailure(id: string): Promise<void> {
-    await runAsSystem("mark web push failure", () =>
-      this.prisma.webPushSubscription.updateMany({
+    await runAsSystem("mark web push failure", async () => {
+      const rows = await this.prisma.webPushSubscription.updateMany({
         where: { id },
         data: { failureCount: { increment: 1 } },
-      }),
-    );
+      });
+      if (rows.count === 0) return;
+      const current = await this.prisma.webPushSubscription.findUnique({
+        where: { id },
+        select: { failureCount: true },
+      });
+      if ((current?.failureCount ?? 0) >= MAX_WEB_PUSH_FAILURES) {
+        await this.prisma.webPushSubscription.deleteMany({ where: { id } });
+      }
+    });
   }
 }

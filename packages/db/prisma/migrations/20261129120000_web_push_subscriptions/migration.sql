@@ -2,6 +2,7 @@
 CREATE TABLE "web_push_subscriptions" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
+    "sessionId" TEXT NOT NULL,
     "endpoint" TEXT NOT NULL,
     "p256dh" TEXT NOT NULL,
     "auth" TEXT NOT NULL,
@@ -15,6 +16,7 @@ CREATE TABLE "web_push_subscriptions" (
 
 CREATE UNIQUE INDEX "web_push_subscriptions_endpoint_key" ON "web_push_subscriptions"("endpoint");
 CREATE INDEX "web_push_subscriptions_userId_idx" ON "web_push_subscriptions"("userId");
+CREATE INDEX "web_push_subscriptions_userId_sessionId_idx" ON "web_push_subscriptions"("userId", "sessionId");
 
 ALTER TABLE "web_push_subscriptions" ADD CONSTRAINT "web_push_subscriptions_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 

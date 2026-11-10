@@ -184,6 +184,7 @@ import {
 import { SearchQueryOutputSchema } from "./search.js";
 import { SecurityEventListInputSchema, SecurityEventSchema } from "./security-events.js";
 import { SettingsScopeSchema, SpaceSettingSchema, settingsScopeInput } from "./settings-scope.js";
+import { isAllowedWebPushEndpoint } from "./web-push-endpoint.js";
 
 const botId = z.object({ botId: Id });
 const groupId = z.object({ groupId: Id });
@@ -1432,16 +1433,40 @@ export const appContract = {
     registerWebPush: oc
       .input(
         z.object({
-          endpoint: z.string().url().max(2048),
+          endpoint: z
+            .string()
+            .url()
+            .max(2048)
+            .refine((value) => isAllowedWebPushEndpoint(value), {
+              message: "Subscription endpoint is not allowed.",
+            }),
           keys: z.object({
-            p256dh: z.string().min(1).max(256).regex(/^[A-Za-z0-9_-]+$/),
-            auth: z.string().min(1).max(256).regex(/^[A-Za-z0-9_-]+$/),
+            p256dh: z
+              .string()
+              .min(1)
+              .max(256)
+              .regex(/^[A-Za-z0-9_-]+$/),
+            auth: z
+              .string()
+              .min(1)
+              .max(256)
+              .regex(/^[A-Za-z0-9_-]+$/),
           }),
         }),
       )
       .output(z.object({ ok: z.literal(true) })),
     unregisterWebPush: oc
-      .input(z.object({ endpoint: z.string().url().max(2048) }))
+      .input(
+        z.object({
+          endpoint: z
+            .string()
+            .url()
+            .max(2048)
+            .refine((value) => isAllowedWebPushEndpoint(value), {
+              message: "Subscription endpoint is not allowed.",
+            }),
+        }),
+      )
       .output(z.object({ ok: z.literal(true) })),
   },
   search: {

@@ -38,6 +38,7 @@ import {
   ChatSdkMessagingSurface,
   CodexCatalogCache,
   ComposioConnector,
+  composeNotificationProviders,
   contentKeyProviderFromEnv,
   createAgentHomeStore,
   createApnsVoipProvider,
@@ -65,7 +66,6 @@ import {
   deploymentModelUsageLookup,
   EmailEmulator,
   ExpoPushProvider,
-  composeNotificationProviders,
   GraphileJobPublisher,
   InMemoryJobQueue,
   InMemoryRealtimeFanout,
@@ -85,7 +85,6 @@ import {
   PostgresRealtimeFanout,
   PrismaPushTokenStore,
   PrismaWebPushSubscriptionStore,
-  WebPushProvider,
   pipedreamConfigFromEnv,
   piSessionsRoot,
   RunJobPublisher,
@@ -107,6 +106,7 @@ import {
   userDeviceForwardSecret,
   userDeviceInternalAddress,
   verifyModelServesAgents,
+  WebPushProvider,
   withSecretPersistence,
 } from "@rakazo/adapters";
 import type { DirectoryAccountChange } from "@rakazo/auth";
@@ -547,10 +547,11 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
     voip: await createApnsVoipProvider(env.apnsVoip),
   });
   const webPush = env.vapid
-    ? new WebPushProvider(webPushSubscriptions, env.vapid)
+    ? new WebPushProvider(webPushSubscriptions, env.vapid, {
+        sessionExpiresAt: (sessionId) => pushSessionExpiresAt(prisma, sessionId),
+      })
     : undefined;
-  const notifications =
-    notificationsOverride ?? composeNotificationProviders(expoPush, webPush);
+  const notifications = notificationsOverride ?? composeNotificationProviders(expoPush, webPush);
   const userDeviceSecret = userDeviceForwardSecret(env.encryptionKey);
   const userDeviceHub = env.userDevicesEnabled
     ? new UserDeviceHub({ prisma, address: userDeviceInternalAddress(env.apiHost, env.port) })

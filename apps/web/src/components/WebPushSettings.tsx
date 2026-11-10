@@ -88,7 +88,10 @@ export function WebPushSettings() {
         }
       >
         {needsInstall ? (
-          <p className="mt-2 text-[12.5px] text-muted-foreground" data-testid="web-push-install-hint">
+          <p
+            className="mt-2 text-[12.5px] text-muted-foreground"
+            data-testid="web-push-install-hint"
+          >
             <Trans>Install the app first to enable alerts on this device.</Trans>
           </p>
         ) : null}

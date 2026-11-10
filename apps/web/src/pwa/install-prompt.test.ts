@@ -1,9 +1,13 @@
+// @vitest-environment jsdom
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createInstallPromptController,
+  ensureInstallPromptController,
   installPromptMode,
   isIosSafari,
   readInstallDismissed,
+  resetInstallPromptControllerForTests,
   writeInstallDismissed,
 } from "./install-prompt.js";
 
@@ -67,7 +71,7 @@ describe("installPromptMode", () => {
 });
 
 describe("isIosSafari", () => {
-  it("detects iPhone Safari and rejects Chrome on iOS", () => {
+  it("detects iPhone Safari, Chrome, and Edge on iOS", () => {
     expect(
       isIosSafari(
         "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
@@ -76,6 +80,26 @@ describe("isIosSafari", () => {
     expect(
       isIosSafari(
         "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/120.0.0.0 Mobile/15E148 Safari/604.1",
+      ),
+    ).toBe(true);
+    expect(
+      isIosSafari(
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) EdgiOS/120.0.0.0 Mobile/15E148 Safari/604.1",
+      ),
+    ).toBe(true);
+  });
+
+  it("detects iPadOS desktop-mode Safari", () => {
+    expect(
+      isIosSafari(
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
+        5,
+      ),
+    ).toBe(true);
+    expect(
+      isIosSafari(
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
+        0,
       ),
     ).toBe(false);
   });
@@ -139,5 +163,50 @@ describe("createInstallPromptController", () => {
     expect(readInstallDismissed(api)).toBe(false);
     writeInstallDismissed(true, api);
     expect(readInstallDismissed(api)).toBe(true);
+  });
+
+  it("keeps a beforeinstallprompt that fired before Settings mounts", () => {
+    resetInstallPromptControllerForTests();
+    const storage = new Map<string, string>();
+    const listeners = new Map<string, Set<EventListener>>();
+    const host = {
+      document: {} as Document,
+      matchMedia: () => ({ matches: false }) as MediaQueryList,
+      navigator: { standalone: false, userAgent: "Chrome", maxTouchPoints: 0 } as Navigator & {
+        standalone?: boolean;
+      },
+      localStorage: {
+        getItem: (key: string) => storage.get(key) ?? null,
+        setItem: (key: string, value: string) => storage.set(key, value),
+        removeItem: (key: string) => storage.delete(key),
+      },
+      addEventListener: (type: string, listener: EventListener) => {
+        if (!listeners.has(type)) listeners.set(type, new Set());
+        listeners.get(type)!.add(listener);
+      },
+      removeEventListener: (type: string, listener: EventListener) => {
+        listeners.get(type)?.delete(listener);
+      },
+    };
+
+    // App startup captures the event before Settings mounts.
+    const startup = ensureInstallPromptController(host);
+    expect(startup).not.toBeNull();
+    const event = {
+      type: "beforeinstallprompt",
+      preventDefault: vi.fn(),
+      prompt: vi.fn(async () => undefined),
+      userChoice: Promise.resolve({ outcome: "accepted" as const }),
+    };
+    for (const listener of listeners.get("beforeinstallprompt") ?? []) {
+      listener(event as unknown as Event);
+    }
+    expect(startup!.getMode()).toBe("install");
+
+    // Settings mounts later and still sees the deferred prompt on the shared controller.
+    const late = ensureInstallPromptController(host);
+    expect(late).toBe(startup);
+    expect(late!.getMode()).toBe("install");
+    resetInstallPromptControllerForTests();
   });
 });

@@ -26,11 +26,11 @@ import type {
   PluginTextReader,
   ProviderCatalogCache,
   PushTokenStore,
-  WebPushProvider,
-  WebPushSubscriptionStore,
   RemoteConnectorDependencies,
   TicketChangeNotifier,
   verifyModelServesAgents,
+  WebPushProvider,
+  WebPushSubscriptionStore,
 } from "@rakazo/adapters";
 import type { Auth } from "@rakazo/auth";
 import type { NavLink } from "@rakazo/contracts";

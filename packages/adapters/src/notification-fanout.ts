@@ -41,7 +41,10 @@ export class FanoutNotificationProvider implements NotificationProvider {
       const deliverable = provider as NotificationProvider & Deliverable;
       if (typeof deliverable.hasPushRecipient === "function") {
         if (await deliverable.hasPushRecipient(userId)) return true;
-      } else if (!(provider instanceof ExpoPushProvider) && !(provider instanceof WebPushProvider)) {
+      } else if (
+        !(provider instanceof ExpoPushProvider) &&
+        !(provider instanceof WebPushProvider)
+      ) {
         return true;
       }
     }
@@ -92,7 +95,9 @@ export class FanoutNotificationProvider implements NotificationProvider {
 export function composeNotificationProviders(
   ...providers: Array<NotificationProvider | undefined>
 ): NotificationProvider {
-  const active = providers.filter((provider): provider is NotificationProvider => Boolean(provider));
+  const active = providers.filter((provider): provider is NotificationProvider =>
+    Boolean(provider),
+  );
   if (active.length === 0) {
     return {
       describe: () => ({
@@ -102,6 +107,7 @@ export function composeNotificationProviders(
         capabilities: { push: false, email: false },
       }),
       send: async () => undefined,
+      hasPushRecipient: async () => false,
     };
   }
   if (active.length === 1) return active[0]!;

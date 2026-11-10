@@ -80,13 +80,8 @@ export function appleStartupImageLinks(
 }
 
 /** HTML for the apple-touch-startup-image link set. */
-export function appleStartupImageHtml(
-  devices: readonly SplashDevice[] = SPLASH_DEVICES,
-): string {
+export function appleStartupImageHtml(devices: readonly SplashDevice[] = SPLASH_DEVICES): string {
   return appleStartupImageLinks(devices)
-    .map(
-      (link) =>
-        `<link rel="${link.rel}" href="${link.href}" media="${link.media}" />`,
-    )
+    .map((link) => `<link rel="${link.rel}" href="${link.href}" media="${link.media}" />`)
     .join("\n    ");
 }

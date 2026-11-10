@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { loadEnv } from "./env.js";
 
 const base = {
@@ -315,6 +315,19 @@ describe("loadEnv", () => {
         VAPID_SUBJECT: "ops@example.com",
       }),
     ).toThrow(/VAPID_SUBJECT/);
+  });
+
+  it("disables Web Push when keys are set without VAPID_SUBJECT", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    expect(
+      loadEnv({
+        ...base,
+        VAPID_PUBLIC_KEY: "pub",
+        VAPID_PRIVATE_KEY: "priv",
+      }).vapid,
+    ).toBeUndefined();
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
   });
 
   it("loads SMTP configuration and keeps the email emulator out of production", () => {

@@ -3,16 +3,12 @@
  * Run: pnpm --filter @rakazo/web generate:pwa-assets
  */
 import { mkdir, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { webDarkTokens, webLightTokens } from "@rakazo/ui-tokens";
 import sharp from "sharp";
-import {
-  SPLASH_DEVICES,
-  splashFileName,
-  splashPixelSize,
-  type SplashTheme,
-} from "../src/pwa/splash.ts";
+import type { SplashTheme } from "../src/pwa/splash.ts";
+import { SPLASH_DEVICES, splashFileName, splashPixelSize } from "../src/pwa/splash.ts";
 
 const root = fileURLToPath(new URL("../../..", import.meta.url));
 const source = join(root, "packages/ui-tokens/assets/Rakazo.icon/Assets/orange-bot.png");
@@ -49,11 +45,7 @@ async function maskable(size: number) {
     .toBuffer();
 }
 
-async function splashImage(
-  width: number,
-  height: number,
-  theme: SplashTheme,
-): Promise<Buffer> {
+async function splashImage(width: number, height: number, theme: SplashTheme): Promise<Buffer> {
   const background = theme === "dark" ? webDarkTokens.background : webLightTokens.background;
   const markSize = Math.round(Math.min(width, height) * 0.28);
   const mark = await sharp(await framed("transparent"))
@@ -77,7 +69,7 @@ await mkdir(splashDir, { recursive: true });
 for (const size of [192, 512] as const) {
   const out = join(publicDir, `icon-maskable-${size}.png`);
   await writeFile(out, await maskable(size));
-  console.log(`wrote ${out.slice(root.length).replace(/^\\/+/, '')}`);
+  console.log(`wrote ${relative(root, out)}`);
 }
 
 for (const device of SPLASH_DEVICES) {
@@ -86,10 +78,8 @@ for (const device of SPLASH_DEVICES) {
     const name = splashFileName(device, theme);
     const out = join(splashDir, name);
     await writeFile(out, await splashImage(width, height, theme));
-    console.log(`wrote splash/${name}`);
+    console.log(`wrote ${relative(root, out)}`);
   }
 }
 
 console.log(`generated ${SPLASH_DEVICES.length * 2} splash images and 2 maskable icons`);
-// Ensure parent packages resolve when run via tsx from apps/web.
-void dirname;

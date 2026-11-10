@@ -22,6 +22,7 @@ describe("buildWebPushPayload", () => {
     expect(payload.title).toBe("Done");
     expect(payload.body).toBe("Reply text");
     expect(payload.icon).toBe("/icon-192.png");
+    expect(payload.tag).toBe("thread-1:completion");
     expect(payload.data.url).toBe("/?space=space-1&bot=bot-1&thread=thread-1");
     expect(payload.data.url.startsWith("/")).toBe(true);
   });

@@ -2,19 +2,13 @@ import { Trans } from "@lingui/react/macro";
 import { Button } from "@rakazo/ui-web";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { desktopBridge } from "../lib/desktop";
-import {
-  createInstallPromptController,
-  type InstallPromptController,
-  type InstallPromptMode,
-} from "../pwa/install-prompt";
+import type { InstallPromptController, InstallPromptMode } from "../pwa/install-prompt";
+import { ensureInstallPromptController } from "../pwa/install-prompt";
 import { SettingsGroup, SettingsRow } from "./SettingsRows";
-
-let shared: InstallPromptController | null = null;
 
 function installController(): InstallPromptController | null {
   if (typeof window === "undefined" || desktopBridge()) return null;
-  shared ??= createInstallPromptController();
-  return shared;
+  return ensureInstallPromptController();
 }
 
 function useInstallPromptMode(): InstallPromptMode {

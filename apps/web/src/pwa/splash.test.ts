@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { webManifest } from "./plugin.js";
 import {
   appleStartupImageHtml,
   appleStartupImageLinks,
+  SPLASH_DEVICES,
   splashFileName,
   splashMedia,
-  SPLASH_DEVICES,
 } from "./splash.js";
-import { webManifest } from "./plugin.js";
 
 describe("iOS splash screens", () => {
   it("covers light and dark portrait links for every device size", () => {

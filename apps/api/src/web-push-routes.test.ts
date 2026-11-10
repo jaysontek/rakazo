@@ -19,7 +19,8 @@ const subscription = {
   },
 };
 
-function setup(options: { withPush?: boolean } = { withPush: true }) {
+function setup(options: { withPush?: boolean; sessionId?: string | null } = {}) {
+  const withPush = options.withPush !== false;
   const save = vi.fn(async () => undefined);
   const remove = vi.fn(async () => undefined);
   const deps = {
@@ -31,8 +32,8 @@ function setup(options: { withPush?: boolean } = { withPush: true }) {
       remove: async () => undefined,
       endSession: async () => undefined,
     },
-    webPushSubscriptions: options.withPush ? { save, remove, list: async () => [] } : undefined,
-    webPush: options.withPush
+    webPushSubscriptions: withPush ? { save, remove, list: async () => [] } : undefined,
+    webPush: withPush
       ? {
           publicKey: () => "test-public-key",
           vapidDigest: () => "digest",
@@ -45,8 +46,9 @@ function setup(options: { withPush?: boolean } = { withPush: true }) {
     },
     dataDir: "/tmp/rakazo-router-test",
   } as unknown as RouterDeps;
+  const sessionId = options.sessionId === undefined ? "session-1" : options.sessionId;
   const client = createRouterClient(createRouter(deps), {
-    context: { actor } as never,
+    context: { actor, ...(sessionId ? { sessionId } : {}) } as never,
   }).notifications;
   const anonymous = createRouterClient(createRouter(deps), {
     context: {} as never,
@@ -63,20 +65,28 @@ describe("web push notification routes", () => {
     });
   });
 
+  it("requires a session when registering", async () => {
+    const { client, save } = setup({ sessionId: null });
+    await expect(client.registerWebPush(subscription)).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+    });
+    expect(save).not.toHaveBeenCalled();
+  });
+
   it("reports unavailable when VAPID is unset", async () => {
     const { client } = setup({ withPush: false });
     await expect(client.webPushStatus()).resolves.toEqual({ available: false });
     await expect(client.registerWebPush(subscription)).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
-  it("saves a subscription for the signed-in user only", async () => {
+  it("saves a subscription for the signed-in session", async () => {
     const { client, save } = setup();
     await expect(client.webPushStatus()).resolves.toEqual({
       available: true,
       publicKey: "test-public-key",
     });
     await expect(client.registerWebPush(subscription)).resolves.toEqual({ ok: true });
-    expect(save).toHaveBeenCalledWith("user-1", subscription, "digest");
+    expect(save).toHaveBeenCalledWith("user-1", subscription, "digest", "session-1");
   });
 
   it("rejects an invalid subscription payload", async () => {
@@ -84,6 +94,17 @@ describe("web push notification routes", () => {
     await expect(
       client.registerWebPush({
         endpoint: "http://insecure.example/push",
+        keys: subscription.keys,
+      }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it("rejects SSRF-shaped endpoints at the contract boundary", async () => {
+    const { client, save } = setup();
+    await expect(
+      client.registerWebPush({
+        endpoint: "https://169.254.169.254/latest",
         keys: subscription.keys,
       }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
@@ -109,6 +130,7 @@ describe("web push 410 cleanup", () => {
         {
           id: "sub-1",
           userId: "user-1",
+          sessionId: "session-1",
           endpoint: "https://fcm.googleapis.com/fcm/send/gone",
           keys: { p256dh: "abc", auth: "def" },
           vapidDigest: vapidPublicKeyDigest(publicKey),
@@ -121,11 +143,15 @@ describe("web push 410 cleanup", () => {
       recordSuccess: async () => undefined,
       recordFailure: async () => undefined,
     };
-    const provider = new WebPushProvider(store, {
-      publicKey,
-      privateKey: "private",
-      subject: "mailto:ops@example.com",
-    });
+    const provider = new WebPushProvider(
+      store,
+      {
+        publicKey,
+        privateKey: "private",
+        subject: "mailto:ops@example.com",
+      },
+      { sessionExpiresAt: async () => new Date(Date.now() + 60_000) },
+    );
     const sendNotification = vi.fn(async () => {
       throw Object.assign(new Error("Gone"), { statusCode: 410 });
     });

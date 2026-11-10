@@ -85,9 +85,7 @@ export async function subscribeWebPush(
 ): Promise<void> {
   if (!host.Notification) throw new Error("Notifications are unavailable.");
   const permission =
-    host.Notification.permission === "granted"
-      ? "granted"
-      : await Notification.requestPermission();
+    host.Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
   if (permission !== "granted") throw new Error("Notification permission was not granted.");
   const registration = await host.navigator.serviceWorker?.ready;
   if (!registration?.pushManager) throw new Error("Push messaging is unavailable.");
