@@ -26,6 +26,8 @@ import type {
   PluginTextReader,
   ProviderCatalogCache,
   PushTokenStore,
+  WebPushProvider,
+  WebPushSubscriptionStore,
   RemoteConnectorDependencies,
   TicketChangeNotifier,
   verifyModelServesAgents,
@@ -63,6 +65,9 @@ export { callMarkerClientNonce } from "./routes/threads.js";
 
 export interface RouterDeps {
   pushTokens: PushTokenStore;
+  webPushSubscriptions?: WebPushSubscriptionStore;
+  /** Present when VAPID is configured; clients use it for the public key. */
+  webPush?: WebPushProvider;
   /** Stops a call's ring on the owner's other devices once it is settled. */
   notifications?: NotificationProvider;
   analytics?: ProductAnalytics;

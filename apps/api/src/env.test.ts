@@ -292,6 +292,31 @@ describe("loadEnv", () => {
     );
   });
 
+  it("loads VAPID only when all three values are set together", () => {
+    expect(loadEnv(base).vapid).toBeUndefined();
+    expect(
+      loadEnv({
+        ...base,
+        VAPID_PUBLIC_KEY: " pub ",
+        VAPID_PRIVATE_KEY: " priv ",
+        VAPID_SUBJECT: " mailto:ops@example.com ",
+      }).vapid,
+    ).toEqual({
+      publicKey: "pub",
+      privateKey: "priv",
+      subject: "mailto:ops@example.com",
+    });
+    expect(() => loadEnv({ ...base, VAPID_PUBLIC_KEY: "pub" })).toThrow(/VAPID_/);
+    expect(() =>
+      loadEnv({
+        ...base,
+        VAPID_PUBLIC_KEY: "pub",
+        VAPID_PRIVATE_KEY: "priv",
+        VAPID_SUBJECT: "ops@example.com",
+      }),
+    ).toThrow(/VAPID_SUBJECT/);
+  });
+
   it("loads SMTP configuration and keeps the email emulator out of production", () => {
     expect(
       loadEnv({

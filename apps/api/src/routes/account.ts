@@ -7,6 +7,8 @@ import {
   loadUserIncomingCalls,
   PushSessionEndedError,
   settleCallRequest,
+  validateWebPushSubscription,
+  WebPushSubscriptionValidationError,
 } from "@rakazo/adapters";
 import type { ActionApprovalRule, Actor, ChatAlert, Me, SettingsScope } from "@rakazo/contracts";
 import {
@@ -476,6 +478,34 @@ export function accountRoutes(ctx: RouterContext) {
         await deps.pushTokens.remove(context.actor.userId);
         return { ok: true as const };
       }),
+      webPushStatus: authed.notifications.webPushStatus.handler(async () => {
+        if (!deps.webPush) return { available: false as const };
+        return { available: true as const, publicKey: deps.webPush.publicKey() };
+      }),
+      registerWebPush: authed.notifications.registerWebPush.handler(async ({ context, input }) => {
+        if (!deps.webPush || !deps.webPushSubscriptions) throw new ORPCError("NOT_FOUND");
+        try {
+          const subscription = validateWebPushSubscription(input);
+          await deps.webPushSubscriptions.save(
+            context.actor.userId,
+            subscription,
+            deps.webPush.vapidDigest(),
+          );
+        } catch (error) {
+          if (error instanceof WebPushSubscriptionValidationError) {
+            throw new ORPCError("BAD_REQUEST", { message: error.message });
+          }
+          throw error;
+        }
+        return { ok: true as const };
+      }),
+      unregisterWebPush: authed.notifications.unregisterWebPush.handler(
+        async ({ context, input }) => {
+          if (!deps.webPushSubscriptions) throw new ORPCError("NOT_FOUND");
+          await deps.webPushSubscriptions.remove(context.actor.userId, input.endpoint);
+          return { ok: true as const };
+        },
+      ),
     },
     voice: {
       catalog: authed.voice.catalog.handler(async () =>

@@ -3,6 +3,7 @@ import { isBuildId } from "@rakazo/contracts/client-build";
 import { webDarkTokens } from "@rakazo/ui-tokens";
 import type { Plugin, Rolldown } from "vite";
 import { CACHE_PREFIX } from "./service-worker.js";
+import { appleStartupImageHtml } from "./splash.js";
 
 const SERVICE_WORKER_FILE = "sw.js";
 const MANIFEST_FILE = "site.webmanifest";
@@ -10,10 +11,18 @@ const PRECACHE_PLACEHOLDER = "__RAKAZO_SW_PRECACHE__";
 const CACHE_PLACEHOLDER = "__RAKAZO_SW_CACHE__";
 
 export function webManifest() {
-  const icons = [192, 512].map((size) => ({
+  const anyIcons = [192, 512].map((size) => ({
     src: `/icon-${size}.png`,
     sizes: `${size}x${size}`,
     type: "image/png",
+    purpose: "any" as const,
+  }));
+  // Separate safe-zone-padded art for masked launchers; keep full-bleed `any` icons.
+  const maskableIcons = [192, 512].map((size) => ({
+    src: `/icon-maskable-${size}.png`,
+    sizes: `${size}x${size}`,
+    type: "image/png",
+    purpose: "maskable" as const,
   }));
   return {
     id: "/",
@@ -25,11 +34,7 @@ export function webManifest() {
     display: "standalone",
     background_color: webDarkTokens.background,
     theme_color: webDarkTokens.background,
-    // The icons are full-bleed, so the same art also works under a launcher mask.
-    icons: [
-      ...icons.map((icon) => ({ ...icon, purpose: "any" })),
-      ...icons.map((icon) => ({ ...icon, purpose: "maskable" })),
-    ],
+    icons: [...anyIcons, ...maskableIcons],
   };
 }
 
@@ -79,6 +84,11 @@ export function rakazoPwa(buildId: string): Plugin[] {
   return [
     {
       name: "rakazo-pwa-manifest",
+      transformIndexHtml(html) {
+        if (html.includes('rel="apple-touch-startup-image"')) return html;
+        const links = appleStartupImageHtml();
+        return html.replace("</head>", `    ${links}\n  </head>`);
+      },
       configureServer(server) {
         server.middlewares.use((req, res, next) => {
           if (req.url?.split("?", 1)[0] !== `/${MANIFEST_FILE}`) {

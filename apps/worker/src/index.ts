@@ -48,6 +48,7 @@ import {
   databaseCapacityBackoffMs,
   deploymentModelUsageLookup,
   ExpoPushProvider,
+  composeNotificationProviders,
   GraphileJobPublisher,
   homeStorageSweeper,
   InMemoryJobQueue,
@@ -65,6 +66,9 @@ import {
   PipedreamConnector,
   PostgresRealtimeFanout,
   PrismaPushTokenStore,
+  PrismaWebPushSubscriptionStore,
+  WebPushProvider,
+  webPushVapidFromEnv,
   pipedreamConfigFromEnv,
   RunJobPublisher,
   RunStarter,
@@ -268,12 +272,17 @@ async function main() {
   const maxUploadSizeBytes = uploadSizeFromEnv(process.env);
   // Shared with the reconciler so a stuck wait uses the same push path as a finish notice.
   const pushTokens = new PrismaPushTokenStore(prisma, resolveEncryptionKey(process.env));
-  const notifications = new ExpoPushProvider(pushTokens, {
+  const expoPush = new ExpoPushProvider(pushTokens, {
     sessionExpiresAt: (sessionId) => pushSessionExpiresAt(prisma, sessionId),
     jobs,
     accessToken: process.env.EXPO_ACCESS_TOKEN,
     voip: await createApnsVoipProvider(apnsVoipConfig(process.env)),
   });
+  const vapid = webPushVapidFromEnv(process.env);
+  const webPush = vapid
+    ? new WebPushProvider(new PrismaWebPushSubscriptionStore(prisma), vapid)
+    : undefined;
+  const notifications = composeNotificationProviders(expoPush, webPush);
   const executor = createRunExecutor({
     maxUploadSizeBytes,
     mediaGeneration,
@@ -358,7 +367,7 @@ async function main() {
     messaging,
     cloudAgent,
     paymentWallet,
-    notifications,
+    notifications: expoPush,
     mediaGeneration,
     maxUploadSizeBytes,
   });

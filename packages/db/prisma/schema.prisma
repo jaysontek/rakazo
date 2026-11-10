@@ -83,6 +83,7 @@ model User {
   createdTickets              Ticket[]                     @relation("TicketCreatorUser")
   ticketComments              TicketComment[]              @relation("TicketCommentAuthorUser")
   pushToken                   PushToken?
+  webPushSubscriptions        WebPushSubscription[]
   callPushDevices             CallPushDevice[]
   trustedLinkSites            TrustedLinkSite[]
   feedbackReports             FeedbackReport[]
@@ -140,6 +141,25 @@ model PushToken {
   updatedAt DateTime @updatedAt
 
   @@map("push_tokens")
+}
+
+/// Browser Web Push subscriptions. Multiple browsers/devices per account; endpoint is unique.
+model WebPushSubscription {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint      String
+  p256dh        String
+  auth          String
+  /// Digest of the VAPID public key used when the browser subscribed.
+  vapidDigest   String
+  createdAt     DateTime  @default(now())
+  lastSuccessAt DateTime?
+  failureCount  Int       @default(0)
+
+  @@unique([endpoint])
+  @@index([userId])
+  @@map("web_push_subscriptions")
 }
 
 /// Encrypted call registrations per installation. Legacy message push remains compatible.

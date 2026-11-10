@@ -65,6 +65,7 @@ import {
   deploymentModelUsageLookup,
   EmailEmulator,
   ExpoPushProvider,
+  composeNotificationProviders,
   GraphileJobPublisher,
   InMemoryJobQueue,
   InMemoryRealtimeFanout,
@@ -83,6 +84,8 @@ import {
   PipedreamConnector,
   PostgresRealtimeFanout,
   PrismaPushTokenStore,
+  PrismaWebPushSubscriptionStore,
+  WebPushProvider,
   pipedreamConfigFromEnv,
   piSessionsRoot,
   RunJobPublisher,
@@ -536,14 +539,18 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
           sessionRoot: env.piSessionRecording ? piSessionsRoot(env.dataDir) : undefined,
         }));
   const pushTokens = new PrismaPushTokenStore(prisma, env.encryptionKey);
+  const webPushSubscriptions = new PrismaWebPushSubscriptionStore(prisma);
+  const expoPush = new ExpoPushProvider(pushTokens, {
+    sessionExpiresAt: (sessionId) => pushSessionExpiresAt(prisma, sessionId),
+    jobs,
+    accessToken: env.expoAccessToken,
+    voip: await createApnsVoipProvider(env.apnsVoip),
+  });
+  const webPush = env.vapid
+    ? new WebPushProvider(webPushSubscriptions, env.vapid)
+    : undefined;
   const notifications =
-    notificationsOverride ??
-    new ExpoPushProvider(pushTokens, {
-      sessionExpiresAt: (sessionId) => pushSessionExpiresAt(prisma, sessionId),
-      jobs,
-      accessToken: env.expoAccessToken,
-      voip: await createApnsVoipProvider(env.apnsVoip),
-    });
+    notificationsOverride ?? composeNotificationProviders(expoPush, webPush);
   const userDeviceSecret = userDeviceForwardSecret(env.encryptionKey);
   const userDeviceHub = env.userDevicesEnabled
     ? new UserDeviceHub({ prisma, address: userDeviceInternalAddress(env.apiHost, env.port) })
@@ -753,7 +760,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
     // Every API container runs node as the same pid, and deploys run old and new side by side.
     workerId: `${hostname()}:${process.pid}`,
     runtime,
-    notifications: notifications instanceof ExpoPushProvider ? notifications : undefined,
+    notifications: expoPush,
     secretStore: secrets,
     memoryProviders,
     deploymentModelKey: env.deploymentModelKey,
@@ -861,6 +868,8 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
     prisma,
     notifications,
     pushTokens,
+    webPushSubscriptions,
+    webPush,
     events,
     ticketChanges,
     boardEvents,

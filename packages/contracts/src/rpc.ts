@@ -1422,6 +1422,27 @@ export const appContract = {
       )
       .output(z.object({ ok: z.literal(true) })),
     unregisterPush: oc.output(z.object({ ok: z.literal(true) })),
+    /** Public VAPID key when Web Push is configured; unavailable when keys are unset. */
+    webPushStatus: oc.output(
+      z.object({
+        available: z.boolean(),
+        publicKey: z.string().optional(),
+      }),
+    ),
+    registerWebPush: oc
+      .input(
+        z.object({
+          endpoint: z.string().url().max(2048),
+          keys: z.object({
+            p256dh: z.string().min(1).max(256).regex(/^[A-Za-z0-9_-]+$/),
+            auth: z.string().min(1).max(256).regex(/^[A-Za-z0-9_-]+$/),
+          }),
+        }),
+      )
+      .output(z.object({ ok: z.literal(true) })),
+    unregisterWebPush: oc
+      .input(z.object({ endpoint: z.string().url().max(2048) }))
+      .output(z.object({ ok: z.literal(true) })),
   },
   search: {
     query: oc.input(z.object({ q: z.string().max(200) })).output(SearchQueryOutputSchema),

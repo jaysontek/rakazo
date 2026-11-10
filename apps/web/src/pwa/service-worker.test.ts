@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ServiceWorkerScope } from "./service-worker.js";
-import { bypassesServiceWorker, installServiceWorker, SKIP_WAITING } from "./service-worker.js";
+import {
+  bypassesServiceWorker,
+  installServiceWorker,
+  readPushPayload,
+  sameOriginOpenUrl,
+  SKIP_WAITING,
+} from "./service-worker.js";
 
 const ORIGIN = "https://app.example.com";
 const CACHE = "rakazo-shell-current";
@@ -37,11 +43,26 @@ function setup(options: { precache?: string[]; windows?: number } = {}) {
     keys: async () => [...stores.keys()],
     delete: async (name: string) => stores.delete(name),
   };
+  const showNotification = vi.fn(async () => undefined);
+  const openWindow = vi.fn(async () => null);
   const scope = {
     location: { origin: ORIGIN },
     caches: caches as unknown as CacheStorage,
-    clients: { matchAll: async () => Array.from({ length: options.windows ?? 1 }) },
-    registration: { waiting: null as typeof waiting | null },
+    clients: {
+      matchAll: async () =>
+        Array.from({ length: options.windows ?? 1 }, () => ({
+          url: `${ORIGIN}/`,
+          focused: false,
+          focus: async function focus() {
+            return this;
+          },
+        })),
+      openWindow,
+    },
+    registration: {
+      waiting: null as typeof waiting | null,
+      showNotification,
+    },
     skipWaiting: vi.fn(async () => undefined),
     fetch: (request: Request) => network(request),
     addEventListener: (type: string, listener: (event: unknown) => void) => {
@@ -71,6 +92,8 @@ function setup(options: { precache?: string[]; windows?: number } = {}) {
     stores,
     scope,
     waiting,
+    showNotification,
+    openWindow,
     dispatch,
     fetch: (path: string, mode?: RequestMode, method?: string) =>
       dispatch("fetch", { request: request(path, mode, method) }),
@@ -198,5 +221,51 @@ describe("service worker", () => {
     const pending = sw.fetch("/", "navigate");
     await vi.runAllTimersAsync();
     expect(await (await pending)!.text()).toBe("page");
+  });
+
+  it("shows a notification from a push payload", async () => {
+    const sw = setup({ windows: 0 });
+    await sw.dispatch("push", {
+      data: {
+        json: () => ({
+          title: "Bot",
+          body: "Done",
+          icon: "/icon-192.png",
+          badge: "/icon-192.png",
+          tag: "thread-1",
+          data: { url: "/?bot=1" },
+        }),
+      },
+    });
+    expect(sw.showNotification).toHaveBeenCalledWith(
+      "Bot",
+      expect.objectContaining({ body: "Done", tag: "thread-1" }),
+    );
+  });
+
+  it("opens a same-origin URL on notification click", async () => {
+    const sw = setup({ windows: 0 });
+    const close = vi.fn();
+    await sw.dispatch("notificationclick", {
+      notification: { data: { url: "/?thread=1" }, close },
+    });
+    expect(close).toHaveBeenCalledOnce();
+    expect(sw.openWindow).toHaveBeenCalledWith(`${ORIGIN}/?thread=1`);
+  });
+});
+
+describe("push helpers", () => {
+  it("reads a JSON push payload with defaults", () => {
+    expect(readPushPayload({ data: null }).title).toBe("Rakazo");
+    expect(
+      readPushPayload({
+        data: { json: () => ({ title: "Hi", body: "There" }) },
+      }),
+    ).toMatchObject({ title: "Hi", body: "There" });
+  });
+
+  it("rejects cross-origin notification URLs", () => {
+    expect(sameOriginOpenUrl(ORIGIN, { url: "https://evil.test/" })).toBeNull();
+    expect(sameOriginOpenUrl(ORIGIN, { url: "/ok" })).toBe(`${ORIGIN}/ok`);
   });
 });

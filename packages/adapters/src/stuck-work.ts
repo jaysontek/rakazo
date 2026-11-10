@@ -1,4 +1,9 @@
-import type { JobPublisher, NotificationMessage, NotificationProvider } from "@rakazo/adapter-kit";
+import type {
+  AdapterContext,
+  JobPublisher,
+  NotificationMessage,
+  NotificationProvider,
+} from "@rakazo/adapter-kit";
 import { runContinueJob } from "@rakazo/adapter-kit";
 import type { StuckWorkStatus } from "@rakazo/core";
 import {
@@ -247,8 +252,14 @@ async function pushCanDeliver(
   notifications: NotificationProvider,
   userId: string,
 ): Promise<boolean> {
-  if (!(notifications instanceof ExpoPushProvider)) return true;
-  return notifications.hasPushRecipient(userId);
+  const capable = notifications as NotificationProvider & {
+    hasPushRecipient?(id: string): Promise<boolean>;
+  };
+  if (typeof capable.hasPushRecipient === "function") {
+    return capable.hasPushRecipient(userId);
+  }
+  if (notifications instanceof ExpoPushProvider) return notifications.hasPushRecipient(userId);
+  return true;
 }
 
 async function claimStuckReminder(
@@ -389,6 +400,15 @@ async function sendStuckNotice(
       sender: await notificationIdentity({ id: run.botId, ...run.bot }),
       ...(run.thread.groupId ? { groupId: run.thread.groupId } : {}),
     };
+    const deliverable = notifications as NotificationProvider & {
+      deliver?(
+        message: NotificationMessage,
+        ctx: AdapterContext,
+      ): Promise<"delivered" | "undeliverable">;
+    };
+    if (typeof deliverable.deliver === "function") {
+      return await deliverable.deliver(notice, context);
+    }
     if (notifications instanceof ExpoPushProvider) {
       return await notifications.deliver(notice, context);
     }
