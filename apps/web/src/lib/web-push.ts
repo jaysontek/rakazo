@@ -62,8 +62,20 @@ function subscriptionJson(subscription: PushSubscription): {
 
 export async function fetchWebPushStatus(
   rpc: Pick<RpcClient, "notifications">,
-): Promise<{ available: boolean; publicKey?: string }> {
-  return rpc.notifications.webPushStatus();
+  endpoint?: string,
+): Promise<{ available: boolean; publicKey?: string; registered?: boolean }> {
+  return rpc.notifications.webPushStatus(endpoint ? { endpoint } : undefined);
+}
+
+/** True only when the server holds this browser's endpoint for the signed-in user. */
+export async function isWebPushRegisteredOnServer(
+  rpc: Pick<RpcClient, "notifications">,
+  host: WebPushHost = window,
+): Promise<boolean> {
+  const subscription = await currentWebPushSubscription(host);
+  if (!subscription) return false;
+  const status = await fetchWebPushStatus(rpc, subscription.endpoint);
+  return Boolean(status.available && status.registered);
 }
 
 export async function currentWebPushSubscription(

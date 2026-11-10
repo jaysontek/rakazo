@@ -11,14 +11,29 @@ export const LOG_OUT_FAILED_KEY = "rakazo.logOutFailed";
 /** The reload after a failed sign-out found the user still signed in. */
 let logOutFailed = false;
 
+const WEB_PUSH_UNREGISTER_TIMEOUT_MS = 3_000;
+
 /** Best-effort: drop this browser's Web Push registration while the session still authorizes it. */
-export async function unregisterWebPushBeforeSignOut(): Promise<void> {
-  try {
+export async function unregisterWebPushBeforeSignOut(
+  timeoutMs = WEB_PUSH_UNREGISTER_TIMEOUT_MS,
+): Promise<void> {
+  const work = (async () => {
     const subscription = await currentWebPushSubscription();
     if (!subscription) return;
     await unsubscribeWebPush(rpc);
+  })();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([
+      work,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("web push unregister timed out")), timeoutMs);
+      }),
+    ]);
   } catch {
-    // Sign-out continues even if push cleanup fails.
+    // Sign-out continues even if push cleanup fails or times out.
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }
 
@@ -29,13 +44,13 @@ export async function unregisterWebPushBeforeSignOut(): Promise<void> {
 export async function signOut(destination: string): Promise<void> {
   // Hang up while the session still exists, so the server-side hang-up is authorized.
   await endCallBeforeSignOut();
-  // Drop push while authenticated; Expo tokens are session-bound the same way.
-  await unregisterWebPushBeforeSignOut();
   // The account changed while hanging up: signing out now would sign out the other account.
   if (sessionChangedUnderPage()) {
     window.location.reload();
     return;
   }
+  // Drop push while authenticated; Expo tokens are session-bound the same way.
+  await unregisterWebPushBeforeSignOut();
   const result = await authClient.signOut().catch(() => null);
   if (result && !result.error) {
     forgetSignedInUser();

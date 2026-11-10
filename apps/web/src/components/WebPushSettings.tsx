@@ -6,6 +6,7 @@ import { useSpaceRpc } from "../lib/space-rpc";
 import {
   currentWebPushSubscription,
   fetchWebPushStatus,
+  isWebPushRegisteredOnServer,
   subscribeWebPush,
   unsubscribeWebPush,
   webPushNeedsHomeScreenInstall,
@@ -32,15 +33,18 @@ export function WebPushSettings() {
     let active = true;
     void (async () => {
       try {
-        const status = await fetchWebPushStatus(rpc);
+        const local = supported ? await currentWebPushSubscription() : null;
+        const status = await fetchWebPushStatus(rpc, local?.endpoint);
         if (!active) return;
         setAvailable(status.available);
         setPublicKey(status.publicKey);
-        if (status.available && supported) {
-          setSubscribed(Boolean(await currentWebPushSubscription()));
-        }
+        // Reflect the server registration for this browser — never silently re-register.
+        setSubscribed(Boolean(local && status.registered));
       } catch {
-        if (active) setAvailable(false);
+        if (active) {
+          setAvailable(false);
+          setSubscribed(false);
+        }
       } finally {
         if (active) setReady(true);
       }
@@ -60,10 +64,10 @@ export function WebPushSettings() {
     try {
       if (next) await subscribeWebPush(rpc, publicKey);
       else await unsubscribeWebPush(rpc);
-      setSubscribed(next);
+      setSubscribed(await isWebPushRegisteredOnServer(rpc));
     } catch {
       setError(t`Couldn't update notifications`);
-      setSubscribed(Boolean(await currentWebPushSubscription().catch(() => null)));
+      setSubscribed(await isWebPushRegisteredOnServer(rpc).catch(() => false));
     } finally {
       setBusy(false);
     }

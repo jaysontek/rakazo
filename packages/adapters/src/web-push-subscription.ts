@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
-import { isAllowedWebPushEndpoint } from "@rakazo/contracts";
+import { canonicalizeWebPushEndpoint } from "@rakazo/contracts";
 import type { PrismaClient } from "@rakazo/db";
-import { runAsSystem } from "@rakazo/db";
+import { runAsSystem, withTransactionRetry } from "@rakazo/db";
 
 export const MAX_WEB_PUSH_SUBSCRIPTIONS_PER_USER = 20;
 export const MAX_WEB_PUSH_ENDPOINT_CHARS = 2048;
@@ -48,11 +48,12 @@ export function validateWebPushSubscription(input: unknown): WebPushSubscription
     throw new WebPushSubscriptionValidationError("Subscription is required.");
   }
   const record = input as Record<string, unknown>;
-  const endpoint = typeof record.endpoint === "string" ? record.endpoint.trim() : "";
-  if (!endpoint || endpoint.length > MAX_WEB_PUSH_ENDPOINT_CHARS) {
+  const rawEndpoint = typeof record.endpoint === "string" ? record.endpoint.trim() : "";
+  if (!rawEndpoint || rawEndpoint.length > MAX_WEB_PUSH_ENDPOINT_CHARS) {
     throw new WebPushSubscriptionValidationError("Subscription endpoint is invalid.");
   }
-  if (!isAllowedWebPushEndpoint(endpoint)) {
+  const endpoint = canonicalizeWebPushEndpoint(rawEndpoint);
+  if (!endpoint) {
     throw new WebPushSubscriptionValidationError("Subscription endpoint is not allowed.");
   }
   const keys = record.keys;
@@ -81,6 +82,8 @@ export function vapidPublicKeyDigest(publicKey: string): string {
 
 export interface WebPushSubscriptionStore {
   list(userId: string): Promise<StoredWebPushSubscription[]>;
+  /** True when this user owns the endpoint (used by settings UI). */
+  hasEndpoint(userId: string, endpoint: string): Promise<boolean>;
   save(
     userId: string,
     subscription: WebPushSubscriptionInput,
@@ -89,6 +92,11 @@ export interface WebPushSubscriptionStore {
   ): Promise<void>;
   remove(userId: string, endpoint: string): Promise<void>;
   removeByEndpoint(endpoint: string): Promise<void>;
+  /**
+   * Sign-out deletes rows for `sessionId`. Password / passkey re-auth passes
+   * `nextSessionId` to retarget them when that session is still live.
+   */
+  endSession(userId: string, sessionId: string, nextSessionId?: string): Promise<void>;
   recordSuccess(id: string): Promise<void>;
   /** Increments failureCount; removes the row once it reaches MAX_WEB_PUSH_FAILURES. */
   recordFailure(id: string): Promise<void>;
@@ -113,6 +121,18 @@ export class PrismaWebPushSubscriptionStore implements WebPushSubscriptionStore 
       vapidDigest: row.vapidDigest,
       failureCount: row.failureCount,
     }));
+  }
+
+  async hasEndpoint(userId: string, endpoint: string): Promise<boolean> {
+    const canonical = canonicalizeWebPushEndpoint(endpoint.trim());
+    if (!canonical) return false;
+    const row = await runAsSystem("check web push subscription", () =>
+      this.prisma.webPushSubscription.findFirst({
+        where: { userId, endpoint: canonical },
+        select: { id: true },
+      }),
+    );
+    return Boolean(row);
   }
 
   async save(
@@ -183,6 +203,32 @@ export class PrismaWebPushSubscriptionStore implements WebPushSubscriptionStore 
   async removeByEndpoint(endpoint: string): Promise<void> {
     await runAsSystem("drop an expired web push subscription", () =>
       this.prisma.webPushSubscription.deleteMany({ where: { endpoint } }),
+    );
+  }
+
+  async endSession(userId: string, sessionId: string, nextSessionId?: string): Promise<void> {
+    await runAsSystem("revoke or retarget a session's web push subscriptions", () =>
+      withTransactionRetry(() =>
+        this.prisma.$transaction(async (tx) => {
+          const where = { userId, sessionId };
+          if (!nextSessionId) {
+            await tx.webPushSubscription.deleteMany({ where });
+            return;
+          }
+          const session = await tx.session.findFirst({
+            where: { id: nextSessionId, userId, expiresAt: { gt: new Date() } },
+            select: { id: true },
+          });
+          if (!session) {
+            await tx.webPushSubscription.deleteMany({ where });
+            return;
+          }
+          await tx.webPushSubscription.updateMany({
+            where,
+            data: { sessionId: nextSessionId },
+          });
+        }),
+      ),
     );
   }
 

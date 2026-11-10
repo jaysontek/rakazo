@@ -35,9 +35,17 @@ function context() {
 
 class MemoryStore implements WebPushSubscriptionStore {
   rows = new Map<string, StoredWebPushSubscription>();
+  /** Session ids that are treated as live for endSession retargeting. */
+  liveSessions = new Set<string>();
 
   async list(userId: string) {
     return [...this.rows.values()].filter((row) => row.userId === userId);
+  }
+
+  async hasEndpoint(userId: string, endpointValue: string) {
+    return [...this.rows.values()].some(
+      (row) => row.userId === userId && row.endpoint === endpointValue,
+    );
   }
 
   async save(
@@ -79,6 +87,24 @@ class MemoryStore implements WebPushSubscriptionStore {
     }
   }
 
+  async endSession(userId: string, sessionId: string, nextSessionId?: string) {
+    if (!nextSessionId) {
+      for (const [id, row] of this.rows) {
+        if (row.userId === userId && row.sessionId === sessionId) this.rows.delete(id);
+      }
+      return;
+    }
+    if (!this.liveSessions.has(nextSessionId)) {
+      for (const [id, row] of this.rows) {
+        if (row.userId === userId && row.sessionId === sessionId) this.rows.delete(id);
+      }
+      return;
+    }
+    for (const row of this.rows.values()) {
+      if (row.userId === userId && row.sessionId === sessionId) row.sessionId = nextSessionId;
+    }
+  }
+
   async recordSuccess(id: string) {
     const row = this.rows.get(id);
     if (row) row.failureCount = 0;
@@ -97,7 +123,7 @@ describe("WebPushProvider", () => {
     vi.restoreAllMocks();
   });
 
-  it("skips and deletes subscriptions whose session expired or is gone", async () => {
+  it("deletes expired sessions but keeps rows while a replacement is pending", async () => {
     const store = new MemoryStore();
     await store.save(
       "user-1",
@@ -114,6 +140,7 @@ describe("WebPushProvider", () => {
       digest,
       "session-expired",
     );
+    const sendNotification = vi.fn(async () => undefined);
     const provider = new WebPushProvider(
       store,
       { publicKey, privateKey: "private", subject: "mailto:ops@example.com" },
@@ -127,12 +154,41 @@ describe("WebPushProvider", () => {
     Object.defineProperty(provider, "library", {
       value: Promise.resolve({
         setVapidDetails: () => undefined,
-        sendNotification: vi.fn(async () => undefined),
+        sendNotification,
       }),
     });
     await expect(provider.deliver(message(), context())).resolves.toBe("undeliverable");
-    expect(store.rows.size).toBe(0);
+    expect(sendNotification).not.toHaveBeenCalled();
+    // Missing session: keep for afterReplaceSession. Expired: delete.
+    expect([...store.rows.values()].map((row) => row.sessionId)).toEqual(["session-gone"]);
     await expect(provider.hasPushRecipient("user-1")).resolves.toBe(false);
+  });
+
+  it("retargets subscriptions on session replace and deletes them on session end", async () => {
+    const store = new MemoryStore();
+    store.liveSessions.add("session-2");
+    await store.save(
+      "user-1",
+      { endpoint, keys: { p256dh: "abc", auth: "def" } },
+      digest,
+      "session-1",
+    );
+    await store.endSession("user-1", "session-1", "session-2");
+    expect([...store.rows.values()][0]?.sessionId).toBe("session-2");
+    await store.endSession("user-1", "session-2");
+    expect(store.rows.size).toBe(0);
+  });
+
+  it("deletes subscriptions when the replacement session is not live", async () => {
+    const store = new MemoryStore();
+    await store.save(
+      "user-1",
+      { endpoint, keys: { p256dh: "abc", auth: "def" } },
+      digest,
+      "session-1",
+    );
+    await store.endSession("user-1", "session-1", "session-dead");
+    expect(store.rows.size).toBe(0);
   });
 
   it("deletes disallowed endpoints before sending", async () => {

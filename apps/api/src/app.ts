@@ -657,6 +657,9 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
       await pushTokens
         .endSession(session.userId, session.id)
         .catch((error) => getLogger().error("push token removal failed", error));
+      await webPushSubscriptions
+        .endSession(session.userId, session.id)
+        .catch((error) => getLogger().error("web push removal failed", error));
       await endUserDeviceSession(deviceSessions, session).catch((error) =>
         getLogger().error("user device revocation failed", error),
       );
@@ -665,6 +668,9 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
       await pushTokens
         .endSession(session.userId, previous.id, session.id)
         .catch((error) => getLogger().error("push token session update failed", error));
+      await webPushSubscriptions
+        .endSession(session.userId, previous.id, session.id)
+        .catch((error) => getLogger().error("web push session update failed", error));
       await endUserDeviceSession(deviceSessions, previous, session).catch((error) =>
         getLogger().error("user device session update failed", error),
       );

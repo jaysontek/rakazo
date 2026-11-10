@@ -1423,13 +1423,26 @@ export const appContract = {
       )
       .output(z.object({ ok: z.literal(true) })),
     unregisterPush: oc.output(z.object({ ok: z.literal(true) })),
-    /** Public VAPID key when Web Push is configured; unavailable when keys are unset. */
-    webPushStatus: oc.output(
-      z.object({
-        available: z.boolean(),
-        publicKey: z.string().optional(),
-      }),
-    ),
+    /**
+     * Public VAPID key when Web Push is configured. Pass this browser's endpoint
+     * to learn whether the server still holds a registration for it.
+     */
+    webPushStatus: oc
+      .input(
+        z
+          .object({
+            endpoint: z.string().url().max(2048).optional(),
+          })
+          .optional(),
+      )
+      .output(
+        z.object({
+          available: z.boolean(),
+          publicKey: z.string().optional(),
+          /** Present when an endpoint was supplied; true only if this user owns it. */
+          registered: z.boolean().optional(),
+        }),
+      ),
     registerWebPush: oc
       .input(
         z.object({

@@ -23,6 +23,8 @@ function setup(options: { withPush?: boolean; sessionId?: string | null } = {}) 
   const withPush = options.withPush !== false;
   const save = vi.fn(async () => undefined);
   const remove = vi.fn(async () => undefined);
+  const hasEndpoint = vi.fn(async () => false);
+  const endSession = vi.fn(async () => undefined);
   const deps = {
     prisma: {},
     pushTokens: {
@@ -32,7 +34,9 @@ function setup(options: { withPush?: boolean; sessionId?: string | null } = {}) 
       remove: async () => undefined,
       endSession: async () => undefined,
     },
-    webPushSubscriptions: withPush ? { save, remove, list: async () => [] } : undefined,
+    webPushSubscriptions: withPush
+      ? { save, remove, list: async () => [], hasEndpoint, endSession }
+      : undefined,
     webPush: withPush
       ? {
           publicKey: () => "test-public-key",
@@ -53,7 +57,7 @@ function setup(options: { withPush?: boolean; sessionId?: string | null } = {}) 
   const anonymous = createRouterClient(createRouter(deps), {
     context: {} as never,
   }).notifications;
-  return { client, anonymous, save, remove };
+  return { client, anonymous, save, remove, hasEndpoint };
 }
 
 describe("web push notification routes", () => {
@@ -80,11 +84,17 @@ describe("web push notification routes", () => {
   });
 
   it("saves a subscription for the signed-in session", async () => {
-    const { client, save } = setup();
+    const { client, save, hasEndpoint } = setup();
     await expect(client.webPushStatus()).resolves.toEqual({
       available: true,
       publicKey: "test-public-key",
     });
+    await expect(client.webPushStatus({ endpoint: subscription.endpoint })).resolves.toEqual({
+      available: true,
+      publicKey: "test-public-key",
+      registered: false,
+    });
+    expect(hasEndpoint).toHaveBeenCalledWith("user-1", subscription.endpoint);
     await expect(client.registerWebPush(subscription)).resolves.toEqual({ ok: true });
     expect(save).toHaveBeenCalledWith("user-1", subscription, "digest", "session-1");
   });
@@ -137,9 +147,11 @@ describe("web push 410 cleanup", () => {
           failureCount: 0,
         },
       ],
+      hasEndpoint: async () => true,
       save: async () => undefined,
       remove: async () => undefined,
       removeByEndpoint,
+      endSession: async () => undefined,
       recordSuccess: async () => undefined,
       recordFailure: async () => undefined,
     };

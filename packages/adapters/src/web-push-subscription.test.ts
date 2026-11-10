@@ -69,9 +69,18 @@ describe("PrismaWebPushSubscriptionStore cross-user upsert", () => {
   let rows: Row[];
   let store: PrismaWebPushSubscriptionStore;
 
+  let liveSessionIds: Set<string>;
+
   beforeEach(() => {
     rows = [];
+    liveSessionIds = new Set();
     const tx = {
+      session: {
+        findFirst: vi.fn(
+          async ({ where }: { where: { id: string; userId: string; expiresAt: { gt: Date } } }) =>
+            liveSessionIds.has(where.id) ? { id: where.id } : null,
+        ),
+      },
       webPushSubscription: {
         findUnique: vi.fn(
           async ({ where }: { where: { endpoint: string } }) =>
@@ -84,6 +93,31 @@ describe("PrismaWebPushSubscriptionStore cross-user upsert", () => {
             return row;
           },
         ),
+        updateMany: vi.fn(
+          async ({
+            where,
+            data,
+          }: {
+            where: { userId: string; sessionId: string };
+            data: { sessionId: string };
+          }) => {
+            let count = 0;
+            for (const row of rows) {
+              if (row.userId === where.userId && row.sessionId === where.sessionId) {
+                row.sessionId = data.sessionId;
+                count += 1;
+              }
+            }
+            return { count };
+          },
+        ),
+        deleteMany: vi.fn(async ({ where }: { where: { userId: string; sessionId: string } }) => {
+          const before = rows.length;
+          rows = rows.filter(
+            (row) => !(row.userId === where.userId && row.sessionId === where.sessionId),
+          );
+          return { count: before - rows.length };
+        }),
         count: vi.fn(async () => rows.length),
         findFirst: vi.fn(async () => rows[0] ?? null),
         create: vi.fn(async ({ data }: { data: Omit<Row, "id" | "failureCount"> }) => {
@@ -152,5 +186,52 @@ describe("PrismaWebPushSubscriptionStore cross-user upsert", () => {
       vapidDigest: "digest-2",
       failureCount: 0,
     });
+  });
+
+  it("retargets rows on endSession replace when the next session is live", async () => {
+    liveSessionIds.add("session-b");
+    rows.push({
+      id: "existing",
+      userId: "user-a",
+      sessionId: "session-a",
+      endpoint: "https://fcm.googleapis.com/fcm/send/shared",
+      p256dh: "same-key",
+      auth: "same-auth",
+      vapidDigest: "digest",
+      failureCount: 0,
+    });
+    await store.endSession("user-a", "session-a", "session-b");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.sessionId).toBe("session-b");
+  });
+
+  it("deletes rows on endSession without a next session", async () => {
+    rows.push({
+      id: "existing",
+      userId: "user-a",
+      sessionId: "session-a",
+      endpoint: "https://fcm.googleapis.com/fcm/send/shared",
+      p256dh: "same-key",
+      auth: "same-auth",
+      vapidDigest: "digest",
+      failureCount: 0,
+    });
+    await store.endSession("user-a", "session-a");
+    expect(rows).toHaveLength(0);
+  });
+
+  it("deletes rows when the replacement session is not live", async () => {
+    rows.push({
+      id: "existing",
+      userId: "user-a",
+      sessionId: "session-a",
+      endpoint: "https://fcm.googleapis.com/fcm/send/shared",
+      p256dh: "same-key",
+      auth: "same-auth",
+      vapidDigest: "digest",
+      failureCount: 0,
+    });
+    await store.endSession("user-a", "session-a", "session-dead");
+    expect(rows).toHaveLength(0);
   });
 });

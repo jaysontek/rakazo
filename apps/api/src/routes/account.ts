@@ -479,9 +479,17 @@ export function accountRoutes(ctx: RouterContext) {
         await deps.pushTokens.remove(context.actor.userId);
         return { ok: true as const };
       }),
-      webPushStatus: authed.notifications.webPushStatus.handler(async () => {
-        if (!deps.webPush) return { available: false as const };
-        return { available: true as const, publicKey: deps.webPush.publicKey() };
+      webPushStatus: authed.notifications.webPushStatus.handler(async ({ context, input }) => {
+        if (!deps.webPush || !deps.webPushSubscriptions) return { available: false as const };
+        const endpoint = input?.endpoint?.trim();
+        const registered = endpoint
+          ? await deps.webPushSubscriptions.hasEndpoint(context.actor.userId, endpoint)
+          : undefined;
+        return {
+          available: true as const,
+          publicKey: deps.webPush.publicKey(),
+          ...(endpoint ? { registered: Boolean(registered) } : {}),
+        };
       }),
       registerWebPush: authed.notifications.registerWebPush.handler(async ({ context, input }) => {
         if (!deps.webPush || !deps.webPushSubscriptions) throw new ORPCError("NOT_FOUND");

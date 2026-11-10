@@ -4,7 +4,7 @@ import type {
   NotificationMessage,
   NotificationProvider,
 } from "@rakazo/adapter-kit";
-import { isAllowedWebPushEndpoint } from "@rakazo/contracts";
+import { canonicalizeWebPushEndpoint } from "@rakazo/contracts";
 import { getLogger } from "@rakazo/logging";
 import { buildWebPushPayload } from "./web-push-payload.js";
 import type {
@@ -92,12 +92,13 @@ export class WebPushProvider implements NotificationProvider {
     await Promise.all(
       rows.map(async (row) => {
         if (!(await this.sessionStillLive(row))) return;
-        if (!isAllowedWebPushEndpoint(row.endpoint)) {
+        const endpoint = canonicalizeWebPushEndpoint(row.endpoint);
+        if (!endpoint) {
           await this.subscriptions.removeByEndpoint(row.endpoint);
           return;
         }
         try {
-          await push.sendNotification({ endpoint: row.endpoint, keys: row.keys }, payload, {
+          await push.sendNotification({ endpoint, keys: row.keys }, payload, {
             TTL: 60 * 60 * 12,
             urgency:
               message.kind === "help" || message.kind === "takeover" || message.kind === "failure"
@@ -109,13 +110,13 @@ export class WebPushProvider implements NotificationProvider {
         } catch (error) {
           const status = pushStatus(error);
           if (status === 404 || status === 410) {
-            await this.subscriptions.removeByEndpoint(row.endpoint);
+            await this.subscriptions.removeByEndpoint(endpoint);
             return;
           }
           await this.subscriptions.recordFailure(row.id);
           getLogger().warn("web push send failed", {
             status,
-            host: endpointHost(row.endpoint),
+            host: endpointHost(endpoint),
           });
         }
       }),
@@ -125,7 +126,8 @@ export class WebPushProvider implements NotificationProvider {
 
   /**
    * A subscription bound to a session is delivered only while that session is
-   * still live. A missing or expired session drops the row.
+   * still live. A missing session row is left alone (replacement pending, same
+   * as Expo); only an expired session deletes the subscription.
    */
   private async sessionStillLive(row: StoredWebPushSubscription): Promise<boolean> {
     if (!row.sessionId) {
@@ -140,7 +142,9 @@ export class WebPushProvider implements NotificationProvider {
       getLogger().error("web push session lookup failed", error);
       return false;
     }
-    if (!expiresAt || expiresAt.getTime() <= Date.now()) {
+    // Replacement in flight: skip without deleting so afterReplaceSession can retarget.
+    if (!expiresAt) return false;
+    if (expiresAt.getTime() <= Date.now()) {
       await this.subscriptions.removeByEndpoint(row.endpoint);
       return false;
     }
