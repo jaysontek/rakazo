@@ -16,6 +16,10 @@ vi.mock("@lingui/react/macro", () => {
   return { useLingui: () => ({ t }), Trans: ({ children }: { children: ReactNode }) => children };
 });
 
+vi.mock("../../components/call/CallStrip", () => ({
+  CallStrip: () => <div data-testid="call-view" />,
+}));
+
 import { dictation } from "../../lib/dictation";
 import { createPageSession, PagesProvider } from "../../lib/pages";
 import { Composer } from "./composer";
@@ -670,6 +674,52 @@ describe("Composer", () => {
     const call = container?.querySelector<HTMLButtonElement>('[data-testid="call-button"]');
     expect(call?.getAttribute("aria-label")).toBe("Call");
     expect(call?.getAttribute("data-voice-ready")).toBe("");
+  });
+
+  it("returns Send for a typed 1:1 draft and sends on click", async () => {
+    const onSend = vi.fn().mockResolvedValue(true);
+    const onStartCall = vi.fn();
+    const textarea = renderComposer(onSend, {
+      phoneCallsEnabled: true,
+      voiceReady: true,
+      onStartCall,
+      onCallSettings: vi.fn(),
+    });
+    type(textarea, "hello from web");
+    expect(container?.querySelector('[data-testid="call-button"]')).toBeNull();
+    const send = container?.querySelector<HTMLButtonElement>('button[aria-label="Send"]');
+    expect(send?.disabled).toBe(false);
+    await act(async () => send?.click());
+    expect(onSend).toHaveBeenCalledWith("hello from web", [], expect.any(String));
+    expect(onStartCall).not.toHaveBeenCalled();
+  });
+
+  it("keeps Send visible when enter-to-send is off even with Call available", () => {
+    const textarea = renderComposer(vi.fn(), {
+      phoneCallsEnabled: true,
+      voiceReady: true,
+      onStartCall: vi.fn(),
+      onCallSettings: vi.fn(),
+      enterToSend: false,
+    });
+    expect(container?.querySelector('[data-testid="call-button"]')).not.toBeNull();
+    const send = container?.querySelector<HTMLButtonElement>('button[aria-label="Send"]');
+    expect(send).not.toBeNull();
+    expect(send?.disabled).toBe(true);
+    expect(textarea.value).toBe("");
+  });
+
+  it("hosts the call strip only when this thread's bot is on the call", () => {
+    renderComposer(vi.fn(), {
+      phoneCallsEnabled: true,
+      onStartCall: vi.fn(),
+      onCallSettings: vi.fn(),
+      hostingCall: true,
+    });
+    expect(container?.querySelector('[data-testid="call-view"]')).not.toBeNull();
+    expect(container?.querySelector('[data-testid="call-button"]')).toBeNull();
+    rerenderComposer({ hostingCall: false });
+    expect(container?.querySelector('[data-testid="call-view"]')).toBeNull();
   });
 
   it("clears the draft once the message is sent", async () => {

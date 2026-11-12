@@ -94,6 +94,8 @@ const ComposerBody = memo(function Composer({
   dictationTranscribe,
   voiceReady,
   onStartCall,
+  /** True when this thread's bot is the one on the call; hosts the strip and hides the dock. */
+  hostingCall,
   onCallSettings,
   replyTarget,
   replyQuote,
@@ -137,8 +139,9 @@ const ComposerBody = memo(function Composer({
   dictationTranscribe?: boolean;
   /** False while voice status loads or no voice is connected; Call then opens voice settings. */
   voiceReady?: boolean;
-  /** When set, Call replaces Send in the field bar; Enter sends. */
+  /** When set, Call occupies the empty-draft slot; Send returns once there is a draft. */
   onStartCall?: () => void;
+  hostingCall?: boolean;
   onCallSettings?: () => void;
   artifactTarget: ArtifactTarget;
   replyTarget?: ThreadMessage | null;
@@ -197,6 +200,7 @@ const ComposerBody = memo(function Composer({
     return slashMatch ? (slashMatch[1] ?? "") : null;
   });
   const onCall = useCallSession() !== null;
+  const stripHosted = Boolean(hostingCall);
   const talk = useHoldToTalk({
     transcribe: dictationTranscribe,
     disabled: disabled || onCall || !phoneCallsEnabled,
@@ -344,6 +348,10 @@ const ComposerBody = memo(function Composer({
   }, []);
   const canSend =
     draft.trim().length > 0 || selectedSkill !== null || pendingAttachments.length > 0;
+  // Call only in the empty slot; Send returns with a draft. When Enter-to-send is off,
+  // Send stays visible even while empty so the message can still leave.
+  const showCall = Boolean(onStartCall) && !stripHosted && !canSend;
+  const showSend = canSend || !enterToSend || !onStartCall || stripHosted;
 
   function markEdited() {
     onDraftEdited?.();
@@ -679,7 +687,7 @@ const ComposerBody = memo(function Composer({
           }}
         />
       ) : null}
-      {onStartCall && onCall && onCallSettings ? (
+      {stripHosted && onCallSettings ? (
         <CallStrip onSettings={onCallSettings} className="mb-2" />
       ) : null}
       {attachmentNotice ? (
@@ -1000,21 +1008,20 @@ const ComposerBody = memo(function Composer({
               {phoneCallsEnabled && draft.trim().length === 0 ? (
                 <HoldToTalkControls talk={talk} disabled={disabled || onCall} />
               ) : null}
-              {onStartCall ? (
-                !onCall ? (
-                  <Button
-                    size="icon"
-                    data-testid="call-button"
-                    aria-label={t`Call`}
-                    disabled={disabled}
-                    data-voice-ready={voiceReady ? "" : undefined}
-                    onClick={onStartCall}
-                    className="size-8 shrink-0 rounded-full transition-transform active:scale-95"
-                  >
-                    <AudioLines size={16} strokeWidth={2.2} />
-                  </Button>
-                ) : null
-              ) : (
+              {showCall ? (
+                <Button
+                  size="icon"
+                  data-testid="call-button"
+                  aria-label={t`Call`}
+                  disabled={disabled}
+                  data-voice-ready={voiceReady ? "" : undefined}
+                  onClick={onStartCall}
+                  className="size-8 shrink-0 rounded-full transition-transform active:scale-95"
+                >
+                  <AudioLines size={16} strokeWidth={2.2} />
+                </Button>
+              ) : null}
+              {showSend ? (
                 <Button
                   size="icon"
                   aria-label={t`Send`}
@@ -1024,7 +1031,7 @@ const ComposerBody = memo(function Composer({
                 >
                   <ArrowUp size={16} strokeWidth={2.2} />
                 </Button>
-              )}
+              ) : null}
               {running ? (
                 <Button
                   variant="outline"

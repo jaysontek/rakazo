@@ -1215,6 +1215,7 @@ function SpaceShell() {
                   ? () => callBot(active)
                   : undefined
               }
+              hostingCall={Boolean(active && call?.botId === active.id)}
               onCallSettings={() => openSettings("voice")}
               artifactTarget={transcriptArtifactTarget}
               replyTarget={composer.replyTarget}

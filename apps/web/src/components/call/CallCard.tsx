@@ -24,7 +24,7 @@ export function CallCard({ onSettings }: { onSettings: () => void }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onCall]);
-  // The matching bot's composer hosts the strip; elsewhere keep a compact dock.
+  // Composer hosts the strip only for this call's bot; dock only when that strip is not up.
   // Escape still hangs up above even when this dock is hidden.
   if (!call || botId === call.botId) return null;
   return (

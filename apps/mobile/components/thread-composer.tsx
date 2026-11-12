@@ -672,11 +672,7 @@ export function ThreadComposer({
                 testID="chat-composer"
                 onChangeText={updateDraft}
                 selection={selection}
-                returnKeyType="send"
-                submitBehavior="submit"
-                onSubmitEditing={() => {
-                  if (canSend && !sending) void send();
-                }}
+                returnKeyType="default"
                 onSelectionChange={(event) => {
                   const next = event.nativeEvent.selection;
                   const pending = pendingNativeEdit.current;
@@ -742,7 +738,6 @@ export function ThreadComposer({
                 multiline
                 scrollEnabled
                 textAlignVertical="top"
-                blurOnSubmit
                 style={{
                   color: tokens.foreground,
                   fontSize: 17,
@@ -769,7 +764,7 @@ export function ThreadComposer({
               </TextInput>
             </Pressable>
           </View>
-          {botId && !onCall ? (
+          {botId && !onCall && !canSend ? (
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={t("Call")}
@@ -790,7 +785,7 @@ export function ThreadComposer({
                 />
               </GlassSurface>
             </Pressable>
-          ) : !botId ? (
+          ) : (
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={t("Send")}
@@ -812,7 +807,7 @@ export function ThreadComposer({
                 />
               </GlassSurface>
             </Pressable>
-          ) : null}
+          )}
         </GlassSurface>
         {working ? (
           <Pressable

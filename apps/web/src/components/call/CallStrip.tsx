@@ -14,6 +14,7 @@ import { authClient } from "../../lib/auth";
 import type { CallState } from "../../lib/call-session";
 import { endCall, toggleMute, useCallSession } from "../../lib/call-session";
 import { useSpaceRpc } from "../../lib/space-rpc";
+import { cameraPreviewAlreadyGranted } from "./call-camera-preview";
 
 function callClock(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
@@ -32,7 +33,11 @@ function useCallElapsed(call: CallState | null): number {
   return connectedAt === null ? 0 : Math.max(0, Math.floor((now - connectedAt) / 1000));
 }
 
-/** Optional local camera preview for the user tile; never touches the call audio path. */
+/**
+ * Optional local camera preview for the user tile.
+ * Only attaches when camera permission is already granted — never prompts mid-call.
+ * Falls back to the account image/initial. Never touches the call audio path.
+ */
 function useUserVideoPreview(active: boolean) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [hasVideo, setHasVideo] = useState(false);
@@ -45,11 +50,14 @@ function useUserVideoPreview(active: boolean) {
     if (!media?.getUserMedia) return;
     let stream: MediaStream | null = null;
     let cancelled = false;
-    const preview = media
-      .getUserMedia({ video: { facingMode: "user" }, audio: false })
+    const preview = cameraPreviewAlreadyGranted()
+      .then((granted) => {
+        if (!granted || cancelled) return null;
+        return media.getUserMedia({ video: { facingMode: "user" }, audio: false });
+      })
       .then((next) => {
-        if (cancelled) {
-          for (const track of next.getTracks()) track.stop();
+        if (!next || cancelled) {
+          if (next) for (const track of next.getTracks()) track.stop();
           return;
         }
         stream = next;
@@ -116,13 +124,14 @@ function CallVoicePicker() {
       disabled={saving}
       onChange={(event) => {
         const next = event.target.value;
+        const previous = voiceId;
         setVoiceId(next);
         if (!next) return;
         setSaving(true);
         void rpc.voice
           .setVoice({ voiceId: next })
           .then((status) => setVoiceId(status.voiceId || next))
-          .catch(() => undefined)
+          .catch(() => setVoiceId(previous))
           .finally(() => setSaving(false));
       }}
       className="max-w-28 shrink-0"

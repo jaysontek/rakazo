@@ -144,13 +144,13 @@ tags:
 - tapOn: "Message Researcher"
 - inputText: "Keyboard visibility check"
 - assertVisible: "Keyboard visibility check"
-# Call occupies Send's place; Enter sends from the field.
-- assertVisible: "Call"
+# Call occupies the empty slot; a draft brings Send back.
+- assertVisible: "Send"
 - takeScreenshot: "15d-thread-keyboard"
 - hideKeyboard
 - tapOn: "Message Researcher"
 - assertVisible: "Keyboard visibility check"
-- assertVisible: "Call"
+- assertVisible: "Send"
 - takeScreenshot: "15g-thread-keyboard-reopened"
 - longPressOn: "Message Researcher"
 - tapOn: "Select all"
