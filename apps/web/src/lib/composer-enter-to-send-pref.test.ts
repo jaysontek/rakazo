@@ -25,9 +25,9 @@ beforeEach(async () => {
 });
 
 describe("defaultComposerEnterToSend", () => {
-  it("defaults to sending on desktop and newline on touch", () => {
+  it("defaults to sending on desktop and mobile", () => {
     expect(defaultComposerEnterToSend(false)).toBe(true);
-    expect(defaultComposerEnterToSend(true)).toBe(false);
+    expect(defaultComposerEnterToSend(true)).toBe(true);
   });
 });
 
@@ -41,15 +41,15 @@ describe("normalizeComposerEnterToSend", () => {
 
   it("falls back to the device default for missing or unknown values", () => {
     expect(normalizeComposerEnterToSend(null, false)).toBe(true);
-    expect(normalizeComposerEnterToSend(null, true)).toBe(false);
+    expect(normalizeComposerEnterToSend(null, true)).toBe(true);
     expect(normalizeComposerEnterToSend("maybe", false)).toBe(true);
-    expect(normalizeComposerEnterToSend("maybe", true)).toBe(false);
+    expect(normalizeComposerEnterToSend("maybe", true)).toBe(true);
   });
 });
 
 describe("get/setComposerEnterToSend", () => {
   it.each([false, true])("reads the device default with coarse pointer %s", (coarsePointer) => {
-    expect(mod.getComposerEnterToSend(memoryStorage(), coarsePointer)).toBe(!coarsePointer);
+    expect(mod.getComposerEnterToSend(memoryStorage(), coarsePointer)).toBe(true);
   });
 
   it.each([false, true])("uses the detected pointer without storage: %s", (coarsePointer) => {
@@ -57,8 +57,7 @@ describe("get/setComposerEnterToSend", () => {
       matchMedia: vi.fn().mockReturnValue({ matches: coarsePointer }),
     });
     try {
-      expect(mod.getComposerEnterToSend(null)).toBe(!coarsePointer);
-      expect(window.matchMedia).toHaveBeenCalledWith("(pointer: coarse)");
+      expect(mod.getComposerEnterToSend(null)).toBe(true);
     } finally {
       vi.unstubAllGlobals();
     }

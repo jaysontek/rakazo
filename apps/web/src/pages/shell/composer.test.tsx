@@ -659,6 +659,19 @@ describe("Composer", () => {
     },
   );
 
+  it("puts Call where Send was when voice calls are available", () => {
+    renderComposer(vi.fn(), {
+      phoneCallsEnabled: true,
+      voiceReady: true,
+      onStartCall: vi.fn(),
+      onCallSettings: vi.fn(),
+    });
+    expect(container?.querySelector('button[aria-label="Send"]')).toBeNull();
+    const call = container?.querySelector<HTMLButtonElement>('[data-testid="call-button"]');
+    expect(call?.getAttribute("aria-label")).toBe("Call");
+    expect(call?.getAttribute("data-voice-ready")).toBe("");
+  });
+
   it("clears the draft once the message is sent", async () => {
     const onSend = vi.fn().mockResolvedValue(true);
     const textarea = renderComposer(onSend);

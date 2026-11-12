@@ -15,23 +15,18 @@ test("an ongoing call stays in reach on a page outside the shell", async ({ page
   await callButton.click();
   const call = page.getByTestId("call-view");
   await expect(call).toBeVisible();
+  // The thread stays visible under the composer call strip.
+  await expect(page.getByTestId("transcript")).toBeVisible();
+  await expect(page.getByTestId("composer-bar")).toBeVisible();
+  await captureScreenshot(page, testInfo, "call-strip-in-thread");
 
   await page.getByTestId("user-menu-trigger").click();
   await page.getByRole("button", { name: "Artifacts", exact: true }).click();
   await expect(page).toHaveURL(/\/app\/artifacts$/);
   await expect(page.getByRole("heading", { name: "Artifacts", exact: true })).toBeVisible();
   await expect(call).toBeVisible();
-  await captureScreenshot(page, testInfo, "call-card-artifacts");
+  await captureScreenshot(page, testInfo, "call-strip-artifacts");
 
-  await call.getByRole("button", { name: "Minimize call" }).click();
-  const returnBar = page.getByTestId("call-return-bar");
-  await expect(returnBar).toBeVisible();
-  await expect(call).toBeHidden();
-  await captureScreenshot(page, testInfo, "call-return-bar-artifacts");
-
-  await returnBar.click();
-  await expect(call).toBeVisible();
   await call.getByRole("button", { name: "Hang up" }).click();
   await expect(call).toBeHidden();
-  await expect(returnBar).toBeHidden();
 });
