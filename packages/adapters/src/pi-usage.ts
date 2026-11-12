@@ -23,6 +23,7 @@ import { estimateModelContextTokens } from "./model-context.js";
 import { openRouterInferenceFetch } from "./openrouter-usage.js";
 import { requestedPiCacheWriteRetention, resolvePiCacheRetention } from "./pi-cache-retention.js";
 import { recordPiTelemetryContent, withPiTelemetrySpan } from "./pi-telemetry.js";
+import type { RunPhaseTiming } from "./run-phase-timing.js";
 import { fetchPairedWithDispatcher } from "./undici-fetch.js";
 
 /** Pi initializes absent usage to zero. Only raw numeric fields can prove reported zero. */
@@ -397,6 +398,8 @@ export function observedPiStream(
     recordUsage?: (event: Extract<AgentRuntimeEvent, { type: "usage" }>) => void | Promise<void>;
     /** Provider failures only; excludes context, reservations and usage settlement. */
     onProviderError?: (message: AssistantMessage) => void;
+    /** Exclusive model/tool/framework phase clock for the enclosing run. */
+    phaseTiming?: RunPhaseTiming;
   },
 ) {
   const stream = createAssistantMessageEventStream();
@@ -469,6 +472,7 @@ export function observedPiStream(
           : undefined;
         options?.signal?.throwIfAborted();
         started = true;
+        hooks?.phaseTiming?.markModelStart();
         // Some Pi adapters reject custom fetch outright. Only audited SSE families opt in.
         const collectRawUsage =
           /^(openai-|anthropic-)/.test(model.api) && !model.provider.startsWith("google");
@@ -535,6 +539,9 @@ export function observedPiStream(
                 : event.type === "error"
                   ? event.error
                   : event.partial;
+          }
+          if (event.type === "text_delta" && event.delta) {
+            hooks?.phaseTiming?.markFirstToken();
           }
           if (event.type === "done" || event.type === "error") {
             const message = event.type === "done" ? event.message : event.error;
@@ -621,6 +628,8 @@ export function observedPiStream(
         if (providerThrew && terminalError === providerError) hooks?.onProviderError?.(message);
         stream.push({ type: "error", reason: "error", error: message });
         stream.end(message);
+      } finally {
+        if (started) hooks?.phaseTiming?.markModelEnd();
       }
     },
   );

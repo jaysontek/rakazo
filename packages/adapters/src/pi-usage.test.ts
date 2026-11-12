@@ -16,6 +16,7 @@ import {
   observedPiStream,
   usageReportingFetch,
 } from "./pi-usage.js";
+import { createRunPhaseTiming } from "./run-phase-timing.js";
 
 const model: Model<Api> = {
   provider: "openrouter",
@@ -64,6 +65,36 @@ async function run(usage?: object) {
 }
 
 describe("Pi usage accounting", () => {
+  it("records model wait and TTFT on the real observed stream path", async () => {
+    const phaseTiming = createRunPhaseTiming();
+    phaseTiming.start();
+    const events: AgentRuntimeEvent[] = [];
+    const stream = await observedPiStream(
+      builtinModels(),
+      model,
+      { systemPrompt: "Fixture", messages: [{ role: "user", content: "test", timestamp: 1 }] },
+      {
+        apiKey: "fake-fixture-key",
+        fetch: async () =>
+          new Response(sse({ prompt_tokens: 3, completion_tokens: 1, total_tokens: 4 }), {
+            headers: { "content-type": "text/event-stream" },
+          }),
+      },
+      (event) => events.push(event),
+      undefined,
+      undefined,
+      { phaseTiming },
+    );
+    for await (const _event of stream) {
+      /* Drain the synthetic provider stream. */
+    }
+    const fields = phaseTiming.finish();
+    expect(fields["run.model_wait_ms"]).toBeGreaterThan(0);
+    expect(fields["run.ttft_ms"]).toBeGreaterThanOrEqual(0);
+    expect(fields["run.tool_wait_ms"]).toBe(0);
+    expect(events.some((event) => event.type === "usage")).toBe(true);
+  });
+
   it.each([false, true])(
     "acknowledges a producer sink only after successful accounting (fails=%s)",
     async (fails) => {
