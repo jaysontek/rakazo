@@ -595,6 +595,11 @@ export interface AgentRunRequest {
   computerModel?: AgentRunModel;
   /** Ordered, user-selected models eligible after provider unavailability. */
   fallbackModels?: Array<Pick<AgentRunModel, "provider" | "id" | "connectionId">>;
+  /**
+   * When `"tpm"`, only a per-minute token/request cap advances the fallback chain.
+   * Deployment shared-key backups use this so 5xx and generic failures stay on the primary.
+   */
+  fallbackTrigger?: "tpm";
   /** Resolve one configured backup lazily so healthy primary turns do no extra auth work. */
   resolveFallbackModel?: (
     provider: string,

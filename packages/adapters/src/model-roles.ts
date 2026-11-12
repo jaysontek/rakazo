@@ -9,6 +9,7 @@ import { backupChoiceKey, usableModelId } from "@rakazo/contracts";
 import type { PrismaClient } from "@rakazo/db";
 import { appliedModelRole } from "@rakazo/db";
 import { resolveAutoReviewChecker } from "./auto-review.js";
+import { resolveDeploymentBackupModels } from "./deployment-model.js";
 import type { ModelChoice, ModelCredential } from "./model-selection.js";
 import { findConnectedModelCredential } from "./model-selection.js";
 
@@ -38,12 +39,21 @@ export function deploymentModelRole(
   const provider = defaults.settings?.defaultModelProvider ?? defaults.deployment?.provider;
   const modelId =
     usableModelId(defaults.settings?.defaultModelId) ?? usableModelId(defaults.deployment?.model);
-  return { primary: provider && modelId ? { provider, modelId } : null, backups: [] };
+  // Same-provider env backups share the deployment key; only attach them when that key applies.
+  const backups =
+    role === "main" && provider
+      ? resolveDeploymentBackupModels(defaults.env)
+          .filter((backup) => backup.provider === provider && backup.modelId !== modelId)
+          .map((backup) => ({ provider: backup.provider, modelId: backup.modelId }))
+      : [];
+  return { primary: provider && modelId ? { provider, modelId } : null, backups };
 }
 
 export type EffectiveModelRole = ModelRoleSettings & {
   /** Whose model leads: the member's own, the deployment's, or nobody's. */
   primarySource: "member" | "deployment" | null;
+  /** Whose backups are offered: the member's always win over the deployment's. */
+  backupSource: "member" | "deployment" | null;
 };
 
 /** The member's ordered models for a purpose, with the deployment's filling what they left empty. */
@@ -58,12 +68,27 @@ export async function effectiveModelRole(
   requested?: SettingsScope,
 ): Promise<EffectiveModelRole> {
   const own = await appliedModelRole(prisma, scope, role, requested);
-  if (own.primary) return { ...own, primarySource: "member" };
+  if (own.primary) {
+    return {
+      ...own,
+      primarySource: "member",
+      backupSource: own.backups.length ? "member" : null,
+    };
+  }
   const deployment = deploymentModelRole(role, defaults);
+  if (own.backups.length) {
+    return {
+      primary: deployment.primary,
+      backups: own.backups,
+      primarySource: deployment.primary ? "deployment" : null,
+      backupSource: "member",
+    };
+  }
   return {
     primary: deployment.primary,
-    backups: own.backups.length ? own.backups : deployment.backups,
+    backups: deployment.backups,
     primarySource: deployment.primary ? "deployment" : null,
+    backupSource: deployment.backups.length ? "deployment" : null,
   };
 }
 

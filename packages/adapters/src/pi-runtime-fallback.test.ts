@@ -847,6 +847,50 @@ describe("Pi runtime ordered model fallback", () => {
     expect(providerState.stream).toHaveBeenCalledTimes(2);
   });
 
+  it("switches mid-task on a TPM 429 when fallbackTrigger is tpm", async () => {
+    const { clearDeploymentModelTpmWindows, isDeploymentModelTpmLimited } = await import(
+      "./deployment-tpm-window.js"
+    );
+    clearDeploymentModelTpmWindows();
+    providerState.stream.mockImplementation((target: Model<"openai-completions">) =>
+      target.provider === primary.provider
+        ? stream(
+            target,
+            message(
+              target,
+              [],
+              "error",
+              "429 rate_limit_error: Number of request tokens has exceeded your per-minute rate limit. Please try again in 8s.",
+            ),
+          )
+        : stream(target, message(target, [{ type: "text", text: "backup answer" }], "stop")),
+    );
+    const input = request([{ provider: backupA.provider, id: backupA.id, apiKey: "backup-key" }]);
+    input.fallbackTrigger = "tpm";
+    const events = await run(input);
+    expect(events.at(-1)).toEqual({ type: "done", text: "backup answer" });
+    expect(providerState.stream.mock.calls.map(([target]) => target.id)).toEqual([
+      primary.id,
+      backupA.id,
+    ]);
+    expect(isDeploymentModelTpmLimited(primary.provider, primary.id)).toBe(true);
+    clearDeploymentModelTpmWindows();
+  });
+
+  it("does not switch on 5xx when fallbackTrigger is tpm", async () => {
+    providerState.stream.mockImplementation((target: Model<"openai-completions">) =>
+      target.provider === primary.provider
+        ? stream(target, message(target, [], "error", "503 overloaded"))
+        : stream(target, message(target, [{ type: "text", text: "backup answer" }], "stop")),
+    );
+    const input = request([{ provider: backupA.provider, id: backupA.id, apiKey: "backup-key" }]);
+    input.fallbackTrigger = "tpm";
+    await expect(run(input)).rejects.toThrow(/503 overloaded/);
+    expect(providerState.stream.mock.calls.map(([target]) => target.provider)).toEqual([
+      primary.provider,
+    ]);
+  });
+
   it("completes on the backup when the primary throws a Kimi 403 usage-limit error", async () => {
     const kimiUsageLimit =
       '403 {"error":{"type":"permission_error","message":"You\'ve reached your 5-hour usage limit. Your quota will reset when the current 5-hour window ends. To continue now, purchase extra usage or upgrade your plan: https://www.kimi.com/membership/subscription?tab=quota"},"type":"error"}';

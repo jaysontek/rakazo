@@ -438,16 +438,22 @@ export async function resolveConnectedModelKey(
   requireStoredSecret = false,
   credentialId?: string,
 ) {
-  const hostedProvider = (await modelCreditBillingEnabled(deps))
-    ? resolveDeploymentModel().provider
-    : undefined;
+  const deployment = resolveDeploymentModel();
+  const hostedProvider = (await modelCreditBillingEnabled(deps)) ? deployment.provider : undefined;
+  // Same-provider deployment backups may share the env key; member backups may not.
+  const allowDeploymentKey =
+    !requireStoredSecret &&
+    !credentialId &&
+    deps.deploymentModelConfigured === true &&
+    provider === deployment.provider &&
+    (Boolean(deps.deploymentModelKey?.trim()) || Boolean(deployment.hostCredentials));
   const validationError = await validateConnectedModelChoice(
     deps.prisma,
     deps.secretStore,
     scope,
     provider,
     modelId,
-    { hostedProvider, credentialId, codexCatalog: deps.codexCatalog },
+    { hostedProvider, allowDeploymentKey, credentialId, codexCatalog: deps.codexCatalog },
   );
   if (validationError) throw new Error(validationError);
   const credential = await findConnectedModelCredential(
@@ -458,7 +464,8 @@ export async function resolveConnectedModelKey(
     modelId,
     { credentialId },
   );
-  if (!credential && provider !== hostedProvider) throw new Error(PINNED_PROVIDER_NOT_CONNECTED);
+  if (!credential && provider !== hostedProvider && !allowDeploymentKey)
+    throw new Error(PINNED_PROVIDER_NOT_CONNECTED);
   const resolved = await resolveModelKey(
     deps,
     scope.userId,

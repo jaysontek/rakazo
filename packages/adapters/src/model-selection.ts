@@ -490,6 +490,11 @@ export type ConnectedModelResolution = {
   /** The connection a role row is pinned to; nothing else may serve it. */
   credentialId?: string | null;
   hostedProvider?: string;
+  /**
+   * Same-provider deployment backups may use the shared env key without a stored
+   * credential. Member and Space credential backups must not set this.
+   */
+  allowDeploymentKey?: boolean;
   codexCatalog?: CodexLiveCatalog;
   /** Preview a connection save using the same runtime selection. */
   replacement?: { credentialId: string; secret: StoredModelSecret; defaultModel?: string | null };
@@ -760,6 +765,9 @@ export async function validateConnectedModelChoice(
     resolution.hostedProvider === provider &&
     (await hasHostedModelCredits(prisma, actor, provider))
   ) {
+    return isCatalogModelChoice(provider, modelId) ? undefined : "Unknown model for that provider";
+  }
+  if (resolution.allowDeploymentKey) {
     return isCatalogModelChoice(provider, modelId) ? undefined : "Unknown model for that provider";
   }
   const credential = await findConnectedModelCredential(

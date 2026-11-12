@@ -168,6 +168,44 @@ export function isRetryableProviderUnavailable(error: unknown): boolean {
 }
 
 /**
+ * A short per-minute (TPM/RPM) rate limit the provider will clear on its own. Longer quotas,
+ * billing exhaustion, and generic 5xx failures are not this. Deployment shared-key backups
+ * switch only on these windows.
+ */
+export function isPerMinuteTokenLimit(error: unknown): boolean {
+  const { text, statuses } = errorFacts(error);
+  if (isAccountExhaustion(text, statuses)) return false;
+  // A reset more than an hour away is a quota to wait out, not a per-minute window.
+  if (providerQuotaResetAt(text) !== undefined) return false;
+  const perMinute =
+    /\bper[- ](?:minute|min)\b|\b(?:requests?|tokens?) per min(?:ute)?\b|\b(?:rpm|tpm)\b|tokens per min(?:ute)?|\bgenerate.?requests?.?per.?minute\b/.test(
+      text,
+    );
+  if (!perMinute) return false;
+  if (statuses.has(429) || /\b429\b/.test(text)) return true;
+  // Some gateways omit the status and only name the per-minute metric.
+  return statuses.size === 0;
+}
+
+/**
+ * When a per-minute limit says it resets, or one minute from now when it does not say.
+ * Used to keep new deployment-default work on the backup until the primary's window opens.
+ */
+export function perMinuteLimitResetAt(error: unknown, now = Date.now()): number | undefined {
+  if (!isPerMinuteTokenLimit(error)) return undefined;
+  const { text } = errorFacts(error);
+  const seconds =
+    text.match(/retry[- ]after[:\s]+(\d+(?:\.\d+)?)\s*(?:seconds?|secs?|s)?\b/)?.[1] ??
+    text.match(/try again in\s+(\d+(?:\.\d+)?)\s*(?:seconds?|secs?|s)\b/)?.[1] ??
+    text.match(/retry[- ]after\\?"?\s*[:=]\s*\\?"?(\d+)(?![\d.])/)?.[1];
+  if (seconds !== undefined) {
+    const delayMs = Math.ceil(Number(seconds) * 1000);
+    if (Number.isFinite(delayMs) && delayMs > 0) return now + Math.min(delayMs, 60 * 60_000);
+  }
+  return now + 60_000;
+}
+
+/**
  * Overload, rate limit, 5xx, timeout or dropped connection. Quota, billing, auth and input
  * errors are permanent. Runtimes often expose only a message, so this reads text as well as
  * structured status fields.

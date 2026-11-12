@@ -1,9 +1,51 @@
 import { describe, expect, it } from "vitest";
 import {
   isModelCredentialRejected,
+  isPerMinuteTokenLimit,
   isRetryableProviderUnavailable,
   isTransientModelError,
+  perMinuteLimitResetAt,
 } from "./model-errors.js";
+
+describe("per-minute token limits", () => {
+  it.each([
+    "429 rate_limit_error: Number of request tokens has exceeded your per-minute rate limit",
+    "You have hit your usage limit for tokens per minute.",
+    "Usage limit: TPM.",
+    "Rate limit reached for example-model on tokens per min (TPM): Limit 60000, Used 51552, Requested 12568. Please try again in 4.12s.",
+    { status: 429, message: "Quota exceeded for quota metric 'requests' per minute" },
+  ])("recognizes %j", (error) => {
+    expect(isPerMinuteTokenLimit(error)).toBe(true);
+  });
+
+  it.each([
+    "503 overloaded",
+    "HTTP 500",
+    "429 rate limit",
+    "You exceeded your current quota, please check your plan and billing details.",
+    "You've reached your monthly usage limit.",
+    { status: 500, message: "tokens per minute" },
+  ])("rejects %j", (error) => {
+    expect(isPerMinuteTokenLimit(error)).toBe(false);
+  });
+
+  it("reads a short retry delay and otherwise waits one minute", () => {
+    const now = Date.parse("2026-11-12T00:00:00Z");
+    expect(
+      perMinuteLimitResetAt(
+        "Rate limit reached on tokens per min (TPM). Please try again in 4.12s.",
+        now,
+      ),
+    ).toBe(now + 4_120);
+    expect(
+      perMinuteLimitResetAt(
+        { status: 429, message: "You have hit your usage limit for tokens per minute." },
+        now,
+      ),
+    ).toBe(now + 60_000);
+    expect(perMinuteLimitResetAt("503 overloaded", now)).toBeUndefined();
+  });
+});
 
 describe("transient model errors", () => {
   it.each([
