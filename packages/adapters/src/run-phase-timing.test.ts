@@ -104,6 +104,48 @@ describe("run phase timing", () => {
     expect(timing.finish()["run.ttft_ms"]).toBe(12);
   });
 
+  it("measures TTFT only on the request that emitted text after a tool-only call", () => {
+    const clock = controllableClock();
+    const timing = createRunPhaseTiming(clock.now);
+    timing.start();
+    timing.markModelStart();
+    clock.at(50);
+    timing.markModelEnd();
+    timing.markToolStart();
+    clock.at(150);
+    timing.markToolEnd();
+    timing.markModelStart();
+    clock.at(180);
+    timing.markFirstToken();
+    clock.at(200);
+    timing.markModelEnd();
+    expect(timing.finish()).toEqual({
+      "run.ttft_ms": 30,
+      "run.model_wait_ms": 100,
+      "run.tool_wait_ms": 100,
+      "run.framework_ms": 0,
+    });
+  });
+
+  it("keeps model phase open across overlapping helper streams", () => {
+    const clock = controllableClock();
+    const timing = createRunPhaseTiming(clock.now);
+    timing.start();
+    timing.markModelStart();
+    clock.at(10);
+    timing.markModelStart();
+    clock.at(20);
+    timing.markModelEnd();
+    clock.at(50);
+    timing.markModelEnd();
+    clock.at(60);
+    expect(timing.finish()).toEqual({
+      "run.model_wait_ms": 50,
+      "run.tool_wait_ms": 0,
+      "run.framework_ms": 10,
+    });
+  });
+
   it("is safe to finish twice and ignores markers after finish", () => {
     const clock = controllableClock();
     const timing = createRunPhaseTiming(clock.now);

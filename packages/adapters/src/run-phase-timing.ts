@@ -1,10 +1,11 @@
 /**
  * Exclusive wall-clock phase timings for one Pi runtime invocation.
  *
- * Phases are mutually exclusive: while a model request is open the clock is
+ * Phases are mutually exclusive: while any model request is open the clock is
  * model-bound; while any tool is in flight (and no model request is open) it is
  * tool-bound; otherwise it is framework/orchestration. Sandbox and computer work
- * runs inside tools, so it lands in tool wait.
+ * runs inside tools, so it lands in tool wait. Overlapping helper streams share
+ * one clock and are refcounted like tools.
  *
  * Client delivery and UI render are not observable from server events and are
  * intentionally omitted from the fields.
@@ -16,7 +17,10 @@ export type RunPhaseTimingFields = {
   "run.model_wait_ms": number;
   "run.tool_wait_ms": number;
   "run.framework_ms": number;
-  /** First model request start → first non-empty text token. Omitted when no text arrived. */
+  /**
+   * Start of the model request that produced the first text token → that token.
+   * Earlier tool-only model requests are excluded. Omitted when no text arrived.
+   */
   "run.ttft_ms"?: number;
 };
 
@@ -37,7 +41,7 @@ export function createRunPhaseTiming(now: () => number = Date.now): RunPhaseTimi
   let closed = false;
   let phase: RunPhase = "framework";
   let phaseStarted = 0;
-  let modelOpen = false;
+  let modelsInFlight = 0;
   let toolsInFlight = 0;
   let firstModelStartAt: number | undefined;
   let firstTokenAt: number | undefined;
@@ -54,7 +58,7 @@ export function createRunPhaseTiming(now: () => number = Date.now): RunPhaseTimi
   };
 
   const desired = (): RunPhase => {
-    if (modelOpen) return "model";
+    if (modelsInFlight > 0) return "model";
     if (toolsInFlight > 0) return "tool";
     return "framework";
   };
@@ -85,8 +89,10 @@ export function createRunPhaseTiming(now: () => number = Date.now): RunPhaseTimi
     markModelStart() {
       if (closed) return;
       if (!started) this.start();
-      if (!modelOpen) firstModelStartAt ??= now();
-      modelOpen = true;
+      modelsInFlight += 1;
+      // Until text arrives, TTFT anchors to the current request so a prior
+      // tool-only call cannot stretch across the tool gap.
+      if (firstTokenAt === undefined) firstModelStartAt = now();
       enter(desired());
     },
     markFirstToken() {
@@ -95,8 +101,8 @@ export function createRunPhaseTiming(now: () => number = Date.now): RunPhaseTimi
       firstTokenAt = now();
     },
     markModelEnd() {
-      if (closed || !modelOpen) return;
-      modelOpen = false;
+      if (closed || modelsInFlight === 0) return;
+      modelsInFlight -= 1;
       enter(desired());
     },
     markToolStart() {
@@ -118,7 +124,7 @@ export function createRunPhaseTiming(now: () => number = Date.now): RunPhaseTimi
       if (!closed) {
         flush(now());
         closed = true;
-        modelOpen = false;
+        modelsInFlight = 0;
         toolsInFlight = 0;
       }
       return snapshot();
