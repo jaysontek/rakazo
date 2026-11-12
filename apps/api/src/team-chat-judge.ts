@@ -6,6 +6,7 @@ import {
   formatCurrentTimeInstruction,
   hasHostedModelCredits,
   hostedModelCreditObserver,
+  isDeploymentSharedKeyUsage,
   parseModelSecret,
   refreshStoredModelCredential,
   resolveMemberMainModel,
@@ -264,14 +265,27 @@ export class ModelTeamChatEngagementJudge implements TeamChatEngagementJudge {
     if (!credential || hosted) {
       const apiKey =
         provider === this.deps.deploymentProvider ? this.deps.deploymentModelKey : undefined;
+      const sharedKey = isDeploymentSharedKeyUsage({
+        ownCredential: false,
+        provider,
+        scriptedRuntime: false,
+      });
       const creditObserver = settings?.modelCreditsEnabled
         ? await hostedModelCreditObserver(this.deps.prisma, scope)
         : undefined;
-      const budgetObserver = await sharedKeyBudgetObserver(this.deps.prisma, scope);
+      const budgetObserver = sharedKey
+        ? await sharedKeyBudgetObserver(this.deps.prisma, scope)
+        : undefined;
       const callObserver = composeSharedKeyBudgetObserver(budgetObserver, creditObserver);
       return {
-        model: { provider, id: modelId, ...(apiKey ? { apiKey } : {}), callObserver },
-        sharedKey: true,
+        model: {
+          provider,
+          id: modelId,
+          ...(apiKey ? { apiKey } : {}),
+          callObserver,
+          usingSharedKey: sharedKey,
+        },
+        sharedKey,
       };
     }
 

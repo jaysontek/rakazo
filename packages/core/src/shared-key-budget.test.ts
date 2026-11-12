@@ -121,6 +121,45 @@ describe("shared-key weekly budget math", () => {
     expect(allotments.has("c")).toBe(false);
   });
 
+  it("keeps reservedUsd out of the redistributed pool", () => {
+    const weekStart = new Date("2026-11-02T05:00:00.000Z");
+    const now = new Date("2026-11-04T12:00:00.000Z");
+    const allotments = redivideWeeklyAllotments({
+      monthlyCapUsd: 400,
+      members: [
+        { userId: "a", joinedAt: weekStart },
+        { userId: "b", joinedAt: weekStart },
+      ],
+      weekStart,
+      now,
+      previousAllotments: new Map([
+        ["a", 50],
+        ["b", 50],
+      ]),
+      spentByUser: new Map([
+        ["a", 10],
+        ["b", 0],
+      ]),
+      reservedByUser: new Map([
+        ["a", 20],
+        ["b", 0],
+      ]),
+    });
+    // Remaining: (50-10-20)+(50-0-0)=70 → 35 each. Continuing a keeps spent+reserved.
+    expect(allotments.get("a")!).toBeCloseTo(10 + 20 + 35, 5);
+    expect(allotments.get("b")!).toBeCloseTo(0 + 0 + 35, 5);
+  });
+
+  it("ends the week at the next America/New_York Monday, not a fixed 7*24h", () => {
+    // Fall-back week: Monday starts in EDT and the next Monday is EST (+1h in UTC).
+    const weekStart = sharedKeyWeekStart(new Date("2026-10-28T12:00:00.000Z"));
+    expect(weekStart.toISOString()).toBe("2026-10-26T04:00:00.000Z");
+    expect(sharedKeyWeekEnd(weekStart).toISOString()).toBe("2026-11-02T05:00:00.000Z");
+    expect(new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()).toBe(
+      "2026-11-02T04:00:00.000Z",
+    );
+  });
+
   it("clamps percent used to 0..100", () => {
     expect(sharedKeyBudgetPercentUsed(0, 25)).toBe(0);
     expect(sharedKeyBudgetPercentUsed(12.5, 25)).toBe(50);

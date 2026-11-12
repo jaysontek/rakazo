@@ -72,7 +72,9 @@ the shared key, does not bypass it. Connect a personal key to keep working.
 configured.
 
 Spend is taken from existing `usage_records` rows marked as shared-key usage (cost from tokens ×
-catalog rates, or provider-reported cost). There is no second ledger.
+catalog rates, or provider-reported cost). There is no second ledger. Rows written before this
+feature are not backfilled as shared-key, so a mid-week deploy undercounts earlier-in-week shared
+spend until the next America/New_York Monday reset.
 
 ## Approvals
 

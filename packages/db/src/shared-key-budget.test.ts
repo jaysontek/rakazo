@@ -1,4 +1,3 @@
-import { sharedKeyWeekStart } from "@rakazo/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   addSharedKeyBudgetMember,
@@ -6,9 +5,14 @@ import {
   releaseSharedKeyBudgetHold,
   removeSharedKeyBudgetMember,
   reserveSharedKeyBudget,
+  SHARED_KEY_BUDGET_HOLD_STALE_MS,
   SharedKeyWeeklyBudgetExceededError,
   sharedKeyWeeklyBudgetStatus,
 } from "./shared-key-budget.js";
+
+vi.mock("@rakazo/logging", () => ({
+  getLogger: () => ({ warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }),
+}));
 
 type Member = { userId: string; joinedAt: Date };
 type Allotment = {
@@ -16,6 +20,7 @@ type Allotment = {
   userId: string;
   allotmentUsd: number;
   reservedUsd: number;
+  updatedAt: Date;
 };
 type Usage = { userId: string; costUsd: number; sharedKey: boolean; createdAt: Date };
 
@@ -24,12 +29,21 @@ function fakePrisma(state: {
   members: Member[];
   allotments: Allotment[];
   usage: Usage[];
+  knownUserIds?: string[];
+  locks?: string[];
 }) {
-  const weekStartOf = (now: Date) => sharedKeyWeekStart(now);
+  const locks = state.locks ?? [];
   const client = {
     deploymentSettings: {
       findUnique: vi.fn(async () =>
         state.monthly == null ? null : { sharedKeyMonthlyBudgetUsd: state.monthly },
+      ),
+    },
+    user: {
+      findMany: vi.fn(async ({ where }: { where: { id: { in: string[] } } }) =>
+        (state.knownUserIds ?? where.id.in)
+          .filter((id) => where.id.in.includes(id))
+          .map((id) => ({ id })),
       ),
     },
     sharedKeyBudgetMember: {
@@ -87,6 +101,33 @@ function fakePrisma(state: {
           });
         },
       ),
+      updateMany: vi.fn(
+        async ({
+          where,
+          data,
+        }: {
+          where: {
+            weekStart: Date;
+            reservedUsd: { gt: number };
+            updatedAt: { lt: Date };
+          };
+          data: { reservedUsd: number };
+        }) => {
+          let count = 0;
+          for (const row of state.allotments) {
+            if (
+              row.weekStart.getTime() === where.weekStart.getTime() &&
+              row.reservedUsd > where.reservedUsd.gt &&
+              row.updatedAt < where.updatedAt.lt
+            ) {
+              row.reservedUsd = data.reservedUsd;
+              row.updatedAt = new Date();
+              count += 1;
+            }
+          }
+          return { count };
+        },
+      ),
       upsert: vi.fn(
         async ({
           where,
@@ -106,7 +147,11 @@ function fakePrisma(state: {
             existing.allotmentUsd = update.allotmentUsd;
             return existing;
           }
-          state.allotments.push({ ...create, reservedUsd: create.reservedUsd ?? 0 });
+          state.allotments.push({
+            ...create,
+            reservedUsd: create.reservedUsd ?? 0,
+            updatedAt: create.updatedAt ?? new Date(),
+          });
           return create;
         },
       ),
@@ -126,6 +171,7 @@ function fakePrisma(state: {
           if (!row) throw new Error("missing allotment");
           if (typeof data.reservedUsd === "number") row.reservedUsd = data.reservedUsd;
           else row.reservedUsd += data.reservedUsd.increment;
+          row.updatedAt = new Date();
           return row;
         },
       ),
@@ -181,10 +227,14 @@ function fakePrisma(state: {
         },
       ),
     },
-    $queryRaw: vi.fn(async () => [{ lock: "1" }]),
+    $queryRaw: vi.fn(async (query: { values?: unknown[] }) => {
+      const key = query && Array.isArray(query.values) ? String(query.values[0] ?? "") : "";
+      if (key) locks.push(key);
+      return [{ lock: "1" }];
+    }),
     $transaction: vi.fn(async (work: (tx: unknown) => Promise<unknown>) => work(client)),
   };
-  return { client, weekStartOf };
+  return { client, locks };
 }
 
 describe("shared-key weekly budget", () => {
@@ -212,7 +262,6 @@ describe("shared-key weekly budget", () => {
     const { client } = fakePrisma(state);
     await addSharedKeyBudgetMember(client as never, "u1", weekStart);
     await reserveSharedKeyBudget(client as never, "u1", 1, weekStart);
-    // Personal-key usage must not consume the weekly allotment.
     expect(state.allotments[0]?.allotmentUsd).toBe(100);
     expect(state.allotments[0]?.reservedUsd).toBe(1);
   });
@@ -226,29 +275,116 @@ describe("shared-key weekly budget", () => {
     };
     const { client } = fakePrisma(state);
     await addSharedKeyBudgetMember(client as never, "u1", weekStart);
-    // One member: weekly cap = 400/1/4 = 100
     state.usage.push({
       userId: "u1",
       costUsd: 100,
       sharedKey: true,
       createdAt: new Date(weekStart.getTime() + 1_000),
     });
-    await expect(reserveSharedKeyBudget(client as never, "u1", 0.01, midweek)).rejects.toBeInstanceOf(
-      SharedKeyWeeklyBudgetExceededError,
-    );
+    await expect(
+      reserveSharedKeyBudget(client as never, "u1", 0.01, midweek),
+    ).rejects.toBeInstanceOf(SharedKeyWeeklyBudgetExceededError);
 
-    // Same user, new thread/call still blocked this week.
     await expect(reserveSharedKeyBudget(client as never, "u1", 0, midweek)).rejects.toBeInstanceOf(
       SharedKeyWeeklyBudgetExceededError,
     );
 
-    // After the America/New_York week boundary, a fresh allotment applies.
     const nextWeek = new Date("2026-11-09T05:00:00.000Z");
     await reserveSharedKeyBudget(client as never, "u1", 1, nextWeek);
     const nextAllotment = state.allotments.find(
       (row) => row.weekStart.getTime() === nextWeek.getTime() && row.userId === "u1",
     );
     expect(nextAllotment?.allotmentUsd).toBe(100);
+  });
+
+  it("clears stale reserved holds so a crash does not hard-stop the rest of the week", async () => {
+    const state = {
+      monthly: 400,
+      members: [{ userId: "u1", joinedAt: weekStart }],
+      allotments: [
+        {
+          weekStart,
+          userId: "u1",
+          allotmentUsd: 100,
+          reservedUsd: 80,
+          updatedAt: new Date(midweek.getTime() - SHARED_KEY_BUDGET_HOLD_STALE_MS - 1_000),
+        },
+      ] as Allotment[],
+      usage: [
+        {
+          userId: "u1",
+          costUsd: 10,
+          sharedKey: true,
+          createdAt: new Date(weekStart.getTime() + 1_000),
+        },
+      ],
+    };
+    const { client } = fakePrisma(state);
+    // Without cleanup, spent(10)+reserved(80)+1 would fit under 100, but a full 20 would not —
+    // after stale clear, reserved is 0 and a 20 reserve succeeds.
+    await reserveSharedKeyBudget(client as never, "u1", 20, midweek);
+    expect(state.allotments[0]?.reservedUsd).toBe(20);
+  });
+
+  it("re-divides remaining budget excluding reservedUsd and uses the members lock", async () => {
+    const locks: string[] = [];
+    const state = {
+      monthly: 400,
+      members: [
+        { userId: "a", joinedAt: weekStart },
+        { userId: "b", joinedAt: weekStart },
+      ],
+      allotments: [
+        {
+          weekStart,
+          userId: "a",
+          allotmentUsd: 50,
+          reservedUsd: 15,
+          updatedAt: midweek,
+        },
+        {
+          weekStart,
+          userId: "b",
+          allotmentUsd: 50,
+          reservedUsd: 0,
+          updatedAt: midweek,
+        },
+      ] as Allotment[],
+      usage: [
+        { userId: "a", costUsd: 10, sharedKey: true, createdAt: new Date(weekStart.getTime() + 1) },
+        { userId: "b", costUsd: 5, sharedKey: true, createdAt: new Date(weekStart.getTime() + 1) },
+      ],
+      locks,
+    };
+    const { client } = fakePrisma(state);
+    // Remaining: a=(50-10-15)=25, b=(50-5-0)=45 → 70 / 3. Mid-week c takes a
+    // proportional cap; surplus goes back to continuing members.
+    await addSharedKeyBudgetMember(client as never, "c", midweek);
+    expect(locks.length).toBeGreaterThan(0);
+    expect(locks.every((key) => key === "shared-key-budget:members")).toBe(true);
+    const evenRemaining = 70 / 3;
+    const proportional = (400 / 3 / 4) * 0.5;
+    const cSlice = Math.min(evenRemaining, proportional);
+    const surplusShare = (evenRemaining - cSlice) / 2;
+    const a = state.allotments.find((row) => row.userId === "a");
+    const c = state.allotments.find((row) => row.userId === "c");
+    // Continuing a keeps spent+reserved committed, plus even remaining and surplus.
+    expect(a?.allotmentUsd).toBeCloseTo(10 + 15 + evenRemaining + surplusShare, 5);
+    expect(a?.reservedUsd).toBe(15);
+    expect(c?.allotmentUsd).toBeCloseTo(cSlice, 5);
+  });
+
+  it("skips unknown user ids during reconcile instead of failing", async () => {
+    const state = {
+      monthly: 200,
+      members: [{ userId: "old", joinedAt: weekStart }],
+      allotments: [] as Allotment[],
+      usage: [] as Usage[],
+      knownUserIds: ["a"],
+    };
+    const { client } = fakePrisma(state);
+    await reconcileSharedKeyBudgetMembers(client as never, ["a", "missing"], weekStart);
+    expect(state.members.map((m) => m.userId)).toEqual(["a"]);
   });
 
   it("re-divides remaining budget when users are added or removed", async () => {
@@ -259,9 +395,9 @@ describe("shared-key weekly budget", () => {
         { userId: "b", joinedAt: weekStart },
       ],
       allotments: [
-        { weekStart, userId: "a", allotmentUsd: 50, reservedUsd: 0 },
-        { weekStart, userId: "b", allotmentUsd: 50, reservedUsd: 0 },
-      ],
+        { weekStart, userId: "a", allotmentUsd: 50, reservedUsd: 0, updatedAt: midweek },
+        { weekStart, userId: "b", allotmentUsd: 50, reservedUsd: 0, updatedAt: midweek },
+      ] as Allotment[],
       usage: [
         { userId: "a", costUsd: 10, sharedKey: true, createdAt: new Date(weekStart.getTime() + 1) },
         { userId: "b", costUsd: 5, sharedKey: true, createdAt: new Date(weekStart.getTime() + 1) },
@@ -284,6 +420,7 @@ describe("shared-key weekly budget", () => {
       members: [{ userId: "old", joinedAt: weekStart }],
       allotments: [] as Allotment[],
       usage: [] as Usage[],
+      knownUserIds: ["a", "b"],
     };
     const { client } = fakePrisma(state);
     await reconcileSharedKeyBudgetMembers(client as never, ["a", "b"], weekStart);

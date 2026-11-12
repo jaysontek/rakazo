@@ -3,15 +3,15 @@ import { spendingPeriodStart } from "./spending.js";
 /** Weekly shared-key budgets reset at Monday 00:00 in this zone. */
 export const SHARED_KEY_BUDGET_TIMEZONE = "America/New_York";
 
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-
 /** Monday 00:00 America/New_York for the week that contains `now`. */
 export function sharedKeyWeekStart(now = new Date()): Date {
   return spendingPeriodStart("week", now, SHARED_KEY_BUDGET_TIMEZONE, now);
 }
 
+/** Next Monday 00:00 America/New_York after `weekStart` (DST-safe week length). */
 export function sharedKeyWeekEnd(weekStart: Date): Date {
-  return new Date(weekStart.getTime() + WEEK_MS);
+  const nextWeekInstant = new Date(weekStart.getTime() + 8 * 24 * 60 * 60 * 1000);
+  return sharedKeyWeekStart(nextWeekInstant);
 }
 
 /**
@@ -37,11 +37,13 @@ export type SharedKeyBudgetMember = { userId: string; joinedAt: Date };
 /**
  * Recompute each member's weekly allotment after a membership change or at week open.
  *
- * - The week's pool starts as monthlyCap/4, or as the sum of unspent prior allotments when
- *   redistributing mid-week (including unused remainder from removed users).
+ * - The week's pool starts as monthlyCap/4, or as the sum of unspent *and unreserved* prior
+ *   allotments when redistributing mid-week (including unused remainder from removed users).
  * - That remaining pool is split evenly across the current member set.
  * - A member who joined after this week's start and has no prior allotment is capped at
  *   (full-week share) × (fraction of week remaining), not a full share.
+ * - Continuing members keep spent + reserved committed; their new allotment is
+ *   spent + reserved + evenRemaining so in-flight holds are not redistributed.
  */
 export function redivideWeeklyAllotments(args: {
   monthlyCapUsd: number;
@@ -50,8 +52,17 @@ export function redivideWeeklyAllotments(args: {
   now: Date;
   previousAllotments: ReadonlyMap<string, number>;
   spentByUser: ReadonlyMap<string, number>;
+  reservedByUser?: ReadonlyMap<string, number>;
 }): Map<string, number> {
-  const { monthlyCapUsd, members, weekStart, now, previousAllotments, spentByUser } = args;
+  const {
+    monthlyCapUsd,
+    members,
+    weekStart,
+    now,
+    previousAllotments,
+    spentByUser,
+    reservedByUser = new Map(),
+  } = args;
   const result = new Map<string, number>();
   const n = members.length;
   if (n <= 0 || !(monthlyCapUsd > 0)) return result;
@@ -60,8 +71,8 @@ export function redivideWeeklyAllotments(args: {
   const fullShare = weekPool / n;
   const fraction = weekFractionRemaining(now, weekStart);
 
-  // Fresh week (no prior allotments): each member gets an even full-week share. Spend is
-  // counted separately against that cap — do not add spent into the allotment.
+  // Fresh week (no prior allotments): each member gets an even full-week share. Spend and
+  // reserved are counted separately against that cap — do not fold them into the allotment.
   if (previousAllotments.size === 0) {
     for (const member of members) {
       const midWeekJoin = member.joinedAt.getTime() > weekStart.getTime();
@@ -76,7 +87,8 @@ export function redivideWeeklyAllotments(args: {
   let remainingPool = 0;
   for (const [userId, allotment] of previousAllotments) {
     const spent = spentByUser.get(userId) ?? 0;
-    remainingPool += Math.max(0, allotment - spent);
+    const reserved = reservedByUser.get(userId) ?? 0;
+    remainingPool += Math.max(0, allotment - spent - reserved);
   }
 
   const evenRemaining = remainingPool / n;
@@ -85,6 +97,7 @@ export function redivideWeeklyAllotments(args: {
 
   for (const member of members) {
     const spent = spentByUser.get(member.userId) ?? 0;
+    const reserved = reservedByUser.get(member.userId) ?? 0;
     const midWeekJoin =
       member.joinedAt.getTime() > weekStart.getTime() && !previousAllotments.has(member.userId);
     if (midWeekJoin) {
@@ -94,8 +107,8 @@ export function redivideWeeklyAllotments(args: {
       result.set(member.userId, slice);
     } else {
       continuing.push(member.userId);
-      // Keep spent already used; remaining budget becomes an even slice of the pool.
-      result.set(member.userId, spent + evenRemaining);
+      // Keep spent and in-flight reserved; remaining budget becomes an even slice of the pool.
+      result.set(member.userId, spent + reserved + evenRemaining);
     }
   }
 

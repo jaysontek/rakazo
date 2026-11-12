@@ -8,6 +8,7 @@ import { getLogger, unwrapJobPayload } from "@rakazo/logging";
 import { formatCurrentTimeInstruction } from "./current-time.js";
 import { resolveDeploymentModel } from "./deployment-model.js";
 import { loadBotNames, UNKNOWN_BOT_SPEAKER, USER_SPEAKER } from "./history-speakers.js";
+import { isDeploymentSharedKeyUsage } from "./shared-key-usage.js";
 import type {
   ConfiguredMemoryProvider,
   MemoryProviderResolver,
@@ -383,10 +384,17 @@ export async function compactHistory(deps: CompactHistoryDeps, threadId: string)
     return;
   }
 
-  // Shared-key observers attach only on the deployment key; personal connections stay exempt.
+  // Same definition as the budget gate: deployment shared key only (not local/compatible/scripted).
   const sharedKeyUsage =
-    Boolean(model.callObserver) ||
-    (!deps.resolveModel && Boolean(deps.deploymentModelConfigured));
+    model.usingSharedKey === true ||
+    (!deps.resolveModel &&
+      Boolean(deps.deploymentModelConfigured) &&
+      isDeploymentSharedKeyUsage({
+        ownCredential: false,
+        provider: model.provider,
+        baseUrl: "baseUrl" in model ? model.baseUrl : undefined,
+        scriptedRuntime: model.provider === "scripted",
+      }));
 
   let summary = "";
   let runtimeReportedFailure = false;

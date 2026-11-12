@@ -68,7 +68,7 @@ export async function autoReviewCheckerProvider(
       runId,
       operationId: `auto-review:${runId}`,
       operationKind: "setup",
-      sharedKey: !judgeKey.ownCredential,
+      sharedKey: judgeKey.usingSharedKey === true,
     });
   return decisionModel(checker.provider, checker.model)
     ? new DecisionAutoReviewProvider({

@@ -501,16 +501,23 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
       })
     : undefined;
   const modelCreditsEnabled = billing?.modelCreditsEnabled ?? false;
+  // Leave a DB-only monthly cap alone when SHARED_KEY_MONTHLY_BUDGET_USD is unset (same
+  // pattern as the member list): only write the column when the env var is present.
+  const sharedKeyBudgetEnvSet = process.env.SHARED_KEY_MONTHLY_BUDGET_USD !== undefined;
   await prisma.deploymentSettings.upsert({
     where: { id: "default" },
     create: {
       id: "default",
       modelCreditsEnabled,
-      sharedKeyMonthlyBudgetUsd: env.sharedKeyMonthlyBudgetUsd,
+      ...(sharedKeyBudgetEnvSet
+        ? { sharedKeyMonthlyBudgetUsd: env.sharedKeyMonthlyBudgetUsd }
+        : {}),
     },
     update: {
       modelCreditsEnabled,
-      sharedKeyMonthlyBudgetUsd: env.sharedKeyMonthlyBudgetUsd,
+      ...(sharedKeyBudgetEnvSet
+        ? { sharedKeyMonthlyBudgetUsd: env.sharedKeyMonthlyBudgetUsd }
+        : {}),
     },
   });
   // When the env list is set, make the member table match it (add/remove + re-divide).

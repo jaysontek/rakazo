@@ -22,9 +22,9 @@ import {
 } from "./model-credit-observer.js";
 import {
   composeSharedKeyBudgetObserver,
-  SharedKeyWeeklyBudgetExceededRunError,
   sharedKeyBudgetObserver,
 } from "./shared-key-budget-observer.js";
+import { isDeploymentSharedKeyUsage } from "./shared-key-usage.js";
 import { resolveMemberMainModel, selectConfiguredModel } from "./model-roles.js";
 import {
   enabledOpenAiCompatibleModelIds,
@@ -60,10 +60,10 @@ export function runtimeFallbackModel(runtime: AgentRuntime) {
 }
 
 export function isTerminalModelSetupError(error: unknown): boolean {
+  // Shared-key weekly budget exhaustion is not terminal: a personal-key backup may still run.
   return (
     error instanceof UnavailableModelForAuthError ||
     error instanceof HostedModelCreditsRequiredError ||
-    error instanceof SharedKeyWeeklyBudgetExceededRunError ||
     isRetiredModelCredentialError(error) ||
     (error instanceof Error &&
       (error.message === CLOUDFLARE_AI_GATEWAY_CONFIG_MESSAGE ||
@@ -187,13 +187,12 @@ export async function resolveModelKey(...args: Parameters<typeof resolveModelKey
   if (!material.apiKey?.trim() && !runtimeKey?.trim() && !keyless) {
     throw new UnavailableModelForAuthError(MISSING_MODEL_RUN_ERROR);
   }
-  // Personal connections are exempt. Local / OpenAI-compatible / scripted endpoints are not the
-  // deployment shared key. Host-credential deployment runs still share the deployment bill.
-  const localOrCompatible =
-    provider === LOCAL_PROVIDER_ID ||
-    (provider === OPENAI_COMPATIBLE_PROVIDER_ID && Boolean(material.baseUrl)) ||
-    (provider === "scripted" && Boolean(deps.runtime?.describe().capabilities.scripted));
-  const usingSharedKey = !material.ownCredential && !localOrCompatible;
+  const usingSharedKey = isDeploymentSharedKeyUsage({
+    ownCredential: material.ownCredential,
+    provider,
+    baseUrl: material.baseUrl,
+    scriptedRuntime: Boolean(deps.runtime?.describe().capabilities.scripted),
+  });
   const creditObserver =
     !credential && billingEnabled
       ? await hostedModelCreditObserver(deps.prisma, scope)
@@ -202,7 +201,13 @@ export async function resolveModelKey(...args: Parameters<typeof resolveModelKey
     ? await sharedKeyBudgetObserver(deps.prisma, scope)
     : undefined;
   const callObserver = composeSharedKeyBudgetObserver(budgetObserver, creditObserver);
-  return { ...material, apiKey: material.apiKey ?? runtimeKey, callObserver };
+  return {
+    ...material,
+    apiKey: material.apiKey ?? runtimeKey,
+    callObserver,
+    /** Same definition as the budget gate; use for usage_records.sharedKey. */
+    usingSharedKey,
+  };
 }
 
 async function resolveModelKeyMaterial(
@@ -421,6 +426,7 @@ export function resolvedModelRunFields(
   return {
     apiKey: resolved.oauth ? undefined : resolved.apiKey,
     callObserver: resolved.callObserver,
+    usingSharedKey: resolved.usingSharedKey,
     ...(resolved.accountId ? { accountId: resolved.accountId } : {}),
     ...(resolved.gatewayId ? { gatewayId: resolved.gatewayId } : {}),
     baseUrl: resolved.baseUrl,
@@ -596,5 +602,6 @@ export async function resolveRunModel(
     id,
     ...resolvedModelRunFields(resolved),
     thinkingLevel: thinkingLevel ?? resolved.thinkingLevel ?? null,
+    usingSharedKey: resolved.usingSharedKey,
   };
 }

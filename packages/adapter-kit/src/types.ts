@@ -496,6 +496,12 @@ export type CacheCapabilities = ConnectionCacheCapabilities;
 export interface AgentRunModel {
   /** Server-side spending authorization, carried with the resolved credential. */
   callObserver?: ModelCallObserver;
+  /**
+   * True when this model uses the deployment shared API key (not a personal connection,
+   * local endpoint, OpenAI-compatible custom URL, or scripted runtime). Used for usage
+   * attribution; absent on older callers.
+   */
+  usingSharedKey?: boolean;
   cacheCapabilities?: CacheCapabilities;
   provider: string;
   id: string;
