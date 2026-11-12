@@ -1270,11 +1270,24 @@ const UsageTotalsSchema = z.object({
   costUsd: z.number().nullable().optional(),
   modelCalls: z.number().optional(),
 });
+export const SharedKeyWeeklyBudgetSchema = z.object({
+  /** 0–100 of this user's weekly shared-key allotment already spent. */
+  percentUsed: z.number().min(0).max(100),
+  spentUsd: z.number().nonnegative(),
+  weeklyCapUsd: z.number().nonnegative(),
+  /** ISO timestamp when the America/New_York week resets. */
+  resetsAt: z.string(),
+  timezone: z.literal("America/New_York"),
+});
+export type SharedKeyWeeklyBudget = z.infer<typeof SharedKeyWeeklyBudgetSchema>;
+
 export const UsageSummarySchema = UsageTotalsSchema.extend({
   runs: z.number(),
   models: z
     .array(UsageTotalsSchema.required().extend({ provider: z.string(), model: z.string() }))
     .optional(),
+  /** Present when this user is on the shared-key budget set and a monthly cap is configured. */
+  sharedKeyWeeklyBudget: SharedKeyWeeklyBudgetSchema.nullable().optional(),
 });
 export type UsageSummary = z.infer<typeof UsageSummarySchema>;
 

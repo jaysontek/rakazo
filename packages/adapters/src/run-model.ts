@@ -20,6 +20,11 @@ import {
   HostedModelCreditsRequiredError,
   hostedModelCreditObserver,
 } from "./model-credit-observer.js";
+import {
+  composeSharedKeyBudgetObserver,
+  SharedKeyWeeklyBudgetExceededRunError,
+  sharedKeyBudgetObserver,
+} from "./shared-key-budget-observer.js";
 import { resolveMemberMainModel, selectConfiguredModel } from "./model-roles.js";
 import {
   enabledOpenAiCompatibleModelIds,
@@ -58,6 +63,7 @@ export function isTerminalModelSetupError(error: unknown): boolean {
   return (
     error instanceof UnavailableModelForAuthError ||
     error instanceof HostedModelCreditsRequiredError ||
+    error instanceof SharedKeyWeeklyBudgetExceededRunError ||
     isRetiredModelCredentialError(error) ||
     (error instanceof Error &&
       (error.message === CLOUDFLARE_AI_GATEWAY_CONFIG_MESSAGE ||
@@ -181,8 +187,21 @@ export async function resolveModelKey(...args: Parameters<typeof resolveModelKey
   if (!material.apiKey?.trim() && !runtimeKey?.trim() && !keyless) {
     throw new UnavailableModelForAuthError(MISSING_MODEL_RUN_ERROR);
   }
-  const callObserver =
-    !credential && billingEnabled ? await hostedModelCreditObserver(deps.prisma, scope) : undefined;
+  // Personal connections are exempt. Local / OpenAI-compatible / scripted endpoints are not the
+  // deployment shared key. Host-credential deployment runs still share the deployment bill.
+  const localOrCompatible =
+    provider === LOCAL_PROVIDER_ID ||
+    (provider === OPENAI_COMPATIBLE_PROVIDER_ID && Boolean(material.baseUrl)) ||
+    (provider === "scripted" && Boolean(deps.runtime?.describe().capabilities.scripted));
+  const usingSharedKey = !material.ownCredential && !localOrCompatible;
+  const creditObserver =
+    !credential && billingEnabled
+      ? await hostedModelCreditObserver(deps.prisma, scope)
+      : undefined;
+  const budgetObserver = usingSharedKey
+    ? await sharedKeyBudgetObserver(deps.prisma, scope)
+    : undefined;
+  const callObserver = composeSharedKeyBudgetObserver(budgetObserver, creditObserver);
   return { ...material, apiKey: material.apiKey ?? runtimeKey, callObserver };
 }
 

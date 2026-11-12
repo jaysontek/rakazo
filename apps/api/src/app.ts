@@ -140,6 +140,7 @@ import {
   parsePositiveInteger,
   provisionMessagingIdentity,
   pushSessionExpiresAt,
+  reconcileSharedKeyBudgetMembers,
   requireMembership,
   rowSecurityWarning,
   runAsSystem,
@@ -505,9 +506,18 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
     create: {
       id: "default",
       modelCreditsEnabled,
+      sharedKeyMonthlyBudgetUsd: env.sharedKeyMonthlyBudgetUsd,
     },
-    update: { modelCreditsEnabled },
+    update: {
+      modelCreditsEnabled,
+      sharedKeyMonthlyBudgetUsd: env.sharedKeyMonthlyBudgetUsd,
+    },
   });
+  // When the env list is set, make the member table match it (add/remove + re-divide).
+  // Leave the table alone when the variable is unset so SQL/admin edits survive restarts.
+  if (process.env.SHARED_KEY_BUDGET_USER_IDS !== undefined) {
+    await reconcileSharedKeyBudgetMembers(prisma, env.sharedKeyBudgetUserIds);
+  }
   const installed = new InstalledConnectorProvider(
     prisma,
     secrets,

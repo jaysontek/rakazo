@@ -209,6 +209,7 @@ export async function consumeRunEvents(
           runId,
           parentRunId: runId,
           operationId: runId,
+          sharedKey: ctx.sharedKeyUsage,
         });
       } else if (event.type === "done") {
         recordExplicitNoResponse(reply, event.text ?? "");

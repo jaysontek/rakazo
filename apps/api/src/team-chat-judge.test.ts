@@ -355,6 +355,7 @@ describe("team chat engagement judge", () => {
           usageSource: null,
           callId: null,
           agentId: null,
+          sharedKey: true,
         },
       ],
     });

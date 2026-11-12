@@ -1594,6 +1594,7 @@ export function createRunExecutor(executorDeps: ExecutorDeps) {
           allowSilentEmptyRun,
           groupReplyOptional,
           emptyResponseText,
+          sharedKeyUsage: !resolved.ownCredential,
           state,
           settleRunningHelpers: settleHelpers,
           stopHeartbeatAfterCompletion,
@@ -1837,6 +1838,7 @@ export function createRunExecutor(executorDeps: ExecutorDeps) {
                   runId,
                   parentRunId: runId,
                   operationId: runId,
+                  sharedKey: !resolved.ownCredential,
                 });
               },
               prompt,
