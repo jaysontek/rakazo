@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { RunSchema } from "./domain.js";
 import {
   providerQuotaResetAt,
+  providerRetryDelaySeconds,
   RUN_TRIGGERS,
   RunActivityRowSchema,
   RunTriggerSchema,
@@ -111,8 +112,25 @@ describe("providerQuotaResetAt", () => {
     ["a reset within the hour", body({ "X-RateLimit-Reset": String(now + 60_000) })],
     ["a reset in the past", body({ "X-RateLimit-Reset": String(now - 60_000) })],
     ["a short Retry-After", body({ "Retry-After": "30" })],
+    ["a short Google retryDelay", '429 RESOURCE_EXHAUSTED retryDelay: "15s"'],
     ["no reset", '429: {"message":"Rate limit reached"}'],
   ])("ignores %s", (_label, text) => {
     expect(providerQuotaResetAt(text, now)).toBeUndefined();
+  });
+
+  it("treats a multi-hour Google retryDelay as a long quota window", () => {
+    expect(providerQuotaResetAt('RESOURCE_EXHAUSTED retryDelay: "7200s"', now)).toBe(
+      now + 7_200_000,
+    );
+  });
+});
+
+describe("providerRetryDelaySeconds", () => {
+  it.each([
+    ['retryDelay: "15s"', 15],
+    ["retry_delay: 1.5s", 1.5],
+    ["Retry-After: 30", 30],
+  ])("reads %s", (text, expected) => {
+    expect(providerRetryDelaySeconds(text)).toBe(expected);
   });
 });

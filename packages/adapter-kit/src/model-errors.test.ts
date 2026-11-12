@@ -7,6 +7,24 @@ import {
   perMinuteLimitResetAt,
 } from "./model-errors.js";
 
+const geminiTpmPascal = {
+  status: 429,
+  message:
+    "Quota exceeded for quota metric 'GenerateContentInputTokensPerModelPerMinute' and limit 'GenerateContentInputTokensPerModelPerMinute' of service 'generativelanguage.googleapis.com' for consumer 'projects/example'.",
+  statusText: "RESOURCE_EXHAUSTED",
+  details: [
+    {
+      "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+      reason: "RATE_LIMIT_EXCEEDED",
+      metadata: {
+        quota_metric:
+          "generativelanguage.googleapis.com/generate_content_input_tokens_per_model_per_minute",
+      },
+    },
+    { "@type": "type.googleapis.com/google.rpc.RetryInfo", retryDelay: "15s" },
+  ],
+};
+
 describe("per-minute token limits", () => {
   it.each([
     "429 rate_limit_error: Number of request tokens has exceeded your per-minute rate limit",
@@ -14,6 +32,21 @@ describe("per-minute token limits", () => {
     "Usage limit: TPM.",
     "Rate limit reached for example-model on tokens per min (TPM): Limit 60000, Used 51552, Requested 12568. Please try again in 4.12s.",
     { status: 429, message: "Quota exceeded for quota metric 'requests' per minute" },
+    geminiTpmPascal,
+    {
+      status: 429,
+      message:
+        "Quota exceeded for quota metric 'generate_content_input_tokens_per_model_per_minute'",
+    },
+    {
+      status: 429,
+      message: "Resource has been exhausted (e.g. check quota).",
+      details: [{ retryDelay: "15s" }],
+    },
+    {
+      errorMessage:
+        "429 RESOURCE_EXHAUSTED: Quota exceeded for quota metric 'GenerateContentInputTokensPerModelPerMinute'; retryDelay: \"15s\"",
+    },
   ])("recognizes %j", (error) => {
     expect(isPerMinuteTokenLimit(error)).toBe(true);
   });
@@ -25,6 +58,17 @@ describe("per-minute token limits", () => {
     "You exceeded your current quota, please check your plan and billing details.",
     "You've reached your monthly usage limit.",
     { status: 500, message: "tokens per minute" },
+    "Resource has been exhausted (e.g. check quota).",
+    {
+      status: 429,
+      message: "You exceeded your current quota, please check your plan and billing details.",
+      details: [{ retryDelay: "15s" }],
+    },
+    {
+      status: 429,
+      message: "Resource has been exhausted (e.g. check quota).",
+      details: [{ retryDelay: "7200s" }],
+    },
   ])("rejects %j", (error) => {
     expect(isPerMinuteTokenLimit(error)).toBe(false);
   });
@@ -37,6 +81,7 @@ describe("per-minute token limits", () => {
         now,
       ),
     ).toBe(now + 4_120);
+    expect(perMinuteLimitResetAt(geminiTpmPascal, now)).toBe(now + 15_000);
     expect(
       perMinuteLimitResetAt(
         { status: 429, message: "You have hit your usage limit for tokens per minute." },

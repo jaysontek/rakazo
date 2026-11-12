@@ -1,4 +1,4 @@
-import { providerQuotaResetAt } from "@rakazo/contracts";
+import { providerQuotaResetAt, providerRetryDelaySeconds } from "@rakazo/contracts";
 
 /** A model call failed for a reason that should clear on its own, such as an overloaded provider. */
 export class TransientModelError extends Error {
@@ -43,13 +43,45 @@ function errorFacts(value: unknown) {
     if (typeof item !== "object" || seen.has(item)) return;
     seen.add(item);
     const record = item as Record<string, unknown>;
-    for (const key of ["message", "errorMessage", "name", "code", "type"]) {
-      if (typeof record[key] === "string") text.push(record[key] as string);
+    for (const key of [
+      "message",
+      "errorMessage",
+      "name",
+      "code",
+      "type",
+      "reason",
+      "status",
+      "statusText",
+      // Google RetryInfo and quota metadata ride on these keys inside `details`.
+      "retryDelay",
+      "retry_delay",
+      "quota_metric",
+      "quotaMetric",
+    ]) {
+      if (typeof record[key] !== "string") continue;
+      const value = record[key] as string;
+      // Keep the key so retryDelay/quota_metric parsers still see a labeled duration.
+      text.push(
+        key === "retryDelay" ||
+          key === "retry_delay" ||
+          key === "quota_metric" ||
+          key === "quotaMetric"
+          ? `${key}: ${value}`
+          : value,
+      );
     }
     for (const key of ["status", "statusCode", "httpStatus"]) {
       if (typeof record[key] === "number") statuses.add(record[key] as number);
     }
-    for (const key of ["response", "cause", "details", "diagnostics", "data", "error"]) {
+    for (const key of [
+      "response",
+      "cause",
+      "details",
+      "diagnostics",
+      "data",
+      "error",
+      "metadata",
+    ]) {
       visit(record[key], depth + 1);
     }
     if (Array.isArray(item)) for (const child of item) visit(child, depth + 1);
@@ -79,7 +111,21 @@ const EXHAUSTION_SIGNAL =
  * unauthorised, was cancelled, or the limit is a short rate window rather than the account.
  */
 const NOT_EXHAUSTION =
-  /not (?:yet )?(?:reached|hit)|unsupported parameter|invalid[ _](?:api[ _]key|parameter|param|input|argument|tool|schema|credential)|validation|must be|context[ _-](?:length|window)|too many tokens|model not found|bad request|unauthori[sz]ed|forbidden|access denied|permission (?:is )?(?:denied|refused|declined)|(?:expired|revoked|missing) (?:api )?(?:key|credential|token)|(?:api )?(?:key|credential|token) (?:expired|revoked|missing)|authentication (?:failed|failure|denied|expired|invalid)|abort|cancel|\bper[- ](?:second|minute)\b|\b(?:rpm|tpm)\b|concurrent/;
+  /not (?:yet )?(?:reached|hit)|unsupported parameter|invalid[ _](?:api[ _]key|parameter|param|input|argument|tool|schema|credential)|validation|must be|context[ _-](?:length|window)|too many tokens|model not found|bad request|unauthori[sz]ed|forbidden|access denied|permission (?:is )?(?:denied|refused|declined)|(?:expired|revoked|missing) (?:api )?(?:key|credential|token)|(?:api )?(?:key|credential|token) (?:expired|revoked|missing)|authentication (?:failed|failure|denied|expired|invalid)|abort|cancel|\bper[- ](?:second|minute)\b|perminute|\b(?:rpm|tpm)\b|concurrent/;
+
+/**
+ * Per-minute rate windows after errorFacts lowercases the payload. Google metrics arrive as
+ * PascalCase (`GenerateContentInputTokensPerModelPerMinute` → `...perminute`) or snake_case
+ * (`generate_content_input_tokens_per_minute`); OpenAI-style copy keeps spaces/hyphens.
+ */
+const PER_MINUTE_METRIC =
+  /perminute|\bper[_-\s]?min(?:ute)?s?\b|\b(?:rpm|tpm)\b|(?:tokens?|requests?)[_-\s]?per[_-\s]?min(?:ute)?s?\b|generate(?:_?content)?\w*perminute|generate_content_\w*_per_minute|input_tokens_per_minute/;
+
+/** Daily, monthly or billing caps — not a short per-minute window. */
+const LONG_QUOTA_WINDOW =
+  /\b(?:daily|monthly|billing(?:\s+details)?|per[_-\s]?day|per[_-\s]?month|free-models-per-day|billing cycle)\b/;
+
+const RESOURCE_EXHAUSTED = /resource[_ ]?exhausted|resource has been exhausted/;
 
 /**
  * Providers report an exhausted account as 400, 402 or 403 depending on the vendor. A 4xx
@@ -175,16 +221,29 @@ export function isRetryableProviderUnavailable(error: unknown): boolean {
 export function isPerMinuteTokenLimit(error: unknown): boolean {
   const { text, statuses } = errorFacts(error);
   if (isAccountExhaustion(text, statuses)) return false;
-  // A reset more than an hour away is a quota to wait out, not a per-minute window.
-  if (providerQuotaResetAt(text) !== undefined) return false;
-  const perMinute =
-    /\bper[- ](?:minute|min)\b|\b(?:requests?|tokens?) per min(?:ute)?\b|\b(?:rpm|tpm)\b|tokens per min(?:ute)?|\bgenerate.?requests?.?per.?minute\b/.test(
-      text,
-    );
-  if (!perMinute) return false;
-  if (statuses.has(429) || /\b429\b/.test(text)) return true;
-  // Some gateways omit the status and only name the per-minute metric.
-  return statuses.size === 0;
+  const perMinute = PER_MINUTE_METRIC.test(text);
+  // A reset more than an hour away is a quota to wait out. Short Google retryDelay values
+  // ("15s") must not be treated as that; providerQuotaResetAt ignores sub-hour delays.
+  if (!perMinute && providerQuotaResetAt(text) !== undefined) return false;
+  if (LONG_QUOTA_WINDOW.test(text) && !perMinute) return false;
+  const is429 = statuses.has(429) || /\b429\b/.test(text);
+  const exhausted = RESOURCE_EXHAUSTED.test(text);
+  if (perMinute) {
+    if (is429 || exhausted) return true;
+    // Some gateways omit the status and only name the per-minute metric.
+    return statuses.size === 0;
+  }
+  // Bare RESOURCE_EXHAUSTED / 429 without a metric still counts when RetryInfo is a short window.
+  const retrySeconds = providerRetryDelaySeconds(text);
+  if (
+    (is429 || exhausted) &&
+    retrySeconds !== undefined &&
+    retrySeconds * 1000 < 60 * 60_000 &&
+    !LONG_QUOTA_WINDOW.test(text)
+  ) {
+    return true;
+  }
+  return false;
 }
 
 /**
@@ -194,10 +253,13 @@ export function isPerMinuteTokenLimit(error: unknown): boolean {
 export function perMinuteLimitResetAt(error: unknown, now = Date.now()): number | undefined {
   if (!isPerMinuteTokenLimit(error)) return undefined;
   const { text } = errorFacts(error);
+  const retrySeconds = providerRetryDelaySeconds(text);
+  if (retrySeconds !== undefined) {
+    return now + Math.min(Math.ceil(retrySeconds * 1000), 60 * 60_000);
+  }
   const seconds =
     text.match(/retry[- ]after[:\s]+(\d+(?:\.\d+)?)\s*(?:seconds?|secs?|s)?\b/)?.[1] ??
-    text.match(/try again in\s+(\d+(?:\.\d+)?)\s*(?:seconds?|secs?|s)\b/)?.[1] ??
-    text.match(/retry[- ]after\\?"?\s*[:=]\s*\\?"?(\d+)(?![\d.])/)?.[1];
+    text.match(/try again in\s+(\d+(?:\.\d+)?)\s*(?:seconds?|secs?|s)\b/)?.[1];
   if (seconds !== undefined) {
     const delayMs = Math.ceil(Number(seconds) * 1000);
     if (Number.isFinite(delayMs) && delayMs > 0) return now + Math.min(delayMs, 60 * 60_000);
@@ -219,10 +281,11 @@ export function isTransientModelError(error: unknown): boolean {
   // A limit the provider says resets hours from now will not clear during a retry.
   if (providerQuotaResetAt(text) !== undefined) return false;
   // Short rate windows can reset during a retry; subscription and billing limits cannot.
+  const retrySeconds = providerRetryDelaySeconds(text);
   const shortWindow =
-    /\bper[- ](?:second|minute)\b|\b(?:rpm|tpm)\b|retry[- ]after[: ]+\d+(?:\.\d+)?\s*(?:seconds?|secs?|s)\b/.test(
-      text,
-    );
+    PER_MINUTE_METRIC.test(text) ||
+    /\bper[- ](?:second)\b|retry[- ]after[: ]+\d+(?:\.\d+)?\s*(?:seconds?|secs?|s)\b/.test(text) ||
+    (retrySeconds !== undefined && retrySeconds * 1000 < 60 * 60_000);
   return (
     isRetryableProviderUnavailable(error) &&
     !/insufficient_quota|exceeded your current quota|quota exhausted|(?:chatgpt|5-hour|weekly(?: \(7-day\))?|monthly) usage limit|credit balance|insufficient (?:funds|balance|credits)|out of budget/.test(

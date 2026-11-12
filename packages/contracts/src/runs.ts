@@ -49,17 +49,37 @@ export type RunErrorKind = (typeof RUN_ERROR_KINDS)[number];
 const PROVIDER_QUOTA_MIN_RESET_MS = 60 * 60_000;
 
 /**
+ * Seconds until a provider says to retry, from Retry-After (integer seconds) or Google's
+ * `retryDelay` / `retry_delay` duration (`15s`, `1.5s`). Short per-minute windows stay under
+ * an hour; only longer delays are treated as quotas to wait out.
+ */
+export function providerRetryDelaySeconds(text: string): number | undefined {
+  const retryAfter = text.match(/\bretry-after\\?"?\s*[:=]\s*\\?"?(\d+)(?![\d.])/i)?.[1];
+  if (retryAfter !== undefined) {
+    const seconds = Number(retryAfter);
+    return Number.isFinite(seconds) && seconds > 0 ? seconds : undefined;
+  }
+  const retryDelay = text.match(/\bretry[_-]?delay\\?"?\s*[:=]\s*\\?"?(\d+(?:\.\d+)?)\s*s\b/i)?.[1];
+  if (retryDelay !== undefined) {
+    const seconds = Number(retryDelay);
+    return Number.isFinite(seconds) && seconds > 0 ? seconds : undefined;
+  }
+  return undefined;
+}
+
+/**
  * When a provider error says its exhausted limit resets, if that is over an hour away. Gateways
  * copy the response's `X-RateLimit-Reset` (an epoch in seconds or milliseconds) or `Retry-After`
- * (seconds) headers into the error body, which is all a model runtime passes on.
+ * (seconds) headers into the error body, which is all a model runtime passes on. Google's
+ * `retryDelay: "15s"` is a short per-minute window and must not count as a long quota.
  */
 export function providerQuotaResetAt(text: string, now = Date.now()): number | undefined {
   const epoch = text.match(/\bx-ratelimit-reset\\?"?\s*[:=]\s*\\?"?(\d{10,13})(?!\d)/i)?.[1];
-  const delay = text.match(/\bretry-after\\?"?\s*[:=]\s*\\?"?(\d+)(?![\d.])/i)?.[1];
+  const delaySeconds = providerRetryDelaySeconds(text);
   const resetAt = epoch
     ? Number(epoch) * (epoch.length > 10 ? 1 : 1000)
-    : delay
-      ? now + Number(delay) * 1000
+    : delaySeconds !== undefined
+      ? now + delaySeconds * 1000
       : undefined;
   return resetAt !== undefined && resetAt - now > PROVIDER_QUOTA_MIN_RESET_MS ? resetAt : undefined;
 }

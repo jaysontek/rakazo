@@ -847,22 +847,18 @@ describe("Pi runtime ordered model fallback", () => {
     expect(providerState.stream).toHaveBeenCalledTimes(2);
   });
 
-  it("switches mid-task on a TPM 429 when fallbackTrigger is tpm", async () => {
+  it.each([
+    "429 rate_limit_error: Number of request tokens has exceeded your per-minute rate limit. Please try again in 8s.",
+    `429 RESOURCE_EXHAUSTED: Quota exceeded for quota metric 'GenerateContentInputTokensPerModelPerMinute' and limit 'GenerateContentInputTokensPerModelPerMinute' of service 'generativelanguage.googleapis.com' for consumer 'projects/example'.; retryDelay: "15s"`,
+    `429 Resource has been exhausted (e.g. check quota). quota_metric: generate_content_input_tokens_per_model_per_minute; retryDelay: "12s"`,
+  ])("switches mid-task on a TPM 429 when fallbackTrigger is tpm: %s", async (error) => {
     const { clearDeploymentModelTpmWindows, isDeploymentModelTpmLimited } = await import(
       "./deployment-tpm-window.js"
     );
     clearDeploymentModelTpmWindows();
     providerState.stream.mockImplementation((target: Model<"openai-completions">) =>
       target.provider === primary.provider
-        ? stream(
-            target,
-            message(
-              target,
-              [],
-              "error",
-              "429 rate_limit_error: Number of request tokens has exceeded your per-minute rate limit. Please try again in 8s.",
-            ),
-          )
+        ? stream(target, message(target, [], "error", error))
         : stream(target, message(target, [{ type: "text", text: "backup answer" }], "stop")),
     );
     const input = request([{ provider: backupA.provider, id: backupA.id, apiKey: "backup-key" }]);
@@ -886,6 +882,28 @@ describe("Pi runtime ordered model fallback", () => {
     const input = request([{ provider: backupA.provider, id: backupA.id, apiKey: "backup-key" }]);
     input.fallbackTrigger = "tpm";
     await expect(run(input)).rejects.toThrow(/503 overloaded/);
+    expect(providerState.stream.mock.calls.map(([target]) => target.provider)).toEqual([
+      primary.provider,
+    ]);
+  });
+
+  it("does not switch on a Google billing quota 429 when fallbackTrigger is tpm", async () => {
+    providerState.stream.mockImplementation((target: Model<"openai-completions">) =>
+      target.provider === primary.provider
+        ? stream(
+            target,
+            message(
+              target,
+              [],
+              "error",
+              "429 You exceeded your current quota, please check your plan and billing details.",
+            ),
+          )
+        : stream(target, message(target, [{ type: "text", text: "backup answer" }], "stop")),
+    );
+    const input = request([{ provider: backupA.provider, id: backupA.id, apiKey: "backup-key" }]);
+    input.fallbackTrigger = "tpm";
+    await expect(run(input)).rejects.toThrow(/billing details/);
     expect(providerState.stream.mock.calls.map(([target]) => target.provider)).toEqual([
       primary.provider,
     ]);
