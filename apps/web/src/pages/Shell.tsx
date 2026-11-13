@@ -37,7 +37,7 @@ import {
 } from "react";
 import { useParams } from "react-router-dom";
 import { ComputerUpdateProgress } from "../components/ComputerUpdateProgress";
-import { CallCard } from "../components/call/CallCard";
+import { CallCard, InThreadCallStrip } from "../components/call/CallCard";
 import { IncomingCall } from "../components/call/IncomingCall";
 import { PageLoading } from "../components/PageLoading";
 import { PageViewHost } from "../components/pages/PageViewHost";
@@ -1110,6 +1110,9 @@ function SpaceShell() {
             onOpenNavigation={() => setMobileSidebarOpen(true)}
             onTogglePanel={toggleChatPanel}
           />
+          {active && call?.botId === active.id ? (
+            <InThreadCallStrip onSettings={() => openSettings("voice")} />
+          ) : null}
           {!active && !activeGroup && initialBotsLoaded ? (
             <div className="grid flex-1 place-items-center">
               <Button onClick={() => dialogs.setCreateBotOpen(true)}>
@@ -1133,6 +1136,7 @@ function SpaceShell() {
               loadingOlder={loadingOlder}
               answerableAskIds={answerableAskIds}
               dismissableAskIds={dismissableAskIds}
+              headerClearance={active && call?.botId === active.id ? "call" : "header"}
               running={transcriptRunning}
               workingBots={workingBots}
               userBubble={userBubble}
@@ -1160,7 +1164,6 @@ function SpaceShell() {
               onSpeak={speakMessage}
               onOpenComputer={computerControls.onOpenComputer}
               onOpenImportSetup={openImportSetup}
-              hostingCall={Boolean(active && call?.botId === active.id)}
               rpc={rpc}
             />
           )}
@@ -1217,7 +1220,6 @@ function SpaceShell() {
                   : undefined
               }
               hostingCall={Boolean(active && call?.botId === active.id)}
-              onCallSettings={() => openSettings("voice")}
               artifactTarget={transcriptArtifactTarget}
               replyTarget={composer.replyTarget}
               replyQuote={composer.replyQuote}

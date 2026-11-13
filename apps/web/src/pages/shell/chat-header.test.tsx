@@ -45,7 +45,25 @@ vi.mock("../../components/SubscriptionGate", () => ({
   useBilling: () => ({ status: billing.status, showPlans: () => undefined }),
 }));
 
+import { InThreadCallStrip } from "../../components/call/CallCard";
 import { ChatHeader } from "./chat-header";
+
+vi.mock("../../components/call/CallStrip", () => ({
+  CallStrip: () => <div data-testid="call-view" />,
+}));
+vi.mock("../../lib/auth", () => ({
+  authClient: { useSession: () => ({ data: { user: { name: "Ada", email: "a@test" } } }) },
+}));
+vi.mock("../../lib/call-session", () => ({
+  endCall: vi.fn(),
+  toggleMute: vi.fn(),
+  useCallSession: () => null,
+}));
+vi.mock("../../lib/space-rpc", () => ({ useSpaceRpc: () => ({ voice: { setVoice: vi.fn() } }) }));
+vi.mock("react-router-dom", () => ({
+  useNavigate: () => vi.fn(),
+  useParams: () => ({}),
+}));
 
 let container: HTMLDivElement;
 let root: Root;
@@ -65,20 +83,33 @@ afterEach(() => {
   writeText.mockClear();
 });
 
-function renderHeader({ inGroup = false } = {}) {
+function renderHeader({
+  inGroup = false,
+  onOpenNavigation = () => undefined,
+  onTogglePanel = () => undefined,
+  withCallStrip = false,
+}: {
+  inGroup?: boolean;
+  onOpenNavigation?: () => void;
+  onTogglePanel?: () => void;
+  withCallStrip?: boolean;
+} = {}) {
   act(() =>
     root.render(
-      <ChatHeader
-        inGroup={inGroup}
-        active={
-          inGroup ? undefined : ({ id: "bot-1", name: "Helper", color: BOT_COLORS[0] } as Bot)
-        }
-        activeGroup={undefined}
-        activeSnapshot={null}
-        panelOpen={false}
-        onOpenNavigation={() => undefined}
-        onTogglePanel={() => undefined}
-      />,
+      <div className="relative">
+        <ChatHeader
+          inGroup={inGroup}
+          active={
+            inGroup ? undefined : ({ id: "bot-1", name: "Helper", color: BOT_COLORS[0] } as Bot)
+          }
+          activeGroup={undefined}
+          activeSnapshot={null}
+          panelOpen={false}
+          onOpenNavigation={onOpenNavigation}
+          onTogglePanel={onTogglePanel}
+        />
+        {withCallStrip ? <InThreadCallStrip onSettings={() => undefined} /> : null}
+      </div>,
     ),
   );
 }
@@ -95,6 +126,20 @@ it("shows the gift only in a bot chat, as mobile does", () => {
   billing.status = { referral: { url: "https://example.test/sign-up?ref=abc", rewards: 0 } };
   renderHeader({ inGroup: true });
   expect(gift()).toBeNull();
+});
+
+it("keeps header actions clickable while the in-thread call strip is shown", () => {
+  const onOpenNavigation = vi.fn();
+  const onTogglePanel = vi.fn();
+  renderHeader({ withCallStrip: true, onOpenNavigation, onTogglePanel });
+  expect(container.querySelector('[data-testid="call-view"]')).not.toBeNull();
+  expect(container.querySelector('[data-testid="call-strip-spacer"]')).not.toBeNull();
+  act(() =>
+    container.querySelector<HTMLButtonElement>('[data-testid="bot-settings-trigger"]')?.click(),
+  );
+  expect(onTogglePanel).toHaveBeenCalledOnce();
+  act(() => container.querySelector<HTMLButtonElement>('[aria-label="Open navigation"]')?.click());
+  expect(onOpenNavigation).toHaveBeenCalledOnce();
 });
 
 it("opens the invite with both rewards and copies the link", async () => {

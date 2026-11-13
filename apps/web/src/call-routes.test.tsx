@@ -177,7 +177,7 @@ afterEach(async () => {
 it("keeps an ongoing call in reach after leaving the shell", async () => {
   startCall({ botId: "bot-1", botName: "Test bot" });
   await render("/app/bot-1");
-  // On the matching bot route the composer hosts the strip; leave the shell to see the dock.
+  // On the matching bot route chat chrome hosts the strip; leave the shell to see the dock.
   await act(async () => find('a[href="/app/artifacts"]')?.click());
   await settle();
   expect(container.textContent).toContain("Artifacts page");

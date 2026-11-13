@@ -15,7 +15,7 @@ test("an ongoing call stays in reach on a page outside the shell", async ({ page
   await callButton.click();
   const call = page.getByTestId("call-view");
   await expect(call).toBeVisible();
-  // The thread stays visible under the composer call strip.
+  // The thread stays visible under the top call strip.
   await expect(page.getByTestId("transcript")).toBeVisible();
   await expect(page.getByTestId("composer-bar")).toBeVisible();
   await captureScreenshot(page, testInfo, "call-strip-in-thread");

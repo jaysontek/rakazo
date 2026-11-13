@@ -60,7 +60,7 @@ export function useCallUserInitial(onCall: boolean): string {
 
 /**
  * Keeps call audio/wake side effects alive for the whole call, and shows a compact
- * dock only when the thread composer is not hosting the strip.
+ * top dock only when the matching bot thread is not hosting the strip.
  */
 export function CallCard() {
   const call = useCallSession();
@@ -129,7 +129,7 @@ export function CallCard() {
   }, [call?.botId, call?.botName, call?.phase]);
 
   const keepAwake = onCall && (Platform.OS !== "android" || !serviceStarted);
-  // The matching bot thread's composer hosts the strip.
+  // The matching bot thread hosts the strip under its header.
   if (!call || params.botId === call.botId) {
     return keepAwake ? <KeepCallAwake /> : null;
   }
@@ -166,7 +166,7 @@ export function CallCard() {
   );
 }
 
-/** Shared in-call row used by CallCard and the thread composer. */
+/** Shared in-call row used by CallCard and the thread screen. */
 export function CallStripBody({
   botId,
   botName,

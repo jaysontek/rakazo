@@ -72,6 +72,8 @@ export const Transcript = memo(function Transcript({
   loadingOlder,
   answerableAskIds,
   dismissableAskIds,
+  /** When a top call strip already clears the floating header, use a small gap instead. */
+  headerClearance = "header",
   running,
   workingBots,
   userBubble,
@@ -96,7 +98,6 @@ export const Transcript = memo(function Transcript({
   onSpeak,
   onOpenComputer,
   onOpenImportSetup,
-  hostingCall,
   rpc,
 }: {
   scrollRef: RefObject<HTMLDivElement | null>;
@@ -113,14 +114,13 @@ export const Transcript = memo(function Transcript({
   loadingOlder: boolean;
   answerableAskIds: Set<string>;
   dismissableAskIds: Set<string>;
+  headerClearance?: "header" | "call";
   running: boolean;
   workingBots: GroupAvatarMember[];
   /** Your bubbles take the bot's color in its own chat. */
   userBubble?: { background: string; foreground: string };
   /** Calls the bot back from a missed call in the transcript. */
   onCallBack?: () => void;
-  /** Composer hosts the in-call strip; raise the jump control above it. */
-  hostingCall?: boolean;
   onLoadOlder: () => void | Promise<void>;
   onOpenBot: (botId: string) => void;
   onAnswer: (
@@ -509,7 +509,13 @@ export const Transcript = memo(function Transcript({
             following.current = false;
           }
         }}
-        className={`rk-scroll isolate flex min-h-0 flex-1 flex-col gap-2 overflow-x-hidden overflow-y-auto scroll-pt-16 scroll-pb-7 pt-20 pb-12 md:pt-[84px] md:pb-13 ${TRANSCRIPT_CONTENT_PADDING}`}
+        className={cn(
+          "rk-scroll isolate flex min-h-0 flex-1 flex-col gap-2 overflow-x-hidden overflow-y-auto scroll-pb-7 pb-12 md:pb-13",
+          headerClearance === "call"
+            ? "scroll-pt-2 pt-2 md:pt-2"
+            : "scroll-pt-16 pt-20 md:pt-[84px]",
+          TRANSCRIPT_CONTENT_PADDING,
+        )}
         style={
           userBubble
             ? ({
@@ -684,9 +690,9 @@ export const Transcript = memo(function Transcript({
         aria-hidden={atEnd}
         tabIndex={atEnd ? -1 : 0}
         onClick={jumpToLatest}
-        className={`absolute left-1/2 z-20 -translate-x-1/2 shadow-md transition-[opacity,transform,background-color] duration-200 ease-[cubic-bezier(.22,1,.36,1)] motion-reduce:transition-none ${
-          hostingCall ? "bottom-28" : "bottom-11"
-        } ${atEnd ? "pointer-events-none translate-y-2 opacity-0" : "translate-y-0 opacity-100"}`}
+        className={`absolute bottom-11 left-1/2 z-20 -translate-x-1/2 shadow-md transition-[opacity,transform,background-color] duration-200 ease-[cubic-bezier(.22,1,.36,1)] motion-reduce:transition-none ${
+          atEnd ? "pointer-events-none translate-y-2 opacity-0" : "translate-y-0 opacity-100"
+        }`}
       >
         <ArrowDown strokeWidth={1.8} className="size-[17px]" />
       </Button>

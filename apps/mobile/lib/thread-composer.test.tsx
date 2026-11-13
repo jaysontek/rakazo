@@ -224,12 +224,6 @@ vi.mock("./native", () => ({
 vi.mock("./i18n", () => ({ useI18n: () => ({ t: (text: string) => text }) }));
 vi.mock("expo-router", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("./call-session", () => ({ useCallSession: () => null }));
-vi.mock("../components/CallCard", () => ({
-  CallStripBody: () => createElement("div", { "data-testid": "call-view" }),
-  useCallUserInitial: () => "Y",
-}));
-vi.mock("../components/call-voice-picker", () => ({ CallVoicePicker: () => null }));
-
 const skill = {
   id: "skill-1",
   name: "Writing",
