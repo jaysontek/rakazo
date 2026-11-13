@@ -168,6 +168,10 @@ export const ZH_MESSAGES: Record<string, string> = {
   "Connect a model in Settings before running bots.": "运行机器人前，请先在设置中连接模型。",
   "Connect your own API key in Models or choose Rakazo credits in Billing.":
     "请在“模型”中连接你自己的 API 密钥，或在“账单”中选择 Rakazo 额度。",
+  "This week's shared API key budget is used up. It resets next week, or connect your own key in Models.":
+    "本周共享 API 密钥预算已用完。将于下周重置，或在“模型”中连接你自己的密钥。",
+  "You're not on the shared-key budget yet. Ask an admin.":
+    "你还不在共享密钥预算中。请联系管理员。",
   "Using your own API key, no shared limit": "正在使用你自己的 API 密钥，无共享额度限制",
   "The model provider returned an error.": "模型提供商返回了错误。",
   "{provider} is rate limiting requests. Try again shortly.":

@@ -50,6 +50,8 @@ export interface ExecutorDeps {
   deploymentModelConfigured?: boolean;
   /** SHARED_KEY_MONTHLY_BUDGET_USD fallback when deployment_settings has no override. */
   sharedKeyMonthlyBudgetUsd?: number | null;
+  /** Open vs gated signup posture for shared-key auto-enroll. */
+  sharedKeyEnrollmentPolicy?: import("@rakazo/db").SharedKeyBudgetEnrollmentPolicy;
   dataDir?: string;
   notifications?: NotificationProvider;
   jobs: JobPublisher;

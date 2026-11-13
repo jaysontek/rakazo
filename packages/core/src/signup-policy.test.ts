@@ -1,63 +1,55 @@
 import { describe, expect, it } from "vitest";
-import {
-  emailAllowed,
-  isMessagingEmail,
-  parseAllowlist,
-  signupPolicyFromEnv,
-  signupRequiresEmailVerification,
-  signupsOpen,
-} from "./signup-policy.js";
+import { isGatedSharedKeyDeployment, parseAdminEmails, signupsOpen } from "./signup-policy.js";
 
-describe("signup policy", () => {
-  it("identifies pending signup consistently across clients without accepting malformed responses", () => {
-    expect(signupRequiresEmailVerification({ token: null })).toBe(true);
-    for (const response of [
-      undefined,
-      null,
-      {},
-      { token: "session-token" },
-      { token: "" },
-      { token: false },
-    ]) {
-      expect(signupRequiresEmailVerification(response)).toBe(false);
-    }
+describe("parseAdminEmails", () => {
+  it("splits on commas or whitespace and lowercases", () => {
+    expect(parseAdminEmails("Ops@Example.com other@example.com,Third@Example.COM")).toEqual([
+      "ops@example.com",
+      "other@example.com",
+      "third@example.com",
+    ]);
+    expect(parseAdminEmails(undefined)).toEqual([]);
+    expect(parseAdminEmails("  ")).toEqual([]);
   });
-  it("allows any email when the list is empty", () => {
-    expect(emailAllowed("a@x.com", [])).toBe(true);
-  });
+});
 
-  it("matches exact addresses and domains case-insensitively", () => {
-    const list = parseAllowlist("You@Example.com,@company.com");
-    expect(emailAllowed("you@example.com", list)).toBe(true);
-    expect(emailAllowed("dev@company.com", list)).toBe(true);
-    expect(emailAllowed(" Dev@Company.com ", list)).toBe(true);
-    expect(emailAllowed("other@x.com", list)).toBe(false);
-  });
-
-  it("does not match a look-alike domain or a longer address", () => {
-    const list = parseAllowlist("you@example.com,@company.com");
-    expect(emailAllowed("dev@evilcompany.com", list)).toBe(false);
-    expect(emailAllowed("dev@company.com.evil.test", list)).toBe(false);
-    expect(emailAllowed("eviyou@example.com", list)).toBe(false);
-  });
-
-  it("recognizes internal messaging addresses in any case", () => {
-    expect(isMessagingEmail(" MSG-1@Messaging.Invalid ")).toBe(true);
-    expect(isMessagingEmail("msg-1@messaging.invalid.example.com")).toBe(false);
-  });
-
-  it("honors SIGNUPS_ENABLED", () => {
+describe("isGatedSharedKeyDeployment", () => {
+  it("treats the code default (open signups) as not gated", () => {
     expect(signupsOpen(undefined)).toBe(true);
-    expect(signupsOpen("false")).toBe(false);
-    expect(signupsOpen("0")).toBe(false);
+    expect(
+      isGatedSharedKeyDeployment({
+        signupsEnabled: undefined,
+        signupAllowlist: undefined,
+      }),
+    ).toBe(false);
   });
 
-  it("builds a normalized policy from environment defaults", () => {
+  it("gates when signups are disabled, allowlisted, single-account, or directory", () => {
     expect(
-      signupPolicyFromEnv({
+      isGatedSharedKeyDeployment({
         signupsEnabled: "false",
-        signupAllowlist: " You@Example.com, @company.test ",
+        signupAllowlist: undefined,
       }),
-    ).toEqual({ enabled: false, allowlist: ["you@example.com", "@company.test"] });
+    ).toBe(true);
+    expect(
+      isGatedSharedKeyDeployment({
+        signupsEnabled: "true",
+        signupAllowlist: "ops@example.com",
+      }),
+    ).toBe(true);
+    expect(
+      isGatedSharedKeyDeployment({
+        signupsEnabled: "true",
+        signupAllowlist: "",
+        singleAccount: true,
+      }),
+    ).toBe(true);
+    expect(
+      isGatedSharedKeyDeployment({
+        signupsEnabled: "true",
+        signupAllowlist: "",
+        directoryProvisioning: true,
+      }),
+    ).toBe(true);
   });
 });

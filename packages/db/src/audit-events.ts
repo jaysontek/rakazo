@@ -10,10 +10,14 @@ import { AuditActorTypeSchema, AuditOutcomeSchema } from "@rakazo/contracts";
 import { getLogger } from "@rakazo/logging";
 import type { Prisma, PrismaClient } from "./client.js";
 import { parsePositiveInteger } from "./client.js";
-import { runAsSystem } from "./row-security.js";
+import { runAsSystem, runAsSystemInTransaction } from "./row-security.js";
 import { securityEventMetadata, securityRequestCaller } from "./security-events.js";
 
 type AuditEventDb = Pick<PrismaClient, "auditEvent" | "space" | "user" | "member">;
+type AuditEventTx = Pick<
+  Prisma.TransactionClient,
+  "auditEvent" | "space" | "user" | "member" | "$queryRaw"
+>;
 type AuditEventRow = Prisma.AuditEventGetPayload<object>;
 
 export interface AuditEventInput {
@@ -71,8 +75,23 @@ export async function recordAuditEvent(input: AuditEventInput): Promise<void> {
   }
 }
 
+/**
+ * Append the same audit row(s) through an interactive transaction. Throws on
+ * failure so the caller's transaction rolls back with the audited action.
+ */
+export async function appendAuditEventTx(
+  tx: AuditEventTx,
+  input: AuditEventInput,
+): Promise<void> {
+  const caller = input.actor.type === "user" ? securityRequestCaller() : undefined;
+  await runAsSystemInTransaction(tx, "append an audit event", async () => {
+    const rows = await auditRows(tx, input, caller);
+    if (rows.length) await tx.auditEvent.createMany({ data: rows });
+  });
+}
+
 async function auditRows(
-  db: AuditEventDb,
+  db: Pick<AuditEventDb, "space" | "user" | "member">,
   input: AuditEventInput,
   caller: { ip?: string; userAgent?: string } | undefined,
 ): Promise<Prisma.AuditEventCreateManyInput[]> {

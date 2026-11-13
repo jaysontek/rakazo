@@ -2,6 +2,7 @@ import { ORPCError } from "@orpc/server";
 import { parseSharedKeyMonthlyBudgetInput } from "@rakazo/core";
 import {
   addAdminGrant,
+  addSharedKeyBudgetMember,
   listAdminGrants,
   recordSecurityEvent,
   removeAdminGrant,
@@ -57,6 +58,8 @@ export function opsRoutes(ctx: RouterContext) {
     ops: {
       overview: authed.ops.overview.handler(async ({ context }) => {
         await gate(context);
+        // Read-only: roster is maintained on the shared-key reserve path and by
+        // explicit SHARED_KEY_BUDGET_USER_IDS — never scan/decrypt keys here.
         const secretsDegraded = deps.secrets?.describe().capabilities.degraded === true;
         return loadOpsOverview(
           deps.prisma,
@@ -287,6 +290,26 @@ export function opsRoutes(ctx: RouterContext) {
                 );
               },
             });
+          } catch (error) {
+            badRequest(error);
+          }
+        },
+      ),
+      addSharedKeyBudgetMember: authed.ops.addSharedKeyBudgetMember.handler(
+        async ({ context, input }) => {
+          await gate(context);
+          try {
+            const result = await addSharedKeyBudgetMember(
+              deps.prisma,
+              input.userId,
+              new Date(),
+              { admin: true, actorUserId: context.actor.userId },
+            );
+            return {
+              ok: true as const,
+              enrolled: result.enrolled,
+              ...(result.enrolled ? {} : { reason: result.reason }),
+            };
           } catch (error) {
             badRequest(error);
           }

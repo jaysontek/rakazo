@@ -40,6 +40,10 @@ export const HOSTED_MODEL_CREDITS_REQUIRED_ERROR =
 export const SHARED_KEY_WEEKLY_BUDGET_ERROR =
   "This week's shared API key budget is used up. It resets next week, or connect your own key in Models.";
 
+/** User is not on the shared-key budget roster (open-signup eligibility or pending admin add). */
+export const SHARED_KEY_BUDGET_NOT_ENROLLED_ERROR =
+  "You're not on the shared-key budget yet. Ask an admin.";
+
 /** A run in a billing organization without a paid plan, credits, or free period. */
 export const MODEL_ACCESS_REQUIRED_RUN_ERROR = "Subscribe in Billing to keep running bots.";
 
@@ -113,6 +117,7 @@ const MODEL_CONNECTION_RUN_ERRORS = new Set([
   MISSING_MODEL_RUN_ERROR,
   HOSTED_MODEL_CREDITS_REQUIRED_ERROR,
   SHARED_KEY_WEEKLY_BUDGET_ERROR,
+  SHARED_KEY_BUDGET_NOT_ENROLLED_ERROR,
 ]);
 const APP_RUN_ERRORS = new Set([
   ...MODEL_OUTPUT_RUN_ERRORS,

@@ -122,6 +122,7 @@ interface ModelTeamChatEngagementJudgeDeps {
   deploymentModelKey?: string;
   /** SHARED_KEY_MONTHLY_BUDGET_USD fallback when deployment_settings has no override. */
   sharedKeyMonthlyBudgetUsd?: number | null;
+  sharedKeyEnrollmentPolicy?: import("@rakazo/db").SharedKeyBudgetEnrollmentPolicy;
   providerOverride?: string;
   modelOverride?: string;
   /** The instance flag (`MCP_ALLOW_PRIVATE_ENDPOINT`). */
@@ -275,11 +276,14 @@ export class ModelTeamChatEngagementJudge implements TeamChatEngagementJudge {
       const creditObserver = settings?.modelCreditsEnabled
         ? await hostedModelCreditObserver(this.deps.prisma, scope)
         : undefined;
+      // Enrollment is inside reserveSharedKeyBudget (observer), not here — keep
+      // model resolution write-free for mocks without the roster table.
       const budgetObserver = sharedKey
         ? await sharedKeyBudgetObserver(
             this.deps.prisma,
             scope,
             this.deps.sharedKeyMonthlyBudgetUsd ?? null,
+            this.deps.sharedKeyEnrollmentPolicy,
           )
         : undefined;
       const callObserver = composeSharedKeyBudgetObserver(budgetObserver, creditObserver);

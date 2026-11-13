@@ -17,314 +17,6 @@ msgstr ""
 msgid " (unread)"
 msgstr "（未読）"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Accounts"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Actions"
-msgstr ""
-
-#: src/components/InstallAppSettings.tsx
-msgid "Add to Home Screen"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Admins"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Agents"
-msgstr ""
-
-#: src/components/InstallAppSettings.tsx
-msgid "App"
-msgstr ""
-
-#: src/components/WebPushSettings.tsx
-msgid "Background alerts"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Cap unset"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Chat log"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Choose a destination on the roster."
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Company"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Company key (not on budget roster)"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Could not add admin"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Could not impersonate"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Could not remove admin"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Could not reverse transfer"
-msgstr ""
-
-#: src/components/ImpersonationBanner.tsx
-msgid "Could not stop impersonation"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Could not transfer allotment"
-msgstr ""
-
-#: src/components/WebPushSettings.tsx
-msgid "Couldn't update notifications"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Database"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Degraded"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Env"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Errors"
-msgstr ""
-
-#. placeholder {0}: accountLabel(addCandidate)
-#: src/pages/AdminOpsPage.tsx
-msgid "Grant admin to {0}?"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Hard-stopped"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Health"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Impersonate"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Impersonate {0}?"
-msgstr ""
-
-#: src/components/InstallAppSettings.tsx
-msgid "Install"
-msgstr ""
-
-#: src/components/InstallAppSettings.tsx
-msgid "Install app"
-msgstr ""
-
-#: src/components/WebPushSettings.tsx
-msgid "Install the app first to enable alerts on this device."
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Key"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Kind"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Median first response"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Median total"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Monthly cap"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "No messages for this selection."
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "None this week."
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Not configured"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Not on roster"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "OK"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Operations"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "p95 first response"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Performance"
-msgstr ""
-
-#. placeholder {0}: money(account.personalKeyCostUsd)
-#: src/pages/AdminOpsPage.tsx
-msgid "Personal {0}"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Personal-key spend"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Remove {0}?"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Request log"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Return {0} from {1} to {2}."
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Reverse"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Reverse transfer?"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Reversed"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Reversing…"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Roster"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Runtime"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Sandbox"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Save monthly shared-key cap?"
-msgstr ""
-
-#: src/components/InstallAppSettings.tsx
-msgid "Share → Add to Home Screen"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Shared week"
-msgstr ""
-
-#. placeholder {0}: money(account.sharedKeyCostUsd)
-#: src/pages/AdminOpsPage.tsx
-msgid "Shared {0}"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Shared-key spend"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Shared-key week"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Spend"
-msgstr ""
-
-#: src/pages/model-settings/use-model-settings.ts
-msgid "That key is the company shared key. Usage counts toward the shared budget."
-msgstr ""
-
-#. placeholder {0}: money(Number(draft) || 0)
-#: src/pages/AdminOpsPage.tsx
-msgid "This sets the deployment monthly cap for the shared Gemini key to {0}."
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Total spend"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Transfer"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Transfer unused allotment"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Transfer unused allotment from {0} to {1}?"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Transfer {0} from {1} to {2}?"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Transferring…"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Transfers"
-msgstr ""
-
-#: src/components/ImpersonationBanner.tsx
-msgid "Viewing as {targetEmail}"
-msgstr ""
-
-#: src/components/ImpersonationBanner.tsx
-msgid "Viewing as {targetName} ({targetEmail})"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Week"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "When"
-msgstr ""
-
 #. placeholder {0}: pinned.length
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "{0, plural, one {# bot has its own model:} other {# bots have their own model:}}"
@@ -802,6 +494,7 @@ msgstr "アクセストークン（任意）"
 
 #: src/components/AccountMenu.tsx
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Account"
 msgstr "アカウント"
 
@@ -822,10 +515,19 @@ msgstr "アカウントラベル"
 msgid "Account menu for {name}"
 msgstr "{name}のアカウントメニュー"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Accounts"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Actions"
+msgstr ""
+
+#. placeholder {0}: accountLabel(account)
 #. placeholder {0}: bot.name
 #. placeholder {0}: group.spaceName
-#. placeholder {0}: page.title
 #: src/components/pages/PagesList.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/BotContextMenu.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/shell/sidebar-roster.tsx
@@ -847,6 +549,7 @@ msgstr "アクティビティ"
 
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/components/SecretAskCard.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/PluginsOverlay.tsx
 #: src/pages/ScratchpadSection.tsx
@@ -964,9 +667,17 @@ msgstr "サーバーURLを追加"
 msgid "Add skills"
 msgstr ""
 
+#: src/components/InstallAppSettings.tsx
+msgid "Add to Home Screen"
+msgstr ""
+
 #: src/components/teach/SkillDraftCard.tsx
 msgid "Add to routine"
 msgstr "ルーティンに追加"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Add to shared budget"
+msgstr "共有予算に追加"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Add trigger"
@@ -996,8 +707,13 @@ msgstr ""
 msgid "Address line 2"
 msgstr ""
 
+#: src/components/AccountMenu.tsx
 #: src/components/SidebarFooter.tsx
 msgid "Admin Dashboard"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Admins"
 msgstr ""
 
 #: src/pages/McpServersOverlay.tsx
@@ -1018,6 +734,10 @@ msgstr "詳細設定..."
 msgid "Agent from another app"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Agents"
+msgstr ""
+
 #: src/components/VaultSettings.tsx
 #: src/pages/PluginsOverlay.tsx
 msgid "All"
@@ -1032,6 +752,10 @@ msgstr "{credit} はすべてモデルの利用に充てられます。"
 #: src/pages/shell/agent-import.tsx
 msgid "All bots"
 msgstr "すべてのボット"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "All keys"
+msgstr "すべてのキー"
 
 #: src/components/integrations/space-availability.tsx
 msgid "All spaces"
@@ -1085,6 +809,10 @@ msgstr "接続済み"
 msgid "Already have an account?"
 msgstr "すでにアカウントをお持ちですか？"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Already on the shared budget"
+msgstr "すでに共有予算に登録済みです"
+
 #: src/pages/ExternalConversationSettings.tsx
 msgid "Always act"
 msgstr "常に対応する"
@@ -1106,6 +834,7 @@ msgid "Always open {site}"
 msgstr "{site} を常に開く"
 
 #: src/components/SpendingLimitSettings.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Amount"
 msgstr "金額"
 
@@ -1200,6 +929,10 @@ msgstr ""
 
 #: src/components/ComputerProviderSettings.tsx
 msgid "API URL"
+msgstr ""
+
+#: src/components/InstallAppSettings.tsx
+msgid "App"
 msgstr ""
 
 #: src/pages/AccountSettingsOverlay.tsx
@@ -1301,6 +1034,10 @@ msgstr "ファイルを添付"
 msgid "Attachment"
 msgstr "添付ファイル"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Audit"
+msgstr "監査"
+
 #: src/pages/PluginsOverlay.tsx
 msgid "Authentication"
 msgstr ""
@@ -1366,6 +1103,7 @@ msgstr "Avatar Studio"
 #: src/components/integrations/skills-dialog.tsx
 #: src/components/vault/VaultPageHeader.tsx
 #: src/pages/AdminAccessPage.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/AdminPluginsPage.tsx
 #: src/pages/Auth.tsx
 #: src/pages/Board.tsx
@@ -1389,6 +1127,10 @@ msgstr "チャットに戻る"
 #: src/pages/Auth.tsx
 msgid "Back to sign in"
 msgstr "ログインに戻る"
+
+#: src/components/WebPushSettings.tsx
+msgid "Background alerts"
+msgstr ""
 
 #: src/pages/memory-providers/ConnectionModeFields.tsx
 msgid "Base URL"
@@ -1516,7 +1258,7 @@ msgstr "MCPサーバーを探す"
 msgid "Built-in"
 msgstr "組み込み"
 
-#: src/pages/shell/chat-header.tsx
+#: src/pages/shell/composer.tsx
 msgid "Call"
 msgstr "通話"
 
@@ -1525,7 +1267,7 @@ msgid "Call back"
 msgstr "折り返し通話"
 
 #. placeholder {0}: call.botName
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Call with {0}"
 msgstr "{0}と通話"
 
@@ -1533,7 +1275,7 @@ msgstr "{0}と通話"
 msgid "Calling you…"
 msgstr "着信中…"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Calling…"
 msgstr "発信中…"
 
@@ -1564,6 +1306,7 @@ msgstr "画像を読み取れません"
 #: src/components/teach/TeachComputerOverlay.tsx
 #: src/components/vault/VaultItemDetail.tsx
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/McpServersOverlay.tsx
@@ -1604,6 +1347,10 @@ msgstr "キャンセル済み"
 #: src/pages/ActivityList.tsx
 msgid "Cancelled"
 msgstr "キャンセル済み"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Cap unset"
+msgstr ""
 
 #: src/components/vault/kinds.tsx
 msgid "Card"
@@ -1660,6 +1407,10 @@ msgstr ""
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Chat details"
 msgstr "チャットの詳細"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Chat log"
+msgstr ""
 
 #: src/pages/shell/composer-mentions.tsx
 msgid "Chat Settings"
@@ -1737,6 +1488,10 @@ msgstr "確認中…"
 #: src/pages/shell/avatar-studio-popover.tsx
 msgid "Choose a bot shape, color, or upload an image"
 msgstr "ボットの形や色を選ぶか、画像をアップロード"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Choose a destination on the roster."
+msgstr ""
 
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/shell/composer-error.tsx
@@ -1940,6 +1695,14 @@ msgstr ""
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Compact"
 msgstr "コンパクト"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Company"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Company key — pending admin approval"
+msgstr "会社キー — 管理者の承認待ち"
 
 #: src/pages/ScratchpadSection.tsx
 msgid "Complete"
@@ -2220,12 +1983,17 @@ msgid "Copy rows"
 msgstr "行をコピー"
 
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Cost"
 msgstr "コスト"
 
 #: src/pages/ScratchpadSection.tsx
 msgid "Could not add"
 msgstr "追加できませんでした"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not add admin"
+msgstr ""
 
 #: src/pages/McpServersOverlay.tsx
 msgid "Could not add MCP server"
@@ -2234,6 +2002,10 @@ msgstr "MCPサーバーを追加できませんでした"
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Could not add skills"
 msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not add to shared budget"
+msgstr "共有予算に追加できませんでした"
 
 #: src/pages/PluginSubmissionsPanel.tsx
 msgid "Could not approve plugin"
@@ -2422,6 +2194,10 @@ msgstr ""
 msgid "Could not grant access"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not impersonate"
+msgstr ""
+
 #: src/pages/PluginsOverlay.tsx
 msgid "Could not install connector"
 msgstr "コネクタをインストールできませんでした"
@@ -2560,6 +2336,10 @@ msgstr ""
 msgid "Could not remove"
 msgstr "削除できませんでした"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not remove admin"
+msgstr ""
+
 #: src/pages/PluginsOverlay.tsx
 msgid "Could not remove connector"
 msgstr "コネクタを削除できませんでした"
@@ -2605,6 +2385,10 @@ msgstr "チャートを表示できませんでした"
 #: src/pages/Auth.tsx
 msgid "Could not reset password"
 msgstr "パスワードをリセットできませんでした"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not reverse transfer"
+msgstr ""
 
 #: src/pages/PluginsOverlay.tsx
 msgid "Could not revoke connection"
@@ -2713,6 +2497,10 @@ msgstr "ティーチングを開始できませんでした"
 msgid "Could not stop computer"
 msgstr ""
 
+#: src/components/ImpersonationBanner.tsx
+msgid "Could not stop impersonation"
+msgstr ""
+
 #: src/components/AskCard.tsx
 #: src/components/SecretAskCard.tsx
 msgid "Could not submit this answer"
@@ -2732,6 +2520,10 @@ msgstr "MCPサーバーをテストできませんでした"
 
 #: src/lib/dictation.ts
 msgid "Could not transcribe that recording."
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not transfer allotment"
 msgstr ""
 
 #: src/pages/ScratchpadSection.tsx
@@ -2801,6 +2593,10 @@ msgstr ""
 #: src/pages/MessagingSettingsPanel.tsx
 msgid "Couldn't update messaging settings"
 msgstr "メッセージ設定を更新できませんでした"
+
+#: src/components/WebPushSettings.tsx
+msgid "Couldn't update notifications"
+msgstr ""
 
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Couldn't update your timezone"
@@ -2947,6 +2743,10 @@ msgstr "ダーク"
 msgid "Data"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Database"
+msgstr ""
+
 #: src/lib/billing.ts
 #: src/lib/cron.ts
 msgid "day"
@@ -2990,6 +2790,10 @@ msgstr "OpenClawの初期設定"
 #: src/pages/MemorySettingsOverlay.tsx
 msgid "Default scope"
 msgstr "デフォルトの範囲"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Degraded"
+msgstr ""
 
 #: src/components/AccountAccess.tsx
 #: src/components/pages/PagesList.tsx
@@ -3183,6 +2987,7 @@ msgstr "切断中…"
 
 #: src/components/AskCard.tsx
 #: src/components/ComputerUpdateProgress.tsx
+#: src/components/InstallAppSettings.tsx
 #: src/components/PasskeyOffer.tsx
 #: src/components/SecretAskCard.tsx
 #: src/components/teach/TeachComputerOverlay.tsx
@@ -3285,6 +3090,7 @@ msgstr "各名前は一度だけ使用できます。"
 #: src/components/SpendingLimitSettings.tsx
 #: src/components/vault/VaultItemDetail.tsx
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/McpServersOverlay.tsx
 msgid "Edit"
 msgstr "編集"
@@ -3368,6 +3174,10 @@ msgstr "画像の上限には1〜1000の整数を入力してください。"
 msgid "Enter an API key before testing."
 msgstr "テストする前にAPIキーを入力してください。"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Env"
+msgstr ""
+
 #: src/components/ComputerProviderSettings.tsx
 msgid "Environment ID"
 msgstr ""
@@ -3384,6 +3194,10 @@ msgstr "環境変数: {names}"
 #: src/pages/shell/sidebar-roster.tsx
 msgid "Error"
 msgstr "エラー"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Errors"
+msgstr ""
 
 #: src/lib/cron.ts
 #: src/pages/ExternalConversationSettings.tsx
@@ -3564,6 +3378,10 @@ msgstr "ボットを絞り込む"
 msgid "Filter by date"
 msgstr "日付で絞り込む"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Filter by key type"
+msgstr "キータイプで絞り込む"
+
 #: src/pages/Artifacts.tsx
 #: src/pages/shell/shell-sidebar.tsx
 msgid "Filters"
@@ -3642,6 +3460,7 @@ msgid "Friday"
 msgstr "金曜日"
 
 #: src/pages/ActivityList.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "From"
 msgstr "開始日"
 
@@ -3707,10 +3526,17 @@ msgid "Go to bot"
 msgstr "ボットに移動"
 
 #: src/pages/AdminAccessPage.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Grant"
 msgstr ""
 
+#. placeholder {0}: accountLabel(addCandidate)
+#: src/pages/AdminOpsPage.tsx
+msgid "Grant admin to {0}?"
+msgstr ""
+
 #: src/pages/AdminAccessPage.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Granting…"
 msgstr ""
 
@@ -3730,7 +3556,7 @@ msgstr "グループ設定"
 msgid "Group updates"
 msgstr "更新をまとめる"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Hang up"
 msgstr "通話を終了"
 
@@ -3741,6 +3567,10 @@ msgstr "先に通話を終了してから、画面に表示されたコードを
 #: src/lib/call-session.ts
 msgid "Hang up, then enter the code on screen."
 msgstr "通話を終了してから、画面に表示されたコードを入力してください。"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Hard-stopped"
+msgstr ""
 
 #: src/pages/RoutineEditor.tsx
 msgid "header"
@@ -3765,6 +3595,10 @@ msgstr "ヘッダー値"
 #: src/components/ModelHeadersEditor.tsx
 msgid "Headers"
 msgstr "ヘッダー"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Health"
+msgstr ""
 
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Hear a sample"
@@ -3875,6 +3709,15 @@ msgstr "このモデルでは画像入力が設定されていません。"
 msgid "Image upload area"
 msgstr "画像アップロードエリア"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Impersonate"
+msgstr ""
+
+#. placeholder {0}: accountLabel(impersonate)
+#: src/pages/AdminOpsPage.tsx
+msgid "Impersonate {0}?"
+msgstr ""
+
 #: src/components/AccountDataSettings.tsx
 msgid "Import"
 msgstr ""
@@ -3927,6 +3770,18 @@ msgstr "入力"
 #: src/components/teach/SkillDraftCard.tsx
 msgid "Inputs"
 msgstr "入力"
+
+#: src/components/InstallAppSettings.tsx
+msgid "Install"
+msgstr ""
+
+#: src/components/InstallAppSettings.tsx
+msgid "Install app"
+msgstr ""
+
+#: src/components/WebPushSettings.tsx
+msgid "Install the app first to enable alerts on this device."
+msgstr ""
 
 #: src/components/SidebarFooter.tsx
 msgid "Install update"
@@ -4057,6 +3912,14 @@ msgstr ""
 msgid "key"
 msgstr "キー"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Key"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Key type"
+msgstr "キータイプ"
+
 #: src/pages/Shell.tsx
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Keyboard shortcuts"
@@ -4064,6 +3927,10 @@ msgstr "キーボードショートカット"
 
 #: src/components/vault/kinds.tsx
 msgid "Keys"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Kind"
 msgstr ""
 
 #: src/components/vault/LoginFieldsInput.tsx
@@ -4127,7 +3994,7 @@ msgstr "SSOを連携"
 msgid "List view"
 msgstr "リスト表示"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Listening"
 msgstr "聞いています"
 
@@ -4324,6 +4191,14 @@ msgstr ""
 msgid "MCP servers"
 msgstr "MCPサーバー"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Median first response"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Median total"
+msgstr ""
+
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/Onboarding.tsx
 msgid "Medium"
@@ -4444,10 +4319,6 @@ msgstr "最小化"
 msgid "Minimize bots"
 msgstr "ボットを最小化"
 
-#: src/components/call/CallCard.tsx
-msgid "Minimize call"
-msgstr "通話を最小化"
-
 #: src/lib/cron.ts
 msgid "minute"
 msgstr "分"
@@ -4466,6 +4337,7 @@ msgid "Mode"
 msgstr "モード"
 
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/RoutineEditor.tsx
@@ -4525,6 +4397,10 @@ msgstr "月"
 msgid "Monthly"
 msgstr "毎月"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Monthly cap"
+msgstr ""
+
 #: src/components/ModelCredits.tsx
 msgid "Monthly credits"
 msgstr "月間クレジット"
@@ -4566,11 +4442,11 @@ msgstr "移動先"
 msgid "Move up"
 msgstr "上へ移動"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Mute"
 msgstr "ミュート"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Muted"
 msgstr "ミュート中"
 
@@ -4775,6 +4651,10 @@ msgstr ""
 msgid "No bots match"
 msgstr "一致するボットはありません"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "No key"
+msgstr "キーなし"
+
 #: src/components/AskCard.tsx
 #: src/components/SecretAskCard.tsx
 msgid "No longer active"
@@ -4802,6 +4682,10 @@ msgstr "一致するモデルはありません"
 msgid "No members yet"
 msgstr "メンバーはまだいません"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "No messages for this selection."
+msgstr ""
+
 #: src/pages/PeerMessagesOverlay.tsx
 msgid "No messages with {peerBotName} yet."
 msgstr "{peerBotName}とのメッセージはまだありません。"
@@ -4821,6 +4705,10 @@ msgstr "OpenClaw、Hermes、またはエージェントのドキュメントが�
 #: src/components/pages/PagesList.tsx
 msgid "No pages match “{query}”."
 msgstr "「{query}」に一致するページはありません。"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "No recent requests."
+msgstr "最近のリクエストはありません。"
 
 #: src/components/integrations/IntegrationSetup.tsx
 msgid "No remote MCP servers found"
@@ -4869,9 +4757,17 @@ msgstr "チケットはまだありません"
 msgid "No trigger"
 msgstr "トリガーなし"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "No weekly share left to assign"
+msgstr "割り当て可能な週間枠が残っていません"
+
 #: src/components/SpendingLimitSettings.tsx
 #: src/components/vault/VaultItemEditor.tsx
 msgid "None"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "None this week."
 msgstr ""
 
 #: src/lib/ticket-priority.ts
@@ -4890,6 +4786,14 @@ msgstr ""
 #: src/components/McpServerHealthLine.tsx
 msgid "Not checked yet"
 msgstr "未確認"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Not configured"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Not eligible for the shared budget"
+msgstr "共有予算の対象外です"
 
 #: src/pages/shell/agent-import.tsx
 msgid "Not imported"
@@ -4925,6 +4829,7 @@ msgstr "動作していません"
 msgid "Nothing remembered yet"
 msgstr "記憶はまだありません"
 
+#: src/components/WebPushSettings.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Notifications"
 msgstr "通知"
@@ -4959,6 +4864,10 @@ msgstr "OAuthの有効期限切れ"
 
 #: src/components/ComputerDeviceSettings.tsx
 msgid "Offline"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "OK"
 msgstr ""
 
 #: src/pages/model-settings/connection-controls.tsx
@@ -5028,15 +4937,6 @@ msgstr "{title} を開く"
 msgid "Open <0>{0}</0> and enter this code:"
 msgstr "<0>{0}</0>を開いて、このコードを入力してください:"
 
-#: src/pages/shell/chat-header.tsx
-msgid "Open call"
-msgstr "通話を開く"
-
-#. placeholder {0}: call.botName
-#: src/components/call/CallCard.tsx
-msgid "Open chat with {0}"
-msgstr "{0}とのチャットを開く"
-
 #: src/components/ComputersUnavailableHint.tsx
 msgid "Open computer settings"
 msgstr "コンピューター設定を開く"
@@ -5082,6 +4982,10 @@ msgstr "OpenClawまたはHermes"
 #: src/components/pages/DownloadPdfButton.tsx
 msgid "Opens your browser's print dialog. Choose Save as PDF as the destination."
 msgstr "ブラウザの印刷ダイアログを開きます。送信先に「PDF に保存」を選んでください。"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Operations"
+msgstr ""
 
 #: src/components/SignupSurvey.tsx
 #: src/pages/model-settings/connection-controls.tsx
@@ -5131,6 +5035,10 @@ msgstr "出力"
 #: src/pages/Board.tsx
 msgid "Owner"
 msgstr "オーナー"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "p95 first response"
+msgstr ""
 
 #: src/components/pages/PageCard.tsx
 #: src/components/pages/PageView.tsx
@@ -5263,6 +5171,14 @@ msgstr "一時停止中"
 msgid "Pending"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Pending admin approval"
+msgstr "管理者の承認待ち"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Performance"
+msgstr ""
+
 #: src/pages/shell/bot-panel.tsx
 msgid "Permissions"
 msgstr "権限"
@@ -5272,8 +5188,14 @@ msgid "Persona"
 msgstr "ペルソナ"
 
 #: src/components/SignupSurvey.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Personal"
 msgstr "個人"
+
+#. placeholder {0}: money(account.personalKeyCostUsd)
+#: src/pages/AdminOpsPage.tsx
+msgid "Personal {0}"
+msgstr ""
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/vault/VaultItemEditor.tsx
@@ -5622,6 +5544,7 @@ msgstr "再読み込み"
 #: src/components/TrustedLinkSitesSettings.tsx
 #: src/components/vault/LoginFieldsInput.tsx
 #: src/components/vault/VaultItemDetail.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/ModelRoleSettings.tsx
 #: src/pages/PluginsOverlay.tsx
@@ -5640,6 +5563,11 @@ msgstr "{0}を削除"
 #: src/pages/GroupPanel.tsx
 msgid "Remove {0} from the group"
 msgstr "{0}をグループから外す"
+
+#. placeholder {0}: accountLabel(removeTarget)
+#: src/pages/AdminOpsPage.tsx
+msgid "Remove {0}?"
+msgstr ""
 
 #: src/components/vault/VaultItemDetail.tsx
 msgid "Remove {secretName}? Bots will no longer be able to use it."
@@ -5694,6 +5622,7 @@ msgid "Removed, but list refresh failed"
 msgstr "削除しましたが、一覧を更新できませんでした"
 
 #: src/components/integrations/plugin-marketplace.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/PluginsOverlay.tsx
 msgid "Removing…"
 msgstr "削除中…"
@@ -5756,6 +5685,10 @@ msgstr "{0}に返信中"
 msgid "Request a new code"
 msgstr "新しいコードをリクエスト"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Request log"
+msgstr ""
+
 #: src/pages/MessagingSettingsPanel.tsx
 msgid "Requests"
 msgstr ""
@@ -5797,6 +5730,11 @@ msgstr "リセット"
 #: src/components/SharedKeyUsageMeter.tsx
 msgid "Resets {reset}"
 msgstr ""
+
+#. placeholder {0}: resetCountdown(budget.resetsAt)
+#: src/pages/AdminOpsPage.tsx
+msgid "Resets in {0}"
+msgstr "{0}後にリセット"
 
 #: src/components/ComputerMaintenanceActions.tsx
 msgid "Resetting…"
@@ -5861,15 +5799,33 @@ msgstr "今すぐ再試行"
 msgid "Retry screen"
 msgstr "画面を再試行"
 
-#. placeholder {0}: call.botName
-#: src/components/call/CallCard.tsx
-msgid "Return to call with {0}"
-msgstr "{0}との通話に戻る"
+#. placeholder {0}: money(reverseTarget.amountUsd)
+#. placeholder {1}: nameFor(reverseTarget.toUserId)
+#. placeholder {2}: nameFor(reverseTarget.fromUserId)
+#: src/pages/AdminOpsPage.tsx
+msgid "Return {0} from {1} to {2}."
+msgstr ""
 
 #: src/pages/McpOAuthCallback.tsx
 #: src/pages/SlackInstallCallback.tsx
 msgid "Return to Rakazo"
 msgstr "Rakazoに戻る"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Reverse"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Reverse transfer?"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Reversed"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Reversing…"
+msgstr ""
 
 #: src/lib/model-connection-preflight.ts
 msgid "Review provider settings and test again."
@@ -5886,6 +5842,10 @@ msgstr ""
 
 #: src/components/ComputerProviderSettings.tsx
 msgid "Root filesystem"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Roster"
 msgstr ""
 
 #: src/pages/RoutineEditor.tsx
@@ -5950,6 +5910,10 @@ msgstr "実行"
 msgid "Runs when this bot receives a verified message from this provider."
 msgstr "このボットがこのプロバイダーから検証済みのメッセージを受信したときに実行されます。"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Runtime"
+msgstr ""
+
 #: src/pages/PluginsOverlay.tsx
 msgid "Sales & CRM"
 msgstr ""
@@ -5961,6 +5925,10 @@ msgstr "{botName}と同じ"
 #: src/pages/ModelSettingsOverlay.tsx
 msgid "Same as main model"
 msgstr "メインモデルと同じ"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Sandbox"
+msgstr ""
 
 #: src/lib/cron.ts
 msgid "Saturday"
@@ -5974,6 +5942,7 @@ msgstr "土曜日"
 #: src/components/teach/SkillDraftCard.tsx
 #: src/components/vault/VaultItemEditor.tsx
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/Board.tsx
 #: src/pages/ExternalConversationSettings.tsx
 #: src/pages/GroupPanel.tsx
@@ -5987,6 +5956,10 @@ msgstr "土曜日"
 #: src/pages/shell/dialogs.tsx
 msgid "Save"
 msgstr "保存"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Save monthly shared-key cap?"
+msgstr ""
 
 #: src/components/ComputerMaintenanceActions.tsx
 msgid "Save the workspace and install current software."
@@ -6070,6 +6043,10 @@ msgstr "画面が接続されていません"
 msgid "Search"
 msgstr "検索"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Search accounts"
+msgstr "アカウントを検索"
+
 #: src/components/integrations/IntegrationSetup.tsx
 #: src/pages/PluginsOverlay.tsx
 msgid "Search apps"
@@ -6101,6 +6078,10 @@ msgstr "integrations.shを検索"
 #: src/pages/shell/chat-model-picker.tsx
 msgid "Search models"
 msgstr "モデルを検索"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Search name or email"
+msgstr "名前またはメールを検索"
 
 #: src/pages/shell/shell-sidebar.tsx
 msgid "Search runs"
@@ -6216,7 +6197,7 @@ msgstr "サーバーURL"
 msgid "Set"
 msgstr "設定"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 #: src/components/SidebarFooter.tsx
 #: src/pages/MessagingSettingsPanel.tsx
 #: src/pages/SettingsOverlay.tsx
@@ -6269,19 +6250,42 @@ msgstr "共有"
 msgid "Share “{title}”"
 msgstr "「{title}」を共有"
 
+#: src/components/InstallAppSettings.tsx
+msgid "Share → Add to Home Screen"
+msgstr ""
+
 #: src/components/pages/SharePopover.tsx
 msgid "Share, anyone with the link can view"
 msgstr "共有、リンクを知っている人は誰でも閲覧可能"
 
 #: src/components/pages/PagesList.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Shared"
 msgstr "共有"
 
+#. placeholder {0}: money(account.sharedKeyCostUsd)
+#: src/pages/AdminOpsPage.tsx
+msgid "Shared {0}"
+msgstr ""
+
 #: src/pages/KnowledgeSection.tsx
 msgid "Shared memory"
 msgstr "共有メモリ"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Shared week"
+msgstr ""
+
+#. placeholder {0}: accountLabel(account)
+#: src/pages/AdminOpsPage.tsx
+msgid "Shared week usage for {0}"
+msgstr "{0}の共有週の使用量"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Shared-key week"
+msgstr ""
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/VaultSettings.tsx
@@ -6489,13 +6493,17 @@ msgstr "読み上げ"
 msgid "Speak this reply"
 msgstr "この返信を読み上げ"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Speaking"
 msgstr "話しています"
 
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Speech model"
 msgstr "音声モデル"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Spend"
+msgstr ""
 
 #: src/components/SpendingLimitSettings.tsx
 msgid "Spending limit"
@@ -6556,6 +6564,7 @@ msgstr "開始中"
 
 #: src/components/teach/TeachComputerOverlay.tsx
 #: src/lib/roster-status.ts
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/model-settings/connection-controls.tsx
 #: src/pages/Onboarding.tsx
 msgid "Starting…"
@@ -6566,6 +6575,7 @@ msgid "State or region"
 msgstr ""
 
 #: src/pages/ActivityList.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/Board.tsx
 msgid "Status"
 msgstr "ステータス"
@@ -6574,6 +6584,7 @@ msgstr "ステータス"
 msgid "Steps"
 msgstr "手順"
 
+#: src/components/ImpersonationBanner.tsx
 #: src/pages/RoutineEditor.tsx
 #: src/pages/shell/composer.tsx
 #: src/pages/shell/computer-overlay.tsx
@@ -6599,6 +6610,7 @@ msgid "Stopped."
 msgstr "停止しました。"
 
 #: src/components/ComputerMaintenanceActions.tsx
+#: src/components/ImpersonationBanner.tsx
 msgid "Stopping…"
 msgstr ""
 
@@ -6749,6 +6761,10 @@ msgstr ""
 msgid "Testing…"
 msgstr "テスト中…"
 
+#: src/pages/model-settings/use-model-settings.ts
+msgid "That key is the company shared key. Usage counts toward the shared budget."
+msgstr ""
+
 #: src/pages/shell/composer-error.tsx
 msgid "The bot can use the file but won't see the picture."
 msgstr "ボットはファイルを利用できますが、画像の内容は見えません。"
@@ -6829,7 +6845,7 @@ msgstr "保存された設定を読み取れません。削除してから再度
 msgid "They get {weeks} weeks free."
 msgstr "友だちは{weeks}週間無料で使えます。"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 #: src/pages/ModelRoleSettings.tsx
 #: src/pages/RoutineEditor.tsx
 #: src/pages/shell/bot-panel.tsx
@@ -6990,6 +7006,11 @@ msgstr "このサーバーはすでに接続されています。再度認可す
 msgid "This server's tool result does not fit the model. Turn off Keep tool results whole for that server, or choose another model."
 msgstr ""
 
+#. placeholder {0}: money(Number(draft) || 0)
+#: src/pages/AdminOpsPage.tsx
+msgid "This sets the deployment monthly cap for the shared Gemini key to {0}."
+msgstr ""
+
 #: src/pages/model-settings/connection-controls.tsx
 msgid "This subscription sign-in is not available in Rakazo yet. Use a deployment credential or choose another provider."
 msgstr "このサブスクリプションでのログインはRakazoではまだ利用できません。デプロイメントの認証情報を使用するか、別のプロバイダーを選択してください。"
@@ -6997,6 +7018,11 @@ msgstr "このサブスクリプションでのログインはRakazoではまだ
 #: src/pages/Artifacts.tsx
 msgid "This week"
 msgstr "今週"
+
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "This week's shared API key budget is used up. It resets next week, or connect your own key in Models."
+msgstr "今週の共有APIキー予算を使い切りました。来週にリセットされるか、モデルで自分のキーを接続してください。"
 
 #: src/lib/cron.ts
 msgid "Thursday"
@@ -7019,6 +7045,7 @@ msgid "Title"
 msgstr "タイトル"
 
 #: src/pages/ActivityList.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "To"
 msgstr "終了日"
 
@@ -7045,6 +7072,7 @@ msgid "Toggle sidebar"
 msgstr "サイドバーの表示切り替え"
 
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Tokens"
 msgstr "トークン"
 
@@ -7074,10 +7102,6 @@ msgstr "ツール"
 msgid "Transcribing…"
 msgstr "文字起こし中…"
 
-#: src/components/call/CallCard.tsx
-msgid "Transcript"
-msgstr "文字起こし"
-
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Transcription model"
 msgstr "文字起こしモデル"
@@ -7088,6 +7112,35 @@ msgstr ""
 
 #: src/lib/dictation.ts
 msgid "Transcription response is too large."
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Transfer"
+msgstr ""
+
+#. placeholder {0}: money(remaining)
+#. placeholder {1}: accountLabel(transferFrom)
+#. placeholder {2}: accountLabel(transferTo)
+#: src/pages/AdminOpsPage.tsx
+msgid "Transfer {0} from {1} to {2}?"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Transfer unused allotment"
+msgstr ""
+
+#. placeholder {0}: accountLabel(transferFrom)
+#. placeholder {1}: accountLabel(transferTo)
+#: src/pages/AdminOpsPage.tsx
+msgid "Transfer unused allotment from {0} to {1}?"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Transferring…"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Transfers"
 msgstr ""
 
 #: src/pages/ExternalConversationSettings.tsx
@@ -7169,7 +7222,7 @@ msgstr "アンインストール"
 msgid "Unlink"
 msgstr "リンクを解除"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Unmute"
 msgstr "ミュート解除"
 
@@ -7394,6 +7447,15 @@ msgstr ""
 msgid "View source"
 msgstr ""
 
+#: src/components/ImpersonationBanner.tsx
+msgid "Viewing as {targetEmail}"
+msgstr ""
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Viewing as {targetName} ({targetEmail})"
+msgstr ""
+
+#: src/components/call/CallStrip.tsx
 #: src/pages/settings-nav.ts
 #: src/pages/shell/bot-panel.tsx
 #: src/pages/SpaceSettingOverrides.tsx
@@ -7459,6 +7521,10 @@ msgstr "週末"
 msgid "Weekly"
 msgstr "毎週"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Weekly shared-key pool used"
+msgstr "週次の共有キープール使用量"
+
 #: src/components/SignupSurvey.tsx
 msgid "Welcome to Rakazo"
 msgstr "Rakazoへようこそ"
@@ -7498,6 +7564,10 @@ msgstr "返す内容"
 #: src/pages/RoutineEditor.tsx
 msgid "What to watch"
 msgstr "監視する対象"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "When"
+msgstr ""
 
 #: src/pages/RoutineEditor.tsx
 msgid "When a webhook fires"
@@ -7601,6 +7671,11 @@ msgstr "友だちが新しいカードでトライアルを始めると、あな
 #: src/pages/shell/computer-overlay.tsx
 msgid "You have control"
 msgstr "あなたが操作中"
+
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "You're not on the shared-key budget yet. Ask an admin."
+msgstr "まだ共有キー予算に入っていません。管理者に依頼してください。"
 
 #. js-lingui-explicit-id
 #: src/lib/run-error.ts

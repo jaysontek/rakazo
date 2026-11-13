@@ -6,6 +6,7 @@ import {
   listAdminGrants,
   listSharedKeyAllotmentTransfers,
   listSharedKeyBudgetMembers,
+  listSharedKeyBudgetNotEnrolledHits,
   runAsSystem,
   sharedKeyMonthlyBudgetUsd,
   sharedKeyWeeklyBudgetStatus,
@@ -44,6 +45,7 @@ export type OpsAccountRow = {
     resetsAt: string;
     timezone: "America/New_York";
   } | null;
+  pendingSharedBudgetApproval: boolean;
 };
 
 export type OpsAgentRow = {
@@ -104,6 +106,8 @@ export type OpsOverview = {
     monthlyCapUsd: number | null;
     rosterConfigured: boolean;
     memberCount: number;
+    weekPoolUsd: number | null;
+    weekSpentUsd: number;
     weekStartsAt: string;
     resetsAt: string;
     timezone: "America/New_York";
@@ -200,16 +204,19 @@ export async function loadOpsOverview(
 ): Promise<OpsOverview> {
   return runAsSystem("operations dashboard overview", async () => {
     const weekAgo = new Date(now.getTime() - RECENT_RUN_WINDOW_MS);
+    const weekStart = sharedKeyWeekStart(now);
     const [
       users,
       usageGroups,
       sharedUsageGroups,
       personalUsageGroups,
+      weekSharedUsage,
       recentModels,
       bots,
       recentRuns,
       monthlyCap,
       members,
+      notEnrolledHits,
       database,
     ] = await Promise.all([
       prisma.user.findMany({
@@ -233,6 +240,11 @@ export async function loadOpsOverview(
       prisma.usageRecord.groupBy({
         by: ["userId"],
         where: { sharedKey: false },
+        _sum: { costUsd: true },
+      }),
+      prisma.usageRecord.groupBy({
+        by: ["userId"],
+        where: { sharedKey: true, createdAt: { gte: weekStart, lt: now } },
         _sum: { costUsd: true },
       }),
       prisma.usageRecord.findMany({
@@ -269,8 +281,10 @@ export async function loadOpsOverview(
       }),
       sharedKeyMonthlyBudgetUsd(prisma, envSharedKeyMonthlyBudgetUsd),
       listSharedKeyBudgetMembers(prisma),
+      listSharedKeyBudgetNotEnrolledHits(prisma, weekStart),
       probeDatabase(prisma),
     ]);
+    const notEnrolledHitIds = new Set(notEnrolledHits);
 
     const usageByUser = new Map(
       usageGroups.map((row) => [
@@ -339,11 +353,19 @@ export async function loadOpsOverview(
             options.sharedGoogleApiKey ?? null,
           )
         : "none";
+      const deactivated = user.deactivatedAt != null;
+      const budgetConfigured = Boolean(budget?.configured) || monthlyCap != null;
+      const pendingSharedBudgetApproval =
+        budgetConfigured &&
+        !memberIds.has(user.id) &&
+        !deactivated &&
+        keyType !== "personal" &&
+        (notEnrolledHitIds.has(user.id) || keyType === "company");
       accounts.push({
         userId: user.id,
         email: user.email,
         name: user.name,
-        deactivated: user.deactivatedAt != null,
+        deactivated,
         modelProvider: model?.provider ?? null,
         modelId: model?.model ?? null,
         keyType,
@@ -352,11 +374,11 @@ export async function loadOpsOverview(
         sharedKeyCostUsd: sharedByUser.get(user.id) ?? 0,
         personalKeyCostUsd: personalByUser.get(user.id) ?? 0,
         sharedKeyBudget: budget,
+        pendingSharedBudgetApproval,
       });
     }
     const visibleBots = bots.filter((bot) => !hiddenUserIds.has(bot.userId));
     const activeBots = visibleBots.filter((bot) => bot.archivedAt == null);
-    const weekStart = sharedKeyWeekStart(now);
     const adminGrants = (
       await listAdminGrants(prisma, options.envBootstrapAdmins ?? [])
     ).filter((grant) => !isHiddenOpsEmail(grant.email));
@@ -398,6 +420,12 @@ export async function loadOpsOverview(
 
     const sharedKeyCostUsd = accounts.reduce((sum, row) => sum + row.sharedKeyCostUsd, 0);
     const personalKeyCostUsd = accounts.reduce((sum, row) => sum + row.personalKeyCostUsd, 0);
+    // Real company shared-key spend since Monday (visible accounts) — not effective
+    // allotment spend, which subtracts preJoin baselines and would undercount the pool.
+    const weekSpentUsd = weekSharedUsage.reduce((sum, row) => {
+      if (hiddenUserIds.has(row.userId)) return sum;
+      return sum + (row._sum.costUsd ?? 0);
+    }, 0);
     const budgetWindow = {
       weekStartsAt: weekStart.toISOString(),
       resetsAt: sharedKeyWeekEnd(weekStart).toISOString(),
@@ -422,8 +450,10 @@ export async function loadOpsOverview(
       },
       sharedKeyBudget: {
         monthlyCapUsd: monthlyCap,
-        rosterConfigured: members.length > 0,
+        rosterConfigured: members.length > 0 || monthlyCap != null,
         memberCount: members.length,
+        weekPoolUsd: monthlyCap != null && monthlyCap > 0 ? monthlyCap / 4 : null,
+        weekSpentUsd,
         weekStartsAt: budgetWindow.weekStartsAt,
         resetsAt: budgetWindow.resetsAt,
         timezone: "America/New_York",

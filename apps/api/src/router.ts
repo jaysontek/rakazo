@@ -133,6 +133,8 @@ export interface RouterDeps {
     opsDashboardAllowlist?: string[];
     /** SHARED_KEY_MONTHLY_BUDGET_USD fallback when deployment_settings has no override. */
     sharedKeyMonthlyBudgetUsd?: number | null;
+    /** Explicit SHARED_KEY_BUDGET_USER_IDS includes (additive; hot-path auto-enroll is separate). */
+    sharedKeyBudgetUserIds?: string[];
     /** Deployment default model API key (for the configured default provider). */
     deploymentModelKey?: string | null;
     phoneCallsEnabled?: boolean;

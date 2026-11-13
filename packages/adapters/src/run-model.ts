@@ -193,12 +193,21 @@ export async function resolveModelKey(...args: Parameters<typeof resolveModelKey
     baseUrl: material.baseUrl,
     scriptedRuntime: Boolean(deps.runtime?.describe().capabilities.scripted),
   });
+  // Enrollment happens inside reserveSharedKeyBudget (budget observer) under the
+  // members lock — keep resolveModelKey write-free so mocks without the roster
+  // table cannot fail a run with "Run setup failed".
   const creditObserver =
     !credential && billingEnabled
       ? await hostedModelCreditObserver(deps.prisma, scope)
       : undefined;
   const budgetObserver = usingSharedKey
-    ? await sharedKeyBudgetObserver(deps.prisma, scope, deps.sharedKeyMonthlyBudgetUsd ?? null)
+    ? await sharedKeyBudgetObserver(
+        deps.prisma,
+        scope,
+        deps.sharedKeyMonthlyBudgetUsd ?? null,
+        // Missing policy must stay strict (open signup), never gated fail-open.
+        deps.sharedKeyEnrollmentPolicy,
+      )
     : undefined;
   const callObserver = composeSharedKeyBudgetObserver(budgetObserver, creditObserver);
   return {

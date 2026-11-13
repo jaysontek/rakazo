@@ -1,4 +1,4 @@
-import { sharedKeyWeekStart } from "@rakazo/core";
+import { effectiveSharedKeySpendUsd, sharedKeyWeekStart } from "@rakazo/core";
 import type { PrismaClient } from "./client.js";
 import { Prisma } from "./client.js";
 import { isHiddenOpsEmail } from "./ops-email-filter.js";
@@ -87,7 +87,7 @@ async function assertTransferPartiesVisible(
 async function spentSharedKeyUsd(
   prisma: Pick<TransferTx, "usageRecord">,
   userId: string,
-  weekStart: Date,
+  since: Date,
   now: Date,
 ): Promise<number> {
   const { _sum } = await prisma.usageRecord.aggregate({
@@ -95,10 +95,24 @@ async function spentSharedKeyUsd(
     where: {
       userId,
       sharedKey: true,
-      createdAt: { gte: weekStart, lt: now },
+      createdAt: { gte: since, lt: now },
     },
   });
   return _sum.costUsd ?? 0;
+}
+
+async function memberSpendSince(
+  tx: Pick<TransferTx, "usageRecord" | "sharedKeyWeekAllotment">,
+  userId: string,
+  weekStart: Date,
+  now: Date,
+): Promise<number> {
+  const mondaySpend = await spentSharedKeyUsd(tx, userId, weekStart, now);
+  const allotment = await tx.sharedKeyWeekAllotment.findUnique({
+    where: { weekStart_userId: { weekStart, userId } },
+    select: { preJoinSpendUsd: true },
+  });
+  return effectiveSharedKeySpendUsd(mondaySpend, allotment?.preJoinSpendUsd ?? 0);
 }
 
 /**
@@ -136,7 +150,7 @@ export async function transferSharedKeyAllotment(
       }),
     ]);
     if (!fromRow || !toRow) throw new Error("Both users must have an allotment this week");
-    const spent = await spentSharedKeyUsd(tx, input.fromUserId, weekStart, now);
+    const spent = await memberSpendSince(tx, input.fromUserId, weekStart, now);
     const remaining = Math.max(0, fromRow.allotmentUsd - spent - fromRow.reservedUsd);
     if (!(remaining > 0)) throw new Error("Source has no unused allotment to transfer");
     await tx.sharedKeyWeekAllotment.update({
@@ -209,7 +223,7 @@ export async function reverseSharedKeyAllotmentTransfer(
       }),
     ]);
     if (!fromRow || !toRow) throw new Error("Allotment rows missing for reverse");
-    const toSpent = await spentSharedKeyUsd(tx, transfer.toUserId, weekStart, now);
+    const toSpent = await memberSpendSince(tx, transfer.toUserId, weekStart, now);
     const toFloor = toSpent + toRow.reservedUsd;
     const desiredTo = toRow.allotmentUsd - transfer.amountUsd;
     // Never raise the receiver's allotment (overspend must not inflate the pool).

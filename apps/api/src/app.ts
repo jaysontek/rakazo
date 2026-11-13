@@ -145,6 +145,7 @@ import {
   rowSecurityWarning,
   runAsSystem,
   securityEventRetentionDays,
+  sharedKeyBudgetEnrollmentPolicyFromEnv,
   verifyContentKeys,
   withSecurityRequest,
 } from "@rakazo/db";
@@ -530,11 +531,9 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
       ...(seedSharedKeyBudget ? { sharedKeyMonthlyBudgetUsd: env.sharedKeyMonthlyBudgetUsd } : {}),
     },
   });
-  // When the env list is set, make the member table match it (add/remove + re-divide).
-  // Leave the table alone when the variable is unset so SQL/admin edits survive restarts.
-  if (process.env.SHARED_KEY_BUDGET_USER_IDS !== undefined) {
-    await reconcileSharedKeyBudgetMembers(prisma, env.sharedKeyBudgetUserIds);
-  }
+  // Explicit SHARED_KEY_BUDGET_USER_IDS includes only — additive, never removes
+  // hot-path auto-enrolled members. Company-key enrollment happens on reserve.
+  await reconcileSharedKeyBudgetMembers(prisma, env.sharedKeyBudgetUserIds);
   const installed = new InstalledConnectorProvider(
     prisma,
     secrets,
@@ -738,6 +737,14 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
   const codexCatalog = new CodexCatalogCache();
   // One instance: chat runs submit videos and, in single-process mode, background polls finish them.
   const mediaGeneration = createMediaGenerationProvider();
+  const sharedKeyEnrollmentPolicy = sharedKeyBudgetEnrollmentPolicyFromEnv({
+    signupsEnabled: env.signupsEnabled,
+    signupAllowlist: env.signupAllowlist,
+    singleAccount: Boolean(env.desktopStackToken),
+    directoryProvisioning: Boolean(directory),
+    adminEmails: env.adminEmails,
+    explicitUserIds: env.sharedKeyBudgetUserIds,
+  });
   const executor = createRunExecutor({
     billingEnabled: modelCreditsEnabled,
     maxUploadSizeBytes: env.maxUploadSizeBytes,
@@ -754,6 +761,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
     connector: stack.connector,
     connectors: stack.connector,
     sharedKeyMonthlyBudgetUsd: env.sharedKeyMonthlyBudgetUsd,
+    sharedKeyEnrollmentPolicy,
     listConnectedPluginSlugs: async (userId) => {
       const provider = await integrationSettings.resolve("composio");
       if (!provider) return [];
@@ -1405,6 +1413,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
               deploymentModel: env.defaultModel,
               deploymentModelKey: env.deploymentModelKey,
               sharedKeyMonthlyBudgetUsd: env.sharedKeyMonthlyBudgetUsd,
+              sharedKeyEnrollmentPolicy,
               allowPrivateEndpoint: env.mcpAllowPrivateEndpoint,
               providerOverride: env.teamChatJudgeProvider,
               modelOverride: env.teamChatJudgeModel,
@@ -1417,6 +1426,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
               deploymentModel: env.defaultModel,
               deploymentModelKey: env.deploymentModelKey,
               sharedKeyMonthlyBudgetUsd: env.sharedKeyMonthlyBudgetUsd,
+              sharedKeyEnrollmentPolicy,
               allowPrivateEndpoint: env.mcpAllowPrivateEndpoint,
             });
       const bridge = new TeamChatBridge({

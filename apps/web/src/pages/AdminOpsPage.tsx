@@ -9,15 +9,32 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  Badge,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  Input,
+  ListSearchInput,
   NativeSelect,
   NativeSelectOption,
-  buttonVariants,
   Spinner,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  buttonVariants,
+  cn,
 } from "@rakazo/ui-web";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, MoreHorizontal } from "lucide-react";
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { PageLoading } from "../components/PageLoading";
 import { useSpaceQueries } from "../lib/query";
@@ -50,22 +67,92 @@ function accountLabel(account: Pick<OpsAccount, "name" | "email">): string {
   return account.name || account.email;
 }
 
-function KeyLabel({
+function KeyBadge({
   keyType,
-  onRoster,
+  pendingSharedBudget,
 }: {
   keyType: OpsAccount["keyType"];
-  onRoster: boolean;
+  pendingSharedBudget?: boolean;
 }) {
-  if (keyType === "company") {
-    return onRoster ? (
-      <Trans>Company</Trans>
-    ) : (
-      <Trans>Company key (not on budget roster)</Trans>
+  if (pendingSharedBudget) {
+    return (
+      <Badge variant="secondary">
+        <Trans>Company key — pending admin approval</Trans>
+      </Badge>
     );
   }
-  if (keyType === "personal") return <Trans>Personal</Trans>;
+  if (keyType === "company") {
+    return (
+      <Badge variant="secondary">
+        <Trans>Company</Trans>
+      </Badge>
+    );
+  }
+  if (keyType === "personal") {
+    return (
+      <Badge variant="outline">
+        <Trans>Personal</Trans>
+      </Badge>
+    );
+  }
   return <span className="text-muted-foreground">—</span>;
+}
+
+function pendingSharedBudgetApproval(account: OpsAccount): boolean {
+  return account.pendingSharedBudgetApproval === true;
+}
+
+function UsageBar({
+  percent,
+  label,
+  hardStopped,
+}: {
+  percent: number;
+  label: string;
+  hardStopped?: boolean;
+}) {
+  const value = Math.min(100, Math.max(0, Math.floor(percent)));
+  return (
+    <div className="space-y-1">
+      <div className="flex items-baseline justify-between gap-2 text-xs">
+        <span className={cn("tabular-nums", hardStopped && "text-destructive")}>{pct(value)}</span>
+        {hardStopped ? (
+          <span className="text-destructive">
+            <Trans>Hard-stopped</Trans>
+          </span>
+        ) : null}
+      </div>
+      <div
+        className="h-1.5 overflow-hidden rounded-full bg-muted"
+        role="progressbar"
+        aria-valuenow={value}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuetext={`${value}%`}
+        aria-label={label}
+      >
+        <div
+          className={cn(
+            "h-full rounded-full transition-[width]",
+            hardStopped ? "bg-destructive" : "bg-foreground",
+          )}
+          style={{ width: `${value}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function resetCountdown(resetsAt: string, nowMs = Date.now()): string {
+  const msLeft = new Date(resetsAt).getTime() - nowMs;
+  if (!(msLeft > 0)) return "0h";
+  const totalHours = Math.floor(msLeft / 3_600_000);
+  const days = Math.floor(totalHours / 24);
+  const hours = totalHours % 24;
+  if (days > 0) return `${days}d ${hours}h`;
+  const minutes = Math.floor((msLeft % 3_600_000) / 60_000);
+  if (totalHours > 0) return `${totalHours}h ${minutes}m`;
+  return `${Math.max(1, minutes)}m`;
 }
 
 export function AdminOpsPage() {
@@ -89,7 +176,7 @@ export function AdminOpsPage() {
         </h1>
       </header>
       <main className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-5xl space-y-10 px-4 py-6">
+        <div className="w-full space-y-6 px-4 py-6 sm:px-6 lg:px-8">
           <OpsDashboard />
         </div>
       </main>
@@ -119,28 +206,91 @@ function OpsDashboard() {
     );
   }
 
-  const data = overview.data;
-  const refetch = () => {
-    void overview.refetch();
-  };
-
   return (
-    <>
-      <BudgetSection data={data} onCapSaved={refetch} />
-      <AccountsSection accounts={data.accounts} onChanged={refetch} />
-      <AdminGrantsSection data={data} onChanged={refetch} />
-      <TransfersSection data={data} onChanged={refetch} />
-      <AgentsSection data={data} />
-      <PerformanceSection data={data} />
-      <RequestLogSection selected={selected} onSelect={setSelected} />
-      {selected?.runId || selected?.threadId ? (
-        <ChatLogSection runId={selected.runId} threadId={selected.threadId} />
-      ) : null}
-    </>
+    <OpsDashboardView
+      data={overview.data}
+      onChanged={() => {
+        void overview.refetch();
+      }}
+      selected={selected}
+      onSelect={setSelected}
+    />
   );
 }
 
-function BudgetSection({ data, onCapSaved }: { data: OpsOverview; onCapSaved: () => void }) {
+/** Presentational ops dashboard — also used by the e2e fixture with mock data. */
+export function OpsDashboardView({
+  data,
+  onChanged,
+  selected,
+  onSelect,
+  interactive = true,
+}: {
+  data: OpsOverview;
+  onChanged: () => void;
+  selected: OpsRequestLogRow | null;
+  onSelect: (row: OpsRequestLogRow) => void;
+  /** When false, mutation controls stay visible but RPC is not called (fixture). */
+  interactive?: boolean;
+}) {
+  return (
+    <div data-testid="ops-dashboard" className="space-y-6">
+      <KpiRow data={data} onCapSaved={onChanged} interactive={interactive} />
+      <Tabs defaultValue="accounts" className="gap-4">
+        <TabsList variant="line" className="w-full max-w-full flex-wrap justify-start">
+          <TabsTrigger value="accounts">
+            <Trans>Accounts</Trans>
+          </TabsTrigger>
+          <TabsTrigger value="transfers">
+            <Trans>Transfers</Trans>
+          </TabsTrigger>
+          <TabsTrigger value="admins">
+            <Trans>Admins</Trans>
+          </TabsTrigger>
+          <TabsTrigger value="audit">
+            <Trans>Audit</Trans>
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="accounts" className="space-y-4">
+          <AccountsSection accounts={data.accounts} onChanged={onChanged} interactive={interactive} />
+        </TabsContent>
+        <TabsContent value="transfers" className="space-y-4">
+          <TransfersSection data={data} onChanged={onChanged} interactive={interactive} />
+        </TabsContent>
+        <TabsContent value="admins" className="space-y-4">
+          <AdminGrantsSection data={data} onChanged={onChanged} interactive={interactive} />
+        </TabsContent>
+        <TabsContent value="audit" className="space-y-8">
+          <AgentsSection data={data} />
+          <PerformanceSection data={data} />
+          <RequestLogSection
+            selected={selected}
+            onSelect={onSelect}
+            interactive={interactive}
+            fixtureRows={interactive ? undefined : []}
+          />
+          {selected?.runId || selected?.threadId ? (
+            <ChatLogSection
+              runId={selected.runId}
+              threadId={selected.threadId}
+              interactive={interactive}
+            />
+          ) : null}
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+function KpiRow({
+  data,
+  onCapSaved,
+  interactive,
+}: {
+  data: OpsOverview;
+  onCapSaved: () => void;
+  interactive: boolean;
+}) {
   const { t } = useLingui();
   const budget = data.sharedKeyBudget;
   const [draft, setDraft] = useState(
@@ -149,6 +299,11 @@ function BudgetSection({ data, onCapSaved }: { data: OpsOverview; onCapSaved: ()
   const [saving, setSaving] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const pool = budget.weekPoolUsd;
+  const spent = budget.weekSpentUsd;
+  const poolPct =
+    pool != null && pool > 0 ? Math.min(100, Math.max(0, (spent / pool) * 100)) : 0;
 
   useEffect(() => {
     setDraft(budget.monthlyCapUsd != null ? String(budget.monthlyCapUsd) : "");
@@ -166,12 +321,18 @@ function BudgetSection({ data, onCapSaved }: { data: OpsOverview; onCapSaved: ()
 
   async function confirmSaveCap() {
     const value = Number(draft);
+    if (!interactive) {
+      setConfirmOpen(false);
+      setEditing(false);
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
       const result = await rpc.ops.setSharedKeyMonthlyBudget({ monthlyCapUsd: value });
       setDraft(String(result.monthlyCapUsd));
       setConfirmOpen(false);
+      setEditing(false);
       onCapSaved();
     } catch (err) {
       setError(errorText(err, "Could not save monthly cap"));
@@ -181,45 +342,132 @@ function BudgetSection({ data, onCapSaved }: { data: OpsOverview; onCapSaved: ()
   }
 
   return (
-    <section className="space-y-3">
-      <h2 className="font-medium">
-        <Trans>Shared-key week</Trans>
-      </h2>
-      <div
-        data-testid="shared-key-monthly-cap"
-        className="flex flex-wrap items-end gap-3 rounded-xl border border-border px-4 py-3"
-      >
-        <label className="min-w-[10rem] flex-1 space-y-1 text-sm">
-          <span className="text-muted-foreground">
-            <Trans>Monthly shared Gemini key cap</Trans>
-          </span>
-          <div className="flex items-center gap-2">
-            <span className="text-muted-foreground" aria-hidden="true">
-              $
-            </span>
-            <input
-              type="number"
-              min={0.01}
-              max={1_000_000}
-              step="any"
-              inputMode="decimal"
-              aria-label={t`Monthly shared Gemini key cap`}
-              className="h-9 w-full min-w-0 rounded-md border border-border bg-background px-3 text-sm tabular-nums"
-              value={draft}
-              disabled={saving}
-              onChange={(event) => setDraft(event.target.value)}
-            />
+    <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label={t`Shared-key week`}>
+      <Card size="sm" data-testid="shared-key-monthly-cap">
+        <CardHeader className="gap-1">
+          <CardDescription>
+            <Trans>Monthly cap</Trans>
+          </CardDescription>
+          <CardTitle className="tabular-nums">
+            {budget.monthlyCapUsd == null ? (
+              <span className="text-muted-foreground font-normal">
+                <Trans>Not configured</Trans>
+              </span>
+            ) : (
+              money(budget.monthlyCapUsd)
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {editing ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="flex min-w-0 flex-1 items-center gap-1 text-sm">
+                <span className="text-muted-foreground" aria-hidden="true">
+                  $
+                </span>
+                <Input
+                  type="number"
+                  min={0.01}
+                  max={1_000_000}
+                  step="any"
+                  inputMode="decimal"
+                  aria-label={t`Monthly shared Gemini key cap`}
+                  className="tabular-nums"
+                  value={draft}
+                  disabled={saving}
+                  onChange={(event) => setDraft(event.target.value)}
+                />
+              </label>
+              <button
+                type="button"
+                className={buttonVariants({ variant: "outline", size: "sm" })}
+                disabled={saving}
+                onClick={() => requestSaveCap()}
+              >
+                {saving ? <Spinner className="size-4" /> : <Trans>Save</Trans>}
+              </button>
+              <button
+                type="button"
+                className={buttonVariants({ variant: "ghost", size: "sm" })}
+                disabled={saving}
+                onClick={() => {
+                  setEditing(false);
+                  setDraft(budget.monthlyCapUsd != null ? String(budget.monthlyCapUsd) : "");
+                  setError(null);
+                }}
+              >
+                <Trans>Cancel</Trans>
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className={buttonVariants({ variant: "ghost", size: "sm" })}
+              onClick={() => setEditing(true)}
+            >
+              <Trans>Edit</Trans>
+            </button>
+          )}
+          {error ? (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <Card size="sm">
+        <CardHeader className="gap-1">
+          <CardDescription>
+            <Trans>Shared-key week</Trans>
+          </CardDescription>
+          <CardTitle className="tabular-nums">
+            {pool == null ? "—" : `${money(spent)} / ${money(pool)}`}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <UsageBar
+            percent={poolPct}
+            label={t`Weekly shared-key pool used`}
+          />
+          <p className="text-xs text-muted-foreground">
+            <Trans>Resets in {resetCountdown(budget.resetsAt)}</Trans>
+            {" · "}
+            {budget.timezone}
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card size="sm">
+        <CardHeader className="gap-1">
+          <CardDescription>
+            <Trans>Roster</Trans>
+          </CardDescription>
+          <CardTitle className="tabular-nums">{budget.memberCount}</CardTitle>
+        </CardHeader>
+      </Card>
+
+      <Card size="sm">
+        <CardHeader className="gap-1">
+          <CardDescription>
+            <Trans>Spend</Trans>
+          </CardDescription>
+          <CardTitle className="tabular-nums">{money(data.spend.totalCostUsd)}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-1 text-xs text-muted-foreground">
+          <div className="flex justify-between gap-2">
+            <Trans>Shared</Trans>
+            <span className="tabular-nums text-foreground">{money(data.spend.sharedKeyCostUsd)}</span>
           </div>
-        </label>
-        <button
-          type="button"
-          className={buttonVariants({ variant: "outline", size: "sm" })}
-          disabled={saving}
-          onClick={() => requestSaveCap()}
-        >
-          {saving ? <Spinner className="size-4" /> : <Trans>Save</Trans>}
-        </button>
-      </div>
+          <div className="flex justify-between gap-2">
+            <Trans>Personal</Trans>
+            <span className="tabular-nums text-foreground">
+              {money(data.spend.personalKeyCostUsd)}
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -243,60 +491,104 @@ function BudgetSection({ data, onCapSaved }: { data: OpsOverview; onCapSaved: ()
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      {error ? (
-        <p role="alert" className="text-sm text-destructive">
-          {error}
-        </p>
-      ) : null}
-      <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-sm">
-        <Stat
-          label={<Trans>Monthly cap</Trans>}
-          value={
-            budget.monthlyCapUsd == null ? (
-              <span className="text-muted-foreground">
-                <Trans>Not configured</Trans>
-              </span>
-            ) : (
-              money(budget.monthlyCapUsd)
-            )
-          }
-        />
-        <Stat
-          label={<Trans>Roster</Trans>}
-          value={
-            budget.rosterConfigured ? (
-              budget.memberCount
-            ) : (
-              <span className="text-muted-foreground">
-                <Trans>Not configured</Trans>
-              </span>
-            )
-          }
-        />
-        <Stat
-          label={<Trans>Week</Trans>}
-          value={`${new Date(budget.weekStartsAt).toLocaleString()} → ${new Date(budget.resetsAt).toLocaleString()}`}
-        />
-        <Stat label={<Trans>Timezone</Trans>} value={budget.timezone} />
-      </dl>
-      <dl className="grid gap-3 sm:grid-cols-3 text-sm">
-        <Stat label={<Trans>Total spend</Trans>} value={money(data.spend.totalCostUsd)} />
-        <Stat label={<Trans>Shared-key spend</Trans>} value={money(data.spend.sharedKeyCostUsd)} />
-        <Stat
-          label={<Trans>Personal-key spend</Trans>}
-          value={money(data.spend.personalKeyCostUsd)}
-        />
-      </dl>
     </section>
   );
+}
+
+type AccountSortKey = "account" | "key" | "tokens" | "spend" | "sharedWeek";
+type AccountSortDir = "asc" | "desc";
+
+function SortButton({
+  column,
+  sortKey,
+  sortDir,
+  onToggle,
+  children,
+}: {
+  column: AccountSortKey;
+  sortKey: AccountSortKey;
+  sortDir: AccountSortDir;
+  onToggle: (column: AccountSortKey) => void;
+  children: ReactNode;
+}) {
+  const active = sortKey === column;
+  const Icon = !active ? ArrowUpDown : sortDir === "asc" ? ArrowUp : ArrowDown;
+  return (
+    <button
+      type="button"
+      className="inline-flex items-center gap-1 font-normal text-muted-foreground hover:text-foreground"
+      onClick={() => onToggle(column)}
+    >
+      {children}
+      <Icon className="size-3.5" aria-hidden="true" />
+    </button>
+  );
+}
+
+function AccountActions({
+  account,
+  canTransfer,
+  transferDisabled,
+  canAddToSharedBudget,
+  addBusy,
+  onImpersonate,
+  onTransfer,
+  onAddToSharedBudget,
+}: {
+  account: OpsAccount;
+  canTransfer: boolean;
+  transferDisabled: boolean;
+  canAddToSharedBudget: boolean;
+  addBusy: boolean;
+  onImpersonate: (account: OpsAccount) => void;
+  onTransfer: (account: OpsAccount) => void;
+  onAddToSharedBudget: (account: OpsAccount) => void;
+}) {
+  const { t } = useLingui();
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label={t`Actions for ${accountLabel(account)}`}
+        className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+      >
+        <MoreHorizontal className="size-4" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => onImpersonate(account)}>
+          <Trans>Impersonate</Trans>
+        </DropdownMenuItem>
+        {canAddToSharedBudget ? (
+          <DropdownMenuItem disabled={addBusy} onClick={() => onAddToSharedBudget(account)}>
+            <Trans>Add to shared budget</Trans>
+          </DropdownMenuItem>
+        ) : null}
+        {canTransfer ? (
+          <DropdownMenuItem disabled={transferDisabled} onClick={() => onTransfer(account)}>
+            <Trans>Transfer</Trans>
+          </DropdownMenuItem>
+        ) : null}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function sortAriaValue(
+  column: AccountSortKey,
+  sortKey: AccountSortKey,
+  sortDir: AccountSortDir,
+): "none" | "ascending" | "descending" {
+  if (sortKey !== column) return "none";
+  return sortDir === "asc" ? "ascending" : "descending";
 }
 
 function AccountsSection({
   accounts,
   onChanged,
+  interactive,
 }: {
   accounts: OpsOverview["accounts"];
   onChanged: () => void;
+  interactive: boolean;
 }) {
   const { t } = useLingui();
   const navigate = useNavigate();
@@ -308,6 +600,10 @@ function AccountsSection({
   const [transferToId, setTransferToId] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [keyFilter, setKeyFilter] = useState<"all" | "company" | "personal" | "none">("all");
+  const [sortKey, setSortKey] = useState<AccountSortKey>("account");
+  const [sortDir, setSortDir] = useState<AccountSortDir>("asc");
 
   const transferTargets = transferFrom
     ? roster.filter((account) => account.userId !== transferFrom.userId)
@@ -326,8 +622,50 @@ function AccountsSection({
     setTransferToId((current) => (ids.includes(current) ? current : (ids[0] ?? "")));
   }, [transferFromId, transferTargetIds]);
 
+  const filtered = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    const rows = accounts.filter((account) => {
+      if (keyFilter !== "all" && account.keyType !== keyFilter) return false;
+      if (!needle) return true;
+      return (
+        account.name.toLowerCase().includes(needle) || account.email.toLowerCase().includes(needle)
+      );
+    });
+    const dir = sortDir === "asc" ? 1 : -1;
+    rows.sort((a, b) => {
+      switch (sortKey) {
+        case "key":
+          return a.keyType.localeCompare(b.keyType) * dir;
+        case "tokens":
+          return ((a.totalTokens ?? -1) - (b.totalTokens ?? -1)) * dir;
+        case "spend":
+          return ((a.totalCostUsd ?? -1) - (b.totalCostUsd ?? -1)) * dir;
+        case "sharedWeek":
+          return (
+            ((a.sharedKeyBudget?.percentUsed ?? -1) - (b.sharedKeyBudget?.percentUsed ?? -1)) * dir
+          );
+        default:
+          return accountLabel(a).localeCompare(accountLabel(b)) * dir;
+      }
+    });
+    return rows;
+  }, [accounts, keyFilter, query, sortDir, sortKey]);
+
+  function toggleSort(key: AccountSortKey) {
+    if (sortKey === key) {
+      setSortDir((current) => (current === "asc" ? "desc" : "asc"));
+      return;
+    }
+    setSortKey(key);
+    setSortDir("asc");
+  }
+
   async function confirmImpersonate() {
     if (!impersonate) return;
+    if (!interactive) {
+      setImpersonate(null);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -344,6 +682,10 @@ function AccountsSection({
 
   async function confirmTransfer() {
     if (!transferFrom || !transferTo) return;
+    if (!interactive) {
+      setTransferFrom(null);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -360,125 +702,272 @@ function AccountsSection({
     }
   }
 
+  async function addToSharedBudget(account: OpsAccount) {
+    if (!interactive) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await rpc.ops.addSharedKeyBudgetMember({ userId: account.userId });
+      if (!result.enrolled) {
+        const reasonMessage =
+          result.reason === "already_member"
+            ? t`Already on the shared budget`
+            : result.reason === "ineligible"
+              ? t`Not eligible for the shared budget`
+              : result.reason === "zero_slice"
+                ? t`No weekly share left to assign`
+                : t`Could not add to shared budget`;
+        setError(reasonMessage);
+        onChanged();
+        return;
+      }
+      onChanged();
+    } catch (err) {
+      setError(errorText(err, t`Could not add to shared budget`));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function AccountBudgetCell({ account }: { account: OpsAccount }) {
+    const budget = account.sharedKeyBudget;
+    if (!budget) return <span className="text-muted-foreground">—</span>;
+    if (!budget.configured) {
+      return (
+        <span className="text-muted-foreground">
+          <Trans>Cap unset</Trans>
+        </span>
+      );
+    }
+    if (!budget.member) {
+      if (pendingSharedBudgetApproval(account)) {
+        return (
+          <span className="text-muted-foreground">
+            <Trans>Pending admin approval</Trans>
+          </span>
+        );
+      }
+      return <span className="text-muted-foreground">—</span>;
+    }
+    return (
+      <div className="min-w-[7rem] space-y-1">
+        <UsageBar
+          percent={budget.percentUsed}
+          label={t`Shared week usage for ${accountLabel(account)}`}
+          hardStopped={budget.hardStopped}
+        />
+        <div className="text-xs text-muted-foreground tabular-nums">
+          {money(budget.remainingUsd)} left
+        </div>
+      </div>
+    );
+  }
+
+  const dialogOpen = Boolean(impersonate || transferFrom);
+
   return (
     <section className="space-y-3">
-      <h2 className="font-medium">
-        <Trans>Accounts</Trans>
-      </h2>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[48rem] text-left text-sm">
-          <thead className="text-muted-foreground">
-            <tr className="border-b">
-              <th className="py-2 pr-3 font-normal">
-                <Trans>Account</Trans>
-              </th>
-              <th className="py-2 pr-3 font-normal">
-                <Trans>Key</Trans>
-              </th>
-              <th className="py-2 pr-3 font-normal">
-                <Trans>Model</Trans>
-              </th>
-              <th className="py-2 pr-3 font-normal">
-                <Trans>Tokens</Trans>
-              </th>
-              <th className="py-2 pr-3 font-normal">
-                <Trans>Spend</Trans>
-              </th>
-              <th className="py-2 pr-3 font-normal">
-                <Trans>Shared week</Trans>
-              </th>
-              <th className="py-2 font-normal">
-                <Trans>Actions</Trans>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {accounts.map((account) => {
-              const budget = account.sharedKeyBudget;
-              const canTransfer = Boolean(budget?.member);
-              return (
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="min-w-0 flex-1">
+          <ListSearchInput
+            query={query}
+            setQuery={setQuery}
+            label={t`Search accounts`}
+            placeholder={t`Search name or email`}
+          />
+        </div>
+        <label className="flex items-center gap-2 text-sm">
+          <span className="sr-only">
+            <Trans>Key type</Trans>
+          </span>
+          <NativeSelect
+            size="sm"
+            value={keyFilter}
+            aria-label={t`Filter by key type`}
+            onChange={(event) =>
+              setKeyFilter(event.target.value as "all" | "company" | "personal" | "none")
+            }
+          >
+            <NativeSelectOption value="all">{t`All keys`}</NativeSelectOption>
+            <NativeSelectOption value="company">{t`Company`}</NativeSelectOption>
+            <NativeSelectOption value="personal">{t`Personal`}</NativeSelectOption>
+            <NativeSelectOption value="none">{t`No key`}</NativeSelectOption>
+          </NativeSelect>
+        </label>
+      </div>
+
+      {error && !dialogOpen ? (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      ) : null}
+
+      <div className="hidden md:block">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-0 text-left text-sm">
+            <thead className="text-muted-foreground">
+              <tr className="border-b">
+                <th className="py-2 pr-3 font-normal" aria-sort={sortAriaValue("account", sortKey, sortDir)}>
+                  <SortButton column="account" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort}>
+                    <Trans>Account</Trans>
+                  </SortButton>
+                </th>
+                <th className="py-2 pr-3 font-normal" aria-sort={sortAriaValue("key", sortKey, sortDir)}>
+                  <SortButton column="key" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort}>
+                    <Trans>Key</Trans>
+                  </SortButton>
+                </th>
+                <th className="py-2 pr-3 font-normal">
+                  <Trans>Model</Trans>
+                </th>
+                <th className="py-2 pr-3 font-normal" aria-sort={sortAriaValue("tokens", sortKey, sortDir)}>
+                  <SortButton column="tokens" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort}>
+                    <Trans>Tokens</Trans>
+                  </SortButton>
+                </th>
+                <th className="py-2 pr-3 font-normal" aria-sort={sortAriaValue("spend", sortKey, sortDir)}>
+                  <SortButton column="spend" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort}>
+                    <Trans>Spend</Trans>
+                  </SortButton>
+                </th>
+                <th className="py-2 pr-3 font-normal" aria-sort={sortAriaValue("sharedWeek", sortKey, sortDir)}>
+                  <SortButton column="sharedWeek" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort}>
+                    <Trans>Shared week</Trans>
+                  </SortButton>
+                </th>
+                <th className="py-2 font-normal">
+                  <span className="sr-only">
+                    <Trans>Actions</Trans>
+                  </span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((account) => (
                 <tr key={account.userId} className="border-b border-border/60 align-top">
-                  <td className="py-2 pr-3">
-                    <div>{account.name || account.email}</div>
-                    <div className="text-muted-foreground">{account.email}</div>
+                  <td className="py-3 pr-3">
+                    <div className="font-medium">{account.name || account.email}</div>
+                    <div className="text-muted-foreground break-all">{account.email}</div>
                   </td>
-                  <td className="py-2 pr-3">
-                    <KeyLabel
+                  <td className="py-3 pr-3">
+                    <KeyBadge
                       keyType={account.keyType}
-                      onRoster={Boolean(account.sharedKeyBudget?.member)}
+                      pendingSharedBudget={pendingSharedBudgetApproval(account)}
                     />
                   </td>
-                  <td className="py-2 pr-3">
-                    {account.modelProvider && account.modelId
-                      ? `${account.modelProvider}/${account.modelId}`
-                      : "—"}
+                  <td className="py-3 pr-3">
+                    {account.modelProvider && account.modelId ? (
+                      <Badge variant="outline" className="max-w-[12rem] truncate font-normal">
+                        {account.modelProvider}/{account.modelId}
+                      </Badge>
+                    ) : (
+                      "—"
+                    )}
                   </td>
-                  <td className="py-2 pr-3">{tokens(account.totalTokens)}</td>
-                  <td className="py-2 pr-3">
-                    <div>{money(account.totalCostUsd)}</div>
-                    <div className="text-muted-foreground">
+                  <td className="py-3 pr-3 tabular-nums">{tokens(account.totalTokens)}</td>
+                  <td className="py-3 pr-3">
+                    <div className="tabular-nums">{money(account.totalCostUsd)}</div>
+                    <div className="text-xs text-muted-foreground">
                       <Trans>Shared {money(account.sharedKeyCostUsd)}</Trans>
                       {" · "}
                       <Trans>Personal {money(account.personalKeyCostUsd)}</Trans>
                     </div>
                   </td>
-                  <td className="py-2 pr-3">
-                    {!budget ? (
-                      "—"
-                    ) : !budget.configured ? (
-                      <span className="text-muted-foreground">
-                        <Trans>Cap unset</Trans>
-                      </span>
-                    ) : !budget.member ? (
-                      <span className="text-muted-foreground">
-                        <Trans>Not on roster</Trans>
-                      </span>
-                    ) : (
-                      <div>
-                        <div>
-                          {pct(budget.percentUsed)} · {money(budget.remainingUsd)} left
-                        </div>
-                        {budget.hardStopped ? (
-                          <div className="text-destructive">
-                            <Trans>Hard-stopped</Trans>
-                          </div>
-                        ) : null}
-                      </div>
-                    )}
+                  <td className="py-3 pr-3">
+                    <AccountBudgetCell account={account} />
                   </td>
-                  <td className="py-2">
-                    <div className="flex flex-wrap gap-1">
-                      <button
-                        type="button"
-                        className={buttonVariants({ variant: "ghost", size: "sm" })}
-                        onClick={() => {
-                          setError(null);
-                          setImpersonate(account);
-                        }}
-                      >
-                        <Trans>Impersonate</Trans>
-                      </button>
-                      {canTransfer ? (
-                        <button
-                          type="button"
-                          className={buttonVariants({ variant: "ghost", size: "sm" })}
-                          disabled={roster.length < 2}
-                          onClick={() => {
-                            setError(null);
-                            setTransferFrom(account);
-                          }}
-                        >
-                          <Trans>Transfer</Trans>
-                        </button>
-                      ) : null}
-                    </div>
+                  <td className="py-3">
+                    <AccountActions
+                      account={account}
+                      canTransfer={Boolean(account.sharedKeyBudget?.member)}
+                      transferDisabled={roster.length < 2}
+                      canAddToSharedBudget={pendingSharedBudgetApproval(account)}
+                      addBusy={busy}
+                      onImpersonate={(next) => {
+                        setError(null);
+                        setImpersonate(next);
+                      }}
+                      onTransfer={(next) => {
+                        setError(null);
+                        setTransferFrom(next);
+                      }}
+                      onAddToSharedBudget={(next) => {
+                        void addToSharedBudget(next);
+                      }}
+                    />
                   </td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
+
+      <ul className="grid gap-3 md:hidden">
+        {filtered.map((account) => (
+          <li key={account.userId}>
+            <Card size="sm">
+              <CardHeader className="flex-row items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <CardTitle className="truncate">{account.name || account.email}</CardTitle>
+                  <CardDescription className="break-all">{account.email}</CardDescription>
+                </div>
+                <AccountActions
+                  account={account}
+                  canTransfer={Boolean(account.sharedKeyBudget?.member)}
+                  transferDisabled={roster.length < 2}
+                  canAddToSharedBudget={pendingSharedBudgetApproval(account)}
+                  addBusy={busy}
+                  onImpersonate={(next) => {
+                    setError(null);
+                    setImpersonate(next);
+                  }}
+                  onTransfer={(next) => {
+                    setError(null);
+                    setTransferFrom(next);
+                  }}
+                  onAddToSharedBudget={(next) => {
+                    void addToSharedBudget(next);
+                  }}
+                />
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <KeyBadge
+                    keyType={account.keyType}
+                    pendingSharedBudget={pendingSharedBudgetApproval(account)}
+                  />
+                  {account.modelProvider && account.modelId ? (
+                    <Badge variant="outline" className="font-normal">
+                      {account.modelProvider}/{account.modelId}
+                    </Badge>
+                  ) : null}
+                </div>
+                <dl className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <dt className="text-muted-foreground">
+                      <Trans>Tokens</Trans>
+                    </dt>
+                    <dd className="tabular-nums">{tokens(account.totalTokens)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">
+                      <Trans>Spend</Trans>
+                    </dt>
+                    <dd className="tabular-nums">{money(account.totalCostUsd)}</dd>
+                  </div>
+                </dl>
+                <div className="text-xs text-muted-foreground">
+                  <Trans>Shared {money(account.sharedKeyCostUsd)}</Trans>
+                  {" · "}
+                  <Trans>Personal {money(account.personalKeyCostUsd)}</Trans>
+                </div>
+                <AccountBudgetCell account={account} />
+              </CardContent>
+            </Card>
+          </li>
+        ))}
+      </ul>
 
       {impersonate ? (
         <AlertDialog
@@ -575,7 +1064,15 @@ function AccountsSection({
   );
 }
 
-function AdminGrantsSection({ data, onChanged }: { data: OpsOverview; onChanged: () => void }) {
+function AdminGrantsSection({
+  data,
+  onChanged,
+  interactive,
+}: {
+  data: OpsOverview;
+  onChanged: () => void;
+  interactive: boolean;
+}) {
   const { t } = useLingui();
   const grants = data.adminGrants;
   const grantedIds = new Set(grants.map((grant) => grant.userId));
@@ -595,6 +1092,10 @@ function AdminGrantsSection({ data, onChanged }: { data: OpsOverview; onChanged:
 
   async function confirmAddGrant() {
     if (!userId) return;
+    if (!interactive) {
+      setAddConfirmOpen(false);
+      return;
+    }
     setBusy("add");
     setError(null);
     try {
@@ -610,6 +1111,10 @@ function AdminGrantsSection({ data, onChanged }: { data: OpsOverview; onChanged:
 
   async function confirmRemove() {
     if (!removeTarget) return;
+    if (!interactive) {
+      setRemoveTarget(null);
+      return;
+    }
     setBusy(removeTarget.userId);
     setError(null);
     try {
@@ -625,20 +1130,17 @@ function AdminGrantsSection({ data, onChanged }: { data: OpsOverview; onChanged:
 
   return (
     <section className="space-y-3">
-      <h2 className="font-medium">
-        <Trans>Admins</Trans>
-      </h2>
-      <ul className="divide-y divide-border/60 text-sm">
+      <ul className="divide-y divide-border/60 rounded-xl border border-border/60 text-sm">
         {grants.map((grant) => (
-          <li key={grant.userId} className="flex items-center gap-3 py-2">
+          <li key={grant.userId} className="flex items-center gap-3 px-3 py-2">
             <div className="min-w-0 flex-1">
               <div>{grant.name || grant.email}</div>
-              <div className="text-muted-foreground">{grant.email}</div>
+              <div className="text-muted-foreground break-all">{grant.email}</div>
             </div>
             {grant.envBootstrap ? (
-              <span className="text-muted-foreground">
+              <Badge variant="outline">
                 <Trans>Env</Trans>
-              </span>
+              </Badge>
             ) : (
               <button
                 type="button"
@@ -758,7 +1260,15 @@ function AdminGrantsSection({ data, onChanged }: { data: OpsOverview; onChanged:
   );
 }
 
-function TransfersSection({ data, onChanged }: { data: OpsOverview; onChanged: () => void }) {
+function TransfersSection({
+  data,
+  onChanged,
+  interactive,
+}: {
+  data: OpsOverview;
+  onChanged: () => void;
+  interactive: boolean;
+}) {
   const { t } = useLingui();
   const accountsById = new Map(data.accounts.map((account) => [account.userId, account]));
   const transfers = data.allotmentTransfers;
@@ -774,6 +1284,10 @@ function TransfersSection({ data, onChanged }: { data: OpsOverview; onChanged: (
 
   async function confirmReverse() {
     if (!reverseTarget) return;
+    if (!interactive) {
+      setReverseId(null);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -789,66 +1303,100 @@ function TransfersSection({ data, onChanged }: { data: OpsOverview; onChanged: (
 
   return (
     <section className="space-y-3">
-      <h2 className="font-medium">
-        <Trans>Transfers</Trans>
-      </h2>
       {transfers.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           <Trans>None this week.</Trans>
         </p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[36rem] text-left text-sm">
-            <thead className="text-muted-foreground">
-              <tr className="border-b">
-                <th className="py-2 pr-3 font-normal">
-                  <Trans>When</Trans>
-                </th>
-                <th className="py-2 pr-3 font-normal">
-                  <Trans>From</Trans>
-                </th>
-                <th className="py-2 pr-3 font-normal">
-                  <Trans>To</Trans>
-                </th>
-                <th className="py-2 pr-3 font-normal">
-                  <Trans>Amount</Trans>
-                </th>
-                <th className="py-2 font-normal" />
-              </tr>
-            </thead>
-            <tbody>
-              {transfers.map((transfer) => (
-                <tr key={transfer.id} className="border-b border-border/60">
-                  <td className="py-2 pr-3">{new Date(transfer.createdAt).toLocaleString()}</td>
-                  <td className="py-2 pr-3">{nameFor(transfer.fromUserId)}</td>
-                  <td className="py-2 pr-3">{nameFor(transfer.toUserId)}</td>
-                  <td className="py-2 pr-3">
-                    {money(transfer.amountUsd)}
-                    {transfer.reversedAt ? (
-                      <span className="ms-2 text-muted-foreground">
-                        <Trans>Reversed</Trans>
-                      </span>
-                    ) : null}
-                  </td>
-                  <td className="py-2">
-                    {transfer.reversedAt ? null : (
-                      <button
-                        type="button"
-                        className={buttonVariants({ variant: "ghost", size: "sm" })}
-                        onClick={() => {
-                          setError(null);
-                          setReverseId(transfer.id);
-                        }}
-                      >
-                        <Trans>Reverse</Trans>
-                      </button>
-                    )}
-                  </td>
+        <>
+          <div className="hidden overflow-x-auto md:block">
+            <table className="w-full min-w-0 text-left text-sm">
+              <thead className="text-muted-foreground">
+                <tr className="border-b">
+                  <th className="py-2 pr-3 font-normal">
+                    <Trans>When</Trans>
+                  </th>
+                  <th className="py-2 pr-3 font-normal">
+                    <Trans>From</Trans>
+                  </th>
+                  <th className="py-2 pr-3 font-normal">
+                    <Trans>To</Trans>
+                  </th>
+                  <th className="py-2 pr-3 font-normal">
+                    <Trans>Amount</Trans>
+                  </th>
+                  <th className="py-2 font-normal" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {transfers.map((transfer) => (
+                  <tr key={transfer.id} className="border-b border-border/60">
+                    <td className="py-2 pr-3">{new Date(transfer.createdAt).toLocaleString()}</td>
+                    <td className="py-2 pr-3">{nameFor(transfer.fromUserId)}</td>
+                    <td className="py-2 pr-3">{nameFor(transfer.toUserId)}</td>
+                    <td className="py-2 pr-3 tabular-nums">
+                      {money(transfer.amountUsd)}
+                      {transfer.reversedAt ? (
+                        <span className="ms-2 text-muted-foreground">
+                          <Trans>Reversed</Trans>
+                        </span>
+                      ) : null}
+                    </td>
+                    <td className="py-2">
+                      {transfer.reversedAt ? null : (
+                        <button
+                          type="button"
+                          className={buttonVariants({ variant: "ghost", size: "sm" })}
+                          onClick={() => {
+                            setError(null);
+                            setReverseId(transfer.id);
+                          }}
+                        >
+                          <Trans>Reverse</Trans>
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <ul className="grid gap-3 md:hidden">
+            {transfers.map((transfer) => (
+              <li key={transfer.id}>
+                <Card size="sm">
+                  <CardContent className="space-y-2 pt-(--card-spacing)">
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(transfer.createdAt).toLocaleString()}
+                    </div>
+                    <div className="text-sm">
+                      {nameFor(transfer.fromUserId)} → {nameFor(transfer.toUserId)}
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="tabular-nums">{money(transfer.amountUsd)}</span>
+                      {transfer.reversedAt ? (
+                        <span className="text-muted-foreground">
+                          <Trans>Reversed</Trans>
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          className={buttonVariants({ variant: "ghost", size: "sm" })}
+                          onClick={() => {
+                            setError(null);
+                            setReverseId(transfer.id);
+                          }}
+                        >
+                          <Trans>Reverse</Trans>
+                        </button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
 
       {reverseTarget ? (
@@ -895,7 +1443,7 @@ function AgentsSection({ data }: { data: OpsOverview }) {
       <p className="text-sm text-muted-foreground">
         {data.agents.active} active · {data.agents.total} total
       </p>
-      <ul className="columns-1 gap-x-8 text-sm sm:columns-2">
+      <ul className="columns-1 gap-x-8 text-sm sm:columns-2 lg:columns-3">
         {data.agents.names.map((agent) => (
           <li key={agent.id} className="break-inside-avoid py-0.5">
             {agent.name}
@@ -941,9 +1489,6 @@ function PerformanceSection({ data }: { data: OpsOverview }) {
         <Stat label={<Trans>Runtime</Trans>} value={health.runtime ?? "—"} />
         <Stat label={<Trans>Sandbox</Trans>} value={health.sandbox ?? "—"} />
       </dl>
-      <p className="text-xs text-muted-foreground">
-        Latency from run timing fields over the last {performance.sampleWindowHours} hours.
-      </p>
     </section>
   );
 }
@@ -951,29 +1496,39 @@ function PerformanceSection({ data }: { data: OpsOverview }) {
 function RequestLogSection({
   selected,
   onSelect,
+  interactive,
+  fixtureRows,
 }: {
   selected: OpsRequestLogRow | null;
   onSelect: (row: OpsRequestLogRow) => void;
+  interactive: boolean;
+  fixtureRows?: OpsRequestLogRow[];
 }) {
   const log = useQuery({
     queryKey: ["ops", "requestLog"],
     queryFn: () => rpc.ops.requestLog({ limit: 40 }),
+    enabled: interactive,
   });
+  const rows = interactive ? log.data : (fixtureRows ?? []);
 
   return (
     <section className="space-y-3">
       <h2 className="font-medium">
         <Trans>Request log</Trans>
       </h2>
-      {log.isPending ? (
+      {interactive && log.isPending ? (
         <Spinner />
-      ) : log.isError || !log.data ? (
+      ) : interactive && (log.isError || !log.data) ? (
         <p className="text-sm text-muted-foreground">
           {errorText(log.error, "Request log unavailable")}
         </p>
+      ) : !rows || rows.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          <Trans>No recent requests.</Trans>
+        </p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[40rem] text-left text-sm">
+          <table className="w-full min-w-0 text-left text-sm">
             <thead className="text-muted-foreground">
               <tr className="border-b">
                 <th className="py-2 pr-3 font-normal">
@@ -994,7 +1549,7 @@ function RequestLogSection({
               </tr>
             </thead>
             <tbody>
-              {log.data.map((row) => {
+              {rows.map((row) => {
                 const active = selected?.id === row.id;
                 return (
                   <tr
@@ -1013,7 +1568,7 @@ function RequestLogSection({
                     <td className="py-2 pr-3">
                       {row.provider && row.model ? `${row.provider}/${row.model}` : "—"}
                     </td>
-                    <td className="py-2 pr-3">{money(row.costUsd)}</td>
+                    <td className="py-2 pr-3 tabular-nums">{money(row.costUsd)}</td>
                     <td className="py-2">{row.status ?? row.error ?? "—"}</td>
                   </tr>
                 );
@@ -1026,7 +1581,15 @@ function RequestLogSection({
   );
 }
 
-function ChatLogSection({ runId, threadId }: { runId: string | null; threadId: string | null }) {
+function ChatLogSection({
+  runId,
+  threadId,
+  interactive,
+}: {
+  runId: string | null;
+  threadId: string | null;
+  interactive: boolean;
+}) {
   const chat = useQuery({
     queryKey: ["ops", "chatLog", runId, threadId],
     queryFn: () =>
@@ -1034,7 +1597,7 @@ function ChatLogSection({ runId, threadId }: { runId: string | null; threadId: s
         ...(runId ? { runId } : {}),
         ...(threadId && !runId ? { threadId } : {}),
       }),
-    enabled: Boolean(runId || threadId),
+    enabled: interactive && Boolean(runId || threadId),
   });
 
   return (
@@ -1042,7 +1605,11 @@ function ChatLogSection({ runId, threadId }: { runId: string | null; threadId: s
       <h2 className="font-medium">
         <Trans>Chat log</Trans>
       </h2>
-      {chat.isPending ? (
+      {!interactive ? (
+        <p className="text-sm text-muted-foreground">
+          <Trans>No messages for this selection.</Trans>
+        </p>
+      ) : chat.isPending ? (
         <Spinner />
       ) : chat.isError || !chat.data ? (
         <p className="text-sm text-muted-foreground">
@@ -1079,9 +1646,9 @@ function ChatMessages({ data }: { data: OpsChatLog }) {
 
 function Stat({ label, value }: { label: ReactNode; value: ReactNode }) {
   return (
-    <div>
+    <div className="rounded-xl border border-border/60 px-3 py-2">
       <dt className="text-muted-foreground">{label}</dt>
-      <dd className="mt-0.5">{value}</dd>
+      <dd className="mt-0.5 tabular-nums">{value}</dd>
     </div>
   );
 }

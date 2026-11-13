@@ -1432,6 +1432,19 @@ export const appContract = {
           clamped: z.boolean(),
         }),
       ),
+    /**
+     * Explicit admin enroll onto the shared-key weekly budget roster. Bypasses the
+     * open-signup eligibility bar; still rejects deactivated / hidden accounts.
+     */
+    addSharedKeyBudgetMember: oc
+      .input(z.strictObject({ userId: Id }))
+      .output(
+        z.object({
+          ok: z.literal(true),
+          enrolled: z.boolean(),
+          reason: z.enum(["already_member", "ineligible", "zero_slice"]).optional(),
+        }),
+      ),
   },
   export: {
     bot: oc.input(botId).output(ExportManifestSchema),

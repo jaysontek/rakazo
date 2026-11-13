@@ -22,6 +22,7 @@ import { parseMinimumClientBuilds, parseNavLinks } from "@rakazo/contracts";
 import { parseCrispWebsiteId } from "@rakazo/contracts/content-security-policy";
 import {
   attachmentCountFromEnv,
+  parseAdminEmails,
   parseSharedKeyBudgetUserIds,
   parseSharedKeyMonthlyBudgetUsd,
   phoneCallSettings,
@@ -281,7 +282,7 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
     ticketBoardEnabled: source.TICKET_BOARD_ENABLED === "true",
     userDevicesEnabled: source.USER_DEVICES_ENABLED !== "false",
     navLinks: parseNavLinks(source.RAKAZO_NAV_LINKS),
-    adminEmails: list(source.RAKAZO_ADMIN_EMAILS).map((email) => email.toLowerCase()),
+    adminEmails: parseAdminEmails(source.RAKAZO_ADMIN_EMAILS),
     opsDashboardAllowlist: parseOpsDashboardAllowlist(source.OPS_DASHBOARD_ALLOWLIST),
     ...phoneCallSettings(source),
     maxUploadSizeBytes: uploadSizeFromEnv(source),

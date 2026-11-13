@@ -177,6 +177,10 @@ export const PL_MESSAGES: Record<string, string> = {
     "Przed uruchomieniem botów połącz model w Ustawieniach.",
   "Connect your own API key in Models or choose Rakazo credits in Billing.":
     "Połącz własny klucz API w Modelach lub wybierz środki Rakazo w Rozliczeniach.",
+  "This week's shared API key budget is used up. It resets next week, or connect your own key in Models.":
+    "Tygodniowy budżet wspólnego klucza API został wyczerpany. Resetuje się w przyszłym tygodniu albo podłącz własny klucz w Modelach.",
+  "You're not on the shared-key budget yet. Ask an admin.":
+    "Nie jesteś jeszcze na budżecie wspólnego klucza. Poproś administratora.",
   "Using your own API key, no shared limit": "Używasz własnego klucza API, bez wspólnego limitu",
   "The model provider returned an error.": "Dostawca modelu zwrócił błąd.",
   "{provider} is rate limiting requests. Try again shortly.":

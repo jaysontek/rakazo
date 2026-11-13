@@ -92,6 +92,7 @@ model User {
   computerRuns                ComputerRun[]
   devices                     UserDevice[]
   sharedKeyBudgetMember       SharedKeyBudgetMember?
+  sharedKeyBudgetEnrollmentRequests SharedKeyBudgetEnrollmentRequest[]
   adminGrant                  AdminGrant?                  @relation("AdminGrantUser")
   adminGrantsGiven            AdminGrant[]                 @relation("AdminGrantGrantedBy")
   sharedKeyTransfersFrom      SharedKeyAllotmentTransfer[] @relation("SharedKeyTransferFrom")
@@ -775,6 +776,20 @@ model SharedKeyBudgetMember {
   @@map("shared_key_budget_members")
 }
 
+/// Lightweight week-scoped record that a user hit SharedKeyBudgetNotEnrolledError.
+/// Ops uses this to show pending approval for deployment-key users without a stored key.
+model SharedKeyBudgetEnrollmentRequest {
+  weekStart  DateTime
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstHitAt DateTime @default(now())
+  lastHitAt  DateTime @updatedAt
+
+  @@id([weekStart, userId])
+  @@index([weekStart])
+  @@map("shared_key_budget_enrollment_requests")
+}
+
 /// Per-user allotment for one America/New_York week after even split / re-divide.
 model SharedKeyWeekAllotment {
   weekStart    DateTime
@@ -782,6 +797,10 @@ model SharedKeyWeekAllotment {
   allotmentUsd Float
   /// Soft holds for in-flight shared-key calls; released in afterCall.
   reservedUsd  Float    @default(0)
+  /// First enrollment instant for this week; reused if the member is removed and re-added.
+  joinedAt     DateTime @default(now())
+  /// Shared-key spend from Monday up to joinedAt; effective spend is Monday-total minus this.
+  preJoinSpendUsd Float @default(0)
   updatedAt    DateTime @updatedAt
 
   @@id([weekStart, userId])
