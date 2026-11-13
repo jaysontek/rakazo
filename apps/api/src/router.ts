@@ -49,6 +49,7 @@ import { mcpRoutes } from "./routes/mcp.js";
 import { memoryRoutes } from "./routes/memory.js";
 import { messagingRoutes } from "./routes/messaging.js";
 import { modelsRoutes } from "./routes/models.js";
+import { opsRoutes } from "./routes/ops.js";
 import { organizationsRoutes } from "./routes/organizations.js";
 import { pagesRoutes } from "./routes/pages.js";
 import { paymentWalletRoutes } from "./routes/payment-wallet.js";
@@ -128,6 +129,8 @@ export interface RouterDeps {
     ticketBoardEnabled?: boolean;
     navLinks?: NavLink[];
     adminEmails?: string[];
+    /** CIDR/IP allowlist for the LAN ops dashboard (plus loopback). */
+    opsDashboardAllowlist?: string[];
     phoneCallsEnabled?: boolean;
     phoneCallRingSeconds?: number;
     maxUploadSizeBytes?: number;
@@ -176,5 +179,6 @@ export function createRouter(deps: RouterDeps) {
     ...pagesRoutes(ctx),
     ...paymentWalletRoutes(ctx),
     ...spendingLimitRoutes(ctx),
+    ...opsRoutes(ctx),
   });
 }

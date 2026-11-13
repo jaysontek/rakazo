@@ -1291,6 +1291,128 @@ export const UsageSummarySchema = UsageTotalsSchema.extend({
 });
 export type UsageSummary = z.infer<typeof UsageSummarySchema>;
 
+/** Per-account shared-key weekly budget row for the LAN admin ops dashboard. */
+export const OpsSharedKeyBudgetSchema = z.object({
+  configured: z.boolean(),
+  member: z.boolean(),
+  weeklyCapUsd: z.number().nonnegative(),
+  spentUsd: z.number().nonnegative(),
+  reservedUsd: z.number().nonnegative(),
+  remainingUsd: z.number().nonnegative(),
+  percentUsed: z.number().min(0).max(100),
+  hardStopped: z.boolean(),
+  weekStartsAt: z.string(),
+  resetsAt: z.string(),
+  timezone: z.literal("America/New_York"),
+});
+export type OpsSharedKeyBudget = z.infer<typeof OpsSharedKeyBudgetSchema>;
+
+export const OpsAccountSchema = z.object({
+  userId: Id,
+  email: z.string(),
+  name: z.string(),
+  deactivated: z.boolean(),
+  modelProvider: z.string().nullable(),
+  modelId: z.string().nullable(),
+  totalTokens: z.number().nullable(),
+  totalCostUsd: z.number().nullable(),
+  sharedKeyCostUsd: z.number().nonnegative(),
+  personalKeyCostUsd: z.number().nonnegative(),
+  sharedKeyBudget: OpsSharedKeyBudgetSchema.nullable(),
+});
+export type OpsAccount = z.infer<typeof OpsAccountSchema>;
+
+export const OpsAgentSchema = z.object({
+  id: Id,
+  name: z.string(),
+  userId: Id,
+  spaceId: Id,
+  modelProvider: z.string().nullable(),
+  modelId: z.string().nullable(),
+  archived: z.boolean(),
+});
+export type OpsAgent = z.infer<typeof OpsAgentSchema>;
+
+export const OpsRequestLogRowSchema = z.object({
+  id: z.string(),
+  kind: z.enum(["usage", "run"]),
+  userId: Id,
+  botId: Id.nullable(),
+  botName: z.string().nullable(),
+  runId: Id.nullable(),
+  threadId: Id.nullable(),
+  provider: z.string().nullable(),
+  model: z.string().nullable(),
+  sharedKey: z.boolean().nullable(),
+  inputTokens: z.number().int().nullable(),
+  outputTokens: z.number().int().nullable(),
+  totalTokens: z.number().int().nullable(),
+  costUsd: z.number().nullable(),
+  status: z.string().nullable(),
+  error: z.string().nullable(),
+  firstResponseMs: z.number().nullable(),
+  totalMs: z.number().nullable(),
+  createdAt: z.string(),
+});
+export type OpsRequestLogRow = z.infer<typeof OpsRequestLogRowSchema>;
+
+export const OpsChatLogMessageSchema = z.object({
+  id: Id,
+  role: z.string(),
+  seq: z.number().int(),
+  runId: Id.nullable(),
+  text: z.string(),
+  createdAt: z.string(),
+});
+export type OpsChatLogMessage = z.infer<typeof OpsChatLogMessageSchema>;
+
+export const OpsChatLogSchema = z.object({
+  threadId: Id,
+  runId: Id.nullable(),
+  messages: z.array(OpsChatLogMessageSchema),
+});
+export type OpsChatLog = z.infer<typeof OpsChatLogSchema>;
+
+export const OpsOverviewSchema = z.object({
+  accounts: z.array(OpsAccountSchema),
+  agents: z.object({
+    total: z.number().int().nonnegative(),
+    active: z.number().int().nonnegative(),
+    names: z.array(z.object({ id: Id, name: z.string(), userId: Id })),
+  }),
+  spend: z.object({
+    totalCostUsd: z.number().nullable(),
+    sharedKeyCostUsd: z.number().nonnegative(),
+    personalKeyCostUsd: z.number().nonnegative(),
+    totalTokens: z.number().nullable(),
+  }),
+  sharedKeyBudget: z.object({
+    monthlyCapUsd: z.number().nullable(),
+    rosterConfigured: z.boolean(),
+    memberCount: z.number().int().nonnegative(),
+    weekStartsAt: z.string(),
+    resetsAt: z.string(),
+    timezone: z.literal("America/New_York"),
+  }),
+  performance: z.object({
+    sampleWindowHours: z.number().int().positive(),
+    runCount: z.number().int().nonnegative(),
+    errorCount: z.number().int().nonnegative(),
+    errorRate: z.number().nullable(),
+    medianFirstResponseMs: z.number().nullable(),
+    medianTotalMs: z.number().nullable(),
+    p95FirstResponseMs: z.number().nullable(),
+  }),
+  health: z.object({
+    database: z.enum(["ok", "unreachable", "unknown"]),
+    degraded: z.boolean(),
+    revision: z.string().nullable(),
+    runtime: z.string().nullable(),
+    sandbox: z.string().nullable(),
+  }),
+});
+export type OpsOverview = z.infer<typeof OpsOverviewSchema>;
+
 export const COMPUTER_UPDATE_STAGES = [
   "preparing",
   "saving",

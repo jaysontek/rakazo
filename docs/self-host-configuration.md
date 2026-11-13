@@ -88,6 +88,7 @@ ceiling because Node's HTTP client stops waiting at that point on its own.
 | `PRIVACY_POLICY_URL` | Rakazo's policy | The privacy policy linked from the AI data-sharing notice. Set it on the API. |
 | `SHARED_KEY_MONTHLY_BUDGET_USD` | unset | Monthly USD cap for the deployment shared API key; see [shared-key weekly spend budget](./self-host-models.md#shared-key-weekly-spend-budget). |
 | `SHARED_KEY_BUDGET_USER_IDS` | unset | Comma-separated user ids that share that budget. |
+| `OPS_DASHBOARD_ALLOWLIST` | unset | Comma-separated IPs/CIDRs allowed to call the admin operations dashboard (`/admin/ops`) in addition to loopback. Unset means only loopback. Example (unconfirmed for any given LAN): `192.168.140.0/24,100.64.0.0/10`. |
 
 ## Web Push (browser background notifications)
 

@@ -66,6 +66,9 @@ const AdminPluginsPage = lazyComponent(() =>
 const AdminAccessPage = lazyComponent(() =>
   import("./pages/AdminAccessPage").then((module) => module.AdminAccessPage),
 );
+const AdminOpsPage = lazyComponent(() =>
+  import("./pages/AdminOpsPage").then((module) => module.AdminOpsPage),
+);
 const NavLinkPage = lazyComponent(() =>
   import("./pages/NavLinkPage").then((module) => module.NavLinkPage),
 );
@@ -116,6 +119,7 @@ function SessionApp() {
     next === "/integrations/setup" ||
     next === "/admin/plugins" ||
     next === "/admin/access" ||
+    next === "/admin/ops" ||
     next.startsWith(`${MCP_OAUTH_CALLBACK_PATH}?`) ||
     next.startsWith(`${SLACK_INSTALL_CALLBACK_PATH}?`)
       ? next
@@ -269,6 +273,12 @@ function SessionApp() {
                 path="/admin/access"
                 element={
                   user ? <AdminAccessPage /> : <Navigate to="/sign-in?next=/admin/access" replace />
+                }
+              />
+              <Route
+                path="/admin/ops"
+                element={
+                  user ? <AdminOpsPage /> : <Navigate to="/sign-in?next=/admin/ops" replace />
                 }
               />
               <Route
