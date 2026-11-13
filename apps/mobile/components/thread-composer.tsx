@@ -526,10 +526,10 @@ export function ThreadComposer({
         </ScrollView>
       ) : null}
       {onCall && call ? (
-        <View style={{ marginTop: 8 }}>
+        <View style={{ marginTop: 8, minWidth: 0 }}>
           <GlassSurface
             shape="roundedRectangle"
-            style={{ padding: 10, borderRadius: 18 }}
+            style={{ padding: 10, borderRadius: 18, minWidth: 0, overflow: "hidden" }}
             fallbackStyle={{
               backgroundColor: tokens.card,
               borderColor: tokens.border,

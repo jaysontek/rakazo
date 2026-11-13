@@ -12,6 +12,7 @@ import { startCallBackground, stopCallBackground } from "../lib/call-background"
 import { endCall, toggleMute, useCallSession } from "../lib/call-session";
 import { useI18n } from "../lib/i18n";
 import { useMobileTokens } from "../lib/native";
+import { HEADER_CONTROL_SIZE } from "../lib/native-controls";
 import { currentSessionGeneration, subscribeSessionGeneration } from "../lib/session";
 import { setVoiceBackgroundPlayback } from "../lib/voice";
 import { BotAvatar } from "./bot-avatar";
@@ -133,10 +134,12 @@ export function CallCard() {
     return keepAwake ? <KeepCallAwake /> : null;
   }
 
+  // Clear the floating/native header controls; safe-top alone sits under Back/title.
+  const cardTop = insets.top + HEADER_CONTROL_SIZE + 8;
   return (
     <GlassSurface
       shape="roundedRectangle"
-      style={[styles.card, { top: insets.top + 8 }]}
+      style={[styles.card, { top: cardTop }]}
       fallbackStyle={[
         styles.cardFallback,
         {
@@ -297,6 +300,7 @@ const styles = StyleSheet.create({
     maxWidth: 420,
     padding: 10,
     zIndex: 50,
+    overflow: "hidden",
   },
   cardFallback: {
     borderRadius: 18,
@@ -306,8 +310,14 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 6,
   },
-  strip: { flexDirection: "row", alignItems: "center", gap: 8 },
-  tiles: { flexDirection: "row", alignItems: "center", gap: 6 },
+  strip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    minWidth: 0,
+    overflow: "hidden",
+  },
+  tiles: { flexDirection: "row", alignItems: "center", gap: 6, flexShrink: 0 },
   tile: {
     width: 36,
     height: 36,
@@ -317,7 +327,8 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   initialText: { fontSize: 13, fontWeight: "600" },
-  namePress: { flexShrink: 1, minWidth: 48, maxWidth: 96 },
+  // No minWidth: on ~375 the voice picker + three controls already fill the row.
+  namePress: { flexShrink: 1, minWidth: 0, maxWidth: 96 },
   name: { ...typeScale.cardTitle, writingDirection: "auto" },
   buttonFallback: { borderWidth: StyleSheet.hairlineWidth },
 });

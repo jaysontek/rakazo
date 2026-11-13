@@ -1005,8 +1005,8 @@ const ComposerBody = memo(function Composer({
             <HoldToTalkControls talk={talk} />
           ) : (
             <>
-              {phoneCallsEnabled && draft.trim().length === 0 ? (
-                <HoldToTalkControls talk={talk} disabled={disabled || onCall} />
+              {phoneCallsEnabled && draft.trim().length === 0 && !onCall ? (
+                <HoldToTalkControls talk={talk} disabled={disabled} />
               ) : null}
               {showCall ? (
                 <Button

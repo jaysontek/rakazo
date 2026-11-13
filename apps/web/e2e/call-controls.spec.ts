@@ -20,6 +20,15 @@ test("an ongoing call stays in reach on a page outside the shell", async ({ page
   await expect(page.getByTestId("composer-bar")).toBeVisible();
   await captureScreenshot(page, testInfo, "call-strip-in-thread");
 
+  // Phone width: the strip must stay inside the viewport (no horizontal overflow).
+  await page.setViewportSize({ width: 375, height: 812 });
+  await expect(call).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+  const stripBox = await call.boundingBox();
+  expect(stripBox).not.toBeNull();
+  expect((stripBox?.x ?? 0) + (stripBox?.width ?? 0)).toBeLessThanOrEqual(375 + 1);
+  await captureScreenshot(page, testInfo, "call-strip-in-thread-mobile");
+
   await page.getByTestId("user-menu-trigger").click();
   await page.getByRole("button", { name: "Artifacts", exact: true }).click();
   await expect(page).toHaveURL(/\/app\/artifacts$/);
