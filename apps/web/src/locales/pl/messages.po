@@ -3031,7 +3031,7 @@ msgstr "Wpisz hasło"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Enter a positive amount up to $1,000,000"
-msgstr ""
+msgstr "Wpisz dodatnią kwotę do $1,000,000"
 
 #: src/lib/user-error.ts
 msgid "Enter a valid email"
@@ -4223,7 +4223,7 @@ msgstr "Miesięczne środki wygasają przy odnowieniu. Doładowania nie wygasaj�
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Monthly shared Gemini key cap"
-msgstr ""
+msgstr "Miesięczny limit wspólnego klucza Gemini"
 
 #: src/pages/PluginsOverlay.tsx
 #: src/pages/shell/message-hover-actions.tsx
@@ -5484,7 +5484,7 @@ msgstr "Resetowanie"
 
 #: src/components/SharedKeyUsageMeter.tsx
 msgid "Resets {reset}"
-msgstr ""
+msgstr "Limit odnawia się {reset}"
 
 #: src/components/ComputerMaintenanceActions.tsx
 msgid "Resetting…"
@@ -7035,7 +7035,7 @@ msgstr "Korzystasz z własnego klucza API. Bezpłatny plan kończy się {freeUnt
 
 #: src/components/SharedKeyUsageMeter.tsx
 msgid "Using your own API key, no shared limit"
-msgstr ""
+msgstr "Używasz własnego klucza API, bez wspólnego limitu"
 
 #: src/components/vault/LoginFieldsInput.tsx
 #: src/components/vault/VaultItemDetail.tsx
