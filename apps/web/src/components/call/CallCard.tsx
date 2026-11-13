@@ -6,6 +6,26 @@ import { CallStrip } from "./CallStrip";
 const EDITABLE = /^(?:input|textarea|select)$/i;
 
 /**
+ * In-thread call chrome: a non-interactive spacer clears the floating header, then the
+ * strip sits below it. Never put the clearance padding on a higher stacking context than
+ * the header — that steals Open navigation / bot settings / Invite hits.
+ */
+export function InThreadCallStrip({ onSettings }: { onSettings: () => void }) {
+  return (
+    <>
+      <div
+        aria-hidden="true"
+        data-testid="call-strip-spacer"
+        className="h-[68px] shrink-0 md:h-[76px]"
+      />
+      <div className="relative z-20 shrink-0 px-3 pb-2 md:px-[22px]">
+        <CallStrip onSettings={onSettings} />
+      </div>
+    </>
+  );
+}
+
+/**
  * Call chrome when the active thread's composer is not showing it — for example on
  * Artifacts or another bot. Never covers the app; the thread stays usable.
  */

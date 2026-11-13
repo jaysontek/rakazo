@@ -37,8 +37,7 @@ import {
 } from "react";
 import { useParams } from "react-router-dom";
 import { ComputerUpdateProgress } from "../components/ComputerUpdateProgress";
-import { CallCard } from "../components/call/CallCard";
-import { CallStrip } from "../components/call/CallStrip";
+import { CallCard, InThreadCallStrip } from "../components/call/CallCard";
 import { IncomingCall } from "../components/call/IncomingCall";
 import { PageLoading } from "../components/PageLoading";
 import { PageViewHost } from "../components/pages/PageViewHost";
@@ -1112,9 +1111,7 @@ function SpaceShell() {
             onTogglePanel={toggleChatPanel}
           />
           {active && call?.botId === active.id ? (
-            <div className="relative z-20 shrink-0 px-3 pb-2 pt-[68px] md:px-[22px] md:pt-[76px]">
-              <CallStrip onSettings={() => openSettings("voice")} />
-            </div>
+            <InThreadCallStrip onSettings={() => openSettings("voice")} />
           ) : null}
           {!active && !activeGroup && initialBotsLoaded ? (
             <div className="grid flex-1 place-items-center">

@@ -5,7 +5,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { CallState } from "../../lib/call-session";
 import { endCall } from "../../lib/call-session";
-import { CallCard } from "./CallCard";
+import { CallCard, InThreadCallStrip } from "./CallCard";
 
 vi.mock("@lingui/react/macro", () => ({
   useLingui: () => ({
@@ -116,4 +116,23 @@ it("hangs up on Escape without covering the composer", () => {
   });
   expect(endCall).toHaveBeenCalledOnce();
   expect(composer.closest('[aria-hidden="true"]')).toBeNull();
+});
+
+it("keeps header clearance on a non-interactive spacer below the floating header", () => {
+  act(() => root.render(<InThreadCallStrip onSettings={vi.fn()} />));
+  const spacer = container.querySelector('[data-testid="call-strip-spacer"]');
+  expect(spacer).not.toBeNull();
+  expect(spacer?.className).toContain("h-[68px]");
+  expect(spacer?.className).not.toContain("z-20");
+  expect(spacer?.className).not.toMatch(/\bpt-/);
+  const stripHost = container.querySelector('[data-testid="call-view"]')?.parentElement;
+  expect(stripHost?.className).toContain("z-20");
+  expect(stripHost?.className).not.toContain("pt-[68px]");
+  expect(stripHost?.className).not.toContain("pt-[76px]");
+  // No single host may combine header clearance padding with a higher stacking context.
+  expect(
+    [...container.querySelectorAll("[class*='z-20']")].some((node) =>
+      /\bpt-\[(?:68|76)px\]/.test(node.className),
+    ),
+  ).toBe(false);
 });
