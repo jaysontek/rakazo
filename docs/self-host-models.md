@@ -15,6 +15,14 @@ picks the provider and `PI_DEFAULT_MODEL` the model:
 | `deepseek` | `DEEPSEEK_API_KEY` | `deepseek-flash` |
 | `google` | `GEMINI_API_KEY` | `gemini-3.8-flash` |
 
+`PI_DEFAULT_BACKUP_MODEL` is an optional comma-separated list of model ids on the same provider.
+When the deployment primary hits a per-minute token cap (TPM) mid-task, the run continues on the
+next backup for the rest of that work, then new work returns to the primary once that window
+resets. Same-provider deployment backups reuse the shared deployment key (`GEMINI_API_KEY` for
+`google`). Member and Space credential backups never receive that shared key; a member's own
+backups still win for that member. Unset keeps Google's built-in backup (`gemini-3.7-flash`); an
+explicit empty value disables deployment backups.
+
 The deployment key stays in the process environment and is referenced at run time. It is never
 copied into each account's encrypted secret rows, never returned by `me` or models APIs, and never
 logged. Anyone who has not connected a model of their own uses it (including new signups, which
