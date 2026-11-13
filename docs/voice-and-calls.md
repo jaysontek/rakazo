@@ -35,9 +35,9 @@ don't have to keep holding.
 
 ## Call a bot
 
-Choose **Call** at the top of the chat to talk with the bot in real time. During a call you can
-**Mute**, open the **Transcript**, minimize the call and keep using the app, or **Hang up**. The
-transcript stays in the chat afterwards.
+Choose **Call** in the chat composer to start an audio-only call with the bot. During a call you can
+**Mute**, change the **Voice**, open voice **Settings**, or **Hang up**. The call strip sits above
+the composer so the thread stays visible; the transcript stays in the chat afterwards.
 
 Bots can call you too: ask "call me at 5 to go over the day", or a bot may call when you've missed
 the same reminder several times. You'll see that the bot is calling you; answer or **Decline**. A
