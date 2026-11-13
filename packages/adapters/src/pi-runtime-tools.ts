@@ -34,6 +34,7 @@ import type { RuntimeModelTarget } from "./pi-runtime-models.js";
 import { executeSubagent } from "./pi-runtime-subagent.js";
 import { parametersFor, prepareFleetArguments } from "./pi-runtime-tool-parameters.js";
 import { recordPiTelemetryContent, withPiTelemetrySpan } from "./pi-telemetry.js";
+import type { RunPhaseTiming } from "./run-phase-timing.js";
 import { VERBATIM_TOOL_RESULTS } from "./runtime-context.js";
 import { SCHEDULE_TOOL_NAMES } from "./schedule-tools.js";
 import type { FinishedShellCommand } from "./shell-command-stream.js";
@@ -514,6 +515,7 @@ function toAgentTool(
             ...(viaUseTool ? { viaUseTool } : {}),
           });
           const startedAt = Date.now();
+          host.phaseTiming?.markToolStart();
           let result: unknown;
           let failure: unknown;
           try {
@@ -657,6 +659,7 @@ function toAgentTool(
             failure = error;
             throw error;
           } finally {
+            host.phaseTiming?.markToolEnd();
             // Pi only terminates a parallel batch when every result terminates.
             // A single paused or turn-ending call must stop the turn before another
             // model request, or the next assistant message replaces its final reply.
@@ -799,6 +802,8 @@ export interface ToolHost {
   pendingShells: Array<Promise<FinishedShellCommand>>;
   /** Model responses started by the main agent. Helpers reset it, so each of their calls counts. */
   modelResponses?: number;
+  /** Shared across nested hosts so helper model/tool time counts toward the parent run. */
+  phaseTiming?: RunPhaseTiming;
 }
 
 export function toolCallBudgetExceededMessage(limit: number) {

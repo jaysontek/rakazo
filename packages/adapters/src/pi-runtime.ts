@@ -84,6 +84,7 @@ import { PiJsonlSessionRecorder } from "./pi-session.js";
 import { withPiTelemetry } from "./pi-telemetry.js";
 import { withPiThinkingActivity } from "./pi-thinking-activity.js";
 import { observedPiStream } from "./pi-usage.js";
+import { createRunPhaseTiming } from "./run-phase-timing.js";
 import type { RuntimeContextDecision } from "./runtime-context.js";
 import { createRuntimeContextPolicy } from "./runtime-context.js";
 import { deliverFinishedShells } from "./shell-command-stream.js";
@@ -277,6 +278,8 @@ export class PiAgentRuntime implements AgentRuntime {
               computer: computerSelection(computer.config),
             }
           : undefined;
+        const phaseTiming = createRunPhaseTiming();
+        phaseTiming.start();
         const host: ToolHost = {
           queue,
           context,
@@ -299,6 +302,7 @@ export class PiAgentRuntime implements AgentRuntime {
           pausePending: false,
           pendingShells: [],
           modelResponses: 0,
+          phaseTiming,
         };
         resumeHost = host;
         const allTools = toAgentTools(toolDefs, host);
@@ -468,6 +472,7 @@ export class PiAgentRuntime implements AgentRuntime {
                       ...usageHooks,
                       prepareContext,
                       onProviderError: (message) => providerFailures.add(message.content),
+                      phaseTiming: host.phaseTiming,
                     },
                   ),
                 target.config.cacheCapabilities?.retentionMode,
@@ -1238,6 +1243,14 @@ export class PiAgentRuntime implements AgentRuntime {
           const keepForResume =
             (signal.aborted || Boolean(resumeHost?.pausePending)) && !trackedBudget.exceeded;
           releaseToolCallBudget(request.runId, keepForResume);
+        }
+        // Diagnosis-only: exclusive model / tool / framework wait for this runtime pass.
+        // Client delivery and UI paint are not included (not observable here).
+        if (resumeHost?.phaseTiming) {
+          getLogger().info("run.phase_timing", {
+            "run.id": request.runId,
+            ...resumeHost.phaseTiming.finish(),
+          });
         }
       }
     });

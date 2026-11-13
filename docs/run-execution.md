@@ -40,8 +40,9 @@ existing dispatch and recovery behavior.
 
 ## Timing
 
-Structured logs emit `run.execution_started`, `run.first_response`, and
-`run.finished`. Timing fields contain durations in milliseconds:
+Structured logs emit `run.execution_started`, `run.first_response`,
+`run.finished`, and `run.phase_timing`. Timing fields contain durations in
+milliseconds:
 
 | Field | Meaning |
 | --- | --- |
@@ -50,6 +51,20 @@ Structured logs emit `run.execution_started`, `run.first_response`, and
 | `run.first_response_ms` | Source message to first persisted visible reply text or reply card. |
 | `run.total_ms` | Source message to run completion or failure. |
 | `run.execution_wall_ms` | First execution start to completion, including retries and human waits. |
+| `run.ttft_ms` | Start of the model request that emitted the first text token to that token (phase log only). Earlier tool-only model requests are excluded. |
+| `run.model_wait_ms` | Exclusive wall time with at least one model HTTP stream open for one Pi runtime pass. |
+| `run.tool_wait_ms` | Exclusive wall time with at least one tool in flight (includes sandbox/computer work). |
+| `run.framework_ms` | Exclusive wall time in the same pass that is neither model nor tool. |
+
+`run.phase_timing` is emitted once per Pi runtime invocation (each executor
+attempt or resume). Its model/tool/framework fields partition that pass's wall
+clock into exclusive phases so a single run can be read as model-bound,
+tool/sandbox-bound, or framework/orchestration-bound. Helper (subagent) model and
+tool time is included in the parent pass; overlapping streams are refcounted so
+the first helper ending does not close the model phase. A pause-and-resume
+produces a separate phase record for the later pass; sum matching fields across
+a run id when the whole run matters. `run.ttft_ms` is omitted when the model
+never emitted text (for example tool-only turns).
 
 These are run-level measurements. Multiple steering messages can share one run;
 its selected source message defines the timing origin. When a run has no source
@@ -69,7 +84,7 @@ already committed operation.
 
 These are server-side availability measurements. They do not measure network
 delivery or rendering on a user's device. Client delivery/render timing would need
-a separate acknowledgement.
+a separate acknowledgement and is not present on `run.phase_timing`.
 
 Recurring timer routines mark their origin durably and keep one pristine pending
 catch-up run for the same routine, prompt, thread, and model selection. A later
