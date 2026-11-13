@@ -1164,7 +1164,6 @@ function SpaceShell() {
               onSpeak={speakMessage}
               onOpenComputer={computerControls.onOpenComputer}
               onOpenImportSetup={openImportSetup}
-              hostingCall={Boolean(active && call?.botId === active.id)}
               rpc={rpc}
             />
           )}
