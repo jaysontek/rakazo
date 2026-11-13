@@ -688,6 +688,10 @@ msgstr ""
 msgid "Address line 2"
 msgstr ""
 
+#: src/components/SidebarFooter.tsx
+msgid "Admin Dashboard"
+msgstr ""
+
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/ModelSettingsOverlay.tsx

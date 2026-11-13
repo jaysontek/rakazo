@@ -7,9 +7,9 @@ import {
   removeSharedKeyBudgetMember,
   reserveSharedKeyBudget,
   resolveUsageLimitView,
-  setSharedKeyMonthlyBudgetUsd,
   SHARED_KEY_BUDGET_HOLD_STALE_MS,
   SharedKeyWeeklyBudgetExceededError,
+  setSharedKeyMonthlyBudgetUsd,
   sharedKeyMonthlyBudgetUsd,
   sharedKeyWeeklyBudgetStatus,
 } from "./shared-key-budget.js";
@@ -27,12 +27,21 @@ type Allotment = {
   updatedAt: Date;
 };
 type Usage = { userId: string; costUsd: number; sharedKey: boolean; createdAt: Date };
+type Transfer = {
+  weekStart: Date;
+  fromUserId: string;
+  toUserId: string;
+  amountUsd: number;
+  createdAt: Date;
+  reversedAt: Date | null;
+};
 
 function fakePrisma(state: {
   monthly: number | null;
   members: Member[];
   allotments: Allotment[];
   usage: Usage[];
+  transfers?: Transfer[];
   knownUserIds?: string[];
   locks?: string[];
 }) {
@@ -69,22 +78,15 @@ function fakePrisma(state: {
       findMany: vi.fn(async () =>
         [...state.members].sort((a, b) => a.joinedAt.getTime() - b.joinedAt.getTime()),
       ),
-      findUnique: vi.fn(async ({ where }: { where: { userId: string } }) =>
-        state.members.find((m) => m.userId === where.userId) ?? null,
+      findUnique: vi.fn(
+        async ({ where }: { where: { userId: string } }) =>
+          state.members.find((m) => m.userId === where.userId) ?? null,
       ),
-      upsert: vi.fn(
-        async ({
-          where,
-          create,
-        }: {
-          where: { userId: string };
-          create: Member;
-        }) => {
-          if (!state.members.some((m) => m.userId === where.userId)) {
-            state.members.push({ userId: create.userId, joinedAt: create.joinedAt });
-          }
-        },
-      ),
+      upsert: vi.fn(async ({ where, create }: { where: { userId: string }; create: Member }) => {
+        if (!state.members.some((m) => m.userId === where.userId)) {
+          state.members.push({ userId: create.userId, joinedAt: create.joinedAt });
+        }
+      }),
       create: vi.fn(async ({ data }: { data: Member }) => {
         state.members.push({ userId: data.userId, joinedAt: data.joinedAt });
       }),
@@ -94,6 +96,18 @@ function fakePrisma(state: {
       deleteMany: vi.fn(async ({ where }: { where: { userId: string } }) => {
         state.members = state.members.filter((m) => m.userId !== where.userId);
       }),
+    },
+    sharedKeyAllotmentTransfer: {
+      findMany: vi.fn(
+        async ({ where }: { where: { weekStart: Date; reversedAt: null } }): Promise<Transfer[]> =>
+          (state.transfers ?? [])
+            .filter(
+              (row) =>
+                row.weekStart.getTime() === where.weekStart.getTime() &&
+                row.reversedAt === where.reversedAt,
+            )
+            .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()),
+      ),
     },
     sharedKeyWeekAllotment: {
       findMany: vi.fn(async ({ where }: { where: { weekStart: Date } }) =>
@@ -108,11 +122,7 @@ function fakePrisma(state: {
           ) ?? null,
       ),
       deleteMany: vi.fn(
-        async ({
-          where,
-        }: {
-          where: { weekStart: Date; userId?: { notIn: string[] } };
-        }) => {
+        async ({ where }: { where: { weekStart: Date; userId?: { notIn: string[] } } }) => {
           state.allotments = state.allotments.filter((row) => {
             if (row.weekStart.getTime() !== where.weekStart.getTime()) return true;
             if (where.userId?.notIn) return where.userId.notIn.includes(row.userId);
@@ -548,15 +558,17 @@ describe("shared-key weekly budget", () => {
     const { client } = fakePrisma(state);
     // At the old $12.50 allotment the member is hard-stopped; raising the monthly cap to
     // $200 must give them $50 this week (200/1/4) and preserve the in-flight hold.
-    await expect(reserveSharedKeyBudget(client as never, "u1", 0.01, midweek)).rejects.toBeInstanceOf(
-      SharedKeyWeeklyBudgetExceededError,
-    );
+    await expect(
+      reserveSharedKeyBudget(client as never, "u1", 0.01, midweek),
+    ).rejects.toBeInstanceOf(SharedKeyWeeklyBudgetExceededError);
     const saved = await setSharedKeyMonthlyBudgetUsd(client as never, 200, midweek);
     expect(saved).toEqual({ monthlyCapUsd: 200, previousMonthlyCapUsd: 50 });
     expect(state.allotments).toEqual([
       expect.objectContaining({ userId: "u1", allotmentUsd: 50, reservedUsd: 3 }),
     ]);
-    await expect(reserveSharedKeyBudget(client as never, "u1", 1, midweek)).resolves.toBeUndefined();
+    await expect(
+      reserveSharedKeyBudget(client as never, "u1", 1, midweek),
+    ).resolves.toBeUndefined();
     expect(state.allotments[0]?.reservedUsd).toBe(4);
   });
 
@@ -596,13 +608,15 @@ describe("shared-key weekly budget", () => {
     // 40 / 2 / 4 = 5 each. Member a already spent $20, so the lower cap hard-stops them;
     // b keeps the reserved hold under the new $5 ceiling.
     await setSharedKeyMonthlyBudgetUsd(client as never, 40, midweek);
-    expect(state.allotments.map((row) => [row.userId, row.allotmentUsd, row.reservedUsd]).sort()).toEqual([
+    expect(
+      state.allotments.map((row) => [row.userId, row.allotmentUsd, row.reservedUsd]).sort(),
+    ).toEqual([
       ["a", 5, 0],
       ["b", 5, 2],
     ]);
-    await expect(reserveSharedKeyBudget(client as never, "a", 0.01, midweek)).rejects.toBeInstanceOf(
-      SharedKeyWeeklyBudgetExceededError,
-    );
+    await expect(
+      reserveSharedKeyBudget(client as never, "a", 0.01, midweek),
+    ).rejects.toBeInstanceOf(SharedKeyWeeklyBudgetExceededError);
   });
 
   it("resolves usage limit percent and reset for shared-key members", async () => {
@@ -631,7 +645,7 @@ describe("shared-key weekly budget", () => {
     }
   });
 
-  it("resolves personal-key usage when a Google credential exists", async () => {
+  it("resolves personal-key usage only when the caller classified a personal key", async () => {
     const state = {
       monthly: 400,
       members: [{ userId: "u1", joinedAt: weekStart }],
@@ -639,9 +653,8 @@ describe("shared-key weekly budget", () => {
       usage: [] as Usage[],
     };
     const { client } = fakePrisma(state);
-    client.userModelCredential.findFirst = vi.fn(async () => ({ id: "cred" }));
-    expect(await resolveUsageLimitView(client as never, "u1", midweek)).toEqual({
-      kind: "personal_key",
-    });
+    expect(
+      await resolveUsageLimitView(client as never, "u1", midweek, null, { personalKey: true }),
+    ).toEqual({ kind: "personal_key" });
   });
 });

@@ -17,6 +17,126 @@ msgstr ""
 msgid " (unread)"
 msgstr " (nieprzeczytane)"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Actions"
+msgstr "Akcje"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Admins"
+msgstr "Administratorzy"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Choose a destination on the roster."
+msgstr "Wybierz odbiorcę z listy."
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Company"
+msgstr "Firmowy"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Company key (not on budget roster)"
+msgstr "Klucz firmowy (poza listą budżetową)"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not add admin"
+msgstr "Nie udało się dodać administratora"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not impersonate"
+msgstr "Nie udało się podszyć"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not remove admin"
+msgstr "Nie udało się usunąć administratora"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not reverse transfer"
+msgstr "Nie udało się cofnąć transferu"
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Could not stop impersonation"
+msgstr "Nie udało się zakończyć podszywania"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not transfer allotment"
+msgstr "Nie udało się przenieść przydziału"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Env"
+msgstr "Env"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Impersonate"
+msgstr "Podszyj się"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Impersonate {0}?"
+msgstr "Podszyć się pod {0}?"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Key"
+msgstr "Klucz"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "None this week."
+msgstr "Brak w tym tygodniu."
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Remove {0}?"
+msgstr "Usunąć {0}?"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Return {0} from {1} to {2}."
+msgstr "Zwrócić {0} od {1} do {2}."
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Reverse"
+msgstr "Cofnij"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Reverse transfer?"
+msgstr "Cofnąć transfer?"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Reversed"
+msgstr "Cofnięty"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Reversing…"
+msgstr "Cofanie…"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Transfer"
+msgstr "Przenieś"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Transfer unused allotment"
+msgstr "Przenieś niewykorzystany przydział"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Transfer unused allotment from {0} to {1}?"
+msgstr "Przenieść niewykorzystany przydział od {0} do {1}?"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Transfer {0} from {1} to {2}?"
+msgstr "Przenieść {0} od {1} do {2}?"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Transferring…"
+msgstr "Przenoszenie…"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Transfers"
+msgstr "Transfery"
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Viewing as {0}"
+msgstr "Widok jako {0}"
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Viewing as {0} ({1})"
+msgstr "Widok jako {0} ({1})"
+
 #. placeholder {0}: pinned.length
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "{0, plural, one {# bot has its own model:} other {# bots have their own model:}}"
@@ -687,6 +807,10 @@ msgstr "Adres"
 #: src/components/vault/VaultItemEditor.tsx
 msgid "Address line 2"
 msgstr "Druga linia adresu"
+
+#: src/components/SidebarFooter.tsx
+msgid "Admin Dashboard"
+msgstr "Panel administratora"
 
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/model-settings/compatible-model-fields.tsx
@@ -5698,6 +5822,10 @@ msgstr "Zapisano, ale nie udało się odświeżyć listy"
 #: src/pages/model-settings/use-model-settings.ts
 msgid "Saved."
 msgstr "Zapisano."
+
+#: src/pages/model-settings/use-model-settings.ts
+msgid "That key is the company shared key. Usage counts toward the shared budget."
+msgstr "Ten klucz to firmowy klucz współdzielony. Zużycie liczy się do wspólnego budżetu."
 
 #: src/pages/RoutineEditor.tsx
 msgid "Saved. Rotate to reveal."

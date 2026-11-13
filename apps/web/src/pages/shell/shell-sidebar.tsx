@@ -348,6 +348,10 @@ function ShellSidebarFooter({
     ...queries.usage.summary.queryOptions(),
     enabled: menuOpen,
   });
+  // Server-derived isAdmin (env bootstrap or DB grant); false while impersonating.
+  const meQuery = useQuery(queries.me.queryOptions());
+  const showAdminDashboard =
+    meQuery.data?.isAdmin === true && meQuery.data?.impersonating == null;
   const { label: userName, initial: initials } = accountDisplay(user ?? {}, t`You`);
   const day = freeUntil ? formatBillingDate(freeUntil, i18n.locale || "en") : "";
   return (
@@ -377,6 +381,12 @@ function ShellSidebarFooter({
           if (!open) setLogOutError(null);
         }}
         usageLimit={usageQuery.data?.usageLimit}
+        showAdminDashboard={showAdminDashboard}
+        onAdminDashboard={() => {
+          setMenuOpen(false);
+          closeMobileSidebar();
+          navigate("/admin/ops");
+        }}
         onIntegrations={() => {
           setMenuOpen(false);
           openIntegrations();

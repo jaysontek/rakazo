@@ -652,6 +652,14 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
     extraOrigins: MOBILE_AUTH_ORIGINS,
     androidAppCertFingerprints: env.passkeyAndroidCertFingerprints,
     beforeDeleteUser: async (userId) => {
+      // An admin viewing as this account must not be able to delete it as the target.
+      const impersonating = await prisma.session.findFirst({
+        where: { userId, impersonatedBy: { not: null } },
+        select: { id: true },
+      });
+      if (impersonating) {
+        throw new Error("Not allowed while impersonating");
+      }
       // Billing cancels inside, after the account's spaces are claimed and before anything is
       // destroyed, so a provider failure aborts deletion with the account as it was.
       await deleteAccountContent(
@@ -943,6 +951,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
       adminEmails: env.adminEmails,
       opsDashboardAllowlist: env.opsDashboardAllowlist,
       sharedKeyMonthlyBudgetUsd: env.sharedKeyMonthlyBudgetUsd,
+      deploymentModelKey: env.deploymentModelKey ?? null,
       maxUploadSizeBytes: env.maxUploadSizeBytes,
       maxAttachmentsPerMessage: env.maxAttachmentsPerMessage,
       agentRuntime: env.agentRuntime,

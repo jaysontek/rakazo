@@ -15,11 +15,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@rakazo/ui-web";
+import { useQuery } from "@tanstack/react-query";
 import { CircleUserRound } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { authClient } from "../lib/auth";
 import { switchOrganization, useOrganizations } from "../lib/organizations";
-import { useQueryUserId } from "../lib/query";
+import { useQueryUserId, useSpaceQueries } from "../lib/query";
 import { DeleteAccountForm, hasDeleteRedirectError } from "./AccountAccess";
 
 /**
@@ -36,8 +38,12 @@ export function AccountMenu({
   onLogOut: () => void;
 }) {
   const { t } = useLingui();
+  const navigate = useNavigate();
   const email = authClient.useSession().data?.user.email;
   const userId = useQueryUserId();
+  const queries = useSpaceQueries();
+  const me = useQuery({ ...queries.me.queryOptions(), enabled: Boolean(userId) });
+  const showAdminDashboard = me.data?.isAdmin === true && me.data?.impersonating == null;
   const { organizations, activeOrganizationId } = useOrganizations();
   // An SSO sign-in to confirm deletion returns here; reopen so its error is seen.
   const [deleting, setDeleting] = useState(hasDeleteRedirectError);
@@ -85,6 +91,14 @@ export function AccountMenu({
               </DropdownMenuRadioGroup>
               <DropdownMenuSeparator />
             </>
+          ) : null}
+          {showAdminDashboard ? (
+            <DropdownMenuItem
+              data-testid="account-menu-admin-dashboard"
+              onClick={() => navigate("/admin/ops")}
+            >
+              <Trans>Admin Dashboard</Trans>
+            </DropdownMenuItem>
           ) : null}
           <DropdownMenuItem onClick={onLogOut}>
             <Trans>Log out</Trans>

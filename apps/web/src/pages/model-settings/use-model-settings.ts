@@ -599,7 +599,11 @@ export function useModelSettings(onClose: () => void, scope: SettingsScope) {
           credentialId: saved?.id,
         });
       // A fresh connection speaks for itself through the Active model row.
-      if (isOpenAiCompatible || savingLimitOnly) setNotice(t`Saved.`);
+      if (saved?.matchesDeploymentSharedKey) {
+        setNotice(t`That key is the company shared key. Usage counts toward the shared budget.`);
+      } else if (isOpenAiCompatible || savingLimitOnly) {
+        setNotice(t`Saved.`);
+      }
     } catch (err) {
       if (stillSelected()) setError(errorText(err, t`Could not connect this provider`));
     } finally {

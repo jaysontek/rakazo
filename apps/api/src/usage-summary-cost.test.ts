@@ -102,6 +102,9 @@ function makeDeps(): RouterDeps {
         where.userId === "user" ? { userId: "user", joinedAt: new Date() } : null,
       findMany: async () => [{ userId: "user", joinedAt: new Date() }],
     },
+    sharedKeyAllotmentTransfer: {
+      findMany: async () => [],
+    },
     sharedKeyWeekAllotment: {
       findUnique: async () => ({
         weekStart: new Date("2026-11-02T05:00:00.000Z"),

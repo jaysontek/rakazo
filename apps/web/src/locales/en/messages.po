@@ -17,6 +17,126 @@ msgstr ""
 msgid " (unread)"
 msgstr " (unread)"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Actions"
+msgstr "Actions"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Admins"
+msgstr "Admins"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Choose a destination on the roster."
+msgstr "Choose a destination on the roster."
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Company"
+msgstr "Company"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Company key (not on budget roster)"
+msgstr "Company key (not on budget roster)"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not add admin"
+msgstr "Could not add admin"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not impersonate"
+msgstr "Could not impersonate"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not remove admin"
+msgstr "Could not remove admin"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not reverse transfer"
+msgstr "Could not reverse transfer"
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Could not stop impersonation"
+msgstr "Could not stop impersonation"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not transfer allotment"
+msgstr "Could not transfer allotment"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Env"
+msgstr "Env"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Impersonate"
+msgstr "Impersonate"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Impersonate {0}?"
+msgstr "Impersonate {0}?"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Key"
+msgstr "Key"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "None this week."
+msgstr "None this week."
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Remove {0}?"
+msgstr "Remove {0}?"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Return {0} from {1} to {2}."
+msgstr "Return {0} from {1} to {2}."
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Reverse"
+msgstr "Reverse"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Reverse transfer?"
+msgstr "Reverse transfer?"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Reversed"
+msgstr "Reversed"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Reversing…"
+msgstr "Reversing…"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Transfer"
+msgstr "Transfer"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Transfer unused allotment"
+msgstr "Transfer unused allotment"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Transfer unused allotment from {0} to {1}?"
+msgstr "Transfer unused allotment from {0} to {1}?"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Transfer {0} from {1} to {2}?"
+msgstr "Transfer {0} from {1} to {2}?"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Transferring…"
+msgstr "Transferring…"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Transfers"
+msgstr "Transfers"
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Viewing as {0}"
+msgstr "Viewing as {0}"
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Viewing as {0} ({1})"
+msgstr "Viewing as {0} ({1})"
+
 #. placeholder {0}: pinned.length
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "{0, plural, one {# bot has its own model:} other {# bots have their own model:}}"
@@ -687,6 +807,10 @@ msgstr "Address"
 #: src/components/vault/VaultItemEditor.tsx
 msgid "Address line 2"
 msgstr "Address line 2"
+
+#: src/components/SidebarFooter.tsx
+msgid "Admin Dashboard"
+msgstr "Admin Dashboard"
 
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/model-settings/compatible-model-fields.tsx
@@ -5698,6 +5822,10 @@ msgstr "Saved, but list refresh failed"
 #: src/pages/model-settings/use-model-settings.ts
 msgid "Saved."
 msgstr "Saved."
+
+#: src/pages/model-settings/use-model-settings.ts
+msgid "That key is the company shared key. Usage counts toward the shared budget."
+msgstr "That key is the company shared key. Usage counts toward the shared budget."
 
 #: src/pages/RoutineEditor.tsx
 msgid "Saved. Rotate to reveal."

@@ -1,11 +1,16 @@
+import type { SecretStore } from "@rakazo/adapter-kit";
 import { sharedKeyWeekEnd, sharedKeyWeekStart } from "@rakazo/core";
-import type { PrismaClient } from "@rakazo/db";
+import type { AdminGrantRow, AllotmentTransferRow, PrismaClient } from "@rakazo/db";
 import {
+  isHiddenOpsEmail,
+  listAdminGrants,
+  listSharedKeyAllotmentTransfers,
   listSharedKeyBudgetMembers,
   runAsSystem,
   sharedKeyMonthlyBudgetUsd,
   sharedKeyWeeklyBudgetStatus,
 } from "@rakazo/db";
+import { classifyGoogleModelKeyType } from "./model-key-type.js";
 
 const RECENT_RUN_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 const LATENCY_SAMPLE_LIMIT = 500;
@@ -21,6 +26,7 @@ export type OpsAccountRow = {
   deactivated: boolean;
   modelProvider: string | null;
   modelId: string | null;
+  keyType: "company" | "personal" | "none";
   totalTokens: number | null;
   totalCostUsd: number | null;
   sharedKeyCostUsd: number;
@@ -118,6 +124,9 @@ export type OpsOverview = {
     runtime: string | null;
     sandbox: string | null;
   };
+  adminGrants: AdminGrantRow[];
+  envBootstrapAdmins: string[];
+  allotmentTransfers: AllotmentTransferRow[];
 };
 
 /** First plain text block from a message; used for admin chat-log drill-in. */
@@ -183,6 +192,11 @@ export async function loadOpsOverview(
   } = {},
   now = new Date(),
   envSharedKeyMonthlyBudgetUsd: number | null = null,
+  options: {
+    secrets?: SecretStore;
+    sharedGoogleApiKey?: string | null;
+    envBootstrapAdmins?: string[];
+  } = {},
 ): Promise<OpsOverview> {
   return runAsSystem("operations dashboard overview", async () => {
     const weekAgo = new Date(now.getTime() - RECENT_RUN_WINDOW_MS);
@@ -241,6 +255,7 @@ export async function loadOpsOverview(
       prisma.run.findMany({
         where: { createdAt: { gte: weekAgo } },
         select: {
+          userId: true,
           status: true,
           error: true,
           createdAt: true,
@@ -277,8 +292,12 @@ export async function loadOpsOverview(
     }
 
     const memberIds = new Set(members.map((member) => member.userId));
+    const visibleUsers = users.filter((user) => !isHiddenOpsEmail(user.email));
+    const hiddenUserIds = new Set(
+      users.filter((user) => isHiddenOpsEmail(user.email)).map((user) => user.id),
+    );
     const accounts: OpsAccountRow[] = [];
-    for (const user of users) {
+    for (const user of visibleUsers) {
       const usage = usageByUser.get(user.id);
       const model = latestModel.get(user.id);
       let budget: OpsAccountRow["sharedKeyBudget"] = null;
@@ -312,6 +331,14 @@ export async function loadOpsOverview(
           timezone: status.timezone,
         };
       }
+      const keyType = options.secrets
+        ? await classifyGoogleModelKeyType(
+            prisma,
+            options.secrets,
+            user.id,
+            options.sharedGoogleApiKey ?? null,
+          )
+        : "none";
       accounts.push({
         userId: user.id,
         email: user.email,
@@ -319,6 +346,7 @@ export async function loadOpsOverview(
         deactivated: user.deactivatedAt != null,
         modelProvider: model?.provider ?? null,
         modelId: model?.model ?? null,
+        keyType,
         totalTokens: usage?.totalTokens ?? null,
         totalCostUsd: usage?.totalCostUsd ?? null,
         sharedKeyCostUsd: sharedByUser.get(user.id) ?? 0,
@@ -326,12 +354,36 @@ export async function loadOpsOverview(
         sharedKeyBudget: budget,
       });
     }
-
-    const activeBots = bots.filter((bot) => bot.archivedAt == null);
+    const visibleBots = bots.filter((bot) => !hiddenUserIds.has(bot.userId));
+    const activeBots = visibleBots.filter((bot) => bot.archivedAt == null);
+    const weekStart = sharedKeyWeekStart(now);
+    const adminGrants = (
+      await listAdminGrants(prisma, options.envBootstrapAdmins ?? [])
+    ).filter((grant) => !isHiddenOpsEmail(grant.email));
+    // Also surface env bootstrap admins that have no DB grant row yet.
+    for (const email of options.envBootstrapAdmins ?? []) {
+      if (isHiddenOpsEmail(email)) continue;
+      if (adminGrants.some((grant) => grant.email.toLowerCase() === email.toLowerCase())) continue;
+      const bootstrap = visibleUsers.find(
+        (user) => user.email.toLowerCase() === email.toLowerCase(),
+      );
+      if (!bootstrap) continue;
+      adminGrants.unshift({
+        userId: bootstrap.id,
+        email: bootstrap.email,
+        name: bootstrap.name,
+        grantedById: bootstrap.id,
+        grantedByEmail: null,
+        createdAt: new Date(0).toISOString(),
+        envBootstrap: true,
+      });
+    }
+    const allotmentTransfers = await listSharedKeyAllotmentTransfers(prisma, weekStart);
     const firstResponses: number[] = [];
     const totals: number[] = [];
     let errorCount = 0;
-    for (const run of recentRuns) {
+    const visibleRuns = recentRuns.filter((run) => !hiddenUserIds.has(run.userId));
+    for (const run of visibleRuns) {
       if (run.error || run.status === "failed") errorCount += 1;
       const origin = run.sourceMessage?.createdAt ?? run.createdAt;
       if (run.firstResponseAt) {
@@ -344,9 +396,8 @@ export async function loadOpsOverview(
     firstResponses.sort((a, b) => a - b);
     totals.sort((a, b) => a - b);
 
-    const sharedKeyCostUsd = [...sharedByUser.values()].reduce((sum, value) => sum + value, 0);
-    const personalKeyCostUsd = [...personalByUser.values()].reduce((sum, value) => sum + value, 0);
-    const weekStart = sharedKeyWeekStart(now);
+    const sharedKeyCostUsd = accounts.reduce((sum, row) => sum + row.sharedKeyCostUsd, 0);
+    const personalKeyCostUsd = accounts.reduce((sum, row) => sum + row.personalKeyCostUsd, 0);
     const budgetWindow = {
       weekStartsAt: weekStart.toISOString(),
       resetsAt: sharedKeyWeekEnd(weekStart).toISOString(),
@@ -355,7 +406,7 @@ export async function loadOpsOverview(
     return {
       accounts,
       agents: {
-        total: bots.length,
+        total: visibleBots.length,
         active: activeBots.length,
         names: activeBots.map((bot) => ({
           id: bot.id,
@@ -364,10 +415,10 @@ export async function loadOpsOverview(
         })),
       },
       spend: {
-        totalCostUsd: sumNullable([...usageGroups.map((row) => row._sum.costUsd)]),
+        totalCostUsd: sumNullable(accounts.map((row) => row.totalCostUsd)),
         sharedKeyCostUsd,
         personalKeyCostUsd,
-        totalTokens: sumNullable(usageGroups.map((row) => row._sum.totalTokens)),
+        totalTokens: sumNullable(accounts.map((row) => row.totalTokens)),
       },
       sharedKeyBudget: {
         monthlyCapUsd: monthlyCap,
@@ -379,9 +430,9 @@ export async function loadOpsOverview(
       },
       performance: {
         sampleWindowHours: 24 * 7,
-        runCount: recentRuns.length,
+        runCount: visibleRuns.length,
         errorCount,
-        errorRate: recentRuns.length > 0 ? errorCount / recentRuns.length : null,
+        errorRate: visibleRuns.length > 0 ? errorCount / visibleRuns.length : null,
         medianFirstResponseMs: median(firstResponses),
         medianTotalMs: median(totals),
         p95FirstResponseMs: percentile(firstResponses, 95),
@@ -393,6 +444,11 @@ export async function loadOpsOverview(
         runtime: health.runtime ?? null,
         sandbox: health.sandbox ?? null,
       },
+      adminGrants,
+      envBootstrapAdmins: (options.envBootstrapAdmins ?? []).filter(
+        (email) => !isHiddenOpsEmail(email),
+      ),
+      allotmentTransfers,
     };
   });
 }
@@ -411,15 +467,24 @@ export async function listOpsAgents(prisma: OpsDashboardPrisma): Promise<OpsAgen
       },
       orderBy: [{ archivedAt: "asc" }, { name: "asc" }],
     });
-    return bots.map((bot) => ({
-      id: bot.id,
-      name: bot.name,
-      userId: bot.userId,
-      spaceId: bot.spaceId,
-      modelProvider: bot.modelProvider,
-      modelId: bot.modelId,
-      archived: bot.archivedAt != null,
-    }));
+    const users = await prisma.user.findMany({
+      where: { id: { in: [...new Set(bots.map((bot) => bot.userId))] } },
+      select: { id: true, email: true },
+    });
+    const hiddenUsers = new Set(
+      users.filter((user) => isHiddenOpsEmail(user.email)).map((user) => user.id),
+    );
+    return bots
+      .filter((bot) => !hiddenUsers.has(bot.userId))
+      .map((bot) => ({
+        id: bot.id,
+        name: bot.name,
+        userId: bot.userId,
+        spaceId: bot.spaceId,
+        modelProvider: bot.modelProvider,
+        modelId: bot.modelId,
+        archived: bot.archivedAt != null,
+      }));
   });
 }
 
@@ -485,55 +550,71 @@ export async function listOpsRequestLog(
     ]);
 
     const names = new Map(botNames.map((bot) => [bot.id, bot.name]));
-    const fromUsage: OpsRequestLogRow[] = usageRows.map((row) => ({
-      id: `usage:${row.id}`,
-      kind: "usage",
-      userId: row.userId,
-      botId: row.botId,
-      botName: row.botId ? (names.get(row.botId) ?? null) : null,
-      runId: row.runId,
-      threadId: null,
-      provider: row.provider,
-      model: row.model,
-      sharedKey: row.sharedKey,
-      inputTokens: row.inputTokens,
-      outputTokens: row.outputTokens,
-      totalTokens: row.totalTokens,
-      costUsd: row.costUsd,
-      status: null,
-      error: null,
-      firstResponseMs: null,
-      totalMs: null,
-      createdAt: row.createdAt.toISOString(),
-    }));
-
-    const fromRuns: OpsRequestLogRow[] = runs.map((run) => {
-      const origin = run.sourceMessage?.createdAt ?? run.createdAt;
-      return {
-        id: `run:${run.id}`,
-        kind: "run",
-        userId: run.userId,
-        botId: run.botId,
-        botName: names.get(run.botId) ?? null,
-        runId: run.id,
-        threadId: run.threadId,
-        provider: run.modelProvider,
-        model: run.modelId,
-        sharedKey: null,
-        inputTokens: null,
-        outputTokens: null,
-        totalTokens: null,
-        costUsd: null,
-        status: run.status,
-        // Admins on LAN may see the run error string; never returned without the gate.
-        error: run.error,
-        firstResponseMs: run.firstResponseAt
-          ? Math.max(0, run.firstResponseAt.getTime() - origin.getTime())
-          : null,
-        totalMs: run.completedAt ? Math.max(0, run.completedAt.getTime() - origin.getTime()) : null,
-        createdAt: run.createdAt.toISOString(),
-      };
+    const userIds = [
+      ...new Set([...usageRows.map((row) => row.userId), ...runs.map((run) => run.userId)]),
+    ];
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, email: true },
     });
+    const hiddenUsers = new Set(
+      users.filter((user) => isHiddenOpsEmail(user.email)).map((user) => user.id),
+    );
+    const fromUsage: OpsRequestLogRow[] = usageRows
+      .filter((row) => !hiddenUsers.has(row.userId))
+      .map((row) => ({
+        id: `usage:${row.id}`,
+        kind: "usage",
+        userId: row.userId,
+        botId: row.botId,
+        botName: row.botId ? (names.get(row.botId) ?? null) : null,
+        runId: row.runId,
+        threadId: null,
+        provider: row.provider,
+        model: row.model,
+        sharedKey: row.sharedKey,
+        inputTokens: row.inputTokens,
+        outputTokens: row.outputTokens,
+        totalTokens: row.totalTokens,
+        costUsd: row.costUsd,
+        status: null,
+        error: null,
+        firstResponseMs: null,
+        totalMs: null,
+        createdAt: row.createdAt.toISOString(),
+      }));
+
+    const fromRuns: OpsRequestLogRow[] = runs
+      .filter((run) => !hiddenUsers.has(run.userId))
+      .map((run) => {
+        const origin = run.sourceMessage?.createdAt ?? run.createdAt;
+        return {
+          id: `run:${run.id}`,
+          kind: "run" as const,
+          userId: run.userId,
+          botId: run.botId,
+          botName: names.get(run.botId) ?? null,
+          runId: run.id,
+          threadId: run.threadId,
+          provider: run.modelProvider,
+          model: run.modelId,
+          sharedKey: null,
+          inputTokens: null,
+          outputTokens: null,
+          totalTokens: null,
+          costUsd: null,
+          status: run.status,
+          // Admins on LAN may see the run error string; never returned without the gate.
+          error: run.error,
+          firstResponseMs: run.firstResponseAt
+            ? Math.max(0, run.firstResponseAt.getTime() - origin.getTime())
+            : null,
+          totalMs: run.completedAt
+            ? Math.max(0, run.completedAt.getTime() - origin.getTime())
+            : null,
+          createdAt: run.createdAt.toISOString(),
+        };
+      });
 
     return [...fromUsage, ...fromRuns]
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))

@@ -19,6 +19,7 @@ import {
   Plug,
   ScrollText,
   Settings,
+  Shield,
   Smartphone,
   SquareKanban,
   UserPlus,
@@ -55,6 +56,9 @@ type Props = {
   onSwitchOrganization?: (organization: Organization) => void;
   /** Shared-key / personal-key usage for non-admin account menus. */
   usageLimit?: UsageLimit | null;
+  /** Server-derived effective admin (env bootstrap or DB grant). Hidden while impersonating. */
+  showAdminDashboard?: boolean;
+  onAdminDashboard?: () => void;
 };
 
 // Marks are 24px wide, overlap by 2px, and need 2px for the outer ring.
@@ -86,6 +90,8 @@ export function SidebarFooter({
   activeOrganizationId,
   onSwitchOrganization,
   usageLimit = null,
+  showAdminDashboard = false,
+  onAdminDashboard,
 }: Props) {
   const { t } = useLingui();
   const update = useSidebarUpdate();
@@ -187,6 +193,17 @@ export function SidebarFooter({
               >
                 <Plug className="text-muted-foreground" strokeWidth={1.75} />
                 <Trans>Connect apps</Trans>
+              </Button>
+            ) : null}
+            {showAdminDashboard ? (
+              <Button
+                variant="ghost"
+                className="h-9 w-full justify-start gap-2.5 font-normal"
+                data-testid="admin-dashboard-link"
+                onClick={onAdminDashboard}
+              >
+                <Shield className="text-muted-foreground" strokeWidth={1.75} />
+                <Trans>Admin Dashboard</Trans>
               </Button>
             ) : null}
             <Button

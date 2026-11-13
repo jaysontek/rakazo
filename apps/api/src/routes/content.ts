@@ -24,6 +24,8 @@ import {
   listSpaceArtifacts,
 } from "../artifacts.js";
 import { requireIdentityConfirmation } from "../identity-confirmation.js";
+import { requireNotImpersonating } from "../impersonation.js";
+import { classifyGoogleModelKeyType } from "../model-key-type.js";
 import { listSpaceRuns } from "../runs.js";
 import { querySpaceSearch } from "../search.js";
 import { loadAllMessages } from "../thread-message-pages.js";
@@ -168,6 +170,12 @@ export function contentRoutes(ctx: RouterContext) {
           costUsd: true,
         } as const;
         const counts = { _all: true, ...sums } as const;
+        const keyType = classifyGoogleModelKeyType(
+          deps.prisma,
+          deps.secrets,
+          context.actor.userId,
+          deps.env.defaultProvider === "google" ? deps.env.deploymentModelKey : undefined,
+        );
         const [result, modelGroups, runGroups, budget, usageLimit] = await Promise.all([
           deps.prisma.usageRecord.aggregate({ where, _sum: sums, _count: counts }),
           deps.prisma.usageRecord.groupBy({
@@ -178,7 +186,11 @@ export function contentRoutes(ctx: RouterContext) {
           }),
           deps.prisma.usageRecord.groupBy({ by: ["runId", "parentRunId"], where }),
           sharedKeyWeeklyBudgetStatus(deps.prisma, context.actor.userId, undefined, envBudget),
-          resolveUsageLimitView(deps.prisma, context.actor.userId, undefined, envBudget),
+          keyType.then((type) =>
+            resolveUsageLimitView(deps.prisma, context.actor.userId, undefined, envBudget, {
+              personalKey: type === "personal",
+            }),
+          ),
         ]);
         const runs = new Set(runGroups.map((row) => row.parentRunId ?? row.runId).filter(Boolean))
           .size;
@@ -200,9 +212,7 @@ export function contentRoutes(ctx: RouterContext) {
                 percentUsed: budget.percentUsed,
                 resetsAt: budget.resetsAt,
                 timezone: budget.timezone,
-                ...(admin
-                  ? { spentUsd: budget.spentUsd, weeklyCapUsd: budget.weeklyCapUsd }
-                  : {}),
+                ...(admin ? { spentUsd: budget.spentUsd, weeklyCapUsd: budget.weeklyCapUsd } : {}),
               }
             : null;
         if (admin) {
@@ -275,6 +285,7 @@ export function contentRoutes(ctx: RouterContext) {
         };
       }),
       accountToken: authed.export.accountToken.handler(async ({ context }) => {
+        await requireNotImpersonating(deps, context.sessionId);
         await requireIdentityConfirmation(deps.auth, context);
         return { token: await deps.auth.issueAccountExportToken(context.actor.userId) };
       }),

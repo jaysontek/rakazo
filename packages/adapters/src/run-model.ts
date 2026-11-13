@@ -24,7 +24,7 @@ import {
   composeSharedKeyBudgetObserver,
   sharedKeyBudgetObserver,
 } from "./shared-key-budget-observer.js";
-import { isDeploymentSharedKeyUsage } from "./shared-key-usage.js";
+import { isDeploymentSharedKeyUsage, sharedKeyMaterialMatches } from "./shared-key-usage.js";
 import { resolveMemberMainModel, selectConfiguredModel } from "./model-roles.js";
 import {
   enabledOpenAiCompatibleModelIds,
@@ -343,6 +343,12 @@ async function resolveModelKeyMaterial(
       const accountId = resolved.secret.kind === "api_key" ? resolved.secret.accountId : undefined;
       const gatewayId = resolved.secret.kind === "api_key" ? resolved.secret.gatewayId : undefined;
       cloudflareProviderEnv({ provider, accountId, gatewayId });
+      const deploymentKey = deploymentKeyFor(deps, provider);
+      const matchesDeploymentSharedKey = Boolean(
+        resolved.apiKey &&
+          deploymentKey &&
+          sharedKeyMaterialMatches(resolved.apiKey, deploymentKey),
+      );
       return {
         apiKey: resolved.apiKey,
         accountId,
@@ -407,7 +413,8 @@ async function resolveModelKeyMaterial(
             )
           : undefined,
         retireOAuth: retire,
-        ownCredential: true,
+        // A stored copy of the deployment key is shared-key spend, not personal.
+        ...(matchesDeploymentSharedKey ? {} : { ownCredential: true as const }),
         redact: [...secretValuesToRedact(resolved.secret), resolved.apiKey].filter(
           (value): value is string => Boolean(value),
         ),

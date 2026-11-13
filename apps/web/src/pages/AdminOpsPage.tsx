@@ -1,11 +1,24 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import type { OpsChatLog, OpsOverview, OpsRequestLogRow } from "@rakazo/contracts";
-import { buttonVariants, Spinner } from "@rakazo/ui-web";
-import { useQuery } from "@tanstack/react-query";
+import type { OpsAccount, OpsChatLog, OpsOverview, OpsRequestLogRow } from "@rakazo/contracts";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  NativeSelect,
+  NativeSelectOption,
+  buttonVariants,
+  Spinner,
+} from "@rakazo/ui-web";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { PageLoading } from "../components/PageLoading";
 import { useSpaceQueries } from "../lib/query";
 import { rpc } from "../lib/rpc";
@@ -31,6 +44,28 @@ function ms(value: number | null | undefined): string {
 function pct(value: number | null | undefined): string {
   if (value == null || !Number.isFinite(value)) return "—";
   return `${Math.round(value)}%`;
+}
+
+function accountLabel(account: Pick<OpsAccount, "name" | "email">): string {
+  return account.name || account.email;
+}
+
+function KeyLabel({
+  keyType,
+  onRoster,
+}: {
+  keyType: OpsAccount["keyType"];
+  onRoster: boolean;
+}) {
+  if (keyType === "company") {
+    return onRoster ? (
+      <Trans>Company</Trans>
+    ) : (
+      <Trans>Company key (not on budget roster)</Trans>
+    );
+  }
+  if (keyType === "personal") return <Trans>Personal</Trans>;
+  return <span className="text-muted-foreground">—</span>;
 }
 
 export function AdminOpsPage() {
@@ -85,15 +120,16 @@ function OpsDashboard() {
   }
 
   const data = overview.data;
+  const refetch = () => {
+    void overview.refetch();
+  };
+
   return (
     <>
-      <BudgetSection
-        data={data}
-        onCapSaved={() => {
-          void overview.refetch();
-        }}
-      />
-      <AccountsSection accounts={data.accounts} />
+      <BudgetSection data={data} onCapSaved={refetch} />
+      <AccountsSection accounts={data.accounts} onChanged={refetch} />
+      <AdminGrantsSection data={data} onChanged={refetch} />
+      <TransfersSection data={data} onChanged={refetch} />
       <AgentsSection data={data} />
       <PerformanceSection data={data} />
       <RequestLogSection selected={selected} onSelect={setSelected} />
@@ -224,18 +260,89 @@ function BudgetSection({ data, onCapSaved }: { data: OpsOverview; onCapSaved: ()
   );
 }
 
-function AccountsSection({ accounts }: { accounts: OpsOverview["accounts"] }) {
+function AccountsSection({
+  accounts,
+  onChanged,
+}: {
+  accounts: OpsOverview["accounts"];
+  onChanged: () => void;
+}) {
+  const { t } = useLingui();
+  const navigate = useNavigate();
+  const queries = useSpaceQueries();
+  const queryClient = useQueryClient();
+  const roster = accounts.filter((account) => account.sharedKeyBudget?.member);
+  const [impersonate, setImpersonate] = useState<OpsAccount | null>(null);
+  const [transferFrom, setTransferFrom] = useState<OpsAccount | null>(null);
+  const [transferToId, setTransferToId] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const transferTargets = transferFrom
+    ? roster.filter((account) => account.userId !== transferFrom.userId)
+    : [];
+  const transferTo = transferTargets.find((account) => account.userId === transferToId) ?? null;
+  const remaining = transferFrom?.sharedKeyBudget?.remainingUsd;
+  const transferFromId = transferFrom?.userId ?? null;
+  const transferTargetIds = transferTargets.map((account) => account.userId).join("\0");
+
+  useEffect(() => {
+    if (!transferFromId) {
+      setTransferToId("");
+      return;
+    }
+    const ids = transferTargetIds ? transferTargetIds.split("\0") : [];
+    setTransferToId((current) => (ids.includes(current) ? current : (ids[0] ?? "")));
+  }, [transferFromId, transferTargetIds]);
+
+  async function confirmImpersonate() {
+    if (!impersonate) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const next = await rpc.ops.startImpersonation({ userId: impersonate.userId });
+      queryClient.setQueryData(queries.me.queryKey(), next);
+      await queryClient.invalidateQueries();
+      setImpersonate(null);
+      navigate("/app", { replace: true });
+    } catch (err) {
+      setError(errorText(err, t`Could not impersonate`));
+      setBusy(false);
+    }
+  }
+
+  async function confirmTransfer() {
+    if (!transferFrom || !transferTo) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await rpc.ops.transferSharedKeyAllotment({
+        fromUserId: transferFrom.userId,
+        toUserId: transferTo.userId,
+      });
+      setTransferFrom(null);
+      onChanged();
+    } catch (err) {
+      setError(errorText(err, t`Could not transfer allotment`));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <section className="space-y-3">
       <h2 className="font-medium">
         <Trans>Accounts</Trans>
       </h2>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[40rem] text-left text-sm">
+        <table className="w-full min-w-[48rem] text-left text-sm">
           <thead className="text-muted-foreground">
             <tr className="border-b">
               <th className="py-2 pr-3 font-normal">
                 <Trans>Account</Trans>
+              </th>
+              <th className="py-2 pr-3 font-normal">
+                <Trans>Key</Trans>
               </th>
               <th className="py-2 pr-3 font-normal">
                 <Trans>Model</Trans>
@@ -246,19 +353,29 @@ function AccountsSection({ accounts }: { accounts: OpsOverview["accounts"] }) {
               <th className="py-2 pr-3 font-normal">
                 <Trans>Spend</Trans>
               </th>
-              <th className="py-2 font-normal">
+              <th className="py-2 pr-3 font-normal">
                 <Trans>Shared week</Trans>
+              </th>
+              <th className="py-2 font-normal">
+                <Trans>Actions</Trans>
               </th>
             </tr>
           </thead>
           <tbody>
             {accounts.map((account) => {
               const budget = account.sharedKeyBudget;
+              const canTransfer = Boolean(budget?.member);
               return (
                 <tr key={account.userId} className="border-b border-border/60 align-top">
                   <td className="py-2 pr-3">
                     <div>{account.name || account.email}</div>
                     <div className="text-muted-foreground">{account.email}</div>
+                  </td>
+                  <td className="py-2 pr-3">
+                    <KeyLabel
+                      keyType={account.keyType}
+                      onRoster={Boolean(account.sharedKeyBudget?.member)}
+                    />
                   </td>
                   <td className="py-2 pr-3">
                     {account.modelProvider && account.modelId
@@ -274,7 +391,7 @@ function AccountsSection({ accounts }: { accounts: OpsOverview["accounts"] }) {
                       <Trans>Personal {money(account.personalKeyCostUsd)}</Trans>
                     </div>
                   </td>
-                  <td className="py-2">
+                  <td className="py-2 pr-3">
                     {!budget ? (
                       "—"
                     ) : !budget.configured ? (
@@ -298,12 +415,407 @@ function AccountsSection({ accounts }: { accounts: OpsOverview["accounts"] }) {
                       </div>
                     )}
                   </td>
+                  <td className="py-2">
+                    <div className="flex flex-wrap gap-1">
+                      <button
+                        type="button"
+                        className={buttonVariants({ variant: "ghost", size: "sm" })}
+                        onClick={() => {
+                          setError(null);
+                          setImpersonate(account);
+                        }}
+                      >
+                        <Trans>Impersonate</Trans>
+                      </button>
+                      {canTransfer ? (
+                        <button
+                          type="button"
+                          className={buttonVariants({ variant: "ghost", size: "sm" })}
+                          disabled={roster.length < 2}
+                          onClick={() => {
+                            setError(null);
+                            setTransferFrom(account);
+                          }}
+                        >
+                          <Trans>Transfer</Trans>
+                        </button>
+                      ) : null}
+                    </div>
+                  </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
       </div>
+
+      {impersonate ? (
+        <AlertDialog
+          open
+          onOpenChange={(open) => {
+            if (!open && !busy) setImpersonate(null);
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                <Trans>Impersonate {accountLabel(impersonate)}?</Trans>
+              </AlertDialogTitle>
+              <AlertDialogDescription className="sr-only">
+                <Trans>Impersonate {accountLabel(impersonate)}?</Trans>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={busy}>
+                <Trans>Cancel</Trans>
+              </AlertDialogCancel>
+              <AlertDialogAction disabled={busy} onClick={() => void confirmImpersonate()}>
+                {busy ? <Trans>Starting…</Trans> : <Trans>Impersonate</Trans>}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      ) : null}
+
+      {transferFrom ? (
+        <AlertDialog
+          open
+          onOpenChange={(open) => {
+            if (!open && !busy) setTransferFrom(null);
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                <Trans>Transfer unused allotment</Trans>
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {transferTo ? (
+                  remaining != null ? (
+                    <Trans>
+                      Transfer {money(remaining)} from {accountLabel(transferFrom)} to{" "}
+                      {accountLabel(transferTo)}?
+                    </Trans>
+                  ) : (
+                    <Trans>
+                      Transfer unused allotment from {accountLabel(transferFrom)} to{" "}
+                      {accountLabel(transferTo)}?
+                    </Trans>
+                  )
+                ) : (
+                  <Trans>Choose a destination on the roster.</Trans>
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <label className="block space-y-1 text-sm">
+              <span className="text-muted-foreground">
+                <Trans>To</Trans>
+              </span>
+              <NativeSelect
+                className="w-full max-w-full"
+                value={transferToId}
+                disabled={busy || transferTargets.length === 0}
+                onChange={(event) => setTransferToId(event.target.value)}
+              >
+                {transferTargets.map((account) => (
+                  <NativeSelectOption key={account.userId} value={account.userId}>
+                    {accountLabel(account)}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
+            </label>
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={busy}>
+                <Trans>Cancel</Trans>
+              </AlertDialogCancel>
+              <AlertDialogAction
+                disabled={busy || !transferTo}
+                onClick={() => void confirmTransfer()}
+              >
+                {busy ? <Trans>Transferring…</Trans> : <Trans>Transfer</Trans>}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      ) : null}
+    </section>
+  );
+}
+
+function AdminGrantsSection({ data, onChanged }: { data: OpsOverview; onChanged: () => void }) {
+  const { t } = useLingui();
+  const grants = data.adminGrants;
+  const grantedIds = new Set(grants.map((grant) => grant.userId));
+  const candidates = data.accounts.filter((account) => !grantedIds.has(account.userId));
+  const [userId, setUserId] = useState(candidates[0]?.userId ?? "");
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<(typeof grants)[number] | null>(null);
+  const candidateIds = candidates.map((account) => account.userId).join("\0");
+
+  useEffect(() => {
+    const ids = candidateIds ? candidateIds.split("\0") : [];
+    setUserId((current) => (ids.includes(current) ? current : (ids[0] ?? "")));
+  }, [candidateIds]);
+
+  async function addGrant() {
+    if (!userId) return;
+    setBusy("add");
+    setError(null);
+    try {
+      await rpc.ops.addAdminGrant({ userId });
+      onChanged();
+    } catch (err) {
+      setError(errorText(err, t`Could not add admin`));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function confirmRemove() {
+    if (!removeTarget) return;
+    setBusy(removeTarget.userId);
+    setError(null);
+    try {
+      await rpc.ops.removeAdminGrant({ userId: removeTarget.userId });
+      setRemoveTarget(null);
+      onChanged();
+    } catch (err) {
+      setError(errorText(err, t`Could not remove admin`));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <section className="space-y-3">
+      <h2 className="font-medium">
+        <Trans>Admins</Trans>
+      </h2>
+      <ul className="divide-y divide-border/60 text-sm">
+        {grants.map((grant) => (
+          <li key={grant.userId} className="flex items-center gap-3 py-2">
+            <div className="min-w-0 flex-1">
+              <div>{grant.name || grant.email}</div>
+              <div className="text-muted-foreground">{grant.email}</div>
+            </div>
+            {grant.envBootstrap ? (
+              <span className="text-muted-foreground">
+                <Trans>Env</Trans>
+              </span>
+            ) : (
+              <button
+                type="button"
+                className={buttonVariants({ variant: "ghost", size: "sm" })}
+                disabled={busy !== null}
+                onClick={() => {
+                  setError(null);
+                  setRemoveTarget(grant);
+                }}
+              >
+                <Trans>Remove</Trans>
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
+      {candidates.length > 0 ? (
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="min-w-[12rem] flex-1 space-y-1 text-sm">
+            <span className="text-muted-foreground">
+              <Trans>Add</Trans>
+            </span>
+            <NativeSelect
+              className="w-full max-w-full"
+              value={userId}
+              disabled={busy !== null}
+              onChange={(event) => setUserId(event.target.value)}
+            >
+              {candidates.map((account) => (
+                <NativeSelectOption key={account.userId} value={account.userId}>
+                  {accountLabel(account)}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+          </label>
+          <button
+            type="button"
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+            disabled={busy !== null || !userId}
+            onClick={() => void addGrant()}
+          >
+            {busy === "add" ? <Spinner className="size-4" /> : <Trans>Grant</Trans>}
+          </button>
+        </div>
+      ) : null}
+      {error && !removeTarget ? (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      ) : null}
+
+      {removeTarget ? (
+        <AlertDialog
+          open
+          onOpenChange={(open) => {
+            if (!open && busy === null) setRemoveTarget(null);
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                <Trans>Remove {accountLabel(removeTarget)}?</Trans>
+              </AlertDialogTitle>
+              <AlertDialogDescription className="sr-only">
+                <Trans>Remove {accountLabel(removeTarget)}?</Trans>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={busy !== null}>
+                <Trans>Cancel</Trans>
+              </AlertDialogCancel>
+              <AlertDialogAction
+                variant="destructive"
+                disabled={busy !== null}
+                onClick={() => void confirmRemove()}
+              >
+                {busy === removeTarget.userId ? <Trans>Removing…</Trans> : <Trans>Remove</Trans>}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      ) : null}
+    </section>
+  );
+}
+
+function TransfersSection({ data, onChanged }: { data: OpsOverview; onChanged: () => void }) {
+  const { t } = useLingui();
+  const accountsById = new Map(data.accounts.map((account) => [account.userId, account]));
+  const transfers = data.allotmentTransfers;
+  const [reverseId, setReverseId] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const reverseTarget = transfers.find((transfer) => transfer.id === reverseId) ?? null;
+
+  function nameFor(userId: string): string {
+    const account = accountsById.get(userId);
+    return account ? accountLabel(account) : userId;
+  }
+
+  async function confirmReverse() {
+    if (!reverseTarget) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await rpc.ops.reverseSharedKeyAllotmentTransfer({ transferId: reverseTarget.id });
+      setReverseId(null);
+      onChanged();
+    } catch (err) {
+      setError(errorText(err, t`Could not reverse transfer`));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="space-y-3">
+      <h2 className="font-medium">
+        <Trans>Transfers</Trans>
+      </h2>
+      {transfers.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          <Trans>None this week.</Trans>
+        </p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[36rem] text-left text-sm">
+            <thead className="text-muted-foreground">
+              <tr className="border-b">
+                <th className="py-2 pr-3 font-normal">
+                  <Trans>When</Trans>
+                </th>
+                <th className="py-2 pr-3 font-normal">
+                  <Trans>From</Trans>
+                </th>
+                <th className="py-2 pr-3 font-normal">
+                  <Trans>To</Trans>
+                </th>
+                <th className="py-2 pr-3 font-normal">
+                  <Trans>Amount</Trans>
+                </th>
+                <th className="py-2 font-normal" />
+              </tr>
+            </thead>
+            <tbody>
+              {transfers.map((transfer) => (
+                <tr key={transfer.id} className="border-b border-border/60">
+                  <td className="py-2 pr-3">{new Date(transfer.createdAt).toLocaleString()}</td>
+                  <td className="py-2 pr-3">{nameFor(transfer.fromUserId)}</td>
+                  <td className="py-2 pr-3">{nameFor(transfer.toUserId)}</td>
+                  <td className="py-2 pr-3">
+                    {money(transfer.amountUsd)}
+                    {transfer.reversedAt ? (
+                      <span className="ms-2 text-muted-foreground">
+                        <Trans>Reversed</Trans>
+                      </span>
+                    ) : null}
+                  </td>
+                  <td className="py-2">
+                    {transfer.reversedAt ? null : (
+                      <button
+                        type="button"
+                        className={buttonVariants({ variant: "ghost", size: "sm" })}
+                        onClick={() => {
+                          setError(null);
+                          setReverseId(transfer.id);
+                        }}
+                      >
+                        <Trans>Reverse</Trans>
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {reverseTarget ? (
+        <AlertDialog
+          open
+          onOpenChange={(open) => {
+            if (!open && !busy) setReverseId(null);
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                <Trans>Reverse transfer?</Trans>
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                <Trans>
+                  Return {money(reverseTarget.amountUsd)} from {nameFor(reverseTarget.toUserId)} to{" "}
+                  {nameFor(reverseTarget.fromUserId)}.
+                </Trans>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={busy}>
+                <Trans>Cancel</Trans>
+              </AlertDialogCancel>
+              <AlertDialogAction disabled={busy} onClick={() => void confirmReverse()}>
+                {busy ? <Trans>Reversing…</Trans> : <Trans>Reverse</Trans>}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      ) : null}
     </section>
   );
 }

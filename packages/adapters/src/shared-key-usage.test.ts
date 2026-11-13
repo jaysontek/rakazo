@@ -1,9 +1,16 @@
 import { OPENAI_COMPATIBLE_PROVIDER_ID } from "@rakazo/contracts";
 import { describe, expect, it } from "vitest";
 import { LOCAL_PROVIDER_ID } from "./pi-local-provider.js";
-import { isDeploymentSharedKeyUsage } from "./shared-key-usage.js";
+import { isDeploymentSharedKeyUsage, sharedKeyMaterialMatches } from "./shared-key-usage.js";
 import { SharedKeyWeeklyBudgetExceededRunError } from "./shared-key-budget-observer.js";
 import { isTerminalModelSetupError } from "./run-model.js";
+
+describe("sharedKeyMaterialMatches", () => {
+  it("matches equal key material without exposing it", () => {
+    expect(sharedKeyMaterialMatches("company-key", "company-key")).toBe(true);
+    expect(sharedKeyMaterialMatches("company-key", "personal-key")).toBe(false);
+  });
+});
 
 describe("isDeploymentSharedKeyUsage", () => {
   it("is true for the deployment shared API key", () => {
@@ -13,6 +20,8 @@ describe("isDeploymentSharedKeyUsage", () => {
     expect(
       isDeploymentSharedKeyUsage({ ownCredential: false, provider: "google" }),
     ).toBe(true);
+    // Stored credential whose material matched the deployment key omits ownCredential.
+    expect(isDeploymentSharedKeyUsage({ provider: "google" })).toBe(true);
   });
 
   it("is false for personal connections", () => {

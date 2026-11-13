@@ -10,13 +10,14 @@ import {
 import { getLogger } from "@rakazo/logging";
 import type { PrismaClient } from "./client.js";
 import { Prisma } from "./client.js";
-import { findNewestUserModelCredential } from "./model-credentials.js";
+import { reapplyActiveTransfersTx } from "./shared-key-transfer.js";
 
 type BudgetPrisma = Pick<
   PrismaClient,
   | "deploymentSettings"
   | "sharedKeyBudgetMember"
   | "sharedKeyWeekAllotment"
+  | "sharedKeyAllotmentTransfer"
   | "usageRecord"
   | "user"
   | "$transaction"
@@ -27,6 +28,7 @@ type BudgetTx = Pick<
   Prisma.TransactionClient,
   | "sharedKeyBudgetMember"
   | "sharedKeyWeekAllotment"
+  | "sharedKeyAllotmentTransfer"
   | "usageRecord"
   | "deploymentSettings"
   | "user"
@@ -103,14 +105,6 @@ export async function setSharedKeyMonthlyBudgetUsd(
   return { monthlyCapUsd: parsed, previousMonthlyCapUsd };
 }
 
-/** True when the user has a personal Google/Gemini model credential. */
-export async function userHasPersonalGoogleModelCredential(
-  prisma: Pick<PrismaClient, "userModelCredential">,
-  userId: string,
-): Promise<boolean> {
-  return (await findNewestUserModelCredential(prisma, userId, "google")) != null;
-}
-
 export type UsageLimitView =
   | {
       kind: "shared_weekly";
@@ -122,18 +116,17 @@ export type UsageLimitView =
   | { kind: "none" };
 
 /**
- * Account-menu usage meter: shared weekly % when on the roster with a cap; a personal-key
- * note when they have their own Google credential; otherwise hide.
+ * Account-menu usage meter: personal-key when the API has classified the effective key,
+ * otherwise shared weekly % when on the roster with a cap.
  */
 export async function resolveUsageLimitView(
-  prisma: BudgetPrisma & Pick<PrismaClient, "userModelCredential">,
+  prisma: BudgetPrisma,
   userId: string,
   now = new Date(),
   envFallback: number | null = null,
+  options?: { personalKey?: boolean },
 ): Promise<UsageLimitView> {
-  if (await userHasPersonalGoogleModelCredential(prisma, userId)) {
-    return { kind: "personal_key" };
-  }
+  if (options?.personalKey) return { kind: "personal_key" };
   const status = await sharedKeyWeeklyBudgetStatus(prisma, userId, now, envFallback);
   if (status.enabled && status.member) {
     return {
@@ -264,13 +257,14 @@ async function recomputeSharedKeyWeekAllotmentsTx(
   const priorIds = [...new Set([...memberIds, ...priorRows.map((row) => row.userId)])];
   const previousAllotments = new Map(priorRows.map((row) => [row.userId, row.allotmentUsd]));
   const reservedByUser = new Map(priorRows.map((row) => [row.userId, row.reservedUsd]));
+  const spentByUser = await spentByMembers(tx, priorIds, weekStart, now);
   const allotments = redivideWeeklyAllotments({
     monthlyCapUsd: monthly,
     members,
     weekStart,
     now,
     previousAllotments,
-    spentByUser: await spentByMembers(tx, priorIds, weekStart, now),
+    spentByUser,
     reservedByUser,
     rebaseOnMonthlyCap: options?.rebaseOnMonthlyCap === true,
   });
@@ -286,7 +280,10 @@ async function recomputeSharedKeyWeekAllotmentsTx(
       update: { allotmentUsd },
     });
   }
-  return allotments;
+  // Cap rebase / membership redivide must keep active mid-week transfers applied.
+  await reapplyActiveTransfersTx(tx, weekStart, spentByUser, reservedByUser);
+  const refreshed = await previousBudgetRows(tx, weekStart);
+  return new Map(refreshed.map((row) => [row.userId, row.allotmentUsd]));
 }
 
 /** Add a user to the shared-key budget set and re-divide the current week. */
@@ -412,8 +409,7 @@ export async function reserveSharedKeyBudget(
     const reserved = allotment?.reservedUsd ?? 0;
     const spent = await spentSharedKeyUsd(tx, userId, weekStart, now);
     // At or over the cap: refuse every further shared-key call (including zero-estimate probes).
-    const over =
-      spent + reserved >= cap || (maxCostUsd > 0 && spent + reserved + maxCostUsd > cap);
+    const over = spent + reserved >= cap || (maxCostUsd > 0 && spent + reserved + maxCostUsd > cap);
     if (!allotment || over) {
       throw new SharedKeyWeeklyBudgetExceededError();
     }

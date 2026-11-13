@@ -92,6 +92,11 @@ model User {
   computerRuns                ComputerRun[]
   devices                     UserDevice[]
   sharedKeyBudgetMember       SharedKeyBudgetMember?
+  adminGrant                  AdminGrant?                  @relation("AdminGrantUser")
+  adminGrantsGiven            AdminGrant[]                 @relation("AdminGrantGrantedBy")
+  sharedKeyTransfersFrom      SharedKeyAllotmentTransfer[] @relation("SharedKeyTransferFrom")
+  sharedKeyTransfersTo        SharedKeyAllotmentTransfer[] @relation("SharedKeyTransferTo")
+  sharedKeyTransfersCreated   SharedKeyAllotmentTransfer[] @relation("SharedKeyTransferCreatedBy")
 
   @@unique([email])
   @@map("user")
@@ -123,10 +128,21 @@ model Session {
   userId               String
   user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   activeOrganizationId String?
+  impersonatedBy       String?
 
   @@unique([token])
   @@index([userId])
   @@map("session")
+}
+
+model AdminGrant {
+  userId      String   @id
+  user        User     @relation("AdminGrantUser", fields: [userId], references: [id], onDelete: Cascade)
+  grantedById String
+  grantedBy   User     @relation("AdminGrantGrantedBy", fields: [grantedById], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@map("admin_grants")
 }
 
 /// One current device registration per account, matching the notification API contract.
@@ -767,6 +783,29 @@ model SharedKeyWeekAllotment {
   @@id([weekStart, userId])
   @@index([userId, weekStart])
   @@map("shared_key_week_allotments")
+}
+
+/// Admin move of unused shared-key weekly allotment from one roster member to another.
+/// Does not survive the America/New_York Monday week boundary.
+model SharedKeyAllotmentTransfer {
+  id          String    @id @default(cuid())
+  weekStart   DateTime
+  fromUserId  String
+  fromUser    User      @relation("SharedKeyTransferFrom", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUserId    String
+  toUser      User      @relation("SharedKeyTransferTo", fields: [toUserId], references: [id], onDelete: Cascade)
+  amountUsd   Float
+  createdById String
+  createdBy   User      @relation("SharedKeyTransferCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  reversedAt  DateTime?
+  /// Set when a reverse could only partially restore the receiver (they had already spent).
+  reverseNote String?
+
+  @@index([weekStart])
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@map("shared_key_allotment_transfers")
 }
 
 /// Append-only security audit trail. No foreign keys, so an account deletion

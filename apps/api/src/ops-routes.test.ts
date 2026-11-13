@@ -30,6 +30,15 @@ function makeDeps(allowlist = ["192.168.140.0/24"]): RouterDeps {
         users.find((user) => user.id === where.id) ?? null,
       findMany: async () => [],
     },
+    session: {
+      findUnique: async () => ({ impersonatedBy: null }),
+    },
+    adminGrant: {
+      findMany: async () => [],
+      findUnique: async () => null,
+      upsert: async () => ({}),
+      deleteMany: async () => ({ count: 0 }),
+    },
     usageRecord: {
       groupBy: async () => [],
       findMany: async () => [],
@@ -68,6 +77,9 @@ function makeDeps(allowlist = ["192.168.140.0/24"]): RouterDeps {
       deleteMany: async () => ({ count: 0 }),
       upsert: async () => ({}),
       updateMany: async () => ({ count: 0 }),
+    },
+    sharedKeyAllotmentTransfer: {
+      findMany: async () => [],
     },
     $queryRaw: async () => [{ "?column?": 1 }],
     $transaction: async (fn: (tx: unknown) => unknown) => fn(prisma),

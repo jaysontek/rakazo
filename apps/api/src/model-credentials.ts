@@ -11,6 +11,7 @@ import {
   prepareAllowedThinkingLevels as prepareModelThinkingLevels,
   providerCatalogCache,
   resolveCodexOAuthDefaultModel,
+  sharedKeyMaterialMatches,
   validateModelAuthAvailability,
   verifyCatalogProviderApiKey,
   verifyOpenAiCompatibleApiKey,
@@ -297,7 +298,29 @@ export async function persistModelCredential(
     }),
   );
   (deps.providerCatalog ?? providerCatalogCache).invalidate(canonicalPiProviderId(input.provider));
-  return modelCredentialDto(cred, input.plaintext);
+  const dto = modelCredentialDto(cred, input.plaintext);
+  const deploymentKey = deps.env.deploymentModelKey?.trim();
+  if (
+    deploymentKey &&
+    deps.env.defaultProvider === input.provider &&
+    plaintextMatchesDeploymentKey(input.plaintext, deploymentKey)
+  ) {
+    return { ...dto, matchesDeploymentSharedKey: true };
+  }
+  return dto;
+}
+
+/** True when stored API key material equals the deployment shared key. Never logs keys. */
+function plaintextMatchesDeploymentKey(plaintext: string, deploymentKey: string): boolean {
+  try {
+    const parsed = parseModelSecret(plaintext);
+    if (parsed.kind === "api_key" && parsed.key) {
+      return sharedKeyMaterialMatches(parsed.key, deploymentKey);
+    }
+  } catch {
+    // Malformed secrets are not treated as the company key.
+  }
+  return false;
 }
 
 export function throwIfAborted(signal?: AbortSignal) {

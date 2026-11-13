@@ -27,6 +27,7 @@ import {
 } from "@rakazo/db";
 import { getLogger } from "@rakazo/logging";
 import { requireAdmin } from "../admins.js";
+import { requireNotImpersonating } from "../impersonation.js";
 import {
   assertNameFreeWhereAvailable,
   lockOwner,
@@ -134,10 +135,12 @@ export function mcpRoutes(ctx: RouterContext) {
         };
       }),
       submissions: authed.marketplace.submissions.handler(async ({ context, input }) => {
+        await requireNotImpersonating(deps, context.sessionId);
         await requireAdmin(deps, context.actor.userId);
         return listPluginSubmissions(deps.prisma, input.status);
       }),
       review: authed.marketplace.review.handler(async ({ context, input }) => {
+        await requireNotImpersonating(deps, context.sessionId);
         await requireAdmin(deps, context.actor.userId);
         return reviewPluginSubmission(deps, input, context.signal);
       }),

@@ -26,7 +26,18 @@ function hostCredentials(active: boolean, provider: string) {
     : { hostCredentialProvider: null, hostCredentialSource: null };
 }
 
-export async function meDto(deps: RouterDeps, actor: Actor): Promise<Me> {
+export async function meDto(
+  deps: RouterDeps,
+  actor: Actor,
+  sessionId?: string | null,
+): Promise<Me> {
+  const session = sessionId
+    ? await deps.prisma.session.findUnique({
+        where: { id: sessionId },
+        select: { impersonatedBy: true, expiresAt: true, userId: true },
+      })
+    : null;
+  const impersonatedBy = session?.impersonatedBy ?? null;
   const [user, setup, admin] = await Promise.all([
     deps.prisma.user.findUniqueOrThrow({
       where: { id: actor.userId },
@@ -40,7 +51,8 @@ export async function meDto(deps: RouterDeps, actor: Actor): Promise<Me> {
       },
     }),
     modelSetup(deps, actor),
-    isAdmin(deps, actor.userId),
+    // While impersonating, the actor is the target — never report admin chrome.
+    impersonatedBy ? Promise.resolve(false) : isAdmin(deps, actor.userId),
   ]);
   // Where the deployment runs computers once an admin's choice in Settings applies.
   const sandboxProvider = effectiveSandboxProvider(setup.settings, deps.env.sandboxProvider);
@@ -56,6 +68,15 @@ export async function meDto(deps: RouterDeps, actor: Actor): Promise<Me> {
     spaceId: actor.spaceId,
     isDeploymentOwner: false,
     isAdmin: admin,
+    impersonating: impersonatedBy
+      ? {
+          adminUserId: impersonatedBy,
+          targetUserId: actor.userId,
+          targetName: user.name,
+          targetEmail: user.email,
+          expiresAt: (session?.expiresAt ?? new Date()).toISOString(),
+        }
+      : null,
     needsModel: setup.needsModel,
     defaultProvider: canonicalPiProviderId(setup.model?.provider ?? deps.env.defaultProvider),
     defaultModel: setup.model?.modelId ?? deps.env.defaultModel,
