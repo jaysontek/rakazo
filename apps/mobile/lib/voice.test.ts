@@ -889,6 +889,7 @@ describe("on-device speech", () => {
     vi.mocked(SecureStore.getItemAsync).mockResolvedValue("1");
     for (const os of ["ios", "android"] as const) {
       Platform.OS = os;
+      vi.mocked(setAudioModeAsync).mockClear();
       const calls: Array<Parameters<typeof Speech.speak>[1]> = [];
       vi.mocked(Speech.speak).mockImplementation((_text, options) => {
         calls.push(options);
@@ -900,10 +901,40 @@ describe("on-device speech", () => {
       expect(Speech.getAvailableVoicesAsync).not.toHaveBeenCalled();
       expect(calls[0]?.voice).toBeUndefined();
       expect(calls[0]?.language).toBeUndefined();
+      // Silent-switch playback: same session flags hosted clips already set.
+      expect(setAudioModeAsync).toHaveBeenCalledWith({
+        playsInSilentMode: true,
+        interruptionMode: "mixWithOthers",
+        shouldPlayInBackground: false,
+      });
+      if (os === "ios") {
+        expect(calls[0]?.useApplicationAudioSession).toBe(true);
+      } else {
+        expect(calls[0]?.useApplicationAudioSession).toBeUndefined();
+      }
       expect(rpc).not.toHaveBeenCalled();
       expect(fetch).not.toHaveBeenCalled();
       vi.mocked(Speech.speak).mockReset();
     }
+  });
+
+  it("enables silent-mode playback before on-device call replies speak", async () => {
+    Platform.OS = "ios";
+    vi.mocked(SecureStore.getItemAsync).mockResolvedValue("1");
+    vi.mocked(setAudioModeAsync).mockClear();
+    vi.mocked(Speech.speak).mockImplementation((_text, options) => {
+      options?.onDone?.();
+    });
+
+    await expect(speakText("Agent reply", { botId: "bot-1" })).resolves.toBe(true);
+
+    expect(setAudioModeAsync).toHaveBeenCalledWith({
+      playsInSilentMode: true,
+      interruptionMode: "mixWithOthers",
+      shouldPlayInBackground: false,
+    });
+    expect(vi.mocked(Speech.speak).mock.calls[0]?.[1]?.useApplicationAudioSession).toBe(true);
+    expect(rpc).not.toHaveBeenCalled();
   });
 
   it("cannot pause on Android, only stop, and pausing there is a no-op", async () => {
