@@ -12,6 +12,7 @@ import {
   OPENAI_COMPATIBLE_PROVIDER_ID,
 } from "@rakazo/contracts";
 import { MISSING_MODEL_RUN_ERROR } from "@rakazo/core";
+import { ensureSharedKeyBudgetMember } from "@rakazo/db";
 import { cloudflareProviderEnv } from "./cloudflare-ai-gateway.js";
 import { resolveDeploymentModel } from "./deployment-model.js";
 import type { ExecutorDeps } from "./executor-deps.js";
@@ -193,6 +194,10 @@ export async function resolveModelKey(...args: Parameters<typeof resolveModelKey
     baseUrl: material.baseUrl,
     scriptedRuntime: Boolean(deps.runtime?.describe().capabilities.scripted),
   });
+  // Anyone using the company/shared key is on the weekly budget roster.
+  if (usingSharedKey) {
+    await ensureSharedKeyBudgetMember(deps.prisma, scope.userId);
+  }
   const creditObserver =
     !credential && billingEnabled
       ? await hostedModelCreditObserver(deps.prisma, scope)

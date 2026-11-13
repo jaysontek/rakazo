@@ -2,6 +2,7 @@ import { sharedKeyWeekEnd } from "@rakazo/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   addSharedKeyBudgetMember,
+  ensureSharedKeyBudgetMember,
   reconcileSharedKeyBudgetMembers,
   releaseSharedKeyBudgetHold,
   removeSharedKeyBudgetMember,
@@ -12,6 +13,7 @@ import {
   setSharedKeyMonthlyBudgetUsd,
   sharedKeyMonthlyBudgetUsd,
   sharedKeyWeeklyBudgetStatus,
+  syncSharedKeyBudgetMembers,
 } from "./shared-key-budget.js";
 
 vi.mock("@rakazo/logging", () => ({
@@ -656,5 +658,89 @@ describe("shared-key weekly budget", () => {
     expect(
       await resolveUsageLimitView(client as never, "u1", midweek, null, { personalKey: true }),
     ).toEqual({ kind: "personal_key" });
+  });
+
+  it("ignores pre-join shared-key spend for a mid-week joiner", async () => {
+    const state = {
+      monthly: 400,
+      members: [{ userId: "a", joinedAt: weekStart }],
+      allotments: [
+        { weekStart, userId: "a", allotmentUsd: 50, reservedUsd: 0, updatedAt: midweek },
+      ] as Allotment[],
+      usage: [
+        // Spent before joining — must not count against the pro-rated slice.
+        {
+          userId: "c",
+          costUsd: 40,
+          sharedKey: true,
+          createdAt: new Date(weekStart.getTime() + 1_000),
+        },
+      ],
+      knownUserIds: ["a", "c"],
+    };
+    const { client } = fakePrisma(state);
+    await addSharedKeyBudgetMember(client as never, "c", midweek);
+    const status = await sharedKeyWeeklyBudgetStatus(client as never, "c", midweek);
+    expect(status.member).toBe(true);
+    expect(status.spentUsd).toBe(0);
+    expect(status.weeklyCapUsd).toBeGreaterThan(0);
+    expect(status.percentUsed).toBe(0);
+    await expect(
+      reserveSharedKeyBudget(client as never, "c", 1, midweek),
+    ).resolves.toBeUndefined();
+  });
+
+  it("keeps a mid-week joiner's join-time slice across later cap re-bases", async () => {
+    const lateWeek = new Date("2026-11-08T05:00:00.000Z");
+    const state = {
+      monthly: 400 as number | null,
+      members: [
+        { userId: "a", joinedAt: weekStart },
+        { userId: "c", joinedAt: midweek },
+      ],
+      allotments: [
+        { weekStart, userId: "a", allotmentUsd: 50, reservedUsd: 0, updatedAt: midweek },
+        { weekStart, userId: "c", allotmentUsd: 25, reservedUsd: 0, updatedAt: midweek },
+      ] as Allotment[],
+      usage: [] as Usage[],
+    };
+    const { client } = fakePrisma(state);
+    await setSharedKeyMonthlyBudgetUsd(client as never, 400, lateWeek);
+    const c = state.allotments.find((row) => row.userId === "c");
+    // 400/2/4 = 50 full share; join at midweek ≈ half → ~25, not ~7 from lateWeek fraction.
+    expect(c?.allotmentUsd).toBeCloseTo(25, 0);
+    expect(c?.allotmentUsd).toBeGreaterThan(10);
+  });
+
+  it("syncs company-key users with explicit env includes and drops personal-only members", async () => {
+    const state = {
+      monthly: 200,
+      members: [{ userId: "personal-old", joinedAt: weekStart }],
+      allotments: [] as Allotment[],
+      usage: [] as Usage[],
+      knownUserIds: ["company-a", "personal-old", "explicit-b"],
+    };
+    const { client } = fakePrisma(state);
+    await syncSharedKeyBudgetMembers(
+      client as never,
+      { companyUserIds: ["company-a"], explicitUserIds: ["explicit-b"] },
+      weekStart,
+    );
+    expect(state.members.map((m) => m.userId).sort()).toEqual(["company-a", "explicit-b"]);
+  });
+
+  it("ensureSharedKeyBudgetMember is a no-op when already enrolled", async () => {
+    const state = {
+      monthly: 400,
+      members: [{ userId: "u1", joinedAt: weekStart }],
+      allotments: [
+        { weekStart, userId: "u1", allotmentUsd: 100, reservedUsd: 0, updatedAt: weekStart },
+      ] as Allotment[],
+      usage: [] as Usage[],
+    };
+    const { client } = fakePrisma(state);
+    expect(await ensureSharedKeyBudgetMember(client as never, "u1", midweek)).toBe(false);
+    expect(state.members).toHaveLength(1);
+    expect(state.members[0]?.joinedAt).toEqual(weekStart);
   });
 });

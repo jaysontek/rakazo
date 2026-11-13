@@ -17,314 +17,6 @@ msgstr ""
 msgid " (unread)"
 msgstr "（未读）"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Accounts"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Actions"
-msgstr ""
-
-#: src/components/InstallAppSettings.tsx
-msgid "Add to Home Screen"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Admins"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Agents"
-msgstr ""
-
-#: src/components/InstallAppSettings.tsx
-msgid "App"
-msgstr ""
-
-#: src/components/WebPushSettings.tsx
-msgid "Background alerts"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Cap unset"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Chat log"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Choose a destination on the roster."
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Company"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Company key (not on budget roster)"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Could not add admin"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Could not impersonate"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Could not remove admin"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Could not reverse transfer"
-msgstr ""
-
-#: src/components/ImpersonationBanner.tsx
-msgid "Could not stop impersonation"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Could not transfer allotment"
-msgstr ""
-
-#: src/components/WebPushSettings.tsx
-msgid "Couldn't update notifications"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Database"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Degraded"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Env"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Errors"
-msgstr ""
-
-#. placeholder {0}: accountLabel(addCandidate)
-#: src/pages/AdminOpsPage.tsx
-msgid "Grant admin to {0}?"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Hard-stopped"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Health"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Impersonate"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Impersonate {0}?"
-msgstr ""
-
-#: src/components/InstallAppSettings.tsx
-msgid "Install"
-msgstr ""
-
-#: src/components/InstallAppSettings.tsx
-msgid "Install app"
-msgstr ""
-
-#: src/components/WebPushSettings.tsx
-msgid "Install the app first to enable alerts on this device."
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Key"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Kind"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Median first response"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Median total"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Monthly cap"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "No messages for this selection."
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "None this week."
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Not configured"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Not on roster"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "OK"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Operations"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "p95 first response"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Performance"
-msgstr ""
-
-#. placeholder {0}: money(account.personalKeyCostUsd)
-#: src/pages/AdminOpsPage.tsx
-msgid "Personal {0}"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Personal-key spend"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Remove {0}?"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Request log"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Return {0} from {1} to {2}."
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Reverse"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Reverse transfer?"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Reversed"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Reversing…"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Roster"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Runtime"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Sandbox"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Save monthly shared-key cap?"
-msgstr ""
-
-#: src/components/InstallAppSettings.tsx
-msgid "Share → Add to Home Screen"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Shared week"
-msgstr ""
-
-#. placeholder {0}: money(account.sharedKeyCostUsd)
-#: src/pages/AdminOpsPage.tsx
-msgid "Shared {0}"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Shared-key spend"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Shared-key week"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Spend"
-msgstr ""
-
-#: src/pages/model-settings/use-model-settings.ts
-msgid "That key is the company shared key. Usage counts toward the shared budget."
-msgstr ""
-
-#. placeholder {0}: money(Number(draft) || 0)
-#: src/pages/AdminOpsPage.tsx
-msgid "This sets the deployment monthly cap for the shared Gemini key to {0}."
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Total spend"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Transfer"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Transfer unused allotment"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Transfer unused allotment from {0} to {1}?"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Transfer {0} from {1} to {2}?"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Transferring…"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Transfers"
-msgstr ""
-
-#: src/components/ImpersonationBanner.tsx
-msgid "Viewing as {targetEmail}"
-msgstr ""
-
-#: src/components/ImpersonationBanner.tsx
-msgid "Viewing as {targetName} ({targetEmail})"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Week"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "When"
-msgstr ""
-
 #. placeholder {0}: pinned.length
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "{0, plural, one {# bot has its own model:} other {# bots have their own model:}}"
@@ -802,6 +494,7 @@ msgstr "访问令牌（可选）"
 
 #: src/components/AccountMenu.tsx
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Account"
 msgstr "账户"
 
@@ -822,10 +515,19 @@ msgstr "账户名称"
 msgid "Account menu for {name}"
 msgstr "{name} 的账户菜单"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Accounts"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Actions"
+msgstr ""
+
+#. placeholder {0}: accountLabel(account)
 #. placeholder {0}: bot.name
 #. placeholder {0}: group.spaceName
-#. placeholder {0}: page.title
 #: src/components/pages/PagesList.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/BotContextMenu.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/shell/sidebar-roster.tsx
@@ -847,6 +549,7 @@ msgstr "动态"
 
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/components/SecretAskCard.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/PluginsOverlay.tsx
 #: src/pages/ScratchpadSection.tsx
@@ -964,6 +667,10 @@ msgstr "添加服务器 URL"
 msgid "Add skills"
 msgstr "添加技能"
 
+#: src/components/InstallAppSettings.tsx
+msgid "Add to Home Screen"
+msgstr ""
+
 #: src/components/teach/SkillDraftCard.tsx
 msgid "Add to routine"
 msgstr "加入例行任务"
@@ -996,8 +703,13 @@ msgstr ""
 msgid "Address line 2"
 msgstr ""
 
+#: src/components/AccountMenu.tsx
 #: src/components/SidebarFooter.tsx
 msgid "Admin Dashboard"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Admins"
 msgstr ""
 
 #: src/pages/McpServersOverlay.tsx
@@ -1018,6 +730,10 @@ msgstr "高级..."
 msgid "Agent from another app"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Agents"
+msgstr ""
+
 #: src/components/VaultSettings.tsx
 #: src/pages/PluginsOverlay.tsx
 msgid "All"
@@ -1032,6 +748,10 @@ msgstr "全部 {credit} 都用于模型用量。"
 #: src/pages/shell/agent-import.tsx
 msgid "All bots"
 msgstr "全部 Bot"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "All keys"
+msgstr ""
 
 #: src/components/integrations/space-availability.tsx
 msgid "All spaces"
@@ -1106,6 +826,7 @@ msgid "Always open {site}"
 msgstr "始终打开 {site}"
 
 #: src/components/SpendingLimitSettings.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Amount"
 msgstr "金额"
 
@@ -1200,6 +921,10 @@ msgstr ""
 
 #: src/components/ComputerProviderSettings.tsx
 msgid "API URL"
+msgstr ""
+
+#: src/components/InstallAppSettings.tsx
+msgid "App"
 msgstr ""
 
 #: src/pages/AccountSettingsOverlay.tsx
@@ -1301,6 +1026,10 @@ msgstr "附加文件"
 msgid "Attachment"
 msgstr "附件"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Audit"
+msgstr ""
+
 #: src/pages/PluginsOverlay.tsx
 msgid "Authentication"
 msgstr "认证"
@@ -1366,6 +1095,7 @@ msgstr "头像工作室"
 #: src/components/integrations/skills-dialog.tsx
 #: src/components/vault/VaultPageHeader.tsx
 #: src/pages/AdminAccessPage.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/AdminPluginsPage.tsx
 #: src/pages/Auth.tsx
 #: src/pages/Board.tsx
@@ -1389,6 +1119,10 @@ msgstr "返回聊天"
 #: src/pages/Auth.tsx
 msgid "Back to sign in"
 msgstr "返回登录"
+
+#: src/components/WebPushSettings.tsx
+msgid "Background alerts"
+msgstr ""
 
 #: src/pages/memory-providers/ConnectionModeFields.tsx
 msgid "Base URL"
@@ -1516,7 +1250,7 @@ msgstr "浏览 MCP 服务器"
 msgid "Built-in"
 msgstr "内置"
 
-#: src/pages/shell/chat-header.tsx
+#: src/pages/shell/composer.tsx
 msgid "Call"
 msgstr "通话"
 
@@ -1525,7 +1259,7 @@ msgid "Call back"
 msgstr "回拨"
 
 #. placeholder {0}: call.botName
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Call with {0}"
 msgstr "与 {0} 通话"
 
@@ -1533,7 +1267,7 @@ msgstr "与 {0} 通话"
 msgid "Calling you…"
 msgstr "正在呼叫你…"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Calling…"
 msgstr "正在呼叫…"
 
@@ -1564,6 +1298,7 @@ msgstr "无法读取图像"
 #: src/components/teach/TeachComputerOverlay.tsx
 #: src/components/vault/VaultItemDetail.tsx
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/McpServersOverlay.tsx
@@ -1604,6 +1339,10 @@ msgstr "已取消"
 #: src/pages/ActivityList.tsx
 msgid "Cancelled"
 msgstr "已取消"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Cap unset"
+msgstr ""
 
 #: src/components/vault/kinds.tsx
 msgid "Card"
@@ -1660,6 +1399,10 @@ msgstr ""
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Chat details"
 msgstr "聊天详情"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Chat log"
+msgstr ""
 
 #: src/pages/shell/composer-mentions.tsx
 msgid "Chat Settings"
@@ -1737,6 +1480,10 @@ msgstr "正在检查…"
 #: src/pages/shell/avatar-studio-popover.tsx
 msgid "Choose a bot shape, color, or upload an image"
 msgstr "选择机器人形状和颜色，或上传图片"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Choose a destination on the roster."
+msgstr ""
 
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/shell/composer-error.tsx
@@ -1940,6 +1687,10 @@ msgstr "沟通"
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Compact"
 msgstr "紧凑"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Company"
+msgstr ""
 
 #: src/pages/ScratchpadSection.tsx
 msgid "Complete"
@@ -2220,12 +1971,17 @@ msgid "Copy rows"
 msgstr "复制行"
 
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Cost"
 msgstr "费用"
 
 #: src/pages/ScratchpadSection.tsx
 msgid "Could not add"
 msgstr "无法添加"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not add admin"
+msgstr ""
 
 #: src/pages/McpServersOverlay.tsx
 msgid "Could not add MCP server"
@@ -2422,6 +2178,10 @@ msgstr "无法启用工具"
 msgid "Could not grant access"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not impersonate"
+msgstr ""
+
 #: src/pages/PluginsOverlay.tsx
 msgid "Could not install connector"
 msgstr "无法安装连接器"
@@ -2560,6 +2320,10 @@ msgstr "无法拒绝插件"
 msgid "Could not remove"
 msgstr "无法移除"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not remove admin"
+msgstr ""
+
 #: src/pages/PluginsOverlay.tsx
 msgid "Could not remove connector"
 msgstr "无法移除连接器"
@@ -2605,6 +2369,10 @@ msgstr "无法渲染图表"
 #: src/pages/Auth.tsx
 msgid "Could not reset password"
 msgstr "无法重置密码"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not reverse transfer"
+msgstr ""
 
 #: src/pages/PluginsOverlay.tsx
 msgid "Could not revoke connection"
@@ -2713,6 +2481,10 @@ msgstr "无法开始教学"
 msgid "Could not stop computer"
 msgstr "无法停止电脑"
 
+#: src/components/ImpersonationBanner.tsx
+msgid "Could not stop impersonation"
+msgstr ""
+
 #: src/components/AskCard.tsx
 #: src/components/SecretAskCard.tsx
 msgid "Could not submit this answer"
@@ -2732,6 +2504,10 @@ msgstr "无法测试 MCP 服务器"
 
 #: src/lib/dictation.ts
 msgid "Could not transcribe that recording."
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not transfer allotment"
 msgstr ""
 
 #: src/pages/ScratchpadSection.tsx
@@ -2801,6 +2577,10 @@ msgstr ""
 #: src/pages/MessagingSettingsPanel.tsx
 msgid "Couldn't update messaging settings"
 msgstr "无法更新消息设置"
+
+#: src/components/WebPushSettings.tsx
+msgid "Couldn't update notifications"
+msgstr ""
 
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Couldn't update your timezone"
@@ -2947,6 +2727,10 @@ msgstr "深色"
 msgid "Data"
 msgstr "数据"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Database"
+msgstr ""
+
 #: src/lib/billing.ts
 #: src/lib/cron.ts
 msgid "day"
@@ -2990,6 +2774,10 @@ msgstr "OpenClaw 默认内容"
 #: src/pages/MemorySettingsOverlay.tsx
 msgid "Default scope"
 msgstr "默认范围"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Degraded"
+msgstr ""
 
 #: src/components/AccountAccess.tsx
 #: src/components/pages/PagesList.tsx
@@ -3183,6 +2971,7 @@ msgstr "正在断开…"
 
 #: src/components/AskCard.tsx
 #: src/components/ComputerUpdateProgress.tsx
+#: src/components/InstallAppSettings.tsx
 #: src/components/PasskeyOffer.tsx
 #: src/components/SecretAskCard.tsx
 #: src/components/teach/TeachComputerOverlay.tsx
@@ -3285,6 +3074,7 @@ msgstr "每个名称只能使用一次。"
 #: src/components/SpendingLimitSettings.tsx
 #: src/components/vault/VaultItemDetail.tsx
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/McpServersOverlay.tsx
 msgid "Edit"
 msgstr "编辑"
@@ -3368,6 +3158,10 @@ msgstr "请输入 1 到 1000 之间的整数作为图像限制。"
 msgid "Enter an API key before testing."
 msgstr "测试前请输入 API 密钥。"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Env"
+msgstr ""
+
 #: src/components/ComputerProviderSettings.tsx
 msgid "Environment ID"
 msgstr ""
@@ -3384,6 +3178,10 @@ msgstr "环境变量：{names}"
 #: src/pages/shell/sidebar-roster.tsx
 msgid "Error"
 msgstr "出错"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Errors"
+msgstr ""
 
 #: src/lib/cron.ts
 #: src/pages/ExternalConversationSettings.tsx
@@ -3564,6 +3362,10 @@ msgstr "筛选 Bot"
 msgid "Filter by date"
 msgstr "按日期筛选"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Filter by key type"
+msgstr ""
+
 #: src/pages/Artifacts.tsx
 #: src/pages/shell/shell-sidebar.tsx
 msgid "Filters"
@@ -3642,6 +3444,7 @@ msgid "Friday"
 msgstr "周五"
 
 #: src/pages/ActivityList.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "From"
 msgstr "从"
 
@@ -3707,10 +3510,17 @@ msgid "Go to bot"
 msgstr "前往 Bot"
 
 #: src/pages/AdminAccessPage.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Grant"
 msgstr ""
 
+#. placeholder {0}: accountLabel(addCandidate)
+#: src/pages/AdminOpsPage.tsx
+msgid "Grant admin to {0}?"
+msgstr ""
+
 #: src/pages/AdminAccessPage.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Granting…"
 msgstr ""
 
@@ -3730,7 +3540,7 @@ msgstr "群组设置"
 msgid "Group updates"
 msgstr "合并更新"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Hang up"
 msgstr "挂断"
 
@@ -3741,6 +3551,10 @@ msgstr "请先挂断，然后输入屏幕上的代码。"
 #: src/lib/call-session.ts
 msgid "Hang up, then enter the code on screen."
 msgstr "请挂断，然后输入屏幕上的代码。"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Hard-stopped"
+msgstr ""
 
 #: src/pages/RoutineEditor.tsx
 msgid "header"
@@ -3765,6 +3579,10 @@ msgstr "请求头值"
 #: src/components/ModelHeadersEditor.tsx
 msgid "Headers"
 msgstr "请求头"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Health"
+msgstr ""
 
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Hear a sample"
@@ -3875,6 +3693,15 @@ msgstr "此模型尚未配置图片输入。"
 msgid "Image upload area"
 msgstr "图片上传区域"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Impersonate"
+msgstr ""
+
+#. placeholder {0}: accountLabel(impersonate)
+#: src/pages/AdminOpsPage.tsx
+msgid "Impersonate {0}?"
+msgstr ""
+
 #: src/components/AccountDataSettings.tsx
 msgid "Import"
 msgstr ""
@@ -3927,6 +3754,18 @@ msgstr "输入"
 #: src/components/teach/SkillDraftCard.tsx
 msgid "Inputs"
 msgstr "输入"
+
+#: src/components/InstallAppSettings.tsx
+msgid "Install"
+msgstr ""
+
+#: src/components/InstallAppSettings.tsx
+msgid "Install app"
+msgstr ""
+
+#: src/components/WebPushSettings.tsx
+msgid "Install the app first to enable alerts on this device."
+msgstr ""
 
 #: src/components/SidebarFooter.tsx
 msgid "Install update"
@@ -4057,6 +3896,14 @@ msgstr ""
 msgid "key"
 msgstr "密钥"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Key"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Key type"
+msgstr ""
+
 #: src/pages/Shell.tsx
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Keyboard shortcuts"
@@ -4064,6 +3911,10 @@ msgstr "键盘快捷键"
 
 #: src/components/vault/kinds.tsx
 msgid "Keys"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Kind"
 msgstr ""
 
 #: src/components/vault/LoginFieldsInput.tsx
@@ -4127,7 +3978,7 @@ msgstr "关联 SSO"
 msgid "List view"
 msgstr "列表视图"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Listening"
 msgstr "聆听"
 
@@ -4324,6 +4175,14 @@ msgstr "MCP 服务器"
 msgid "MCP servers"
 msgstr "MCP 服务器"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Median first response"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Median total"
+msgstr ""
+
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/Onboarding.tsx
 msgid "Medium"
@@ -4444,10 +4303,6 @@ msgstr "最小化"
 msgid "Minimize bots"
 msgstr "最小化 Bot"
 
-#: src/components/call/CallCard.tsx
-msgid "Minimize call"
-msgstr "最小化通话"
-
 #: src/lib/cron.ts
 msgid "minute"
 msgstr "分钟"
@@ -4466,6 +4321,7 @@ msgid "Mode"
 msgstr "模式"
 
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/RoutineEditor.tsx
@@ -4525,6 +4381,10 @@ msgstr "月"
 msgid "Monthly"
 msgstr "每月"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Monthly cap"
+msgstr ""
+
 #: src/components/ModelCredits.tsx
 msgid "Monthly credits"
 msgstr "每月额度"
@@ -4566,11 +4426,11 @@ msgstr "移动到"
 msgid "Move up"
 msgstr "上移"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Mute"
 msgstr "静音"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Muted"
 msgstr "已静音"
 
@@ -4775,6 +4635,10 @@ msgstr ""
 msgid "No bots match"
 msgstr "没有匹配的 Bot"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "No key"
+msgstr ""
+
 #: src/components/AskCard.tsx
 #: src/components/SecretAskCard.tsx
 msgid "No longer active"
@@ -4802,6 +4666,10 @@ msgstr "没有匹配的模型"
 msgid "No members yet"
 msgstr "还没有成员"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "No messages for this selection."
+msgstr ""
+
 #: src/pages/PeerMessagesOverlay.tsx
 msgid "No messages with {peerBotName} yet."
 msgstr "还没有与 {peerBotName} 的消息。"
@@ -4821,6 +4689,10 @@ msgstr "未找到 OpenClaw、Hermes 或 Agent 文档。"
 #: src/components/pages/PagesList.tsx
 msgid "No pages match “{query}”."
 msgstr "没有与“{query}”匹配的页面。"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "No recent requests."
+msgstr ""
 
 #: src/components/integrations/IntegrationSetup.tsx
 msgid "No remote MCP servers found"
@@ -4874,6 +4746,10 @@ msgstr "无触发器"
 msgid "None"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "None this week."
+msgstr ""
+
 #: src/lib/ticket-priority.ts
 msgid "Normal"
 msgstr "普通"
@@ -4890,6 +4766,10 @@ msgstr "未添加：{0}"
 #: src/components/McpServerHealthLine.tsx
 msgid "Not checked yet"
 msgstr "尚未检查"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Not configured"
+msgstr ""
 
 #: src/pages/shell/agent-import.tsx
 msgid "Not imported"
@@ -4925,6 +4805,7 @@ msgstr "无法正常工作"
 msgid "Nothing remembered yet"
 msgstr "暂无记忆"
 
+#: src/components/WebPushSettings.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Notifications"
 msgstr "通知"
@@ -4960,6 +4841,10 @@ msgstr "OAuth 已过期"
 #: src/components/ComputerDeviceSettings.tsx
 msgid "Offline"
 msgstr "离线"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "OK"
+msgstr ""
 
 #: src/pages/model-settings/connection-controls.tsx
 #: src/pages/Onboarding.tsx
@@ -5028,15 +4913,6 @@ msgstr "打开 {title}"
 msgid "Open <0>{0}</0> and enter this code:"
 msgstr "打开 <0>{0}</0>，输入这个验证码："
 
-#: src/pages/shell/chat-header.tsx
-msgid "Open call"
-msgstr "打开通话"
-
-#. placeholder {0}: call.botName
-#: src/components/call/CallCard.tsx
-msgid "Open chat with {0}"
-msgstr "打开与 {0} 的对话"
-
 #: src/components/ComputersUnavailableHint.tsx
 msgid "Open computer settings"
 msgstr "打开电脑设置"
@@ -5082,6 +4958,10 @@ msgstr "OpenClaw 或 Hermes"
 #: src/components/pages/DownloadPdfButton.tsx
 msgid "Opens your browser's print dialog. Choose Save as PDF as the destination."
 msgstr "打开浏览器的打印对话框。目标请选择“另存为 PDF”。"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Operations"
+msgstr ""
 
 #: src/components/SignupSurvey.tsx
 #: src/pages/model-settings/connection-controls.tsx
@@ -5131,6 +5011,10 @@ msgstr "输出"
 #: src/pages/Board.tsx
 msgid "Owner"
 msgstr "所有者"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "p95 first response"
+msgstr ""
 
 #: src/components/pages/PageCard.tsx
 #: src/components/pages/PageView.tsx
@@ -5263,6 +5147,10 @@ msgstr "已暂停"
 msgid "Pending"
 msgstr "待处理"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Performance"
+msgstr ""
+
 #: src/pages/shell/bot-panel.tsx
 msgid "Permissions"
 msgstr "权限"
@@ -5272,8 +5160,14 @@ msgid "Persona"
 msgstr "人设"
 
 #: src/components/SignupSurvey.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Personal"
 msgstr "个人"
+
+#. placeholder {0}: money(account.personalKeyCostUsd)
+#: src/pages/AdminOpsPage.tsx
+msgid "Personal {0}"
+msgstr ""
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/vault/VaultItemEditor.tsx
@@ -5622,6 +5516,7 @@ msgstr "重新加载"
 #: src/components/TrustedLinkSitesSettings.tsx
 #: src/components/vault/LoginFieldsInput.tsx
 #: src/components/vault/VaultItemDetail.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/ModelRoleSettings.tsx
 #: src/pages/PluginsOverlay.tsx
@@ -5640,6 +5535,11 @@ msgstr "移除 {0}"
 #: src/pages/GroupPanel.tsx
 msgid "Remove {0} from the group"
 msgstr "把 {0} 移出群组"
+
+#. placeholder {0}: accountLabel(removeTarget)
+#: src/pages/AdminOpsPage.tsx
+msgid "Remove {0}?"
+msgstr ""
 
 #: src/components/vault/VaultItemDetail.tsx
 msgid "Remove {secretName}? Bots will no longer be able to use it."
@@ -5694,6 +5594,7 @@ msgid "Removed, but list refresh failed"
 msgstr "已移除，但列表刷新失败"
 
 #: src/components/integrations/plugin-marketplace.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/PluginsOverlay.tsx
 msgid "Removing…"
 msgstr "正在移除…"
@@ -5756,6 +5657,10 @@ msgstr "正在回复 {0}"
 msgid "Request a new code"
 msgstr "请重新获取验证码"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Request log"
+msgstr ""
+
 #: src/pages/MessagingSettingsPanel.tsx
 msgid "Requests"
 msgstr "请求"
@@ -5796,6 +5701,11 @@ msgstr "重置"
 
 #: src/components/SharedKeyUsageMeter.tsx
 msgid "Resets {reset}"
+msgstr ""
+
+#. placeholder {0}: resetCountdown(budget.resetsAt)
+#: src/pages/AdminOpsPage.tsx
+msgid "Resets in {0}"
 msgstr ""
 
 #: src/components/ComputerMaintenanceActions.tsx
@@ -5861,15 +5771,33 @@ msgstr "立即重试"
 msgid "Retry screen"
 msgstr "重新连接屏幕"
 
-#. placeholder {0}: call.botName
-#: src/components/call/CallCard.tsx
-msgid "Return to call with {0}"
-msgstr "返回与 {0} 的通话"
+#. placeholder {0}: money(reverseTarget.amountUsd)
+#. placeholder {1}: nameFor(reverseTarget.toUserId)
+#. placeholder {2}: nameFor(reverseTarget.fromUserId)
+#: src/pages/AdminOpsPage.tsx
+msgid "Return {0} from {1} to {2}."
+msgstr ""
 
 #: src/pages/McpOAuthCallback.tsx
 #: src/pages/SlackInstallCallback.tsx
 msgid "Return to Rakazo"
 msgstr "返回 Rakazo"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Reverse"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Reverse transfer?"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Reversed"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Reversing…"
+msgstr ""
 
 #: src/lib/model-connection-preflight.ts
 msgid "Review provider settings and test again."
@@ -5886,6 +5814,10 @@ msgstr ""
 
 #: src/components/ComputerProviderSettings.tsx
 msgid "Root filesystem"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Roster"
 msgstr ""
 
 #: src/pages/RoutineEditor.tsx
@@ -5950,6 +5882,10 @@ msgstr "运行"
 msgid "Runs when this bot receives a verified message from this provider."
 msgstr "这个 Bot 收到该提供方发来的已验证消息时会运行。"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Runtime"
+msgstr ""
+
 #: src/pages/PluginsOverlay.tsx
 msgid "Sales & CRM"
 msgstr "销售与 CRM"
@@ -5961,6 +5897,10 @@ msgstr "与 {botName} 相同"
 #: src/pages/ModelSettingsOverlay.tsx
 msgid "Same as main model"
 msgstr "与主模型相同"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Sandbox"
+msgstr ""
 
 #: src/lib/cron.ts
 msgid "Saturday"
@@ -5974,6 +5914,7 @@ msgstr "周六"
 #: src/components/teach/SkillDraftCard.tsx
 #: src/components/vault/VaultItemEditor.tsx
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/Board.tsx
 #: src/pages/ExternalConversationSettings.tsx
 #: src/pages/GroupPanel.tsx
@@ -5987,6 +5928,10 @@ msgstr "周六"
 #: src/pages/shell/dialogs.tsx
 msgid "Save"
 msgstr "保存"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Save monthly shared-key cap?"
+msgstr ""
 
 #: src/components/ComputerMaintenanceActions.tsx
 msgid "Save the workspace and install current software."
@@ -6070,6 +6015,10 @@ msgstr "屏幕未连接"
 msgid "Search"
 msgstr "搜索"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Search accounts"
+msgstr ""
+
 #: src/components/integrations/IntegrationSetup.tsx
 #: src/pages/PluginsOverlay.tsx
 msgid "Search apps"
@@ -6101,6 +6050,10 @@ msgstr "搜索 integrations.sh"
 #: src/pages/shell/chat-model-picker.tsx
 msgid "Search models"
 msgstr "搜索模型"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Search name or email"
+msgstr ""
 
 #: src/pages/shell/shell-sidebar.tsx
 msgid "Search runs"
@@ -6216,7 +6169,7 @@ msgstr "服务器 URL"
 msgid "Set"
 msgstr "设置"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 #: src/components/SidebarFooter.tsx
 #: src/pages/MessagingSettingsPanel.tsx
 #: src/pages/SettingsOverlay.tsx
@@ -6269,19 +6222,42 @@ msgstr "共享"
 msgid "Share “{title}”"
 msgstr "共享“{title}”"
 
+#: src/components/InstallAppSettings.tsx
+msgid "Share → Add to Home Screen"
+msgstr ""
+
 #: src/components/pages/SharePopover.tsx
 msgid "Share, anyone with the link can view"
 msgstr "共享，任何拥有链接的人都可查看"
 
 #: src/components/pages/PagesList.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Shared"
 msgstr "共享"
 
+#. placeholder {0}: money(account.sharedKeyCostUsd)
+#: src/pages/AdminOpsPage.tsx
+msgid "Shared {0}"
+msgstr ""
+
 #: src/pages/KnowledgeSection.tsx
 msgid "Shared memory"
 msgstr "共享记忆"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Shared week"
+msgstr ""
+
+#. placeholder {0}: accountLabel(account)
+#: src/pages/AdminOpsPage.tsx
+msgid "Shared week usage for {0}"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Shared-key week"
+msgstr ""
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/VaultSettings.tsx
@@ -6489,13 +6465,17 @@ msgstr "朗读"
 msgid "Speak this reply"
 msgstr "朗读这条回复"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Speaking"
 msgstr "正在说话"
 
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Speech model"
 msgstr "语音模型"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Spend"
+msgstr ""
 
 #: src/components/SpendingLimitSettings.tsx
 msgid "Spending limit"
@@ -6556,6 +6536,7 @@ msgstr "正在开始"
 
 #: src/components/teach/TeachComputerOverlay.tsx
 #: src/lib/roster-status.ts
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/model-settings/connection-controls.tsx
 #: src/pages/Onboarding.tsx
 msgid "Starting…"
@@ -6566,6 +6547,7 @@ msgid "State or region"
 msgstr ""
 
 #: src/pages/ActivityList.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/Board.tsx
 msgid "Status"
 msgstr "状态"
@@ -6574,6 +6556,7 @@ msgstr "状态"
 msgid "Steps"
 msgstr "步骤"
 
+#: src/components/ImpersonationBanner.tsx
 #: src/pages/RoutineEditor.tsx
 #: src/pages/shell/composer.tsx
 #: src/pages/shell/computer-overlay.tsx
@@ -6599,6 +6582,7 @@ msgid "Stopped."
 msgstr "已停止。"
 
 #: src/components/ComputerMaintenanceActions.tsx
+#: src/components/ImpersonationBanner.tsx
 msgid "Stopping…"
 msgstr "正在停止…"
 
@@ -6749,6 +6733,10 @@ msgstr "测试"
 msgid "Testing…"
 msgstr "正在测试…"
 
+#: src/pages/model-settings/use-model-settings.ts
+msgid "That key is the company shared key. Usage counts toward the shared budget."
+msgstr ""
+
 #: src/pages/shell/composer-error.tsx
 msgid "The bot can use the file but won't see the picture."
 msgstr "Bot 可以使用该文件，但看不到图片内容。"
@@ -6829,7 +6817,7 @@ msgstr "这些已保存的设置读不出来。请移除后再添加一次。"
 msgid "They get {weeks} weeks free."
 msgstr "对方可免费使用 {weeks} 周。"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 #: src/pages/ModelRoleSettings.tsx
 #: src/pages/RoutineEditor.tsx
 #: src/pages/shell/bot-panel.tsx
@@ -6990,6 +6978,11 @@ msgstr "此服务器已连接。请先断开再重新授权。"
 msgid "This server's tool result does not fit the model. Turn off Keep tool results whole for that server, or choose another model."
 msgstr ""
 
+#. placeholder {0}: money(Number(draft) || 0)
+#: src/pages/AdminOpsPage.tsx
+msgid "This sets the deployment monthly cap for the shared Gemini key to {0}."
+msgstr ""
+
 #: src/pages/model-settings/connection-controls.tsx
 msgid "This subscription sign-in is not available in Rakazo yet. Use a deployment credential or choose another provider."
 msgstr "此订阅登录在 Rakazo 中尚不可用。请使用部署凭据或选择其他提供方。"
@@ -7019,6 +7012,7 @@ msgid "Title"
 msgstr "标题"
 
 #: src/pages/ActivityList.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "To"
 msgstr "到"
 
@@ -7045,6 +7039,7 @@ msgid "Toggle sidebar"
 msgstr "显示或隐藏侧边栏"
 
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Tokens"
 msgstr "Token"
 
@@ -7074,10 +7069,6 @@ msgstr "工具"
 msgid "Transcribing…"
 msgstr "正在转写…"
 
-#: src/components/call/CallCard.tsx
-msgid "Transcript"
-msgstr "文字记录"
-
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Transcription model"
 msgstr "转写模型"
@@ -7088,6 +7079,35 @@ msgstr ""
 
 #: src/lib/dictation.ts
 msgid "Transcription response is too large."
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Transfer"
+msgstr ""
+
+#. placeholder {0}: money(remaining)
+#. placeholder {1}: accountLabel(transferFrom)
+#. placeholder {2}: accountLabel(transferTo)
+#: src/pages/AdminOpsPage.tsx
+msgid "Transfer {0} from {1} to {2}?"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Transfer unused allotment"
+msgstr ""
+
+#. placeholder {0}: accountLabel(transferFrom)
+#. placeholder {1}: accountLabel(transferTo)
+#: src/pages/AdminOpsPage.tsx
+msgid "Transfer unused allotment from {0} to {1}?"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Transferring…"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Transfers"
 msgstr ""
 
 #: src/pages/ExternalConversationSettings.tsx
@@ -7169,7 +7189,7 @@ msgstr "卸载"
 msgid "Unlink"
 msgstr "取消关联"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Unmute"
 msgstr "取消静音"
 
@@ -7394,6 +7414,15 @@ msgstr "查看全部"
 msgid "View source"
 msgstr "查看源代码"
 
+#: src/components/ImpersonationBanner.tsx
+msgid "Viewing as {targetEmail}"
+msgstr ""
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Viewing as {targetName} ({targetEmail})"
+msgstr ""
+
+#: src/components/call/CallStrip.tsx
 #: src/pages/settings-nav.ts
 #: src/pages/shell/bot-panel.tsx
 #: src/pages/SpaceSettingOverrides.tsx
@@ -7459,6 +7488,10 @@ msgstr "周末"
 msgid "Weekly"
 msgstr "每周"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Weekly shared-key pool used"
+msgstr ""
+
 #: src/components/SignupSurvey.tsx
 msgid "Welcome to Rakazo"
 msgstr "欢迎使用 Rakazo"
@@ -7498,6 +7531,10 @@ msgstr "返回什么"
 #: src/pages/RoutineEditor.tsx
 msgid "What to watch"
 msgstr "监视内容"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "When"
+msgstr ""
 
 #: src/pages/RoutineEditor.tsx
 msgid "When a webhook fires"

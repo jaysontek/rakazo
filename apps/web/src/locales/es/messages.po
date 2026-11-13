@@ -17,314 +17,6 @@ msgstr ""
 msgid " (unread)"
 msgstr " (sin leer)"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Accounts"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Actions"
-msgstr ""
-
-#: src/components/InstallAppSettings.tsx
-msgid "Add to Home Screen"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Admins"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Agents"
-msgstr ""
-
-#: src/components/InstallAppSettings.tsx
-msgid "App"
-msgstr ""
-
-#: src/components/WebPushSettings.tsx
-msgid "Background alerts"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Cap unset"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Chat log"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Choose a destination on the roster."
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Company"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Company key (not on budget roster)"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Could not add admin"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Could not impersonate"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Could not remove admin"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Could not reverse transfer"
-msgstr ""
-
-#: src/components/ImpersonationBanner.tsx
-msgid "Could not stop impersonation"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Could not transfer allotment"
-msgstr ""
-
-#: src/components/WebPushSettings.tsx
-msgid "Couldn't update notifications"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Database"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Degraded"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Env"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Errors"
-msgstr ""
-
-#. placeholder {0}: accountLabel(addCandidate)
-#: src/pages/AdminOpsPage.tsx
-msgid "Grant admin to {0}?"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Hard-stopped"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Health"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Impersonate"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Impersonate {0}?"
-msgstr ""
-
-#: src/components/InstallAppSettings.tsx
-msgid "Install"
-msgstr ""
-
-#: src/components/InstallAppSettings.tsx
-msgid "Install app"
-msgstr ""
-
-#: src/components/WebPushSettings.tsx
-msgid "Install the app first to enable alerts on this device."
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Key"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Kind"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Median first response"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Median total"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Monthly cap"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "No messages for this selection."
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "None this week."
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Not configured"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Not on roster"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "OK"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Operations"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "p95 first response"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Performance"
-msgstr ""
-
-#. placeholder {0}: money(account.personalKeyCostUsd)
-#: src/pages/AdminOpsPage.tsx
-msgid "Personal {0}"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Personal-key spend"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Remove {0}?"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Request log"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Return {0} from {1} to {2}."
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Reverse"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Reverse transfer?"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Reversed"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Reversing…"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Roster"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Runtime"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Sandbox"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Save monthly shared-key cap?"
-msgstr ""
-
-#: src/components/InstallAppSettings.tsx
-msgid "Share → Add to Home Screen"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Shared week"
-msgstr ""
-
-#. placeholder {0}: money(account.sharedKeyCostUsd)
-#: src/pages/AdminOpsPage.tsx
-msgid "Shared {0}"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Shared-key spend"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Shared-key week"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Spend"
-msgstr ""
-
-#: src/pages/model-settings/use-model-settings.ts
-msgid "That key is the company shared key. Usage counts toward the shared budget."
-msgstr ""
-
-#. placeholder {0}: money(Number(draft) || 0)
-#: src/pages/AdminOpsPage.tsx
-msgid "This sets the deployment monthly cap for the shared Gemini key to {0}."
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Total spend"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Transfer"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Transfer unused allotment"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Transfer unused allotment from {0} to {1}?"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Transfer {0} from {1} to {2}?"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Transferring…"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Transfers"
-msgstr ""
-
-#: src/components/ImpersonationBanner.tsx
-msgid "Viewing as {targetEmail}"
-msgstr ""
-
-#: src/components/ImpersonationBanner.tsx
-msgid "Viewing as {targetName} ({targetEmail})"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Week"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "When"
-msgstr ""
-
 #. placeholder {0}: pinned.length
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "{0, plural, one {# bot has its own model:} other {# bots have their own model:}}"
@@ -802,6 +494,7 @@ msgstr "Token de acceso (opcional)"
 
 #: src/components/AccountMenu.tsx
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Account"
 msgstr "Cuenta"
 
@@ -822,10 +515,19 @@ msgstr "Nombre de la cuenta"
 msgid "Account menu for {name}"
 msgstr "Menú de cuenta de {name}"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Accounts"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Actions"
+msgstr ""
+
+#. placeholder {0}: accountLabel(account)
 #. placeholder {0}: bot.name
 #. placeholder {0}: group.spaceName
-#. placeholder {0}: page.title
 #: src/components/pages/PagesList.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/BotContextMenu.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/shell/sidebar-roster.tsx
@@ -847,6 +549,7 @@ msgstr "Actividad"
 
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/components/SecretAskCard.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/PluginsOverlay.tsx
 #: src/pages/ScratchpadSection.tsx
@@ -964,6 +667,10 @@ msgstr "Agregar URL del servidor"
 msgid "Add skills"
 msgstr "Agregar habilidades"
 
+#: src/components/InstallAppSettings.tsx
+msgid "Add to Home Screen"
+msgstr ""
+
 #: src/components/teach/SkillDraftCard.tsx
 msgid "Add to routine"
 msgstr "Agregar a la rutina"
@@ -996,8 +703,13 @@ msgstr ""
 msgid "Address line 2"
 msgstr ""
 
+#: src/components/AccountMenu.tsx
 #: src/components/SidebarFooter.tsx
 msgid "Admin Dashboard"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Admins"
 msgstr ""
 
 #: src/pages/McpServersOverlay.tsx
@@ -1018,6 +730,10 @@ msgstr "Avanzado..."
 msgid "Agent from another app"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Agents"
+msgstr ""
+
 #: src/components/VaultSettings.tsx
 #: src/pages/PluginsOverlay.tsx
 msgid "All"
@@ -1032,6 +748,10 @@ msgstr "Los {credit} completos se destinan al uso de modelos."
 #: src/pages/shell/agent-import.tsx
 msgid "All bots"
 msgstr "Todos los bots"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "All keys"
+msgstr ""
 
 #: src/components/integrations/space-availability.tsx
 msgid "All spaces"
@@ -1106,6 +826,7 @@ msgid "Always open {site}"
 msgstr "Abrir siempre {site}"
 
 #: src/components/SpendingLimitSettings.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Amount"
 msgstr "Importe"
 
@@ -1200,6 +921,10 @@ msgstr ""
 
 #: src/components/ComputerProviderSettings.tsx
 msgid "API URL"
+msgstr ""
+
+#: src/components/InstallAppSettings.tsx
+msgid "App"
 msgstr ""
 
 #: src/pages/AccountSettingsOverlay.tsx
@@ -1301,6 +1026,10 @@ msgstr "Adjuntar archivo"
 msgid "Attachment"
 msgstr "Archivo adjunto"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Audit"
+msgstr ""
+
 #: src/pages/PluginsOverlay.tsx
 msgid "Authentication"
 msgstr "Autenticación"
@@ -1366,6 +1095,7 @@ msgstr "Estudio de avatares"
 #: src/components/integrations/skills-dialog.tsx
 #: src/components/vault/VaultPageHeader.tsx
 #: src/pages/AdminAccessPage.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/AdminPluginsPage.tsx
 #: src/pages/Auth.tsx
 #: src/pages/Board.tsx
@@ -1389,6 +1119,10 @@ msgstr "Volver al chat"
 #: src/pages/Auth.tsx
 msgid "Back to sign in"
 msgstr "Volver a iniciar sesión"
+
+#: src/components/WebPushSettings.tsx
+msgid "Background alerts"
+msgstr ""
 
 #: src/pages/memory-providers/ConnectionModeFields.tsx
 msgid "Base URL"
@@ -1516,7 +1250,7 @@ msgstr "Explorar servidores MCP"
 msgid "Built-in"
 msgstr "Integrado"
 
-#: src/pages/shell/chat-header.tsx
+#: src/pages/shell/composer.tsx
 msgid "Call"
 msgstr "Llamar"
 
@@ -1525,7 +1259,7 @@ msgid "Call back"
 msgstr "Devolver llamada"
 
 #. placeholder {0}: call.botName
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Call with {0}"
 msgstr "Llamada con {0}"
 
@@ -1533,7 +1267,7 @@ msgstr "Llamada con {0}"
 msgid "Calling you…"
 msgstr "Te está llamando…"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Calling…"
 msgstr "Llamando…"
 
@@ -1564,6 +1298,7 @@ msgstr "No puede leer imágenes"
 #: src/components/teach/TeachComputerOverlay.tsx
 #: src/components/vault/VaultItemDetail.tsx
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/McpServersOverlay.tsx
@@ -1604,6 +1339,10 @@ msgstr "cancelado"
 #: src/pages/ActivityList.tsx
 msgid "Cancelled"
 msgstr "Cancelado"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Cap unset"
+msgstr ""
 
 #: src/components/vault/kinds.tsx
 msgid "Card"
@@ -1660,6 +1399,10 @@ msgstr ""
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Chat details"
 msgstr "Detalles del chat"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Chat log"
+msgstr ""
 
 #: src/pages/shell/composer-mentions.tsx
 msgid "Chat Settings"
@@ -1737,6 +1480,10 @@ msgstr "Comprobando…"
 #: src/pages/shell/avatar-studio-popover.tsx
 msgid "Choose a bot shape, color, or upload an image"
 msgstr "Elige una forma y color del bot, o sube una imagen"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Choose a destination on the roster."
+msgstr ""
 
 #: src/pages/ModelSettingsOverlay.tsx
 #: src/pages/shell/composer-error.tsx
@@ -1940,6 +1687,10 @@ msgstr "Comunicación"
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Compact"
 msgstr "Compacta"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Company"
+msgstr ""
 
 #: src/pages/ScratchpadSection.tsx
 msgid "Complete"
@@ -2220,12 +1971,17 @@ msgid "Copy rows"
 msgstr "Copiar filas"
 
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Cost"
 msgstr "Coste"
 
 #: src/pages/ScratchpadSection.tsx
 msgid "Could not add"
 msgstr "No se pudo agregar"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not add admin"
+msgstr ""
 
 #: src/pages/McpServersOverlay.tsx
 msgid "Could not add MCP server"
@@ -2422,6 +2178,10 @@ msgstr "No se pudieron activar las herramientas"
 msgid "Could not grant access"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not impersonate"
+msgstr ""
+
 #: src/pages/PluginsOverlay.tsx
 msgid "Could not install connector"
 msgstr "No se pudo instalar el conector"
@@ -2560,6 +2320,10 @@ msgstr "No se pudo rechazar el plugin"
 msgid "Could not remove"
 msgstr "No se pudo quitar"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not remove admin"
+msgstr ""
+
 #: src/pages/PluginsOverlay.tsx
 msgid "Could not remove connector"
 msgstr "No se pudo quitar el conector"
@@ -2605,6 +2369,10 @@ msgstr "No se pudo renderizar el gráfico"
 #: src/pages/Auth.tsx
 msgid "Could not reset password"
 msgstr "No se pudo restablecer la contraseña"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not reverse transfer"
+msgstr ""
 
 #: src/pages/PluginsOverlay.tsx
 msgid "Could not revoke connection"
@@ -2713,6 +2481,10 @@ msgstr "No se pudo iniciar la enseñanza"
 msgid "Could not stop computer"
 msgstr "No se pudo detener la computadora"
 
+#: src/components/ImpersonationBanner.tsx
+msgid "Could not stop impersonation"
+msgstr ""
+
 #: src/components/AskCard.tsx
 #: src/components/SecretAskCard.tsx
 msgid "Could not submit this answer"
@@ -2733,6 +2505,10 @@ msgstr "No se pudo probar el servidor MCP"
 #: src/lib/dictation.ts
 msgid "Could not transcribe that recording."
 msgstr "No se pudo transcribir esa grabación."
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not transfer allotment"
+msgstr ""
 
 #: src/pages/ScratchpadSection.tsx
 msgid "Could not update"
@@ -2801,6 +2577,10 @@ msgstr ""
 #: src/pages/MessagingSettingsPanel.tsx
 msgid "Couldn't update messaging settings"
 msgstr "No se pudo actualizar la configuración de mensajería"
+
+#: src/components/WebPushSettings.tsx
+msgid "Couldn't update notifications"
+msgstr ""
 
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Couldn't update your timezone"
@@ -2947,6 +2727,10 @@ msgstr "Oscuro"
 msgid "Data"
 msgstr "Datos"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Database"
+msgstr ""
+
 #: src/lib/billing.ts
 #: src/lib/cron.ts
 msgid "day"
@@ -2990,6 +2774,10 @@ msgstr "Predeterminado de OpenClaw"
 #: src/pages/MemorySettingsOverlay.tsx
 msgid "Default scope"
 msgstr "Alcance predeterminado"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Degraded"
+msgstr ""
 
 #: src/components/AccountAccess.tsx
 #: src/components/pages/PagesList.tsx
@@ -3183,6 +2971,7 @@ msgstr "Desconectando…"
 
 #: src/components/AskCard.tsx
 #: src/components/ComputerUpdateProgress.tsx
+#: src/components/InstallAppSettings.tsx
 #: src/components/PasskeyOffer.tsx
 #: src/components/SecretAskCard.tsx
 #: src/components/teach/TeachComputerOverlay.tsx
@@ -3285,6 +3074,7 @@ msgstr "Cada nombre solo se puede usar una vez."
 #: src/components/SpendingLimitSettings.tsx
 #: src/components/vault/VaultItemDetail.tsx
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/McpServersOverlay.tsx
 msgid "Edit"
 msgstr "Editar"
@@ -3368,6 +3158,10 @@ msgstr "Introduce un número entero del 1 al 1000 para el límite de imágenes."
 msgid "Enter an API key before testing."
 msgstr "Introduce una clave de API antes de probar."
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Env"
+msgstr ""
+
 #: src/components/ComputerProviderSettings.tsx
 msgid "Environment ID"
 msgstr ""
@@ -3384,6 +3178,10 @@ msgstr "Variables de entorno: {names}"
 #: src/pages/shell/sidebar-roster.tsx
 msgid "Error"
 msgstr "Error"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Errors"
+msgstr ""
 
 #: src/lib/cron.ts
 #: src/pages/ExternalConversationSettings.tsx
@@ -3564,6 +3362,10 @@ msgstr "Filtrar bots"
 msgid "Filter by date"
 msgstr "Filtrar por fecha"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Filter by key type"
+msgstr ""
+
 #: src/pages/Artifacts.tsx
 #: src/pages/shell/shell-sidebar.tsx
 msgid "Filters"
@@ -3642,6 +3444,7 @@ msgid "Friday"
 msgstr "viernes"
 
 #: src/pages/ActivityList.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "From"
 msgstr "Desde"
 
@@ -3707,10 +3510,17 @@ msgid "Go to bot"
 msgstr "Ir a un bot"
 
 #: src/pages/AdminAccessPage.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Grant"
 msgstr ""
 
+#. placeholder {0}: accountLabel(addCandidate)
+#: src/pages/AdminOpsPage.tsx
+msgid "Grant admin to {0}?"
+msgstr ""
+
 #: src/pages/AdminAccessPage.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Granting…"
 msgstr ""
 
@@ -3730,7 +3540,7 @@ msgstr "Configuración del grupo"
 msgid "Group updates"
 msgstr "Agrupar actualizaciones"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Hang up"
 msgstr "Colgar"
 
@@ -3741,6 +3551,10 @@ msgstr "Cuelga primero y luego ingresa el código en pantalla."
 #: src/lib/call-session.ts
 msgid "Hang up, then enter the code on screen."
 msgstr "Cuelga y luego ingresa el código en pantalla."
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Hard-stopped"
+msgstr ""
 
 #: src/pages/RoutineEditor.tsx
 msgid "header"
@@ -3765,6 +3579,10 @@ msgstr "Valor del encabezado"
 #: src/components/ModelHeadersEditor.tsx
 msgid "Headers"
 msgstr "Encabezados"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Health"
+msgstr ""
 
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Hear a sample"
@@ -3875,6 +3693,15 @@ msgstr "La entrada de imágenes no está configurada para este modelo."
 msgid "Image upload area"
 msgstr "Área de carga de imagen"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Impersonate"
+msgstr ""
+
+#. placeholder {0}: accountLabel(impersonate)
+#: src/pages/AdminOpsPage.tsx
+msgid "Impersonate {0}?"
+msgstr ""
+
 #: src/components/AccountDataSettings.tsx
 msgid "Import"
 msgstr ""
@@ -3927,6 +3754,18 @@ msgstr "Entrada"
 #: src/components/teach/SkillDraftCard.tsx
 msgid "Inputs"
 msgstr "Entradas"
+
+#: src/components/InstallAppSettings.tsx
+msgid "Install"
+msgstr ""
+
+#: src/components/InstallAppSettings.tsx
+msgid "Install app"
+msgstr ""
+
+#: src/components/WebPushSettings.tsx
+msgid "Install the app first to enable alerts on this device."
+msgstr ""
 
 #: src/components/SidebarFooter.tsx
 msgid "Install update"
@@ -4057,6 +3896,14 @@ msgstr ""
 msgid "key"
 msgstr "Clave"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Key"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Key type"
+msgstr ""
+
 #: src/pages/Shell.tsx
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Keyboard shortcuts"
@@ -4064,6 +3911,10 @@ msgstr "Atajos de teclado"
 
 #: src/components/vault/kinds.tsx
 msgid "Keys"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Kind"
 msgstr ""
 
 #: src/components/vault/LoginFieldsInput.tsx
@@ -4127,7 +3978,7 @@ msgstr "Vincular SSO"
 msgid "List view"
 msgstr "Vista de lista"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Listening"
 msgstr "Escuchando"
 
@@ -4324,6 +4175,14 @@ msgstr "Servidor MCP"
 msgid "MCP servers"
 msgstr "Servidores MCP"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Median first response"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Median total"
+msgstr ""
+
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/Onboarding.tsx
 msgid "Medium"
@@ -4444,10 +4303,6 @@ msgstr "Minimizar"
 msgid "Minimize bots"
 msgstr "Minimizar bots"
 
-#: src/components/call/CallCard.tsx
-msgid "Minimize call"
-msgstr "Minimizar llamada"
-
 #: src/lib/cron.ts
 msgid "minute"
 msgstr "minuto"
@@ -4466,6 +4321,7 @@ msgid "Mode"
 msgstr "Modo"
 
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/RoutineEditor.tsx
@@ -4525,6 +4381,10 @@ msgstr "mes"
 msgid "Monthly"
 msgstr "Mensual"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Monthly cap"
+msgstr ""
+
 #: src/components/ModelCredits.tsx
 msgid "Monthly credits"
 msgstr "Créditos mensuales"
@@ -4566,11 +4426,11 @@ msgstr "Mover a"
 msgid "Move up"
 msgstr "Subir"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Mute"
 msgstr "Silenciar"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Muted"
 msgstr "Silenciado"
 
@@ -4775,6 +4635,10 @@ msgstr ""
 msgid "No bots match"
 msgstr "Ningún bot coincide"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "No key"
+msgstr ""
+
 #: src/components/AskCard.tsx
 #: src/components/SecretAskCard.tsx
 msgid "No longer active"
@@ -4802,6 +4666,10 @@ msgstr "No hay modelos coincidentes"
 msgid "No members yet"
 msgstr "Aún no hay miembros"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "No messages for this selection."
+msgstr ""
+
 #: src/pages/PeerMessagesOverlay.tsx
 msgid "No messages with {peerBotName} yet."
 msgstr "Aún no hay mensajes con {peerBotName}."
@@ -4821,6 +4689,10 @@ msgstr "No se encontraron archivos de OpenClaw, Hermes ni un documento de agente
 #: src/components/pages/PagesList.tsx
 msgid "No pages match “{query}”."
 msgstr "Ninguna página coincide con «{query}»."
+
+#: src/pages/AdminOpsPage.tsx
+msgid "No recent requests."
+msgstr ""
 
 #: src/components/integrations/IntegrationSetup.tsx
 msgid "No remote MCP servers found"
@@ -4874,6 +4746,10 @@ msgstr "Sin disparador"
 msgid "None"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "None this week."
+msgstr ""
+
 #: src/lib/ticket-priority.ts
 msgid "Normal"
 msgstr "Normal"
@@ -4890,6 +4766,10 @@ msgstr "No se agregaron: {0}"
 #: src/components/McpServerHealthLine.tsx
 msgid "Not checked yet"
 msgstr "Aún no comprobado"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Not configured"
+msgstr ""
 
 #: src/pages/shell/agent-import.tsx
 msgid "Not imported"
@@ -4925,6 +4805,7 @@ msgstr "No funciona"
 msgid "Nothing remembered yet"
 msgstr "Aún no hay recuerdos"
 
+#: src/components/WebPushSettings.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Notifications"
 msgstr "Notificaciones"
@@ -4960,6 +4841,10 @@ msgstr "OAuth expirado"
 #: src/components/ComputerDeviceSettings.tsx
 msgid "Offline"
 msgstr "Sin conexión"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "OK"
+msgstr ""
 
 #: src/pages/model-settings/connection-controls.tsx
 #: src/pages/Onboarding.tsx
@@ -5028,15 +4913,6 @@ msgstr "Abrir {title}"
 msgid "Open <0>{0}</0> and enter this code:"
 msgstr "Abre <0>{0}</0> e introduce este código:"
 
-#: src/pages/shell/chat-header.tsx
-msgid "Open call"
-msgstr "Abrir llamada"
-
-#. placeholder {0}: call.botName
-#: src/components/call/CallCard.tsx
-msgid "Open chat with {0}"
-msgstr "Abrir chat con {0}"
-
 #: src/components/ComputersUnavailableHint.tsx
 msgid "Open computer settings"
 msgstr "Abrir la configuración de computadoras"
@@ -5082,6 +4958,10 @@ msgstr "OpenClaw o Hermes"
 #: src/components/pages/DownloadPdfButton.tsx
 msgid "Opens your browser's print dialog. Choose Save as PDF as the destination."
 msgstr "Abre el diálogo de impresión del navegador. Elige Guardar como PDF como destino."
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Operations"
+msgstr ""
 
 #: src/components/SignupSurvey.tsx
 #: src/pages/model-settings/connection-controls.tsx
@@ -5131,6 +5011,10 @@ msgstr "Salida"
 #: src/pages/Board.tsx
 msgid "Owner"
 msgstr "Propietario"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "p95 first response"
+msgstr ""
 
 #: src/components/pages/PageCard.tsx
 #: src/components/pages/PageView.tsx
@@ -5263,6 +5147,10 @@ msgstr "En pausa"
 msgid "Pending"
 msgstr "Pendiente"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Performance"
+msgstr ""
+
 #: src/pages/shell/bot-panel.tsx
 msgid "Permissions"
 msgstr "Permisos"
@@ -5272,8 +5160,14 @@ msgid "Persona"
 msgstr "Personalidad"
 
 #: src/components/SignupSurvey.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Personal"
 msgstr "Personal"
+
+#. placeholder {0}: money(account.personalKeyCostUsd)
+#: src/pages/AdminOpsPage.tsx
+msgid "Personal {0}"
+msgstr ""
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/vault/VaultItemEditor.tsx
@@ -5622,6 +5516,7 @@ msgstr "Recargar"
 #: src/components/TrustedLinkSitesSettings.tsx
 #: src/components/vault/LoginFieldsInput.tsx
 #: src/components/vault/VaultItemDetail.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/ModelRoleSettings.tsx
 #: src/pages/PluginsOverlay.tsx
@@ -5640,6 +5535,11 @@ msgstr "Quitar {0}"
 #: src/pages/GroupPanel.tsx
 msgid "Remove {0} from the group"
 msgstr "Quitar a {0} del grupo"
+
+#. placeholder {0}: accountLabel(removeTarget)
+#: src/pages/AdminOpsPage.tsx
+msgid "Remove {0}?"
+msgstr ""
 
 #: src/components/vault/VaultItemDetail.tsx
 msgid "Remove {secretName}? Bots will no longer be able to use it."
@@ -5694,6 +5594,7 @@ msgid "Removed, but list refresh failed"
 msgstr "Eliminado, pero falló la actualización de la lista"
 
 #: src/components/integrations/plugin-marketplace.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/PluginsOverlay.tsx
 msgid "Removing…"
 msgstr "Quitando…"
@@ -5756,6 +5657,10 @@ msgstr "Respondiendo a {0}"
 msgid "Request a new code"
 msgstr "Solicita un código nuevo"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Request log"
+msgstr ""
+
 #: src/pages/MessagingSettingsPanel.tsx
 msgid "Requests"
 msgstr "Solicitudes"
@@ -5796,6 +5701,11 @@ msgstr "Se reinicia"
 
 #: src/components/SharedKeyUsageMeter.tsx
 msgid "Resets {reset}"
+msgstr ""
+
+#. placeholder {0}: resetCountdown(budget.resetsAt)
+#: src/pages/AdminOpsPage.tsx
+msgid "Resets in {0}"
 msgstr ""
 
 #: src/components/ComputerMaintenanceActions.tsx
@@ -5861,15 +5771,33 @@ msgstr "Reintentar ahora"
 msgid "Retry screen"
 msgstr "Reintentar pantalla"
 
-#. placeholder {0}: call.botName
-#: src/components/call/CallCard.tsx
-msgid "Return to call with {0}"
-msgstr "Volver a la llamada con {0}"
+#. placeholder {0}: money(reverseTarget.amountUsd)
+#. placeholder {1}: nameFor(reverseTarget.toUserId)
+#. placeholder {2}: nameFor(reverseTarget.fromUserId)
+#: src/pages/AdminOpsPage.tsx
+msgid "Return {0} from {1} to {2}."
+msgstr ""
 
 #: src/pages/McpOAuthCallback.tsx
 #: src/pages/SlackInstallCallback.tsx
 msgid "Return to Rakazo"
 msgstr "Volver a Rakazo"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Reverse"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Reverse transfer?"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Reversed"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Reversing…"
+msgstr ""
 
 #: src/lib/model-connection-preflight.ts
 msgid "Review provider settings and test again."
@@ -5886,6 +5814,10 @@ msgstr ""
 
 #: src/components/ComputerProviderSettings.tsx
 msgid "Root filesystem"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Roster"
 msgstr ""
 
 #: src/pages/RoutineEditor.tsx
@@ -5950,6 +5882,10 @@ msgstr "Ejecuciones"
 msgid "Runs when this bot receives a verified message from this provider."
 msgstr "Se ejecuta cuando este bot recibe un mensaje verificado de este proveedor."
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Runtime"
+msgstr ""
+
 #: src/pages/PluginsOverlay.tsx
 msgid "Sales & CRM"
 msgstr "Ventas y CRM"
@@ -5961,6 +5897,10 @@ msgstr "Igual que {botName}"
 #: src/pages/ModelSettingsOverlay.tsx
 msgid "Same as main model"
 msgstr "Igual que el modelo principal"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Sandbox"
+msgstr ""
 
 #: src/lib/cron.ts
 msgid "Saturday"
@@ -5974,6 +5914,7 @@ msgstr "sábado"
 #: src/components/teach/SkillDraftCard.tsx
 #: src/components/vault/VaultItemEditor.tsx
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/Board.tsx
 #: src/pages/ExternalConversationSettings.tsx
 #: src/pages/GroupPanel.tsx
@@ -5987,6 +5928,10 @@ msgstr "sábado"
 #: src/pages/shell/dialogs.tsx
 msgid "Save"
 msgstr "Guardar"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Save monthly shared-key cap?"
+msgstr ""
 
 #: src/components/ComputerMaintenanceActions.tsx
 msgid "Save the workspace and install current software."
@@ -6070,6 +6015,10 @@ msgstr "Pantalla no conectada"
 msgid "Search"
 msgstr "Buscar"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Search accounts"
+msgstr ""
+
 #: src/components/integrations/IntegrationSetup.tsx
 #: src/pages/PluginsOverlay.tsx
 msgid "Search apps"
@@ -6101,6 +6050,10 @@ msgstr "Buscar en integrations.sh"
 #: src/pages/shell/chat-model-picker.tsx
 msgid "Search models"
 msgstr "Buscar modelos"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Search name or email"
+msgstr ""
 
 #: src/pages/shell/shell-sidebar.tsx
 msgid "Search runs"
@@ -6216,7 +6169,7 @@ msgstr "URL del servidor"
 msgid "Set"
 msgstr "Establecer"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 #: src/components/SidebarFooter.tsx
 #: src/pages/MessagingSettingsPanel.tsx
 #: src/pages/SettingsOverlay.tsx
@@ -6269,19 +6222,42 @@ msgstr "Compartir"
 msgid "Share “{title}”"
 msgstr "Compartir «{title}»"
 
+#: src/components/InstallAppSettings.tsx
+msgid "Share → Add to Home Screen"
+msgstr ""
+
 #: src/components/pages/SharePopover.tsx
 msgid "Share, anyone with the link can view"
 msgstr "Compartir, cualquiera con el enlace puede verla"
 
 #: src/components/pages/PagesList.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Shared"
 msgstr "Compartido"
 
+#. placeholder {0}: money(account.sharedKeyCostUsd)
+#: src/pages/AdminOpsPage.tsx
+msgid "Shared {0}"
+msgstr ""
+
 #: src/pages/KnowledgeSection.tsx
 msgid "Shared memory"
 msgstr "Memoria compartida"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Shared week"
+msgstr ""
+
+#. placeholder {0}: accountLabel(account)
+#: src/pages/AdminOpsPage.tsx
+msgid "Shared week usage for {0}"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Shared-key week"
+msgstr ""
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/VaultSettings.tsx
@@ -6489,13 +6465,17 @@ msgstr "Hablar"
 msgid "Speak this reply"
 msgstr "Leer esta respuesta"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Speaking"
 msgstr "Hablando"
 
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Speech model"
 msgstr "Modelo de habla"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Spend"
+msgstr ""
 
 #: src/components/SpendingLimitSettings.tsx
 msgid "Spending limit"
@@ -6556,6 +6536,7 @@ msgstr "Iniciando"
 
 #: src/components/teach/TeachComputerOverlay.tsx
 #: src/lib/roster-status.ts
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/model-settings/connection-controls.tsx
 #: src/pages/Onboarding.tsx
 msgid "Starting…"
@@ -6566,6 +6547,7 @@ msgid "State or region"
 msgstr ""
 
 #: src/pages/ActivityList.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/Board.tsx
 msgid "Status"
 msgstr "Estado"
@@ -6574,6 +6556,7 @@ msgstr "Estado"
 msgid "Steps"
 msgstr "Pasos"
 
+#: src/components/ImpersonationBanner.tsx
 #: src/pages/RoutineEditor.tsx
 #: src/pages/shell/composer.tsx
 #: src/pages/shell/computer-overlay.tsx
@@ -6599,6 +6582,7 @@ msgid "Stopped."
 msgstr "Detenido."
 
 #: src/components/ComputerMaintenanceActions.tsx
+#: src/components/ImpersonationBanner.tsx
 msgid "Stopping…"
 msgstr "Deteniendo…"
 
@@ -6749,6 +6733,10 @@ msgstr "Pruebas"
 msgid "Testing…"
 msgstr "Probando…"
 
+#: src/pages/model-settings/use-model-settings.ts
+msgid "That key is the company shared key. Usage counts toward the shared budget."
+msgstr ""
+
 #: src/pages/shell/composer-error.tsx
 msgid "The bot can use the file but won't see the picture."
 msgstr "El bot puede usar el archivo, pero no verá la imagen."
@@ -6829,7 +6817,7 @@ msgstr "No se puede leer esta configuración guardada. Quítala y vuelve a agreg
 msgid "They get {weeks} weeks free."
 msgstr "Recibe {weeks} semanas gratis."
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 #: src/pages/ModelRoleSettings.tsx
 #: src/pages/RoutineEditor.tsx
 #: src/pages/shell/bot-panel.tsx
@@ -6990,6 +6978,11 @@ msgstr "Este servidor ya está conectado. Desconéctalo primero para autorizarlo
 msgid "This server's tool result does not fit the model. Turn off Keep tool results whole for that server, or choose another model."
 msgstr ""
 
+#. placeholder {0}: money(Number(draft) || 0)
+#: src/pages/AdminOpsPage.tsx
+msgid "This sets the deployment monthly cap for the shared Gemini key to {0}."
+msgstr ""
+
 #: src/pages/model-settings/connection-controls.tsx
 msgid "This subscription sign-in is not available in Rakazo yet. Use a deployment credential or choose another provider."
 msgstr "Este inicio de sesión por suscripción aún no está disponible en Rakazo. Usa una credencial de despliegue o elige otro proveedor."
@@ -7019,6 +7012,7 @@ msgid "Title"
 msgstr "Título"
 
 #: src/pages/ActivityList.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "To"
 msgstr "Hasta"
 
@@ -7045,6 +7039,7 @@ msgid "Toggle sidebar"
 msgstr "Mostrar u ocultar barra lateral"
 
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Tokens"
 msgstr "Tokens"
 
@@ -7074,10 +7069,6 @@ msgstr "Herramientas"
 msgid "Transcribing…"
 msgstr "Transcribiendo…"
 
-#: src/components/call/CallCard.tsx
-msgid "Transcript"
-msgstr "Transcripción"
-
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Transcription model"
 msgstr "Modelo de transcripción"
@@ -7089,6 +7080,35 @@ msgstr "Se agotó el tiempo de la solicitud de transcripción."
 #: src/lib/dictation.ts
 msgid "Transcription response is too large."
 msgstr "La respuesta de la transcripción es demasiado grande."
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Transfer"
+msgstr ""
+
+#. placeholder {0}: money(remaining)
+#. placeholder {1}: accountLabel(transferFrom)
+#. placeholder {2}: accountLabel(transferTo)
+#: src/pages/AdminOpsPage.tsx
+msgid "Transfer {0} from {1} to {2}?"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Transfer unused allotment"
+msgstr ""
+
+#. placeholder {0}: accountLabel(transferFrom)
+#. placeholder {1}: accountLabel(transferTo)
+#: src/pages/AdminOpsPage.tsx
+msgid "Transfer unused allotment from {0} to {1}?"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Transferring…"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Transfers"
+msgstr ""
 
 #: src/pages/ExternalConversationSettings.tsx
 msgid "Treat like a person"
@@ -7169,7 +7189,7 @@ msgstr "Desinstalar"
 msgid "Unlink"
 msgstr "Desvincular"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Unmute"
 msgstr "Activar el sonido"
 
@@ -7394,6 +7414,15 @@ msgstr "Ver todo"
 msgid "View source"
 msgstr "Ver código fuente"
 
+#: src/components/ImpersonationBanner.tsx
+msgid "Viewing as {targetEmail}"
+msgstr ""
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Viewing as {targetName} ({targetEmail})"
+msgstr ""
+
+#: src/components/call/CallStrip.tsx
 #: src/pages/settings-nav.ts
 #: src/pages/shell/bot-panel.tsx
 #: src/pages/SpaceSettingOverrides.tsx
@@ -7459,6 +7488,10 @@ msgstr "Fines de semana"
 msgid "Weekly"
 msgstr "Semanal"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Weekly shared-key pool used"
+msgstr ""
+
 #: src/components/SignupSurvey.tsx
 msgid "Welcome to Rakazo"
 msgstr "Te damos la bienvenida a Rakazo"
@@ -7498,6 +7531,10 @@ msgstr "Qué devolver"
 #: src/pages/RoutineEditor.tsx
 msgid "What to watch"
 msgstr "Qué observar"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "When"
+msgstr ""
 
 #: src/pages/RoutineEditor.tsx
 msgid "When a webhook fires"

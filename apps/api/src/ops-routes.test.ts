@@ -172,7 +172,9 @@ describe("ops dashboard routes", () => {
     expect(overview.accounts).toEqual([]);
     // Env fallback (50) when DB has no override.
     expect(overview.sharedKeyBudget.monthlyCapUsd).toBe(50);
-    expect(overview.sharedKeyBudget.rosterConfigured).toBe(false);
+    expect(overview.sharedKeyBudget.weekPoolUsd).toBe(12.5);
+    expect(overview.sharedKeyBudget.weekSpentUsd).toBe(0);
+    expect(overview.sharedKeyBudget.rosterConfigured).toBe(true);
     expect(overview.agents.total).toBe(0);
   });
 

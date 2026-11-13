@@ -1439,6 +1439,10 @@ export const OpsOverviewSchema = z.object({
     monthlyCapUsd: z.number().nullable(),
     rosterConfigured: z.boolean(),
     memberCount: z.number().int().nonnegative(),
+    /** monthlyCap / 4 when a cap is set; null when unconfigured. */
+    weekPoolUsd: z.number().nullable(),
+    /** Sum of roster members' shared-key spend in the current week window. */
+    weekSpentUsd: z.number().nonnegative(),
     weekStartsAt: z.string(),
     resetsAt: z.string(),
     timezone: z.literal("America/New_York"),

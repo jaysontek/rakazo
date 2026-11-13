@@ -23,6 +23,7 @@ import {
   loadOpsChatLog,
   loadOpsOverview,
 } from "../ops-dashboard.js";
+import { syncSharedKeyBudgetFromKeys } from "../shared-key-budget-sync.js";
 import type { RouterContext } from "./context.js";
 import { meDto } from "./shared.js";
 
@@ -57,6 +58,14 @@ export function opsRoutes(ctx: RouterContext) {
     ops: {
       overview: authed.ops.overview.handler(async ({ context }) => {
         await gate(context);
+        // Refresh roster from live key classification before the snapshot so
+        // company-key users appear on the budget without waiting for a restart.
+        if (deps.secrets) {
+          await syncSharedKeyBudgetFromKeys(deps.prisma, deps.secrets, {
+            explicitUserIds: deps.env?.sharedKeyBudgetUserIds ?? [],
+            deploymentSharedKey: sharedGoogleApiKey(),
+          });
+        }
         const secretsDegraded = deps.secrets?.describe().capabilities.degraded === true;
         return loadOpsOverview(
           deps.prisma,

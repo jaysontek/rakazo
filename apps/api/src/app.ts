@@ -140,7 +140,6 @@ import {
   parsePositiveInteger,
   provisionMessagingIdentity,
   pushSessionExpiresAt,
-  reconcileSharedKeyBudgetMembers,
   requireMembership,
   rowSecurityWarning,
   runAsSystem,
@@ -209,6 +208,7 @@ import { createRouter } from "./router.js";
 import { mountScreenTarget } from "./screen-proxy.js";
 import { mountScriptAssets } from "./script-assets.js";
 import { createAuthResponseAudit } from "./security-audit.js";
+import { syncSharedKeyBudgetFromKeys } from "./shared-key-budget-sync.js";
 import { mountSharedPages } from "./shared-pages.js";
 import { createSpeechSummarizer } from "./speech-summary.js";
 import { isDeferredReservationLost, TeamChatBridge } from "./team-chat-bridge.js";
@@ -530,11 +530,14 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
       ...(seedSharedKeyBudget ? { sharedKeyMonthlyBudgetUsd: env.sharedKeyMonthlyBudgetUsd } : {}),
     },
   });
-  // When the env list is set, make the member table match it (add/remove + re-divide).
-  // Leave the table alone when the variable is unset so SQL/admin edits survive restarts.
-  if (process.env.SHARED_KEY_BUDGET_USER_IDS !== undefined) {
-    await reconcileSharedKeyBudgetMembers(prisma, env.sharedKeyBudgetUserIds);
-  }
+  // Roster = company-key users ∪ SHARED_KEY_BUDGET_USER_IDS (explicit include).
+  // Personal-key users stay off unless explicitly listed. Always sync so newly
+  // detected company keys join the budget without a redeploy of the env list.
+  await syncSharedKeyBudgetFromKeys(prisma, secrets, {
+    explicitUserIds: env.sharedKeyBudgetUserIds,
+    deploymentSharedKey:
+      env.defaultProvider === "google" ? (env.deploymentModelKey ?? null) : null,
+  });
   const installed = new InstalledConnectorProvider(
     prisma,
     secrets,

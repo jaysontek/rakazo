@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   formatSharedKeyBudgetResetAt,
   fullWeekShareUsd,
+  midWeekJoinFraction,
   parseSharedKeyMonthlyBudgetInput,
   redivideWeeklyAllotments,
   SHARED_KEY_BUDGET_TIMEZONE,
   sharedKeyBudgetPercentUsed,
+  sharedKeySpendWindowStart,
   sharedKeyWeekEnd,
   sharedKeyWeekStart,
   weekFractionRemaining,
@@ -175,11 +177,54 @@ describe("shared-key weekly budget math", () => {
       ]),
       rebaseOnMonthlyCap: true,
     });
-    // 200 / 3 / 4; mid-week joiner c is pro-rated by remaining fraction.
+    // 200 / 3 / 4; mid-week joiner c is pro-rated by join-time remaining fraction.
     const fullShare = fullWeekShareUsd(200, 3);
     expect(allotments.get("a")).toBeCloseTo(fullShare, 5);
     expect(allotments.get("b")).toBeCloseTo(fullShare, 5);
-    expect(allotments.get("c")).toBeCloseTo(fullShare * weekFractionRemaining(now, weekStart), 5);
+    expect(allotments.get("c")).toBeCloseTo(fullShare * midWeekJoinFraction(now, weekStart), 5);
+  });
+
+  it("freezes mid-week join pro-rate at join time across later cap re-bases", () => {
+    const weekStart = new Date("2026-11-02T05:00:00.000Z");
+    const joinedAt = new Date("2026-11-05T17:00:00.000Z"); // ~50% of week left
+    const laterSave = new Date("2026-11-08T05:00:00.000Z"); // ~14% left
+    expect(midWeekJoinFraction(joinedAt, weekStart)).toBeCloseTo(0.5, 1);
+    expect(weekFractionRemaining(laterSave, weekStart)).toBeLessThan(0.25);
+
+    const allotments = redivideWeeklyAllotments({
+      monthlyCapUsd: 400,
+      members: [
+        { userId: "a", joinedAt: weekStart },
+        { userId: "c", joinedAt },
+      ],
+      weekStart,
+      now: laterSave,
+      previousAllotments: new Map([
+        ["a", 50],
+        ["c", 25],
+      ]),
+      spentByUser: new Map([
+        ["a", 10],
+        ["c", 5],
+      ]),
+      rebaseOnMonthlyCap: true,
+    });
+    const fullShare = fullWeekShareUsd(400, 2);
+    // Must keep the join-time half-week slice, not shrink to laterSave's remainder.
+    expect(allotments.get("c")).toBeCloseTo(fullShare * midWeekJoinFraction(joinedAt, weekStart), 5);
+    expect(allotments.get("c")).toBeGreaterThan(fullShare * weekFractionRemaining(laterSave, weekStart));
+    expect(allotments.get("a")).toBeCloseTo(fullShare, 5);
+  });
+
+  it("starts the spend window at join time for mid-week members", () => {
+    const weekStart = new Date("2026-11-02T05:00:00.000Z");
+    const joinedAt = new Date("2026-11-05T17:00:00.000Z");
+    expect(sharedKeySpendWindowStart(weekStart, weekStart).toISOString()).toBe(
+      weekStart.toISOString(),
+    );
+    expect(sharedKeySpendWindowStart(weekStart, joinedAt).toISOString()).toBe(
+      joinedAt.toISOString(),
+    );
   });
 
   it("ends the week at the next America/New_York Monday, not a fixed 7*24h", () => {

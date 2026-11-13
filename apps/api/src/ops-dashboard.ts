@@ -104,6 +104,8 @@ export type OpsOverview = {
     monthlyCapUsd: number | null;
     rosterConfigured: boolean;
     memberCount: number;
+    weekPoolUsd: number | null;
+    weekSpentUsd: number;
     weekStartsAt: string;
     resetsAt: string;
     timezone: "America/New_York";
@@ -398,6 +400,10 @@ export async function loadOpsOverview(
 
     const sharedKeyCostUsd = accounts.reduce((sum, row) => sum + row.sharedKeyCostUsd, 0);
     const personalKeyCostUsd = accounts.reduce((sum, row) => sum + row.personalKeyCostUsd, 0);
+    const weekSpentUsd = accounts.reduce(
+      (sum, row) => sum + (row.sharedKeyBudget?.member ? row.sharedKeyBudget.spentUsd : 0),
+      0,
+    );
     const budgetWindow = {
       weekStartsAt: weekStart.toISOString(),
       resetsAt: sharedKeyWeekEnd(weekStart).toISOString(),
@@ -422,8 +428,10 @@ export async function loadOpsOverview(
       },
       sharedKeyBudget: {
         monthlyCapUsd: monthlyCap,
-        rosterConfigured: members.length > 0,
+        rosterConfigured: members.length > 0 || monthlyCap != null,
         memberCount: members.length,
+        weekPoolUsd: monthlyCap != null && monthlyCap > 0 ? monthlyCap / 4 : null,
+        weekSpentUsd,
         weekStartsAt: budgetWindow.weekStartsAt,
         resetsAt: budgetWindow.resetsAt,
         timezone: "America/New_York",

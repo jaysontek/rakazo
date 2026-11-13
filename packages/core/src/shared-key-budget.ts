@@ -32,6 +32,25 @@ export function weekFractionRemaining(now: Date, weekStart: Date): number {
   return Math.min(1, Math.max(0, (end - now.getTime()) / total));
 }
 
+/**
+ * Lower bound for shared-key spend counted against a member's weekly allotment.
+ * Mid-week joiners are only charged for usage at/after `joinedAt`, so pre-join company-key
+ * spend (from before they were enrolled) cannot instantly exhaust a pro-rated slice.
+ */
+export function sharedKeySpendWindowStart(weekStart: Date, joinedAt: Date): Date {
+  return joinedAt.getTime() > weekStart.getTime() ? joinedAt : weekStart;
+}
+
+/**
+ * Pro-rate fraction for a mid-week joiner, frozen at their join instant.
+ * Cap re-bases and later membership syncs must reuse this — never `weekFractionRemaining(now)` —
+ * or each later save would shrink the same joiner's slice toward zero.
+ */
+export function midWeekJoinFraction(joinedAt: Date, weekStart: Date): number {
+  if (joinedAt.getTime() <= weekStart.getTime()) return 1;
+  return weekFractionRemaining(joinedAt, weekStart);
+}
+
 export type SharedKeyBudgetMember = { userId: string; joinedAt: Date };
 
 /**
@@ -41,13 +60,16 @@ export type SharedKeyBudgetMember = { userId: string; joinedAt: Date };
  *   allotments when redistributing mid-week (including unused remainder from removed users).
  * - That remaining pool is split evenly across the current member set.
  * - A member who joined after this week's start and has no prior allotment is capped at
- *   (full-week share) × (fraction of week remaining), not a full share.
+ *   (full-week share) × (fraction of week remaining at join time), not a full share and not
+ *   the fraction remaining at the current recompute instant.
  * - Continuing members keep spent + reserved committed; their new allotment is
  *   spent + reserved + evenRemaining so in-flight holds are not redistributed.
  * - When `rebaseOnMonthlyCap` is set (admin changed the monthly cap), ignore prior
  *   allotment rows and assign monthlyCap/4/n afresh so raising the cap unblocks this week
- *   and lowering it tightens it. Mid-week joiners are still pro-rated the same way as a
- *   fresh week. reservedUsd is preserved by the caller on the allotment row.
+ *   and lowering it tightens it. Mid-week joiners stay pro-rated by join time (not save time).
+ *   reservedUsd is preserved by the caller on the allotment row.
+ * - Callers must pass `spentByUser` as spend inside each member's
+ *   {@link sharedKeySpendWindowStart} window so mid-week join allotments stay pool-conserving.
  */
 export function redivideWeeklyAllotments(args: {
   monthlyCapUsd: number;
@@ -64,7 +86,6 @@ export function redivideWeeklyAllotments(args: {
     monthlyCapUsd,
     members,
     weekStart,
-    now,
     previousAllotments,
     spentByUser,
     reservedByUser = new Map(),
@@ -76,7 +97,6 @@ export function redivideWeeklyAllotments(args: {
 
   const weekPool = monthlyCapUsd / 4;
   const fullShare = weekPool / n;
-  const fraction = weekFractionRemaining(now, weekStart);
 
   // Fresh week (no prior allotments) or admin rebased the monthly cap: each member gets an
   // even full-week share of the (new) cap. Spend and reserved are counted separately against
@@ -86,7 +106,7 @@ export function redivideWeeklyAllotments(args: {
       const midWeekJoin = member.joinedAt.getTime() > weekStart.getTime();
       result.set(
         member.userId,
-        midWeekJoin ? fullShare * weekFractionRemaining(now, weekStart) : fullShare,
+        midWeekJoin ? fullShare * midWeekJoinFraction(member.joinedAt, weekStart) : fullShare,
       );
     }
     return result;
@@ -109,7 +129,7 @@ export function redivideWeeklyAllotments(args: {
     const midWeekJoin =
       member.joinedAt.getTime() > weekStart.getTime() && !previousAllotments.has(member.userId);
     if (midWeekJoin) {
-      const proportional = fullShare * fraction;
+      const proportional = fullShare * midWeekJoinFraction(member.joinedAt, weekStart);
       const slice = Math.min(evenRemaining, proportional);
       surplus += evenRemaining - slice;
       result.set(member.userId, slice);
