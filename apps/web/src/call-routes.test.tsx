@@ -32,6 +32,12 @@ vi.mock("@rakazo/ui-web", () => ({
   Button: ({ children, ...props }: { children: ReactNode }) => (
     <button {...props}>{children}</button>
   ),
+  NativeSelect: ({ children, ...props }: { children: ReactNode }) => (
+    <select {...props}>{children}</select>
+  ),
+  NativeSelectOption: ({ children, ...props }: { children: ReactNode }) => (
+    <option {...props}>{children}</option>
+  ),
 }));
 vi.mock("@rakazo/core", async (importOriginal) => ({
   ...(await importOriginal<typeof CoreModule>()),
@@ -62,7 +68,17 @@ vi.mock("./lib/rpc", () => {
   const client = {
     me: mocks.me,
     bots: { list: mocks.listBots },
-    voice: { status: mocks.voiceStatus },
+    voice: {
+      status: mocks.voiceStatus,
+      voices: vi.fn(async () => []),
+      setVoice: vi.fn(async (input: { voiceId: string }) => ({
+        ready: true,
+        configured: true,
+        transcribe: false,
+        provider: "scripted",
+        voiceId: input.voiceId,
+      })),
+    },
   };
   return {
     clearSpaceSelection: vi.fn(),
@@ -137,7 +153,13 @@ beforeEach(() => {
   mocks.bots = [];
   mocks.me.mockImplementation(async () => ({ phoneCallsEnabled: true }));
   mocks.listBots.mockImplementation(async () => mocks.bots);
-  mocks.voiceStatus.mockImplementation(async () => ({ ready: true, transcribe: false }));
+  mocks.voiceStatus.mockImplementation(async () => ({
+    ready: true,
+    configured: true,
+    transcribe: false,
+    provider: "scripted",
+    voiceId: "voice-1",
+  }));
   mocks.endCall.mockResolvedValue(undefined);
   mocks.declineIncomingCall.mockResolvedValue({ ok: true });
   container = document.createElement("div");
@@ -155,16 +177,12 @@ afterEach(async () => {
 it("keeps an ongoing call in reach after leaving the shell", async () => {
   startCall({ botId: "bot-1", botName: "Test bot" });
   await render("/app/bot-1");
+  // On the matching bot route the composer hosts the strip; leave the shell to see the dock.
   await act(async () => find('a[href="/app/artifacts"]')?.click());
   await settle();
   expect(container.textContent).toContain("Artifacts page");
   expect(find('[data-testid="call-view"]')).not.toBeNull();
   expect(button("Mute")).not.toBeNull();
-
-  await act(async () => button("Minimize call")?.click());
-  expect(find('[data-testid="call-view"]')).toBeNull();
-  await act(async () => find('[data-testid="call-return-bar"]')?.click());
-  expect(find('[data-testid="call-view"]')).not.toBeNull();
 
   await act(async () => button("Hang up")?.click());
   await settle();

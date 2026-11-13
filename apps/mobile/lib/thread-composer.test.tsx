@@ -208,10 +208,27 @@ vi.mock("../components/bot-avatar", () => ({
     createElement("span", { "data-avatar": identity, "data-size": size }),
 }));
 vi.mock("./native", () => ({
-  useMobileTokens: () => ({ link: "token-link" }),
+  useMobileTokens: () => ({
+    link: "token-link",
+    card: "card",
+    border: "border",
+    primary: "primary",
+    primaryForeground: "primaryForeground",
+    muted: "muted",
+    mutedForeground: "mutedForeground",
+    foreground: "foreground",
+    faintForeground: "faint",
+  }),
   useResolvedAppearance: () => "light",
 }));
 vi.mock("./i18n", () => ({ useI18n: () => ({ t: (text: string) => text }) }));
+vi.mock("expo-router", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("./call-session", () => ({ useCallSession: () => null }));
+vi.mock("../components/CallCard", () => ({
+  CallStripBody: () => createElement("div", { "data-testid": "call-view" }),
+  useCallUserInitial: () => "Y",
+}));
+vi.mock("../components/call-voice-picker", () => ({ CallVoicePicker: () => null }));
 
 const skill = {
   id: "skill-1",
@@ -806,14 +823,24 @@ describe("thread composer isolation", () => {
     expect(composer.current!.snapshot().mentions).toEqual([bot]);
   });
 
-  it("types 20 characters without rendering the parent and sends the latest ref snapshot", () => {
+  it("types 20 characters without rendering the parent and swaps Call for Send", () => {
     const mounted = threadRenders;
+    expect(container.querySelector('button[aria-label="Call"]')).not.toBeNull();
+    expect(container.querySelector('button[aria-label="Send"]')).toBeNull();
     const text = "abcdefghijklmnopqrst";
     for (let length = 1; length <= text.length; length += 1) type(text.slice(0, length));
     expect(threadRenders - mounted).toBe(0);
     expect(container.querySelector("input")!.value).toBe(text);
     expect(composer.current!.snapshot().promptText).toBe(text);
+    // Call occupies the empty slot; a draft brings Send back so sending is not Enter-only.
+    expect(container.querySelector('button[aria-label="Call"]')).toBeNull();
+    expect(container.querySelector('button[aria-label="Send"]')).not.toBeNull();
+  });
+
+  it("sends a typed 1:1 message with the Send control", async () => {
+    type("hello from mobile");
     press("Send");
+    await act(async () => {});
     expect(props.send).toHaveBeenCalledOnce();
   });
 
@@ -1158,7 +1185,7 @@ describe("thread composer isolation", () => {
     expect(composer.current!.snapshot().skill).toBeNull();
   });
 
-  it("clears a slash query before routing and uses the call control for an empty draft", () => {
+  it("clears a slash query before routing and keeps Call in the empty slot", () => {
     type("/settings");
     press("Chat Settings");
     expect(props.onSlashAction).toHaveBeenCalledWith("chat-settings");
@@ -1166,6 +1193,11 @@ describe("thread composer isolation", () => {
     expect(container.querySelector('[data-testid="slash-picker"]')).toBeNull();
     press("Call");
     expect(props.startVoiceCall).toHaveBeenCalledOnce();
+    expect(container.querySelector('button[aria-label="Call"]')).not.toBeNull();
+    expect(container.querySelector('button[aria-label="Send"]')).toBeNull();
+    type("Hello");
+    expect(container.querySelector('button[aria-label="Call"]')).toBeNull();
+    expect(container.querySelector('button[aria-label="Send"]')).not.toBeNull();
   });
 
   it("focuses the input when its padding wrapper is pressed without adding an accessibility stop", () => {
@@ -1204,10 +1236,11 @@ describe("thread composer isolation", () => {
     },
   );
 
-  it("insets the call and send pills equally from the capsule's bottom and trailing edges", () => {
+  it("insets the call or send pill equally from the capsule's bottom and trailing edges", () => {
     const style = (element: Element) => JSON.parse((element as HTMLElement).dataset.style!);
-    for (const label of ["Call", "Send"]) {
-      if (label === "Send") type("Hello");
+    for (const draft of ["", "Hello"]) {
+      type(draft);
+      const label = draft ? "Send" : "Call";
       const button = container.querySelector(`button[aria-label="${label}"]`)!;
       const pill = style(button.querySelector("[data-glass]")!);
       const capsule = style(button.closest('[data-glass="roundedRectangle"]')!);
@@ -1217,15 +1250,12 @@ describe("thread composer isolation", () => {
     }
   });
 
-  it("keeps right-to-left text clear of the call and send pills", () => {
+  it("keeps right-to-left text clear of the call or send pill", () => {
     const style = (element: Element) => JSON.parse((element as HTMLElement).dataset.style!);
     // Right-to-left text runs up to the field's trailing edge, right next to the pill.
-    for (const [label, draft] of [
-      ["Call", ""],
-      ["Send", "אבג"],
-      ["Send", "مرحبا\nبالعالم"],
-    ] as const) {
+    for (const draft of ["", "אבג", "مرحبا\nبالعالم"]) {
       type(draft);
+      const label = draft ? "Send" : "Call";
       const button = container.querySelector(`button[aria-label="${label}"]`)!;
       const capsule = style(button.closest('[data-glass="roundedRectangle"]')!);
       expect(capsule.gap).toBe(capsule.paddingEnd);

@@ -2,7 +2,7 @@ import type { Bot } from "@rakazo/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { Outlet, useNavigate } from "react-router-dom";
 import { useSpaceQueries } from "../../lib/query";
-import { CallCard, CallReturnBar } from "./CallCard";
+import { CallCard } from "./CallCard";
 import { IncomingCall } from "./IncomingCall";
 
 const NO_BOTS: Bot[] = [];
@@ -28,7 +28,6 @@ export function CallLayout() {
   }).data;
   return (
     <div className="flex h-full flex-col">
-      <CallReturnBar />
       <div className="min-h-0 flex-1">
         <Outlet />
       </div>
