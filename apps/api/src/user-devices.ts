@@ -63,15 +63,19 @@ async function revokeDevice(
  * in moves the caller's computers to the replacing session. A computer paired before sessions were
  * recorded is tied to none, so it ends only once the user has no sign-in left; its desktop app ties
  * it to its own sign-in when it next connects.
+ *
+ * When `ended.impersonatedBy` is set, the deleted row's `userId` is the target — revoke only
+ * devices the admin (`impersonatedBy`) paired on this session, and never the target's legacy
+ * `sessionId: null` computers.
  */
 export async function endUserDeviceSession(
   store: DeviceStore,
-  ended: { id: string; userId: string },
+  ended: { id: string; userId: string; impersonatedBy?: string | null },
   next?: { id: string },
 ) {
   const { prisma } = store;
-  const { userId } = ended;
   if (next) {
+    const { userId } = ended;
     await runAsSystem("move user devices to a new session", () =>
       prisma.userDevice.updateMany({
         where: { userId, sessionId: ended.id, revokedAt: null },
@@ -80,6 +84,19 @@ export async function endUserDeviceSession(
     );
     return;
   }
+  if (ended.impersonatedBy) {
+    const adminUserId = ended.impersonatedBy;
+    const devices = await runAsSystem("find the admin's devices on an impersonated session", () =>
+      prisma.userDevice.findMany({
+        where: { userId: adminUserId, sessionId: ended.id, revokedAt: null },
+        select: { id: true, sessionId: true },
+      }),
+    );
+    for (const device of devices)
+      await revokeDevice(store, device.id, adminUserId, "session", device.sessionId);
+    return;
+  }
+  const { userId } = ended;
   const signedIn = await runAsSystem("check for a user's remaining sign-ins", () =>
     prisma.session.findFirst({
       where: { userId, expiresAt: { gt: new Date() } },

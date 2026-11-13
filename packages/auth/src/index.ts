@@ -96,7 +96,25 @@ export interface AuthEnv {
   directoryProvisioning?: boolean;
 }
 
-type AuthSession = { id: string; userId: string };
+type AuthSession = { id: string; userId: string; impersonatedBy?: string | null };
+
+/** True when the request presents a session cookie or signed bearer. */
+function requestCarriesSessionCredential(ctx: {
+  headers?: Headers | { get?: (name: string) => string | null };
+}): boolean {
+  const get = ctx.headers?.get?.bind(ctx.headers);
+  if (!get) return false;
+  const authorization = get("authorization");
+  if (authorization && /^bearer\s+\S+/i.test(authorization)) return true;
+  const cookie = get("cookie");
+  if (
+    cookie &&
+    /(?:^|;\s*)(?:__Secure-)?better-auth\.session_token=/.test(cookie)
+  ) {
+    return true;
+  }
+  return false;
+}
 
 const SEND_SIGN_IN_CODE_PATH = "/email-otp/send-verification-otp";
 const CODE_SIGN_IN_PATH = "/sign-in/email-otp";
@@ -442,27 +460,31 @@ export function createAuth(prisma: PrismaClient, env: AuthEnv) {
         // etc.) stay closed. Only session read and sign-out remain; stop uses our RPC.
         const impersonationAllowedAuth = new Set(["/get-session", "/sign-out"]);
         if (ctx.path && !impersonationAllowedAuth.has(ctx.path) && prisma.session?.findUnique) {
-          const hooked = await sessionForAuthHook(ctx).catch(() => null);
+          const denyImpersonationReadOnly = () => {
+            throw new APIError("FORBIDDEN", {
+              message: "Not allowed while impersonating",
+              code: "IMPERSONATION_READ_ONLY",
+            });
+          };
+          let hooked: Awaited<ReturnType<typeof sessionForAuthHook>> | null;
+          try {
+            hooked = await sessionForAuthHook(ctx);
+          } catch {
+            // Fail closed when a credential was presented: do not skip the guard.
+            if (requestCarriesSessionCredential(ctx)) denyImpersonationReadOnly();
+            hooked = null;
+          }
           const sessionId = hooked?.session?.id;
           if (sessionId) {
-            let row: { impersonatedBy: string | null } | null;
             try {
-              row = await prisma.session.findUnique({
+              const row = await prisma.session.findUnique({
                 where: { id: sessionId },
                 select: { impersonatedBy: true },
               });
-            } catch {
-              // Fail closed: a lookup error must not open mutations while possibly impersonating.
-              throw new APIError("FORBIDDEN", {
-                message: "Not allowed while impersonating",
-                code: "IMPERSONATION_READ_ONLY",
-              });
-            }
-            if (row?.impersonatedBy) {
-              throw new APIError("FORBIDDEN", {
-                message: "Not allowed while impersonating",
-                code: "IMPERSONATION_READ_ONLY",
-              });
+              if (row?.impersonatedBy) denyImpersonationReadOnly();
+            } catch (error) {
+              if (error instanceof APIError) throw error;
+              denyImpersonationReadOnly();
             }
           }
         }
@@ -832,8 +854,11 @@ export function createAuth(prisma: PrismaClient, env: AuthEnv) {
             if (!row?.impersonatedBy) return;
             const adminUserId = row.impersonatedBy;
             const targetUserId = row.userId;
+            // Stash for afterDeleteSession: the deleted row's userId is the target.
+            (session as AuthSession).impersonatedBy = adminUserId;
             const now = new Date();
             await Promise.all([
+              // Push registered while viewing as the target is keyed by the target.
               prisma.pushToken.deleteMany({ where: { userId: targetUserId, sessionId: session.id } }),
               prisma.webPushSubscription.deleteMany({
                 where: { userId: targetUserId, sessionId: session.id },
@@ -841,8 +866,9 @@ export function createAuth(prisma: PrismaClient, env: AuthEnv) {
               prisma.callPushDevice.deleteMany({
                 where: { userId: targetUserId, sessionId: session.id },
               }),
+              // Desktops paired on this session belong to the admin (pre-impersonation).
               prisma.userDevice.updateMany({
-                where: { userId: targetUserId, sessionId: session.id, revokedAt: null },
+                where: { userId: adminUserId, sessionId: session.id, revokedAt: null },
                 data: { revokedAt: now, revokedBy: "session" },
               }),
             ]);
@@ -866,7 +892,9 @@ export function createAuth(prisma: PrismaClient, env: AuthEnv) {
                 metadata: { via: ctx.path },
               });
             }
-            if (replacedSession(ctx)?.id !== session.id) await env.afterDeleteSession?.(session);
+            if (replacedSession(ctx)?.id !== session.id) {
+              await env.afterDeleteSession?.(session as AuthSession);
+            }
           },
         },
       },

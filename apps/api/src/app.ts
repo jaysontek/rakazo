@@ -695,6 +695,8 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
       await webPushSubscriptions
         .endSession(session.userId, session.id)
         .catch((error) => getLogger().error("web push removal failed", error));
+      // Impersonated sign-out: session.userId is the target — pass impersonatedBy so we
+      // revoke the admin's session-bound desktops and leave the target's legacy ones alone.
       await endUserDeviceSession(deviceSessions, session).catch((error) =>
         getLogger().error("user device revocation failed", error),
       );
