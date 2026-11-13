@@ -936,6 +936,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
       ticketBoardEnabled,
       navLinks: env.navLinks,
       adminEmails: env.adminEmails,
+      opsDashboardAllowlist: env.opsDashboardAllowlist,
       maxUploadSizeBytes: env.maxUploadSizeBytes,
       maxAttachmentsPerMessage: env.maxAttachmentsPerMessage,
       agentRuntime: env.agentRuntime,
@@ -1156,6 +1157,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
         actor,
         sessionId: session?.sessionId,
         signal: c.req.raw.signal,
+        clientIp: requestClientIp(c),
         // Same user in the same space, so leaving the space also ends a stream.
         // A database failure rejects this check; only a missing membership is unauthorized.
         stillAuthorized: async () => {

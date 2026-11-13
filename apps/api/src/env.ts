@@ -33,6 +33,7 @@ import {
   uploadSizeFromEnv,
 } from "@rakazo/core";
 import { monitoringPseudonymSecret } from "@rakazo/logging";
+import { parseOpsDashboardAllowlist } from "./ops-allowlist.js";
 
 export { resolveCloudAgentProvider, resolveSandboxProvider } from "@rakazo/adapters";
 
@@ -78,6 +79,11 @@ export interface AppEnv {
   /** Verified accounts that review plugin submissions, add stdio MCP servers, and grant access
    * (RAKAZO_ADMIN_EMAILS), lowercased. */
   adminEmails: string[];
+  /**
+   * LAN CIDR/IP allowlist for the admin operations dashboard (OPS_DASHBOARD_ALLOWLIST).
+   * Loopback is always allowed in addition to these entries.
+   */
+  opsDashboardAllowlist: string[];
   phoneCallsEnabled: boolean;
   phoneCallRingSeconds: number;
   phoneCallCooldownMinutes: number;
@@ -276,6 +282,7 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
     userDevicesEnabled: source.USER_DEVICES_ENABLED !== "false",
     navLinks: parseNavLinks(source.RAKAZO_NAV_LINKS),
     adminEmails: list(source.RAKAZO_ADMIN_EMAILS).map((email) => email.toLowerCase()),
+    opsDashboardAllowlist: parseOpsDashboardAllowlist(source.OPS_DASHBOARD_ALLOWLIST),
     ...phoneCallSettings(source),
     maxUploadSizeBytes: uploadSizeFromEnv(source),
     maxAttachmentsPerMessage: attachmentCountFromEnv(source),
@@ -295,9 +302,7 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
     deploymentModelKey: deploymentModel.key,
     deploymentModelConfigured: deploymentModel.configured,
     deploymentModelHostCredentials: deploymentModel.hostCredentials,
-    sharedKeyMonthlyBudgetUsd: parseSharedKeyMonthlyBudgetUsd(
-      source.SHARED_KEY_MONTHLY_BUDGET_USD,
-    ),
+    sharedKeyMonthlyBudgetUsd: parseSharedKeyMonthlyBudgetUsd(source.SHARED_KEY_MONTHLY_BUDGET_USD),
     sharedKeyBudgetUserIds: parseSharedKeyBudgetUserIds(source.SHARED_KEY_BUDGET_USER_IDS),
     e2bApiKey: source.E2B_API_KEY,
     novitaApiKey: source.NOVITA_API_KEY,

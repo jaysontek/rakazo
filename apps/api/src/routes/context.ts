@@ -81,6 +81,8 @@ export function createRouterContext(deps: RouterDeps) {
     /** The signed-in session, so a push token ends with the session that registered it. */
     sessionId?: string;
     signal?: AbortSignal;
+    /** Resolved client IP from the request (for LAN-gated admin surfaces). */
+    clientIp?: string;
     /** Re-runs the request's auth so a long-lived stream notices sign-out and revocation. */
     stillAuthorized?: () => Promise<boolean>;
   }>();

@@ -115,6 +115,10 @@ import {
   ModelCreditAmountSchema,
   ModelOAuthBeginSchema,
   OPENAI_COMPATIBLE_PROVIDER_ID,
+  OpsAgentSchema,
+  OpsChatLogSchema,
+  OpsOverviewSchema,
+  OpsRequestLogRowSchema,
   PluginMarketplaceCatalogSchema,
   PluginPartSchema,
   PluginPreviewSchema,
@@ -1366,6 +1370,39 @@ export const appContract = {
   usage: {
     list: oc.output(z.array(UsageRecordSchema)),
     summary: oc.output(UsageSummarySchema),
+  },
+  /**
+   * Self-hosted LAN admin operations dashboard. Every procedure requires a verified
+   * admin account and a client IP on OPS_DASHBOARD_ALLOWLIST (loopback always allowed).
+   */
+  ops: {
+    overview: oc.output(OpsOverviewSchema),
+    agents: oc.output(z.array(OpsAgentSchema)),
+    requestLog: oc
+      .input(
+        z
+          .object({
+            userId: Id.optional(),
+            before: z.string().optional(),
+            limit: z.number().int().min(1).max(100).optional(),
+          })
+          .optional(),
+      )
+      .output(z.array(OpsRequestLogRowSchema)),
+    chatLog: oc
+      .input(
+        z
+          .object({
+            runId: Id.optional(),
+            threadId: Id.optional(),
+            before: z.string().optional(),
+            limit: z.number().int().min(1).max(200).optional(),
+          })
+          .refine((value) => Boolean(value.runId || value.threadId), {
+            message: "runId or threadId required",
+          }),
+      )
+      .output(OpsChatLogSchema),
   },
   export: {
     bot: oc.input(botId).output(ExportManifestSchema),
