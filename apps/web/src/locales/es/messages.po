@@ -17,6 +17,314 @@ msgstr ""
 msgid " (unread)"
 msgstr " (sin leer)"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Accounts"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Actions"
+msgstr ""
+
+#: src/components/InstallAppSettings.tsx
+msgid "Add to Home Screen"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Admins"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Agents"
+msgstr ""
+
+#: src/components/InstallAppSettings.tsx
+msgid "App"
+msgstr ""
+
+#: src/components/WebPushSettings.tsx
+msgid "Background alerts"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Cap unset"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Chat log"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Choose a destination on the roster."
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Company"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Company key (not on budget roster)"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not add admin"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not impersonate"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not remove admin"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not reverse transfer"
+msgstr ""
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Could not stop impersonation"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not transfer allotment"
+msgstr ""
+
+#: src/components/WebPushSettings.tsx
+msgid "Couldn't update notifications"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Database"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Degraded"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Env"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Errors"
+msgstr ""
+
+#. placeholder {0}: accountLabel(addCandidate)
+#: src/pages/AdminOpsPage.tsx
+msgid "Grant admin to {0}?"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Hard-stopped"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Health"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Impersonate"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Impersonate {0}?"
+msgstr ""
+
+#: src/components/InstallAppSettings.tsx
+msgid "Install"
+msgstr ""
+
+#: src/components/InstallAppSettings.tsx
+msgid "Install app"
+msgstr ""
+
+#: src/components/WebPushSettings.tsx
+msgid "Install the app first to enable alerts on this device."
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Key"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Kind"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Median first response"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Median total"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Monthly cap"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "No messages for this selection."
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "None this week."
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Not configured"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Not on roster"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "OK"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Operations"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "p95 first response"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Performance"
+msgstr ""
+
+#. placeholder {0}: money(account.personalKeyCostUsd)
+#: src/pages/AdminOpsPage.tsx
+msgid "Personal {0}"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Personal-key spend"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Remove {0}?"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Request log"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Return {0} from {1} to {2}."
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Reverse"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Reverse transfer?"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Reversed"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Reversing…"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Roster"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Runtime"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Sandbox"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Save monthly shared-key cap?"
+msgstr ""
+
+#: src/components/InstallAppSettings.tsx
+msgid "Share → Add to Home Screen"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Shared week"
+msgstr ""
+
+#. placeholder {0}: money(account.sharedKeyCostUsd)
+#: src/pages/AdminOpsPage.tsx
+msgid "Shared {0}"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Shared-key spend"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Shared-key week"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Spend"
+msgstr ""
+
+#: src/pages/model-settings/use-model-settings.ts
+msgid "That key is the company shared key. Usage counts toward the shared budget."
+msgstr ""
+
+#. placeholder {0}: money(Number(draft) || 0)
+#: src/pages/AdminOpsPage.tsx
+msgid "This sets the deployment monthly cap for the shared Gemini key to {0}."
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Total spend"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Transfer"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Transfer unused allotment"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Transfer unused allotment from {0} to {1}?"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Transfer {0} from {1} to {2}?"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Transferring…"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Transfers"
+msgstr ""
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Viewing as {targetEmail}"
+msgstr ""
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Viewing as {targetName} ({targetEmail})"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Week"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "When"
+msgstr ""
+
 #. placeholder {0}: pinned.length
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "{0, plural, one {# bot has its own model:} other {# bots have their own model:}}"
