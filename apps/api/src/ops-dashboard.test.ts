@@ -74,6 +74,9 @@ describe("loadOpsOverview", () => {
         findMany: vi.fn(async () => []),
         findUnique: vi.fn(async () => null),
       },
+      sharedKeyBudgetEnrollmentRequest: {
+        findMany: vi.fn(async () => []),
+      },
       sharedKeyWeekAllotment: {
         findMany: vi.fn(async () => []),
         findUnique: vi.fn(async () => null),

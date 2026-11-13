@@ -6,6 +6,7 @@ import {
   listAdminGrants,
   listSharedKeyAllotmentTransfers,
   listSharedKeyBudgetMembers,
+  listSharedKeyBudgetNotEnrolledHits,
   runAsSystem,
   sharedKeyMonthlyBudgetUsd,
   sharedKeyWeeklyBudgetStatus,
@@ -44,6 +45,7 @@ export type OpsAccountRow = {
     resetsAt: string;
     timezone: "America/New_York";
   } | null;
+  pendingSharedBudgetApproval: boolean;
 };
 
 export type OpsAgentRow = {
@@ -214,6 +216,7 @@ export async function loadOpsOverview(
       recentRuns,
       monthlyCap,
       members,
+      notEnrolledHits,
       database,
     ] = await Promise.all([
       prisma.user.findMany({
@@ -278,8 +281,10 @@ export async function loadOpsOverview(
       }),
       sharedKeyMonthlyBudgetUsd(prisma, envSharedKeyMonthlyBudgetUsd),
       listSharedKeyBudgetMembers(prisma),
+      listSharedKeyBudgetNotEnrolledHits(prisma, weekStart),
       probeDatabase(prisma),
     ]);
+    const notEnrolledHitIds = new Set(notEnrolledHits);
 
     const usageByUser = new Map(
       usageGroups.map((row) => [
@@ -348,11 +353,19 @@ export async function loadOpsOverview(
             options.sharedGoogleApiKey ?? null,
           )
         : "none";
+      const deactivated = user.deactivatedAt != null;
+      const budgetConfigured = Boolean(budget?.configured) || monthlyCap != null;
+      const pendingSharedBudgetApproval =
+        budgetConfigured &&
+        !memberIds.has(user.id) &&
+        !deactivated &&
+        keyType !== "personal" &&
+        (notEnrolledHitIds.has(user.id) || keyType === "company");
       accounts.push({
         userId: user.id,
         email: user.email,
         name: user.name,
-        deactivated: user.deactivatedAt != null,
+        deactivated,
         modelProvider: model?.provider ?? null,
         modelId: model?.model ?? null,
         keyType,
@@ -361,6 +374,7 @@ export async function loadOpsOverview(
         sharedKeyCostUsd: sharedByUser.get(user.id) ?? 0,
         personalKeyCostUsd: personalByUser.get(user.id) ?? 0,
         sharedKeyBudget: budget,
+        pendingSharedBudgetApproval,
       });
     }
     const visibleBots = bots.filter((bot) => !hiddenUserIds.has(bot.userId));

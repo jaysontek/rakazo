@@ -809,6 +809,10 @@ msgstr "Zaten bağlı"
 msgid "Already have an account?"
 msgstr "Zaten hesabın var mı?"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Already on the shared budget"
+msgstr "Zaten paylaşılan bütçede"
+
 #: src/pages/ExternalConversationSettings.tsx
 msgid "Always act"
 msgstr "Her zaman işlem yap"
@@ -4753,6 +4757,10 @@ msgstr "Henüz talep yok"
 msgid "No trigger"
 msgstr "Tetikleyici yok"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "No weekly share left to assign"
+msgstr "Atanacak haftalık pay kalmadı"
+
 #: src/components/SpendingLimitSettings.tsx
 #: src/components/vault/VaultItemEditor.tsx
 msgid "None"
@@ -4782,6 +4790,10 @@ msgstr "Henüz kontrol edilmedi"
 #: src/pages/AdminOpsPage.tsx
 msgid "Not configured"
 msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Not eligible for the shared budget"
+msgstr "Paylaşılan bütçe için uygun değil"
 
 #: src/pages/shell/agent-import.tsx
 msgid "Not imported"

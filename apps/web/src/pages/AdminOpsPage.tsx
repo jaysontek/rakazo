@@ -74,14 +74,14 @@ function KeyBadge({
   keyType: OpsAccount["keyType"];
   pendingSharedBudget?: boolean;
 }) {
+  if (pendingSharedBudget) {
+    return (
+      <Badge variant="secondary">
+        <Trans>Company key — pending admin approval</Trans>
+      </Badge>
+    );
+  }
   if (keyType === "company") {
-    if (pendingSharedBudget) {
-      return (
-        <Badge variant="secondary">
-          <Trans>Company key — pending admin approval</Trans>
-        </Badge>
-      );
-    }
     return (
       <Badge variant="secondary">
         <Trans>Company</Trans>
@@ -99,11 +99,7 @@ function KeyBadge({
 }
 
 function pendingSharedBudgetApproval(account: OpsAccount): boolean {
-  return (
-    account.keyType === "company" &&
-    Boolean(account.sharedKeyBudget?.configured) &&
-    !account.sharedKeyBudget?.member
-  );
+  return account.pendingSharedBudgetApproval === true;
 }
 
 function UsageBar({
@@ -711,7 +707,20 @@ function AccountsSection({
     setBusy(true);
     setError(null);
     try {
-      await rpc.ops.addSharedKeyBudgetMember({ userId: account.userId });
+      const result = await rpc.ops.addSharedKeyBudgetMember({ userId: account.userId });
+      if (!result.enrolled) {
+        const reasonMessage =
+          result.reason === "already_member"
+            ? t`Already on the shared budget`
+            : result.reason === "ineligible"
+              ? t`Not eligible for the shared budget`
+              : result.reason === "zero_slice"
+                ? t`No weekly share left to assign`
+                : t`Could not add to shared budget`;
+        setError(reasonMessage);
+        onChanged();
+        return;
+      }
       onChanged();
     } catch (err) {
       setError(errorText(err, t`Could not add to shared budget`));

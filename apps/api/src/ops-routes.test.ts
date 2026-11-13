@@ -84,6 +84,11 @@ function makeDeps(allowlist = ["192.168.140.0/24"]): RouterDeps {
       findUnique: async () => null,
       findMany: async () => [],
     },
+    sharedKeyBudgetEnrollmentRequest: {
+      findMany: async () => [],
+      upsert: async () => ({}),
+      deleteMany: async () => ({ count: 0 }),
+    },
     sharedKeyWeekAllotment: {
       findUnique: async () => null,
       findMany: async () => [],
@@ -224,7 +229,9 @@ describe("ops dashboard routes", () => {
   });
 
   it("lets an admin add a shared-key budget member and denies non-admins", async () => {
-    const add = vi.spyOn(db, "addSharedKeyBudgetMember").mockResolvedValue(true);
+    const add = vi
+      .spyOn(db, "addSharedKeyBudgetMember")
+      .mockResolvedValue({ enrolled: true });
     const deps = makeDeps();
     const admin = createRouterClient(createRouter(deps), {
       context: { actor: adminActor, clientIp: "192.168.140.10", sessionId: "session-admin" },
@@ -246,6 +253,22 @@ describe("ops dashboard routes", () => {
       expect.any(Date),
       { admin: true, actorUserId: "admin" },
     );
+    add.mockRestore();
+  });
+
+  it("returns the enroll failure reason when admin add does not enroll", async () => {
+    const add = vi
+      .spyOn(db, "addSharedKeyBudgetMember")
+      .mockResolvedValue({ enrolled: false, reason: "zero_slice" });
+    const deps = makeDeps();
+    const admin = createRouterClient(createRouter(deps), {
+      context: { actor: adminActor, clientIp: "192.168.140.10", sessionId: "session-admin" },
+    });
+    await expect(admin.ops.addSharedKeyBudgetMember({ userId: "user" })).resolves.toEqual({
+      ok: true,
+      enrolled: false,
+      reason: "zero_slice",
+    });
     add.mockRestore();
   });
 });

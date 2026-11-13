@@ -299,13 +299,17 @@ export function opsRoutes(ctx: RouterContext) {
         async ({ context, input }) => {
           await gate(context);
           try {
-            const enrolled = await addSharedKeyBudgetMember(
+            const result = await addSharedKeyBudgetMember(
               deps.prisma,
               input.userId,
               new Date(),
               { admin: true, actorUserId: context.actor.userId },
             );
-            return { ok: true as const, enrolled };
+            return {
+              ok: true as const,
+              enrolled: result.enrolled,
+              ...(result.enrolled ? {} : { reason: result.reason }),
+            };
           } catch (error) {
             badRequest(error);
           }

@@ -92,6 +92,7 @@ model User {
   computerRuns                ComputerRun[]
   devices                     UserDevice[]
   sharedKeyBudgetMember       SharedKeyBudgetMember?
+  sharedKeyBudgetEnrollmentRequests SharedKeyBudgetEnrollmentRequest[]
   adminGrant                  AdminGrant?                  @relation("AdminGrantUser")
   adminGrantsGiven            AdminGrant[]                 @relation("AdminGrantGrantedBy")
   sharedKeyTransfersFrom      SharedKeyAllotmentTransfer[] @relation("SharedKeyTransferFrom")
@@ -773,6 +774,20 @@ model SharedKeyBudgetMember {
   createdAt DateTime @default(now())
 
   @@map("shared_key_budget_members")
+}
+
+/// Lightweight week-scoped record that a user hit SharedKeyBudgetNotEnrolledError.
+/// Ops uses this to show pending approval for deployment-key users without a stored key.
+model SharedKeyBudgetEnrollmentRequest {
+  weekStart  DateTime
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstHitAt DateTime @default(now())
+  lastHitAt  DateTime @updatedAt
+
+  @@id([weekStart, userId])
+  @@index([weekStart])
+  @@map("shared_key_budget_enrollment_requests")
 }
 
 /// Per-user allotment for one America/New_York week after even split / re-divide.

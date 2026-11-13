@@ -1344,6 +1344,11 @@ export const OpsAccountSchema = z.object({
   sharedKeyCostUsd: z.number().nonnegative(),
   personalKeyCostUsd: z.number().nonnegative(),
   sharedKeyBudget: OpsSharedKeyBudgetSchema.nullable(),
+  /**
+   * Server-flagged: budget configured, not a member, not personal-key, and either
+   * hit SharedKeyBudgetNotEnrolledError this week or uses the deployment company key.
+   */
+  pendingSharedBudgetApproval: z.boolean().default(false),
 });
 export type OpsAccount = z.infer<typeof OpsAccountSchema>;
 

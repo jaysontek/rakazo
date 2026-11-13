@@ -809,6 +809,10 @@ msgstr "Уже подключено"
 msgid "Already have an account?"
 msgstr "У вас уже есть аккаунт?"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Already on the shared budget"
+msgstr "Уже в общем бюджете"
+
 #: src/pages/ExternalConversationSettings.tsx
 msgid "Always act"
 msgstr "Всегда выполнять"
@@ -4753,6 +4757,10 @@ msgstr ""
 msgid "No trigger"
 msgstr "Нет триггера"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "No weekly share left to assign"
+msgstr "Не осталось недельной доли для назначения"
+
 #: src/components/SpendingLimitSettings.tsx
 #: src/components/vault/VaultItemEditor.tsx
 msgid "None"
@@ -4782,6 +4790,10 @@ msgstr "Ещё не проверено"
 #: src/pages/AdminOpsPage.tsx
 msgid "Not configured"
 msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Not eligible for the shared budget"
+msgstr "Не подходит для общего бюджета"
 
 #: src/pages/shell/agent-import.tsx
 msgid "Not imported"

@@ -205,6 +205,7 @@ export async function resolveModelKey(...args: Parameters<typeof resolveModelKey
         deps.prisma,
         scope,
         deps.sharedKeyMonthlyBudgetUsd ?? null,
+        // Missing policy must stay strict (open signup), never gated fail-open.
         deps.sharedKeyEnrollmentPolicy,
       )
     : undefined;

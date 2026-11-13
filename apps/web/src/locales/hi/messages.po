@@ -809,6 +809,10 @@ msgstr "पहले से कनेक्ट है"
 msgid "Already have an account?"
 msgstr "पहले से खाता है?"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Already on the shared budget"
+msgstr "पहले से साझा बजट पर है"
+
 #: src/pages/ExternalConversationSettings.tsx
 msgid "Always act"
 msgstr ""
@@ -4753,6 +4757,10 @@ msgstr ""
 msgid "No trigger"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "No weekly share left to assign"
+msgstr "आवंटित करने के लिए साप्ताहिक हिस्सा शेष नहीं"
+
 #: src/components/SpendingLimitSettings.tsx
 #: src/components/vault/VaultItemEditor.tsx
 msgid "None"
@@ -4782,6 +4790,10 @@ msgstr "अभी तक जाँच नहीं हुई"
 #: src/pages/AdminOpsPage.tsx
 msgid "Not configured"
 msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Not eligible for the shared budget"
+msgstr "साझा बजट के लिए पात्र नहीं"
 
 #: src/pages/shell/agent-import.tsx
 msgid "Not imported"

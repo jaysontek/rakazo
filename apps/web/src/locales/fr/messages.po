@@ -809,6 +809,10 @@ msgstr "Déjà connecté"
 msgid "Already have an account?"
 msgstr "Vous avez déjà un compte ?"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Already on the shared budget"
+msgstr "Déjà sur le budget partagé"
+
 #: src/pages/ExternalConversationSettings.tsx
 msgid "Always act"
 msgstr "Agir toujours"
@@ -4753,6 +4757,10 @@ msgstr ""
 msgid "No trigger"
 msgstr "Aucun déclencheur"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "No weekly share left to assign"
+msgstr "Plus de part hebdomadaire à attribuer"
+
 #: src/components/SpendingLimitSettings.tsx
 #: src/components/vault/VaultItemEditor.tsx
 msgid "None"
@@ -4782,6 +4790,10 @@ msgstr "Pas encore vérifié"
 #: src/pages/AdminOpsPage.tsx
 msgid "Not configured"
 msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Not eligible for the shared budget"
+msgstr "Non éligible au budget partagé"
 
 #: src/pages/shell/agent-import.tsx
 msgid "Not imported"

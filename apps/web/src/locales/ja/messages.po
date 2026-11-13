@@ -809,6 +809,10 @@ msgstr "接続済み"
 msgid "Already have an account?"
 msgstr "すでにアカウントをお持ちですか？"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Already on the shared budget"
+msgstr "すでに共有予算に登録済みです"
+
 #: src/pages/ExternalConversationSettings.tsx
 msgid "Always act"
 msgstr "常に対応する"
@@ -4753,6 +4757,10 @@ msgstr "チケットはまだありません"
 msgid "No trigger"
 msgstr "トリガーなし"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "No weekly share left to assign"
+msgstr "割り当て可能な週間枠が残っていません"
+
 #: src/components/SpendingLimitSettings.tsx
 #: src/components/vault/VaultItemEditor.tsx
 msgid "None"
@@ -4782,6 +4790,10 @@ msgstr "未確認"
 #: src/pages/AdminOpsPage.tsx
 msgid "Not configured"
 msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Not eligible for the shared budget"
+msgstr "共有予算の対象外です"
 
 #: src/pages/shell/agent-import.tsx
 msgid "Not imported"

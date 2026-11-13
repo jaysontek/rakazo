@@ -809,6 +809,10 @@ msgstr "已连接"
 msgid "Already have an account?"
 msgstr "已有账户？"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Already on the shared budget"
+msgstr "已在共享预算中"
+
 #: src/pages/ExternalConversationSettings.tsx
 msgid "Always act"
 msgstr "始终处理"
@@ -4753,6 +4757,10 @@ msgstr "还没有工单"
 msgid "No trigger"
 msgstr "无触发器"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "No weekly share left to assign"
+msgstr "本周已无可分配份额"
+
 #: src/components/SpendingLimitSettings.tsx
 #: src/components/vault/VaultItemEditor.tsx
 msgid "None"
@@ -4782,6 +4790,10 @@ msgstr "尚未检查"
 #: src/pages/AdminOpsPage.tsx
 msgid "Not configured"
 msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Not eligible for the shared budget"
+msgstr "不符合共享预算资格"
 
 #: src/pages/shell/agent-import.tsx
 msgid "Not imported"

@@ -5,11 +5,11 @@ import {
 } from "@rakazo/core";
 import type { PrismaClient, SharedKeyBudgetEnrollmentPolicy } from "@rakazo/db";
 import {
-  DEFAULT_SHARED_KEY_ENROLLMENT_POLICY,
   releaseSharedKeyBudgetHold,
   reserveSharedKeyBudget,
   SharedKeyBudgetNotEnrolledError,
   SharedKeyWeeklyBudgetExceededError,
+  STRICT_SHARED_KEY_ENROLLMENT_POLICY,
   sharedKeyMonthlyBudgetUsd,
 } from "@rakazo/db";
 
@@ -46,12 +46,15 @@ function decodeHold(reservationId: string): Hold | null {
  * Personal connections never attach this observer. When model fallback is also in play, call
  * {@link assertSharedKeyWeeklyBudget} (or attach this observer) before spending the shared key
  * on a backup — the weekly hard-stop wins.
+ *
+ * `enrollmentPolicy` must come from {@link sharedKeyBudgetEnrollmentPolicyFromEnv} in api/worker.
+ * Missing policy falls back to the strict open-signup bar (never the gated fail-open default).
  */
 export async function sharedKeyBudgetObserver(
   prisma: PrismaClient,
   scope: { userId: string },
   envFallback: number | null = null,
-  enrollmentPolicy: SharedKeyBudgetEnrollmentPolicy = DEFAULT_SHARED_KEY_ENROLLMENT_POLICY,
+  enrollmentPolicy: SharedKeyBudgetEnrollmentPolicy = STRICT_SHARED_KEY_ENROLLMENT_POLICY,
 ): Promise<ModelCallObserver | undefined> {
   if (!(await sharedKeyMonthlyBudgetUsd(prisma, envFallback))) return undefined;
   return {
@@ -89,7 +92,7 @@ export async function assertSharedKeyWeeklyBudget(
   estimateCostUsd = 0,
   now = new Date(),
   envFallback: number | null = null,
-  enrollmentPolicy: SharedKeyBudgetEnrollmentPolicy = DEFAULT_SHARED_KEY_ENROLLMENT_POLICY,
+  enrollmentPolicy: SharedKeyBudgetEnrollmentPolicy = STRICT_SHARED_KEY_ENROLLMENT_POLICY,
 ): Promise<void> {
   if (!(await sharedKeyMonthlyBudgetUsd(prisma, envFallback))) return;
   try {

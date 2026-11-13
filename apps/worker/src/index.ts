@@ -89,7 +89,12 @@ import {
   withRunWorker,
   withSecretPersistence,
 } from "@rakazo/adapters";
-import { resolveEncryptionKey, resolveSupervisorToken, uploadSizeFromEnv } from "@rakazo/core";
+import {
+  parseSharedKeyBudgetUserIds,
+  resolveEncryptionKey,
+  resolveSupervisorToken,
+  uploadSizeFromEnv,
+} from "@rakazo/core";
 import {
   createBoardEvents,
   createDb,
@@ -98,6 +103,7 @@ import {
   describeRowSecurity,
   installAuditEventStore,
   installSecurityEventStore,
+  sharedKeyBudgetEnrollmentPolicyFromEnv,
   isPoolCheckoutTimeout,
   isTooManyDatabaseConnections,
   parsePositiveInteger,
@@ -285,6 +291,18 @@ async function main() {
       })
     : undefined;
   const notifications = composeNotificationProviders(expoPush, webPush);
+  // Same enrollment bar as apps/api — never leave worker on the gated fail-open default.
+  const sharedKeyEnrollmentPolicy = sharedKeyBudgetEnrollmentPolicyFromEnv({
+    signupsEnabled: process.env.SIGNUPS_ENABLED,
+    signupAllowlist: process.env.SIGNUP_ALLOWLIST,
+    singleAccount: Boolean(process.env.RAKAZO_DESKTOP_STACK_TOKEN?.trim()),
+    directoryProvisioning: Boolean(process.env.SCIM_BEARER_TOKEN?.trim()),
+    adminEmails: (process.env.RAKAZO_ADMIN_EMAILS ?? "")
+      .split(",")
+      .map((email) => email.trim().toLowerCase())
+      .filter(Boolean),
+    explicitUserIds: parseSharedKeyBudgetUserIds(process.env.SHARED_KEY_BUDGET_USER_IDS),
+  });
   const executor = createRunExecutor({
     maxUploadSizeBytes,
     mediaGeneration,
@@ -299,6 +317,7 @@ async function main() {
     artifacts,
     connector: stack.connector,
     connectors: stack.connector,
+    sharedKeyEnrollmentPolicy,
     listConnectedPluginSlugs: async (userId) => {
       const provider = await integrationSettings.resolve("composio");
       if (!provider) return [];

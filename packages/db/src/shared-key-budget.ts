@@ -1,6 +1,7 @@
 import {
   effectiveSharedKeySpendUsd,
   fullWeekShareUsd,
+  isGatedSharedKeyDeployment,
   parseSharedKeyMonthlyBudgetInput,
   redivideWeeklyAllotments,
   SHARED_KEY_BUDGET_TIMEZONE,
@@ -19,6 +20,7 @@ type BudgetPrisma = Pick<
   PrismaClient,
   | "deploymentSettings"
   | "sharedKeyBudgetMember"
+  | "sharedKeyBudgetEnrollmentRequest"
   | "sharedKeyWeekAllotment"
   | "sharedKeyAllotmentTransfer"
   | "usageRecord"
@@ -34,6 +36,7 @@ type BudgetPrisma = Pick<
 type BudgetTx = Pick<
   Prisma.TransactionClient,
   | "sharedKeyBudgetMember"
+  | "sharedKeyBudgetEnrollmentRequest"
   | "sharedKeyWeekAllotment"
   | "sharedKeyAllotmentTransfer"
   | "usageRecord"
@@ -50,18 +53,63 @@ type BudgetTx = Pick<
  * Auto-enroll policy from the deployment's signup posture.
  * Gated deployments (signups off, allowlist, singleAccount, directory): verified + any membership.
  * Open signups: only users who share a non-personal (multi-member) org with an ops admin.
+ * Always pass this explicitly — never fail open with a gated default in workers.
  */
 export type SharedKeyBudgetEnrollmentPolicy = {
   gatedDeployment: boolean;
   /** Lowercased RAKAZO_ADMIN_EMAILS. */
   adminEmails: string[];
+  /** SHARED_KEY_BUDGET_USER_IDS — bypass eligibility on the hot path too. */
+  explicitUserIds: string[];
 };
 
-/** Default for unit tests: gated, so verified + membership is enough. */
-export const DEFAULT_SHARED_KEY_ENROLLMENT_POLICY: SharedKeyBudgetEnrollmentPolicy = {
+/**
+ * Strict open-signup policy: no auto-enroll unless env list / admin-share / admin add.
+ * Use when a call site has no deployment posture yet (tests / missing deps).
+ */
+export const STRICT_SHARED_KEY_ENROLLMENT_POLICY: SharedKeyBudgetEnrollmentPolicy = {
+  gatedDeployment: false,
+  adminEmails: [],
+  explicitUserIds: [],
+};
+
+/** Gated unit-test policy: verified email + any membership is enough. */
+export const GATED_SHARED_KEY_ENROLLMENT_POLICY: SharedKeyBudgetEnrollmentPolicy = {
   gatedDeployment: true,
   adminEmails: [],
+  explicitUserIds: [],
 };
+
+export type AddSharedKeyBudgetMemberResult =
+  | { enrolled: true }
+  | { enrolled: false; reason: "already_member" | "ineligible" | "zero_slice" };
+
+type EnrollOutcome = "enrolled" | "already_member" | "ineligible" | "zero_slice";
+
+/**
+ * Shared builder for API and worker so both processes use the same open vs gated bar.
+ */
+export function sharedKeyBudgetEnrollmentPolicyFromEnv(input: {
+  signupsEnabled: string | undefined;
+  signupAllowlist: string | undefined;
+  singleAccount?: boolean;
+  directoryProvisioning?: boolean;
+  adminEmails: readonly string[];
+  explicitUserIds?: readonly string[];
+}): SharedKeyBudgetEnrollmentPolicy {
+  return {
+    gatedDeployment: isGatedSharedKeyDeployment({
+      signupsEnabled: input.signupsEnabled,
+      signupAllowlist: input.signupAllowlist,
+      singleAccount: input.singleAccount,
+      directoryProvisioning: input.directoryProvisioning,
+    }),
+    adminEmails: input.adminEmails.map((email) => email.trim().toLowerCase()).filter(Boolean),
+    explicitUserIds: [...(input.explicitUserIds ?? [])]
+      .map((id) => id.trim())
+      .filter(Boolean),
+  };
+}
 
 export type SharedKeyWeeklyBudgetStatus = {
   enabled: boolean;
@@ -420,17 +468,18 @@ async function recomputeSharedKeyWeekAllotmentsTx(
 
 /**
  * Auto-enroll bar. Always rejects deactivated / hidden accounts.
- * SHARED_KEY_BUDGET_USER_IDS and explicit admin adds bypass via `bypassEligibilityBar`.
+ * SHARED_KEY_BUDGET_USER_IDS and explicit admin adds bypass via `bypassEligibilityBar`
+ * (or `policy.explicitUserIds` on the hot path).
  * Gated deployments: verified email + any organization membership.
  * Open signups: verified email + membership in a non-personal (multi-member) org
- * that also includes an ops admin (AdminGrant or env admin email).
+ * that also includes an ops admin (active verified AdminGrant or env admin email).
  */
 export async function userEligibleForSharedKeyBudget(
   tx: Pick<BudgetTx, "user" | "member" | "adminGrant">,
   userId: string,
-  options?: {
+  options: {
+    policy: SharedKeyBudgetEnrollmentPolicy;
     bypassEligibilityBar?: boolean;
-    policy?: SharedKeyBudgetEnrollmentPolicy;
   },
 ): Promise<boolean> {
   const user = await tx.user.findUnique({
@@ -439,16 +488,16 @@ export async function userEligibleForSharedKeyBudget(
   });
   if (!user || user.deactivatedAt != null) return false;
   if (isHiddenOpsEmail(user.email)) return false;
-  if (options?.bypassEligibilityBar) return true;
+  if (options.bypassEligibilityBar) return true;
+  if (options.policy.explicitUserIds.includes(userId)) return true;
   if (!user.emailVerified) return false;
   const memberships = await tx.member.findMany({
     where: { userId },
     select: { organizationId: true },
   });
   if (memberships.length === 0) return false;
-  const policy = options?.policy ?? DEFAULT_SHARED_KEY_ENROLLMENT_POLICY;
-  if (policy.gatedDeployment) return true;
-  return sharesNonPersonalOrgWithOpsAdmin(tx, userId, memberships, policy.adminEmails);
+  if (options.policy.gatedDeployment) return true;
+  return sharesNonPersonalOrgWithOpsAdmin(tx, userId, memberships, options.policy.adminEmails);
 }
 
 /** Orgs with only one member are personal bootstraps; multi-member orgs are team orgs. */
@@ -478,11 +527,22 @@ async function sharesNonPersonalOrgWithOpsAdmin(
   }
   if (candidateAdminIds.size === 0) return false;
 
-  const granted = await tx.adminGrant.findFirst({
+  // AdminGrant holders must be active + verified, same as isActiveVerified in admin-grants.
+  const grantHolders = await tx.adminGrant.findMany({
     where: { userId: { in: [...candidateAdminIds] } },
     select: { userId: true },
   });
-  if (granted) return true;
+  if (grantHolders.length > 0) {
+    const activeVerified = await tx.user.findFirst({
+      where: {
+        id: { in: grantHolders.map((row) => row.userId) },
+        emailVerified: true,
+        deactivatedAt: null,
+      },
+      select: { id: true },
+    });
+    if (activeVerified) return true;
+  }
 
   const adminEmailSet = new Set(
     adminEmails.map((email) => email.trim().toLowerCase()).filter(Boolean),
@@ -510,26 +570,26 @@ async function enrollSharedKeyBudgetMemberTx(
   tx: BudgetTx,
   userId: string,
   now: Date,
-  options?: {
+  options: {
+    policy: SharedKeyBudgetEnrollmentPolicy;
     audit?: boolean;
     bypassEligibilityBar?: boolean;
-    policy?: SharedKeyBudgetEnrollmentPolicy;
     /** When set, write an admin-add audit instead of auto-enroll. */
     adminActorUserId?: string;
   },
-): Promise<boolean> {
+): Promise<EnrollOutcome> {
   const existing = await tx.sharedKeyBudgetMember.findUnique({
     where: { userId },
     select: { userId: true },
   });
-  if (existing) return false;
+  if (existing) return "already_member";
   if (
     !(await userEligibleForSharedKeyBudget(tx, userId, {
-      bypassEligibilityBar: options?.bypassEligibilityBar === true,
-      policy: options?.policy,
+      bypassEligibilityBar: options.bypassEligibilityBar === true,
+      policy: options.policy,
     }))
   ) {
-    return false;
+    return "ineligible";
   }
 
   const weekStart = sharedKeyWeekStart(now);
@@ -553,10 +613,13 @@ async function enrollSharedKeyBudgetMemberTx(
       // Fresh zero allotment row from this enroll — drop it.
       await tx.sharedKeyWeekAllotment.deleteMany({ where: { weekStart, userId } });
     }
-    return false;
+    return "zero_slice";
   }
-  if (options?.audit !== false) {
-    if (options?.adminActorUserId) {
+  await tx.sharedKeyBudgetEnrollmentRequest.deleteMany({
+    where: { weekStart, userId },
+  });
+  if (options.audit !== false) {
+    if (options.adminActorUserId) {
       await appendAuditEventTx(tx, {
         action: "shared_key_budget.member.added",
         actor: { type: "user", id: options.adminActorUserId },
@@ -578,7 +641,7 @@ async function enrollSharedKeyBudgetMemberTx(
       });
     }
   }
-  return true;
+  return "enrolled";
 }
 
 /**
@@ -595,7 +658,7 @@ export async function addSharedKeyBudgetMember(
     actorUserId?: string;
     policy?: SharedKeyBudgetEnrollmentPolicy;
   },
-): Promise<boolean> {
+): Promise<AddSharedKeyBudgetMemberResult> {
   return prisma.$transaction(async (tx) => {
     await lockSharedKeyBudget(tx, MEMBERS_LOCK);
     const existing = await tx.sharedKeyBudgetMember.findUnique({
@@ -604,14 +667,16 @@ export async function addSharedKeyBudgetMember(
     });
     if (existing) {
       await recomputeSharedKeyWeekAllotmentsTx(tx, joinedAt);
-      return false;
+      return { enrolled: false, reason: "already_member" };
     }
-    return enrollSharedKeyBudgetMemberTx(tx, userId, joinedAt, {
+    const outcome = await enrollSharedKeyBudgetMemberTx(tx, userId, joinedAt, {
       bypassEligibilityBar: options?.admin === true,
-      policy: options?.policy,
+      policy: options?.policy ?? STRICT_SHARED_KEY_ENROLLMENT_POLICY,
       adminActorUserId: options?.admin ? options.actorUserId : undefined,
       audit: options?.admin === true ? true : false,
     });
+    if (outcome === "enrolled") return { enrolled: true };
+    return { enrolled: false, reason: outcome };
   });
 }
 
@@ -682,9 +747,36 @@ export async function syncSharedKeyBudgetMembers(
       await enrollSharedKeyBudgetMemberTx(tx, userId, now, {
         audit: false,
         bypassEligibilityBar: true,
+        policy: STRICT_SHARED_KEY_ENROLLMENT_POLICY,
       });
     }
   });
+}
+
+/** Persist a not-enrolled hit outside the rolled-back reserve transaction. */
+export async function recordSharedKeyBudgetNotEnrolledHit(
+  prisma: Pick<BudgetPrisma, "sharedKeyBudgetEnrollmentRequest">,
+  userId: string,
+  now = new Date(),
+): Promise<void> {
+  const weekStart = sharedKeyWeekStart(now);
+  await prisma.sharedKeyBudgetEnrollmentRequest.upsert({
+    where: { weekStart_userId: { weekStart, userId } },
+    create: { weekStart, userId, firstHitAt: now, lastHitAt: now },
+    update: { lastHitAt: now },
+  });
+}
+
+/** User ids that hit SharedKeyBudgetNotEnrolledError in the given week. */
+export async function listSharedKeyBudgetNotEnrolledHits(
+  prisma: Pick<BudgetPrisma, "sharedKeyBudgetEnrollmentRequest">,
+  weekStart: Date,
+): Promise<string[]> {
+  const rows = await prisma.sharedKeyBudgetEnrollmentRequest.findMany({
+    where: { weekStart },
+    select: { userId: true },
+  });
+  return rows.map((row) => row.userId);
 }
 
 /**
@@ -768,54 +860,65 @@ async function ensureMemberAllotment(
  * Auto-enrolls the user under the same members lock when a monthly cap is set
  * and the enrollment policy allows it. Reserves `maxCostUsd` against the weekly
  * allotment until `releaseSharedKeyBudgetHold`.
+ * `policy` is required — callers must build it with
+ * {@link sharedKeyBudgetEnrollmentPolicyFromEnv} (never a gated default).
  */
 export async function reserveSharedKeyBudget(
-  prisma: Pick<BudgetPrisma, "$transaction">,
+  prisma: Pick<BudgetPrisma, "$transaction" | "sharedKeyBudgetEnrollmentRequest">,
   userId: string,
   maxCostUsd: number,
   now = new Date(),
-  policy: SharedKeyBudgetEnrollmentPolicy = DEFAULT_SHARED_KEY_ENROLLMENT_POLICY,
+  policy: SharedKeyBudgetEnrollmentPolicy = STRICT_SHARED_KEY_ENROLLMENT_POLICY,
 ): Promise<void> {
   if (!Number.isFinite(maxCostUsd) || maxCostUsd < 0) {
     throw new Error("Invalid shared-key budget reservation");
   }
-  await prisma.$transaction(async (tx) => {
-    await lockSharedKeyBudget(tx, MEMBERS_LOCK);
-    const settings = await tx.deploymentSettings.findUnique({
-      where: { id: "default" },
-      select: { sharedKeyMonthlyBudgetUsd: true },
-    });
-    const monthly = settings?.sharedKeyMonthlyBudgetUsd;
-    if (!(monthly != null && monthly > 0)) return;
+  try {
+    await prisma.$transaction(async (tx) => {
+      await lockSharedKeyBudget(tx, MEMBERS_LOCK);
+      const settings = await tx.deploymentSettings.findUnique({
+        where: { id: "default" },
+        select: { sharedKeyMonthlyBudgetUsd: true },
+      });
+      const monthly = settings?.sharedKeyMonthlyBudgetUsd;
+      if (!(monthly != null && monthly > 0)) return;
 
-    const weekStart = sharedKeyWeekStart(now);
-    await clearStaleSharedKeyBudgetHolds(tx, weekStart, now);
-    const alreadyMember = await tx.sharedKeyBudgetMember.findUnique({
-      where: { userId },
-      select: { userId: true },
-    });
-    if (!alreadyMember) {
-      if (!(await userEligibleForSharedKeyBudget(tx, userId, { policy }))) {
-        throw new SharedKeyBudgetNotEnrolledError();
+      const weekStart = sharedKeyWeekStart(now);
+      await clearStaleSharedKeyBudgetHolds(tx, weekStart, now);
+      const alreadyMember = await tx.sharedKeyBudgetMember.findUnique({
+        where: { userId },
+        select: { userId: true },
+      });
+      if (!alreadyMember) {
+        if (!(await userEligibleForSharedKeyBudget(tx, userId, { policy }))) {
+          throw new SharedKeyBudgetNotEnrolledError();
+        }
+        await enrollSharedKeyBudgetMemberTx(tx, userId, now, { policy });
       }
-      await enrollSharedKeyBudgetMemberTx(tx, userId, now, { policy });
-    }
-    const allotment = await ensureMemberAllotment(tx, userId, weekStart, now);
-    // Feature on but user not enrolled (e.g. $0 slice): no shared-key spend allowed.
-    const cap = allotment?.allotmentUsd ?? 0;
-    const reserved = allotment?.reservedUsd ?? 0;
-    const mondaySpend = await spentSharedKeyUsd(tx, userId, weekStart, now);
-    const spent = effectiveSharedKeySpendUsd(mondaySpend, allotment?.preJoinSpendUsd ?? 0);
-    // At or over the cap: refuse every further shared-key call (including zero-estimate probes).
-    const over = spent + reserved >= cap || (maxCostUsd > 0 && spent + reserved + maxCostUsd > cap);
-    if (!allotment || over) {
-      throw new SharedKeyWeeklyBudgetExceededError();
-    }
-    await tx.sharedKeyWeekAllotment.update({
-      where: { weekStart_userId: { weekStart, userId } },
-      data: { reservedUsd: { increment: maxCostUsd } },
+      const allotment = await ensureMemberAllotment(tx, userId, weekStart, now);
+      // Feature on but user not enrolled (e.g. $0 slice): no shared-key spend allowed.
+      const cap = allotment?.allotmentUsd ?? 0;
+      const reserved = allotment?.reservedUsd ?? 0;
+      const mondaySpend = await spentSharedKeyUsd(tx, userId, weekStart, now);
+      const spent = effectiveSharedKeySpendUsd(mondaySpend, allotment?.preJoinSpendUsd ?? 0);
+      // At or over the cap: refuse every further shared-key call (including zero-estimate probes).
+      const over =
+        spent + reserved >= cap || (maxCostUsd > 0 && spent + reserved + maxCostUsd > cap);
+      if (!allotment || over) {
+        throw new SharedKeyWeeklyBudgetExceededError();
+      }
+      await tx.sharedKeyWeekAllotment.update({
+        where: { weekStart_userId: { weekStart, userId } },
+        data: { reservedUsd: { increment: maxCostUsd } },
+      });
     });
-  });
+  } catch (error) {
+    // Hit row must commit outside the rolled-back reserve transaction.
+    if (error instanceof SharedKeyBudgetNotEnrolledError) {
+      await recordSharedKeyBudgetNotEnrolledHit(prisma, userId, now);
+    }
+    throw error;
+  }
 }
 
 /** Drop the soft hold after the call settles (usage_records keep the spend). */

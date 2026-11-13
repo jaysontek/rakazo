@@ -809,6 +809,10 @@ msgstr "Al verbonden"
 msgid "Already have an account?"
 msgstr "Heb je al een account?"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Already on the shared budget"
+msgstr "Al op het gedeelde budget"
+
 #: src/pages/ExternalConversationSettings.tsx
 msgid "Always act"
 msgstr "Altijd handelen"
@@ -4753,6 +4757,10 @@ msgstr "Nog geen tickets"
 msgid "No trigger"
 msgstr "Geen trigger"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "No weekly share left to assign"
+msgstr "Geen wekelijks aandeel meer om toe te wijzen"
+
 #: src/components/SpendingLimitSettings.tsx
 #: src/components/vault/VaultItemEditor.tsx
 msgid "None"
@@ -4782,6 +4790,10 @@ msgstr "Nog niet gecontroleerd"
 #: src/pages/AdminOpsPage.tsx
 msgid "Not configured"
 msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Not eligible for the shared budget"
+msgstr "Niet in aanmerking voor het gedeelde budget"
 
 #: src/pages/shell/agent-import.tsx
 msgid "Not imported"

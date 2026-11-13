@@ -123,8 +123,8 @@ import {
   PLUGIN_SUBMISSIONS_PATH,
   SERVER_BUILD_HEADER,
 } from "@rakazo/contracts";
-import { encryptionKeyWarning, isGatedSharedKeyDeployment, signupPolicyFromEnv } from "@rakazo/core";
-import type { Pool, PrismaClient, SharedKeyBudgetEnrollmentPolicy } from "@rakazo/db";
+import { encryptionKeyWarning, signupPolicyFromEnv } from "@rakazo/core";
+import type { Pool, PrismaClient } from "@rakazo/db";
 import {
   configureProviderTransactionPool,
   createBoardEvents,
@@ -145,6 +145,7 @@ import {
   rowSecurityWarning,
   runAsSystem,
   securityEventRetentionDays,
+  sharedKeyBudgetEnrollmentPolicyFromEnv,
   verifyContentKeys,
   withSecurityRequest,
 } from "@rakazo/db";
@@ -736,15 +737,14 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
   const codexCatalog = new CodexCatalogCache();
   // One instance: chat runs submit videos and, in single-process mode, background polls finish them.
   const mediaGeneration = createMediaGenerationProvider();
-  const sharedKeyEnrollmentPolicy: SharedKeyBudgetEnrollmentPolicy = {
-    gatedDeployment: isGatedSharedKeyDeployment({
-      signupsEnabled: env.signupsEnabled,
-      signupAllowlist: env.signupAllowlist,
-      singleAccount: Boolean(env.desktopStackToken),
-      directoryProvisioning: Boolean(directory),
-    }),
+  const sharedKeyEnrollmentPolicy = sharedKeyBudgetEnrollmentPolicyFromEnv({
+    signupsEnabled: env.signupsEnabled,
+    signupAllowlist: env.signupAllowlist,
+    singleAccount: Boolean(env.desktopStackToken),
+    directoryProvisioning: Boolean(directory),
     adminEmails: env.adminEmails,
-  };
+    explicitUserIds: env.sharedKeyBudgetUserIds,
+  });
   const executor = createRunExecutor({
     billingEnabled: modelCreditsEnabled,
     maxUploadSizeBytes: env.maxUploadSizeBytes,
