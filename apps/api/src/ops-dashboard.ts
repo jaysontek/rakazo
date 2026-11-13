@@ -202,11 +202,13 @@ export async function loadOpsOverview(
 ): Promise<OpsOverview> {
   return runAsSystem("operations dashboard overview", async () => {
     const weekAgo = new Date(now.getTime() - RECENT_RUN_WINDOW_MS);
+    const weekStart = sharedKeyWeekStart(now);
     const [
       users,
       usageGroups,
       sharedUsageGroups,
       personalUsageGroups,
+      weekSharedUsage,
       recentModels,
       bots,
       recentRuns,
@@ -235,6 +237,11 @@ export async function loadOpsOverview(
       prisma.usageRecord.groupBy({
         by: ["userId"],
         where: { sharedKey: false },
+        _sum: { costUsd: true },
+      }),
+      prisma.usageRecord.groupBy({
+        by: ["userId"],
+        where: { sharedKey: true, createdAt: { gte: weekStart, lt: now } },
         _sum: { costUsd: true },
       }),
       prisma.usageRecord.findMany({
@@ -358,7 +365,6 @@ export async function loadOpsOverview(
     }
     const visibleBots = bots.filter((bot) => !hiddenUserIds.has(bot.userId));
     const activeBots = visibleBots.filter((bot) => bot.archivedAt == null);
-    const weekStart = sharedKeyWeekStart(now);
     const adminGrants = (
       await listAdminGrants(prisma, options.envBootstrapAdmins ?? [])
     ).filter((grant) => !isHiddenOpsEmail(grant.email));
@@ -400,10 +406,12 @@ export async function loadOpsOverview(
 
     const sharedKeyCostUsd = accounts.reduce((sum, row) => sum + row.sharedKeyCostUsd, 0);
     const personalKeyCostUsd = accounts.reduce((sum, row) => sum + row.personalKeyCostUsd, 0);
-    const weekSpentUsd = accounts.reduce(
-      (sum, row) => sum + (row.sharedKeyBudget?.member ? row.sharedKeyBudget.spentUsd : 0),
-      0,
-    );
+    // Real company shared-key spend since Monday (visible accounts) — not effective
+    // allotment spend, which subtracts preJoin baselines and would undercount the pool.
+    const weekSpentUsd = weekSharedUsage.reduce((sum, row) => {
+      if (hiddenUserIds.has(row.userId)) return sum;
+      return sum + (row._sum.costUsd ?? 0);
+    }, 0);
     const budgetWindow = {
       weekStartsAt: weekStart.toISOString(),
       resetsAt: sharedKeyWeekEnd(weekStart).toISOString(),

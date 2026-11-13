@@ -111,6 +111,7 @@ function UsageBar({
         aria-valuenow={value}
         aria-valuemin={0}
         aria-valuemax={100}
+        aria-valuetext={`${value}%`}
         aria-label={label}
       >
         <div
@@ -478,6 +479,79 @@ function KpiRow({
 }
 
 type AccountSortKey = "account" | "key" | "tokens" | "spend" | "sharedWeek";
+type AccountSortDir = "asc" | "desc";
+
+function SortButton({
+  column,
+  sortKey,
+  sortDir,
+  onToggle,
+  children,
+}: {
+  column: AccountSortKey;
+  sortKey: AccountSortKey;
+  sortDir: AccountSortDir;
+  onToggle: (column: AccountSortKey) => void;
+  children: ReactNode;
+}) {
+  const active = sortKey === column;
+  const Icon = !active ? ArrowUpDown : sortDir === "asc" ? ArrowUp : ArrowDown;
+  return (
+    <button
+      type="button"
+      className="inline-flex items-center gap-1 font-normal text-muted-foreground hover:text-foreground"
+      onClick={() => onToggle(column)}
+    >
+      {children}
+      <Icon className="size-3.5" aria-hidden="true" />
+    </button>
+  );
+}
+
+function AccountActions({
+  account,
+  canTransfer,
+  transferDisabled,
+  onImpersonate,
+  onTransfer,
+}: {
+  account: OpsAccount;
+  canTransfer: boolean;
+  transferDisabled: boolean;
+  onImpersonate: (account: OpsAccount) => void;
+  onTransfer: (account: OpsAccount) => void;
+}) {
+  const { t } = useLingui();
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label={t`Actions for ${accountLabel(account)}`}
+        className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+      >
+        <MoreHorizontal className="size-4" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => onImpersonate(account)}>
+          <Trans>Impersonate</Trans>
+        </DropdownMenuItem>
+        {canTransfer ? (
+          <DropdownMenuItem disabled={transferDisabled} onClick={() => onTransfer(account)}>
+            <Trans>Transfer</Trans>
+          </DropdownMenuItem>
+        ) : null}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function sortAriaValue(
+  column: AccountSortKey,
+  sortKey: AccountSortKey,
+  sortDir: AccountSortDir,
+): "none" | "ascending" | "descending" {
+  if (sortKey !== column) return "none";
+  return sortDir === "asc" ? "ascending" : "descending";
+}
 
 function AccountsSection({
   accounts,
@@ -501,7 +575,7 @@ function AccountsSection({
   const [query, setQuery] = useState("");
   const [keyFilter, setKeyFilter] = useState<"all" | "company" | "personal" | "none">("all");
   const [sortKey, setSortKey] = useState<AccountSortKey>("account");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [sortDir, setSortDir] = useState<AccountSortDir>("asc");
 
   const transferTargets = transferFrom
     ? roster.filter((account) => account.userId !== transferFrom.userId)
@@ -600,62 +674,6 @@ function AccountsSection({
     }
   }
 
-  function SortButton({
-    column,
-    children,
-  }: {
-    column: AccountSortKey;
-    children: ReactNode;
-  }) {
-    const active = sortKey === column;
-    const Icon = !active ? ArrowUpDown : sortDir === "asc" ? ArrowUp : ArrowDown;
-    return (
-      <button
-        type="button"
-        className="inline-flex items-center gap-1 font-normal text-muted-foreground hover:text-foreground"
-        onClick={() => toggleSort(column)}
-      >
-        {children}
-        <Icon className="size-3.5" aria-hidden="true" />
-      </button>
-    );
-  }
-
-  function AccountActions({ account }: { account: OpsAccount }) {
-    const canTransfer = Boolean(account.sharedKeyBudget?.member);
-    return (
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          aria-label={t`Actions for ${accountLabel(account)}`}
-          className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
-        >
-          <MoreHorizontal className="size-4" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem
-            onClick={() => {
-              setError(null);
-              setImpersonate(account);
-            }}
-          >
-            <Trans>Impersonate</Trans>
-          </DropdownMenuItem>
-          {canTransfer ? (
-            <DropdownMenuItem
-              disabled={roster.length < 2}
-              onClick={() => {
-                setError(null);
-                setTransferFrom(account);
-              }}
-            >
-              <Trans>Transfer</Trans>
-            </DropdownMenuItem>
-          ) : null}
-        </DropdownMenuContent>
-      </DropdownMenu>
-    );
-  }
-
   function AccountBudgetCell({ account }: { account: OpsAccount }) {
     const budget = account.sharedKeyBudget;
     if (!budget) return <span className="text-muted-foreground">—</span>;
@@ -717,31 +735,31 @@ function AccountsSection({
           <table className="w-full min-w-0 text-left text-sm">
             <thead className="text-muted-foreground">
               <tr className="border-b">
-                <th className="py-2 pr-3 font-normal">
-                  <SortButton column="account">
+                <th className="py-2 pr-3 font-normal" aria-sort={sortAriaValue("account", sortKey, sortDir)}>
+                  <SortButton column="account" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort}>
                     <Trans>Account</Trans>
                   </SortButton>
                 </th>
-                <th className="py-2 pr-3 font-normal">
-                  <SortButton column="key">
+                <th className="py-2 pr-3 font-normal" aria-sort={sortAriaValue("key", sortKey, sortDir)}>
+                  <SortButton column="key" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort}>
                     <Trans>Key</Trans>
                   </SortButton>
                 </th>
                 <th className="py-2 pr-3 font-normal">
                   <Trans>Model</Trans>
                 </th>
-                <th className="py-2 pr-3 font-normal">
-                  <SortButton column="tokens">
+                <th className="py-2 pr-3 font-normal" aria-sort={sortAriaValue("tokens", sortKey, sortDir)}>
+                  <SortButton column="tokens" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort}>
                     <Trans>Tokens</Trans>
                   </SortButton>
                 </th>
-                <th className="py-2 pr-3 font-normal">
-                  <SortButton column="spend">
+                <th className="py-2 pr-3 font-normal" aria-sort={sortAriaValue("spend", sortKey, sortDir)}>
+                  <SortButton column="spend" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort}>
                     <Trans>Spend</Trans>
                   </SortButton>
                 </th>
-                <th className="py-2 pr-3 font-normal">
-                  <SortButton column="sharedWeek">
+                <th className="py-2 pr-3 font-normal" aria-sort={sortAriaValue("sharedWeek", sortKey, sortDir)}>
+                  <SortButton column="sharedWeek" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort}>
                     <Trans>Shared week</Trans>
                   </SortButton>
                 </th>
@@ -784,7 +802,19 @@ function AccountsSection({
                     <AccountBudgetCell account={account} />
                   </td>
                   <td className="py-3">
-                    <AccountActions account={account} />
+                    <AccountActions
+                      account={account}
+                      canTransfer={Boolean(account.sharedKeyBudget?.member)}
+                      transferDisabled={roster.length < 2}
+                      onImpersonate={(next) => {
+                        setError(null);
+                        setImpersonate(next);
+                      }}
+                      onTransfer={(next) => {
+                        setError(null);
+                        setTransferFrom(next);
+                      }}
+                    />
                   </td>
                 </tr>
               ))}
@@ -802,7 +832,19 @@ function AccountsSection({
                   <CardTitle className="truncate">{account.name || account.email}</CardTitle>
                   <CardDescription className="break-all">{account.email}</CardDescription>
                 </div>
-                <AccountActions account={account} />
+                <AccountActions
+                  account={account}
+                  canTransfer={Boolean(account.sharedKeyBudget?.member)}
+                  transferDisabled={roster.length < 2}
+                  onImpersonate={(next) => {
+                    setError(null);
+                    setImpersonate(next);
+                  }}
+                  onTransfer={(next) => {
+                    setError(null);
+                    setTransferFrom(next);
+                  }}
+                />
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex flex-wrap items-center gap-2">

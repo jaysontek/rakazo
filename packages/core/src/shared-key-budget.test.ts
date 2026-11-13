@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  effectiveSharedKeySpendUsd,
   formatSharedKeyBudgetResetAt,
   fullWeekShareUsd,
   midWeekJoinFraction,
@@ -7,7 +8,6 @@ import {
   redivideWeeklyAllotments,
   SHARED_KEY_BUDGET_TIMEZONE,
   sharedKeyBudgetPercentUsed,
-  sharedKeySpendWindowStart,
   sharedKeyWeekEnd,
   sharedKeyWeekStart,
   weekFractionRemaining,
@@ -216,15 +216,39 @@ describe("shared-key weekly budget math", () => {
     expect(allotments.get("a")).toBeCloseTo(fullShare, 5);
   });
 
-  it("starts the spend window at join time for mid-week members", () => {
+  it("charges effective spend as Monday total minus the pre-join baseline", () => {
+    expect(effectiveSharedKeySpendUsd(40, 40)).toBe(0);
+    expect(effectiveSharedKeySpendUsd(40, 10)).toBe(30);
+    expect(effectiveSharedKeySpendUsd(5, 10)).toBe(0);
+    expect(effectiveSharedKeySpendUsd(0, 0)).toBe(0);
+  });
+
+  it("uses preJoin baselines when redistributing so mid-week prior spend is not charged", () => {
     const weekStart = new Date("2026-11-02T05:00:00.000Z");
-    const joinedAt = new Date("2026-11-05T17:00:00.000Z");
-    expect(sharedKeySpendWindowStart(weekStart, weekStart).toISOString()).toBe(
-      weekStart.toISOString(),
-    );
-    expect(sharedKeySpendWindowStart(weekStart, joinedAt).toISOString()).toBe(
-      joinedAt.toISOString(),
-    );
+    const mid = new Date("2026-11-05T17:00:00.000Z");
+    const allotments = redivideWeeklyAllotments({
+      monthlyCapUsd: 400,
+      members: [
+        { userId: "a", joinedAt: weekStart },
+        { userId: "c", joinedAt: mid },
+      ],
+      weekStart,
+      now: mid,
+      previousAllotments: new Map([["a", 50]]),
+      // Monday totals; c's $40 was before join.
+      spentByUser: new Map([
+        ["a", 10],
+        ["c", 40],
+      ]),
+      preJoinSpendByUser: new Map([
+        ["a", 0],
+        ["c", 40],
+      ]),
+    });
+    // Remaining from a: 50-10=40; c has no prior allotment → mid-week slice.
+    // effective c = 0 so continuing a keeps 10 + evenRemaining.
+    expect(allotments.get("c")!).toBeGreaterThan(0);
+    expect(allotments.get("a")!).toBeGreaterThan(10);
   });
 
   it("ends the week at the next America/New_York Monday, not a fixed 7*24h", () => {

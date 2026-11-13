@@ -782,6 +782,10 @@ model SharedKeyWeekAllotment {
   allotmentUsd Float
   /// Soft holds for in-flight shared-key calls; released in afterCall.
   reservedUsd  Float    @default(0)
+  /// First enrollment instant for this week; reused if the member is removed and re-added.
+  joinedAt     DateTime @default(now())
+  /// Shared-key spend from Monday up to joinedAt; effective spend is Monday-total minus this.
+  preJoinSpendUsd Float @default(0)
   updatedAt    DateTime @updatedAt
 
   @@id([weekStart, userId])

@@ -751,7 +751,7 @@ msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
 msgid "All keys"
-msgstr ""
+msgstr "Alle Schlüssel"
 
 #: src/components/integrations/space-availability.tsx
 msgid "All spaces"
@@ -1028,7 +1028,7 @@ msgstr "Anhang"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Audit"
-msgstr ""
+msgstr "Prüfung"
 
 #: src/pages/PluginsOverlay.tsx
 msgid "Authentication"
@@ -3364,7 +3364,7 @@ msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Filter by key type"
-msgstr ""
+msgstr "Nach Schlüsseltyp filtern"
 
 #: src/pages/Artifacts.tsx
 #: src/pages/shell/shell-sidebar.tsx
@@ -3902,7 +3902,7 @@ msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Key type"
-msgstr ""
+msgstr "Schlüsseltyp"
 
 #: src/pages/Shell.tsx
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
@@ -4637,7 +4637,7 @@ msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
 msgid "No key"
-msgstr ""
+msgstr "Kein Schlüssel"
 
 #: src/components/AskCard.tsx
 #: src/components/SecretAskCard.tsx
@@ -4692,7 +4692,7 @@ msgstr "Keine Seiten passen zu „{query}“."
 
 #: src/pages/AdminOpsPage.tsx
 msgid "No recent requests."
-msgstr ""
+msgstr "Keine aktuellen Anfragen."
 
 #: src/components/integrations/IntegrationSetup.tsx
 msgid "No remote MCP servers found"
@@ -5706,7 +5706,7 @@ msgstr ""
 #. placeholder {0}: resetCountdown(budget.resetsAt)
 #: src/pages/AdminOpsPage.tsx
 msgid "Resets in {0}"
-msgstr ""
+msgstr "Zurücksetzen in {0}"
 
 #: src/components/ComputerMaintenanceActions.tsx
 msgid "Resetting…"
@@ -6017,7 +6017,7 @@ msgstr "Suchen"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Search accounts"
-msgstr ""
+msgstr "Konten suchen"
 
 #: src/components/integrations/IntegrationSetup.tsx
 #: src/pages/PluginsOverlay.tsx
@@ -6053,7 +6053,7 @@ msgstr "Modelle suchen"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Search name or email"
-msgstr ""
+msgstr "Name oder E-Mail suchen"
 
 #: src/pages/shell/shell-sidebar.tsx
 msgid "Search runs"
@@ -6253,7 +6253,7 @@ msgstr ""
 #. placeholder {0}: accountLabel(account)
 #: src/pages/AdminOpsPage.tsx
 msgid "Shared week usage for {0}"
-msgstr ""
+msgstr "Gemeinsame Wochennutzung für {0}"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Shared-key week"
@@ -7490,7 +7490,7 @@ msgstr "Wöchentlich"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Weekly shared-key pool used"
-msgstr ""
+msgstr "Wöchentlicher Shared-Key-Pool verbraucht"
 
 #: src/components/SignupSurvey.tsx
 msgid "Welcome to Rakazo"

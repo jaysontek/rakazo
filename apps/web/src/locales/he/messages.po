@@ -751,7 +751,7 @@ msgstr "כל הבוטים"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "All keys"
-msgstr ""
+msgstr "כל המפתחות"
 
 #: src/components/integrations/space-availability.tsx
 msgid "All spaces"
@@ -1028,7 +1028,7 @@ msgstr "קובץ מצורף"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Audit"
-msgstr ""
+msgstr "ביקורת"
 
 #: src/pages/PluginsOverlay.tsx
 msgid "Authentication"
@@ -3364,7 +3364,7 @@ msgstr "סינון לפי תאריך"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Filter by key type"
-msgstr ""
+msgstr "סינון לפי סוג מפתח"
 
 #: src/pages/Artifacts.tsx
 #: src/pages/shell/shell-sidebar.tsx
@@ -3902,7 +3902,7 @@ msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Key type"
-msgstr ""
+msgstr "סוג מפתח"
 
 #: src/pages/Shell.tsx
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
@@ -4637,7 +4637,7 @@ msgstr "אין בוטים תואמים"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "No key"
-msgstr ""
+msgstr "אין מפתח"
 
 #: src/components/AskCard.tsx
 #: src/components/SecretAskCard.tsx
@@ -4692,7 +4692,7 @@ msgstr "אין דפים שתואמים ל-„{query}”."
 
 #: src/pages/AdminOpsPage.tsx
 msgid "No recent requests."
-msgstr ""
+msgstr "אין בקשות אחרונות."
 
 #: src/components/integrations/IntegrationSetup.tsx
 msgid "No remote MCP servers found"
@@ -5706,7 +5706,7 @@ msgstr ""
 #. placeholder {0}: resetCountdown(budget.resetsAt)
 #: src/pages/AdminOpsPage.tsx
 msgid "Resets in {0}"
-msgstr ""
+msgstr "מתאפס בעוד {0}"
 
 #: src/components/ComputerMaintenanceActions.tsx
 msgid "Resetting…"
@@ -6017,7 +6017,7 @@ msgstr "חיפוש"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Search accounts"
-msgstr ""
+msgstr "חיפוש חשבונות"
 
 #: src/components/integrations/IntegrationSetup.tsx
 #: src/pages/PluginsOverlay.tsx
@@ -6053,7 +6053,7 @@ msgstr "חיפוש מודלים"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Search name or email"
-msgstr ""
+msgstr "חיפוש שם או אימייל"
 
 #: src/pages/shell/shell-sidebar.tsx
 msgid "Search runs"
@@ -6253,7 +6253,7 @@ msgstr ""
 #. placeholder {0}: accountLabel(account)
 #: src/pages/AdminOpsPage.tsx
 msgid "Shared week usage for {0}"
-msgstr ""
+msgstr "שימוש שבועי משותף עבור {0}"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Shared-key week"
@@ -7490,7 +7490,7 @@ msgstr "שבועי"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Weekly shared-key pool used"
-msgstr ""
+msgstr "מאגר מפתח משותף שבועי בשימוש"
 
 #: src/components/SignupSurvey.tsx
 msgid "Welcome to Rakazo"

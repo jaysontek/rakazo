@@ -751,7 +751,7 @@ msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
 msgid "All keys"
-msgstr ""
+msgstr "모든 키"
 
 #: src/components/integrations/space-availability.tsx
 msgid "All spaces"
@@ -1028,7 +1028,7 @@ msgstr "첨부 파일"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Audit"
-msgstr ""
+msgstr "감사"
 
 #: src/pages/PluginsOverlay.tsx
 msgid "Authentication"
@@ -3364,7 +3364,7 @@ msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Filter by key type"
-msgstr ""
+msgstr "키 유형으로 필터"
 
 #: src/pages/Artifacts.tsx
 #: src/pages/shell/shell-sidebar.tsx
@@ -3902,7 +3902,7 @@ msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Key type"
-msgstr ""
+msgstr "키 유형"
 
 #: src/pages/Shell.tsx
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
@@ -4637,7 +4637,7 @@ msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
 msgid "No key"
-msgstr ""
+msgstr "키 없음"
 
 #: src/components/AskCard.tsx
 #: src/components/SecretAskCard.tsx
@@ -4692,7 +4692,7 @@ msgstr "“{query}”과(와) 일치하는 페이지가 없습니다."
 
 #: src/pages/AdminOpsPage.tsx
 msgid "No recent requests."
-msgstr ""
+msgstr "최근 요청이 없습니다."
 
 #: src/components/integrations/IntegrationSetup.tsx
 msgid "No remote MCP servers found"
@@ -5706,7 +5706,7 @@ msgstr ""
 #. placeholder {0}: resetCountdown(budget.resetsAt)
 #: src/pages/AdminOpsPage.tsx
 msgid "Resets in {0}"
-msgstr ""
+msgstr "{0} 후 초기화"
 
 #: src/components/ComputerMaintenanceActions.tsx
 msgid "Resetting…"
@@ -6017,7 +6017,7 @@ msgstr "검색"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Search accounts"
-msgstr ""
+msgstr "계정 검색"
 
 #: src/components/integrations/IntegrationSetup.tsx
 #: src/pages/PluginsOverlay.tsx
@@ -6053,7 +6053,7 @@ msgstr "모델 검색"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Search name or email"
-msgstr ""
+msgstr "이름 또는 이메일 검색"
 
 #: src/pages/shell/shell-sidebar.tsx
 msgid "Search runs"
@@ -6253,7 +6253,7 @@ msgstr ""
 #. placeholder {0}: accountLabel(account)
 #: src/pages/AdminOpsPage.tsx
 msgid "Shared week usage for {0}"
-msgstr ""
+msgstr "{0}의 공유 주간 사용량"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Shared-key week"
@@ -7490,7 +7490,7 @@ msgstr "매주"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Weekly shared-key pool used"
-msgstr ""
+msgstr "주간 공유 키 풀 사용량"
 
 #: src/components/SignupSurvey.tsx
 msgid "Welcome to Rakazo"

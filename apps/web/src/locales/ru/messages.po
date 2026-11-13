@@ -751,7 +751,7 @@ msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
 msgid "All keys"
-msgstr ""
+msgstr "Все ключи"
 
 #: src/components/integrations/space-availability.tsx
 msgid "All spaces"
@@ -1028,7 +1028,7 @@ msgstr "Вложение"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Audit"
-msgstr ""
+msgstr "Аудит"
 
 #: src/pages/PluginsOverlay.tsx
 msgid "Authentication"
@@ -3364,7 +3364,7 @@ msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Filter by key type"
-msgstr ""
+msgstr "Фильтр по типу ключа"
 
 #: src/pages/Artifacts.tsx
 #: src/pages/shell/shell-sidebar.tsx
@@ -3902,7 +3902,7 @@ msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Key type"
-msgstr ""
+msgstr "Тип ключа"
 
 #: src/pages/Shell.tsx
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
@@ -4637,7 +4637,7 @@ msgstr "Ни один бот не подходит"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "No key"
-msgstr ""
+msgstr "Нет ключа"
 
 #: src/components/AskCard.tsx
 #: src/components/SecretAskCard.tsx
@@ -4692,7 +4692,7 @@ msgstr "Нет страниц по запросу «{query}»."
 
 #: src/pages/AdminOpsPage.tsx
 msgid "No recent requests."
-msgstr ""
+msgstr "Нет недавних запросов."
 
 #: src/components/integrations/IntegrationSetup.tsx
 msgid "No remote MCP servers found"
@@ -5706,7 +5706,7 @@ msgstr ""
 #. placeholder {0}: resetCountdown(budget.resetsAt)
 #: src/pages/AdminOpsPage.tsx
 msgid "Resets in {0}"
-msgstr ""
+msgstr "Сброс через {0}"
 
 #: src/components/ComputerMaintenanceActions.tsx
 msgid "Resetting…"
@@ -6017,7 +6017,7 @@ msgstr "Поиск"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Search accounts"
-msgstr ""
+msgstr "Поиск аккаунтов"
 
 #: src/components/integrations/IntegrationSetup.tsx
 #: src/pages/PluginsOverlay.tsx
@@ -6053,7 +6053,7 @@ msgstr "Поиск моделей"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Search name or email"
-msgstr ""
+msgstr "Поиск имени или email"
 
 #: src/pages/shell/shell-sidebar.tsx
 msgid "Search runs"
@@ -6253,7 +6253,7 @@ msgstr ""
 #. placeholder {0}: accountLabel(account)
 #: src/pages/AdminOpsPage.tsx
 msgid "Shared week usage for {0}"
-msgstr ""
+msgstr "Общее недельное использование для {0}"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Shared-key week"
@@ -7490,7 +7490,7 @@ msgstr "Еженедельно"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Weekly shared-key pool used"
-msgstr ""
+msgstr "Использовано недельного пула общего ключа"
 
 #: src/components/SignupSurvey.tsx
 msgid "Welcome to Rakazo"

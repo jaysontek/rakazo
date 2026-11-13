@@ -33,8 +33,10 @@ export async function classifyGoogleModelKeyType(
   deploymentSharedKey: string | null | undefined,
 ): Promise<ModelKeyType> {
   const credential = await findNewestUserModelCredential(prisma, userId, "google");
+  // No stored Google key: do not badge as company. Shared-key budget enrollment is
+  // decided on the hot path via isDeploymentSharedKeyUsage, not this classifier.
   if (!credential) {
-    return deploymentSharedKey ? "company" : "none";
+    return "none";
   }
   const row = await prisma.secret.findFirst({
     where: { id: credential.secretId, userId },

@@ -19,7 +19,7 @@ import {
 } from "@rakazo/adapters";
 import { redactSecrets } from "@rakazo/core";
 import type { PrismaClient } from "@rakazo/db";
-import { ensureSharedKeyBudgetMember, findModelCredential, recordUsage } from "@rakazo/db";
+import { findModelCredential, recordUsage } from "@rakazo/db";
 import { getLogger } from "@rakazo/logging";
 
 const MAX_RULES_CHARS = 4_000;
@@ -275,9 +275,8 @@ export class ModelTeamChatEngagementJudge implements TeamChatEngagementJudge {
       const creditObserver = settings?.modelCreditsEnabled
         ? await hostedModelCreditObserver(this.deps.prisma, scope)
         : undefined;
-      if (sharedKey) {
-        await ensureSharedKeyBudgetMember(this.deps.prisma, scope.userId);
-      }
+      // Enrollment is inside reserveSharedKeyBudget (observer), not here — keep
+      // model resolution write-free for mocks without the roster table.
       const budgetObserver = sharedKey
         ? await sharedKeyBudgetObserver(
             this.deps.prisma,

@@ -1,4 +1,4 @@
-import { sharedKeySpendWindowStart, sharedKeyWeekStart } from "@rakazo/core";
+import { effectiveSharedKeySpendUsd, sharedKeyWeekStart } from "@rakazo/core";
 import type { PrismaClient } from "./client.js";
 import { Prisma } from "./client.js";
 import { isHiddenOpsEmail } from "./ops-email-filter.js";
@@ -102,17 +102,17 @@ async function spentSharedKeyUsd(
 }
 
 async function memberSpendSince(
-  tx: Pick<TransferTx, "usageRecord" | "sharedKeyBudgetMember">,
+  tx: Pick<TransferTx, "usageRecord" | "sharedKeyWeekAllotment">,
   userId: string,
   weekStart: Date,
   now: Date,
 ): Promise<number> {
-  const member = await tx.sharedKeyBudgetMember.findUnique({
-    where: { userId },
-    select: { joinedAt: true },
+  const mondaySpend = await spentSharedKeyUsd(tx, userId, weekStart, now);
+  const allotment = await tx.sharedKeyWeekAllotment.findUnique({
+    where: { weekStart_userId: { weekStart, userId } },
+    select: { preJoinSpendUsd: true },
   });
-  const since = sharedKeySpendWindowStart(weekStart, member?.joinedAt ?? weekStart);
-  return spentSharedKeyUsd(tx, userId, since, now);
+  return effectiveSharedKeySpendUsd(mondaySpend, allotment?.preJoinSpendUsd ?? 0);
 }
 
 /**

@@ -1,16 +1,18 @@
 import {
+  effectiveSharedKeySpendUsd,
   fullWeekShareUsd,
   parseSharedKeyMonthlyBudgetInput,
   redivideWeeklyAllotments,
   SHARED_KEY_BUDGET_TIMEZONE,
   sharedKeyBudgetPercentUsed,
-  sharedKeySpendWindowStart,
   sharedKeyWeekEnd,
   sharedKeyWeekStart,
 } from "@rakazo/core";
 import { getLogger } from "@rakazo/logging";
+import { recordAuditEvent } from "./audit-events.js";
 import type { PrismaClient } from "./client.js";
 import { Prisma } from "./client.js";
+import { isHiddenOpsEmail } from "./ops-email-filter.js";
 import { reapplyActiveTransfersTx } from "./shared-key-transfer.js";
 
 type BudgetPrisma = Pick<
@@ -167,20 +169,17 @@ async function spentSharedKeyUsd(
 }
 
 /**
- * Per-member shared-key spend inside each member's allotment window (week start, or join
- * time when they enrolled mid-week). Pre-join spend is ignored so a mid-week enroll cannot
- * be hard-stopped by earlier unmetered company-key usage.
+ * Monday→now shared-key spend per user. Effective allotment spend subtracts each row's
+ * preJoinSpendUsd separately — never window spend at joinedAt.
  */
 async function spentByMembers(
   prisma: Pick<BudgetTx, "usageRecord">,
-  members: Array<{ userId: string; joinedAt: Date }>,
+  userIds: string[],
   weekStart: Date,
   now: Date,
 ): Promise<Map<string, number>> {
   const spent = new Map<string, number>();
-  if (members.length === 0) return spent;
-  const userIds = members.map((member) => member.userId);
-  const joinedById = new Map(members.map((member) => [member.userId, member.joinedAt]));
+  if (userIds.length === 0) return spent;
   const groups = await prisma.usageRecord.groupBy({
     by: ["userId"],
     where: {
@@ -190,38 +189,35 @@ async function spentByMembers(
     },
     _sum: { costUsd: true },
   });
-  const midWeekIds = members
-    .filter((member) => member.joinedAt.getTime() > weekStart.getTime())
-    .map((member) => member.userId);
-  if (midWeekIds.length === 0) {
-    for (const group of groups) {
-      spent.set(group.userId, group._sum.costUsd ?? 0);
-    }
-    return spent;
-  }
-  // Full-week members can use the groupBy totals; mid-week joiners need a join-bounded sum.
   for (const group of groups) {
-    if (!midWeekIds.includes(group.userId)) {
-      spent.set(group.userId, group._sum.costUsd ?? 0);
-    }
-  }
-  for (const userId of midWeekIds) {
-    const joinedAt = joinedById.get(userId) ?? weekStart;
-    spent.set(
-      userId,
-      await spentSharedKeyUsd(prisma, userId, sharedKeySpendWindowStart(weekStart, joinedAt), now),
-    );
+    spent.set(group.userId, group._sum.costUsd ?? 0);
   }
   return spent;
 }
 
+type AllotmentBaseline = {
+  userId: string;
+  allotmentUsd: number;
+  reservedUsd: number;
+  joinedAt: Date;
+  preJoinSpendUsd: number;
+  updatedAt: Date;
+};
+
 async function previousBudgetRows(
   prisma: Pick<BudgetTx, "sharedKeyWeekAllotment">,
   weekStart: Date,
-): Promise<Array<{ userId: string; allotmentUsd: number; reservedUsd: number; updatedAt: Date }>> {
+): Promise<AllotmentBaseline[]> {
   return prisma.sharedKeyWeekAllotment.findMany({
     where: { weekStart },
-    select: { userId: true, allotmentUsd: true, reservedUsd: true, updatedAt: true },
+    select: {
+      userId: true,
+      allotmentUsd: true,
+      reservedUsd: true,
+      joinedAt: true,
+      preJoinSpendUsd: true,
+      updatedAt: true,
+    },
   });
 }
 
@@ -274,48 +270,188 @@ async function recomputeSharedKeyWeekAllotmentsTx(
   const weekStart = sharedKeyWeekStart(now);
   await clearStaleSharedKeyBudgetHolds(tx, weekStart, now);
   const members = await listSharedKeyBudgetMembers(tx);
-  if (!(monthly != null && monthly > 0) || members.length === 0) {
-    await tx.sharedKeyWeekAllotment.deleteMany({ where: { weekStart } });
+  if (!(monthly != null && monthly > 0)) {
+    return new Map();
+  }
+  if (members.length === 0) {
+    // Empty roster: shrink leftover week rows to spent+reserved so unused returns to the
+    // conceptual pool, but keep joinedAt / preJoinSpendUsd for same-week re-add.
+    const priorRows = await previousBudgetRows(tx, weekStart);
+    const spentByUser = await spentByMembers(
+      tx,
+      priorRows.map((row) => row.userId),
+      weekStart,
+      now,
+    );
+    for (const row of priorRows) {
+      const effective = effectiveSharedKeySpendUsd(
+        spentByUser.get(row.userId) ?? 0,
+        row.preJoinSpendUsd,
+      );
+      const floor = effective + row.reservedUsd;
+      if (row.allotmentUsd !== floor) {
+        await tx.sharedKeyWeekAllotment.update({
+          where: { weekStart_userId: { weekStart, userId: row.userId } },
+          data: { allotmentUsd: floor },
+        });
+      }
+    }
     return new Map();
   }
 
   const priorRows = await previousBudgetRows(tx, weekStart);
   const previousAllotments = new Map(priorRows.map((row) => [row.userId, row.allotmentUsd]));
   const reservedByUser = new Map(priorRows.map((row) => [row.userId, row.reservedUsd]));
+  const preJoinSpendByUser = new Map(priorRows.map((row) => [row.userId, row.preJoinSpendUsd]));
+  const priorJoinedAt = new Map(priorRows.map((row) => [row.userId, row.joinedAt]));
+
+  // Members for redivide use allotment.joinedAt when the week row already exists so
+  // remove/re-add keeps the original mid-week fraction and baseline.
+  const redivideMembers = members.map((member) => ({
+    userId: member.userId,
+    joinedAt: priorJoinedAt.get(member.userId) ?? member.joinedAt,
+  }));
+
   // Include removed prior allotment holders so their unspent remainder returns to the pool.
-  const spendMembers = [
-    ...members,
-    ...priorRows
-      .filter((row) => !members.some((member) => member.userId === row.userId))
-      .map((row) => ({ userId: row.userId, joinedAt: weekStart })),
+  const spendUserIds = [
+    ...new Set([...redivideMembers.map((m) => m.userId), ...priorRows.map((row) => row.userId)]),
   ];
-  const spentByUser = await spentByMembers(tx, spendMembers, weekStart, now);
+  const spentByUser = await spentByMembers(tx, spendUserIds, weekStart, now);
+
+  // Fresh enrolls without a week row yet: baseline is Monday→joinedAt shared spend.
+  for (const member of redivideMembers) {
+    if (!preJoinSpendByUser.has(member.userId)) {
+      const baseline =
+        member.joinedAt.getTime() > weekStart.getTime()
+          ? await spentSharedKeyUsd(tx, member.userId, weekStart, member.joinedAt)
+          : 0;
+      preJoinSpendByUser.set(member.userId, baseline);
+    }
+  }
+
   const allotments = redivideWeeklyAllotments({
     monthlyCapUsd: monthly,
-    members,
+    members: redivideMembers,
     weekStart,
     now,
     previousAllotments,
     spentByUser,
     reservedByUser,
+    preJoinSpendByUser,
     rebaseOnMonthlyCap: options?.rebaseOnMonthlyCap === true,
   });
 
-  await tx.sharedKeyWeekAllotment.deleteMany({
-    where: { weekStart, userId: { notIn: [...allotments.keys()] } },
-  });
+  const memberIds = new Set(allotments.keys());
+
   for (const [userId, allotmentUsd] of allotments) {
+    const existing = priorRows.find((row) => row.userId === userId);
+    const joinedAt = existing?.joinedAt ?? redivideMembers.find((m) => m.userId === userId)!.joinedAt;
+    const preJoinSpendUsd = existing?.preJoinSpendUsd ?? preJoinSpendByUser.get(userId) ?? 0;
     await tx.sharedKeyWeekAllotment.upsert({
       where: { weekStart_userId: { weekStart, userId } },
-      create: { weekStart, userId, allotmentUsd, reservedUsd: 0 },
-      // Keep live reservedUsd; only the allotment ceiling is rewritten.
+      create: {
+        weekStart,
+        userId,
+        allotmentUsd,
+        reservedUsd: 0,
+        joinedAt,
+        preJoinSpendUsd,
+      },
+      // Keep live reservedUsd and join baseline; only the allotment ceiling is rewritten.
       update: { allotmentUsd },
     });
   }
+
+  // Removed members: shrink allotment to spent+reserved so unused returns via the pool above,
+  // but keep the row (joinedAt / preJoinSpendUsd) for same-week re-add.
+  for (const row of priorRows) {
+    if (memberIds.has(row.userId)) continue;
+    const mondaySpend = spentByUser.get(row.userId) ?? 0;
+    const effective = effectiveSharedKeySpendUsd(mondaySpend, row.preJoinSpendUsd);
+    const floor = effective + row.reservedUsd;
+    if (row.allotmentUsd !== floor) {
+      await tx.sharedKeyWeekAllotment.update({
+        where: { weekStart_userId: { weekStart, userId: row.userId } },
+        data: { allotmentUsd: floor },
+      });
+    }
+  }
+
   // Cap rebase / membership redivide must keep active mid-week transfers applied.
-  await reapplyActiveTransfersTx(tx, weekStart, spentByUser, reservedByUser);
+  // Pass effective spend so transfer floors match the allotment accounting.
+  const effectiveSpent = new Map<string, number>();
+  for (const userId of spendUserIds) {
+    effectiveSpent.set(
+      userId,
+      effectiveSharedKeySpendUsd(spentByUser.get(userId) ?? 0, preJoinSpendByUser.get(userId) ?? 0),
+    );
+  }
+  await reapplyActiveTransfersTx(tx, weekStart, effectiveSpent, reservedByUser);
   const refreshed = await previousBudgetRows(tx, weekStart);
-  return new Map(refreshed.map((row) => [row.userId, row.allotmentUsd]));
+  return new Map(
+    refreshed.filter((row) => memberIds.has(row.userId)).map((row) => [row.userId, row.allotmentUsd]),
+  );
+}
+
+async function userEligibleForSharedKeyBudget(
+  tx: Pick<BudgetTx, "user">,
+  userId: string,
+): Promise<boolean> {
+  const user = await tx.user.findUnique({
+    where: { id: userId },
+    select: { id: true, email: true, deactivatedAt: true },
+  });
+  if (!user || user.deactivatedAt != null) return false;
+  if (isHiddenOpsEmail(user.email)) return false;
+  return true;
+}
+
+/**
+ * Enroll under the members lock (caller must hold it). Reuses this week's allotment
+ * joinedAt / preJoinSpendUsd on remove→re-add. Skips deactivated and hidden accounts.
+ * Returns true when a new roster row was created.
+ */
+async function enrollSharedKeyBudgetMemberTx(
+  tx: BudgetTx,
+  userId: string,
+  now: Date,
+  options?: { audit?: boolean },
+): Promise<boolean> {
+  const existing = await tx.sharedKeyBudgetMember.findUnique({
+    where: { userId },
+    select: { userId: true },
+  });
+  if (existing) return false;
+  if (!(await userEligibleForSharedKeyBudget(tx, userId))) return false;
+
+  const weekStart = sharedKeyWeekStart(now);
+  const priorAllotment = await tx.sharedKeyWeekAllotment.findUnique({
+    where: { weekStart_userId: { weekStart, userId } },
+    select: { joinedAt: true, preJoinSpendUsd: true },
+  });
+
+  const joinedAt = priorAllotment?.joinedAt ?? now;
+  const preJoinSpendUsd =
+    priorAllotment?.preJoinSpendUsd ??
+    (joinedAt.getTime() > weekStart.getTime()
+      ? await spentSharedKeyUsd(tx, userId, weekStart, joinedAt)
+      : 0);
+
+  await tx.sharedKeyBudgetMember.create({ data: { userId, joinedAt } });
+  await recomputeSharedKeyWeekAllotmentsTx(tx, now);
+  if (options?.audit !== false) {
+    await recordAuditEvent({
+      action: "shared_key_budget.member.auto_enrolled",
+      actor: { type: "system", label: "shared-key-budget" },
+      target: { type: "user", id: userId },
+      metadata: {
+        userId,
+        weekStartsAt: weekStart.toISOString(),
+        preJoinSpendUsd,
+      },
+    });
+  }
+  return true;
 }
 
 /** Add a user to the shared-key budget set and re-divide the current week. */
@@ -326,34 +462,48 @@ export async function addSharedKeyBudgetMember(
 ): Promise<void> {
   await prisma.$transaction(async (tx) => {
     await lockSharedKeyBudget(tx, MEMBERS_LOCK);
-    await tx.sharedKeyBudgetMember.upsert({
+    const existing = await tx.sharedKeyBudgetMember.findUnique({
       where: { userId },
-      create: { userId, joinedAt },
-      update: {},
+      select: { userId: true },
+    });
+    if (existing) {
+      await recomputeSharedKeyWeekAllotmentsTx(tx, joinedAt);
+      return;
+    }
+    const weekStart = sharedKeyWeekStart(joinedAt);
+    const priorAllotment = await tx.sharedKeyWeekAllotment.findUnique({
+      where: { weekStart_userId: { weekStart, userId } },
+      select: { joinedAt: true },
+    });
+    const effectiveJoinedAt = priorAllotment?.joinedAt ?? joinedAt;
+    await tx.sharedKeyBudgetMember.create({
+      data: { userId, joinedAt: effectiveJoinedAt },
     });
     await recomputeSharedKeyWeekAllotmentsTx(tx, joinedAt);
   });
 }
 
 /**
- * Enroll a company-key user if they are not already on the roster.
- * No-op when already a member so hot paths (shared-key model calls) stay cheap.
+ * Enroll a shared-key user if they are not already on the roster.
+ * Prefer {@link reserveSharedKeyBudget} on the hot path (enrolls under the budget lock).
+ * Kept for explicit admin/env includes. No-op when already a member.
  */
 export async function ensureSharedKeyBudgetMember(
-  prisma: Pick<BudgetPrisma, "$transaction" | "sharedKeyBudgetMember">,
+  prisma: Pick<BudgetPrisma, "$transaction">,
   userId: string,
   joinedAt = new Date(),
 ): Promise<boolean> {
-  const existing = await prisma.sharedKeyBudgetMember.findUnique({
-    where: { userId },
-    select: { userId: true },
+  return prisma.$transaction(async (tx) => {
+    await lockSharedKeyBudget(tx, MEMBERS_LOCK);
+    return enrollSharedKeyBudgetMemberTx(tx, userId, joinedAt, { audit: false });
   });
-  if (existing) return false;
-  await addSharedKeyBudgetMember(prisma, userId, joinedAt);
-  return true;
 }
 
-/** Remove a user from the shared-key budget set and re-divide remaining budget. */
+/**
+ * Remove a user from the active roster and return unused allotment to the pool.
+ * Keeps this week's allotment row (joinedAt / preJoinSpendUsd) so a same-week re-add
+ * reuses the original baseline. The row is irrelevant after the next Monday weekStart.
+ */
 export async function removeSharedKeyBudgetMember(
   prisma: Pick<BudgetPrisma, "$transaction">,
   userId: string,
@@ -367,61 +517,96 @@ export async function removeSharedKeyBudgetMember(
 }
 
 /**
- * Make the member set match `userIds` (order ignored). Adds missing users at `now`,
- * removes extras, then re-divides. Used when syncing SHARED_KEY_BUDGET_USER_IDS alone.
- * Unknown ids (no matching user row) are skipped and logged so API startup cannot crash.
+ * Add every known id from SHARED_KEY_BUDGET_USER_IDS. Never removes hot-path or
+ * admin-added roster rows — only additive.
  */
 export async function reconcileSharedKeyBudgetMembers(
   prisma: Pick<BudgetPrisma, "$transaction">,
   userIds: string[],
   now = new Date(),
 ): Promise<void> {
-  await syncSharedKeyBudgetMembers(prisma, { explicitUserIds: userIds, companyUserIds: [] }, now);
+  await syncSharedKeyBudgetMembers(prisma, { explicitUserIds: userIds }, now);
 }
 
 /**
- * Roster = company-key users ∪ explicit SHARED_KEY_BUDGET_USER_IDS includes.
- * Adds missing members at `now`, removes anyone not in the union, then re-divides.
- * Personal-key users are kept only when listed in `explicitUserIds`.
+ * Additive roster sync for explicit SHARED_KEY_BUDGET_USER_IDS includes.
+ * Does not remove anyone — auto-enrolled and admin-added members stay until
+ * an explicit remove or the optional Monday prune.
  */
 export async function syncSharedKeyBudgetMembers(
   prisma: Pick<BudgetPrisma, "$transaction">,
-  input: { explicitUserIds: string[]; companyUserIds: string[] },
+  input: { explicitUserIds: string[]; companyUserIds?: string[] },
   now = new Date(),
 ): Promise<void> {
   const wanted = [
     ...new Set(
-      [...input.explicitUserIds, ...input.companyUserIds].map((id) => id.trim()).filter(Boolean),
+      [...input.explicitUserIds, ...(input.companyUserIds ?? [])]
+        .map((id) => id.trim())
+        .filter(Boolean),
     ),
   ];
+  if (wanted.length === 0) return;
   await prisma.$transaction(async (tx) => {
     await lockSharedKeyBudget(tx, MEMBERS_LOCK);
-    const known = wanted.length
-      ? await tx.user.findMany({
-          where: { id: { in: wanted } },
-          select: { id: true },
-        })
-      : [];
-    const knownIds = new Set(known.map((row) => row.id));
+    const known = await tx.user.findMany({
+      where: { id: { in: wanted }, deactivatedAt: null },
+      select: { id: true, email: true },
+    });
+    const knownIds = new Set(
+      known.filter((row) => !isHiddenOpsEmail(row.email)).map((row) => row.id),
+    );
     for (const userId of wanted) {
       if (!knownIds.has(userId)) {
-        getLogger().warn("shared-key budget: skipping unknown user id", { userId });
+        getLogger().warn("shared-key budget: skipping unknown or ineligible user id", { userId });
       }
     }
-    const existing = await tx.sharedKeyBudgetMember.findMany({ select: { userId: true } });
-    const have = new Set(existing.map((row) => row.userId));
     for (const userId of knownIds) {
-      if (!have.has(userId)) {
-        await tx.sharedKeyBudgetMember.create({ data: { userId, joinedAt: now } });
-      }
+      await enrollSharedKeyBudgetMemberTx(tx, userId, now, { audit: false });
     }
-    for (const userId of have) {
-      if (!knownIds.has(userId)) {
-        await tx.sharedKeyBudgetMember.delete({ where: { userId } });
-      }
-    }
-    await recomputeSharedKeyWeekAllotmentsTx(tx, now);
   });
+}
+
+/**
+ * Drop roster members with no shared-key usage in the prior America/New_York week
+ * who are not on the explicit env include list. Call on Monday (or lazily when the
+ * week rolls) so dormant auto-enrolls do not keep splitting the pool forever.
+ */
+export async function pruneInactiveSharedKeyBudgetMembers(
+  prisma: Pick<BudgetPrisma, "$transaction">,
+  explicitUserIds: string[],
+  now = new Date(),
+): Promise<string[]> {
+  const weekStart = sharedKeyWeekStart(now);
+  const priorWeekEnd = weekStart;
+  const priorWeekStart = sharedKeyWeekStart(new Date(weekStart.getTime() - 24 * 60 * 60 * 1000));
+  const keep = new Set(explicitUserIds.map((id) => id.trim()).filter(Boolean));
+  const removed: string[] = [];
+  await prisma.$transaction(async (tx) => {
+    await lockSharedKeyBudget(tx, MEMBERS_LOCK);
+    const members = await listSharedKeyBudgetMembers(tx);
+    if (members.length === 0) return;
+    const usage = await tx.usageRecord.groupBy({
+      by: ["userId"],
+      where: {
+        userId: { in: members.map((m) => m.userId) },
+        sharedKey: true,
+        createdAt: { gte: priorWeekStart, lt: priorWeekEnd },
+      },
+      _sum: { costUsd: true },
+    });
+    const active = new Set(
+      usage.filter((row) => (row._sum.costUsd ?? 0) > 0).map((row) => row.userId),
+    );
+    for (const member of members) {
+      if (keep.has(member.userId) || active.has(member.userId)) continue;
+      await tx.sharedKeyBudgetMember.delete({ where: { userId: member.userId } });
+      removed.push(member.userId);
+    }
+    if (removed.length > 0) {
+      await recomputeSharedKeyWeekAllotmentsTx(tx, now);
+    }
+  });
+  return removed;
 }
 
 async function ensureMemberAllotment(
@@ -429,7 +614,12 @@ async function ensureMemberAllotment(
   userId: string,
   weekStart: Date,
   now: Date,
-): Promise<{ allotmentUsd: number; reservedUsd: number } | null> {
+): Promise<{
+  allotmentUsd: number;
+  reservedUsd: number;
+  joinedAt: Date;
+  preJoinSpendUsd: number;
+} | null> {
   const member = await tx.sharedKeyBudgetMember.findUnique({ where: { userId } });
   if (!member) return null;
   let row = await tx.sharedKeyWeekAllotment.findUnique({
@@ -442,13 +632,21 @@ async function ensureMemberAllotment(
       where: { weekStart_userId: { weekStart, userId } },
     });
   }
-  return row ? { allotmentUsd: row.allotmentUsd, reservedUsd: row.reservedUsd } : null;
+  return row
+    ? {
+        allotmentUsd: row.allotmentUsd,
+        reservedUsd: row.reservedUsd,
+        joinedAt: row.joinedAt,
+        preJoinSpendUsd: row.preJoinSpendUsd,
+      }
+    : null;
 }
 
 /**
  * Hard-stop gate for a shared-key model call. Personal keys never call this.
- * Reserves `maxCostUsd` against the weekly allotment until `releaseSharedKeyBudgetHold`.
- * Takes the same members lock as re-divide so the two cannot interleave.
+ * Auto-enrolls the user under the same members lock when a monthly cap is set
+ * (skips deactivated / hidden). Reserves `maxCostUsd` against the weekly allotment
+ * until `releaseSharedKeyBudgetHold`.
  */
 export async function reserveSharedKeyBudget(
   prisma: Pick<BudgetPrisma, "$transaction">,
@@ -470,13 +668,13 @@ export async function reserveSharedKeyBudget(
 
     const weekStart = sharedKeyWeekStart(now);
     await clearStaleSharedKeyBudgetHolds(tx, weekStart, now);
-    const member = await tx.sharedKeyBudgetMember.findUnique({ where: { userId } });
+    await enrollSharedKeyBudgetMemberTx(tx, userId, now);
     const allotment = await ensureMemberAllotment(tx, userId, weekStart, now);
-    // Feature on but user not in the shared-key set: no shared-key spend allowed.
+    // Feature on but user not eligible / not enrolled: no shared-key spend allowed.
     const cap = allotment?.allotmentUsd ?? 0;
     const reserved = allotment?.reservedUsd ?? 0;
-    const spendSince = sharedKeySpendWindowStart(weekStart, member?.joinedAt ?? weekStart);
-    const spent = await spentSharedKeyUsd(tx, userId, spendSince, now);
+    const mondaySpend = await spentSharedKeyUsd(tx, userId, weekStart, now);
+    const spent = effectiveSharedKeySpendUsd(mondaySpend, allotment?.preJoinSpendUsd ?? 0);
     // At or over the cap: refuse every further shared-key call (including zero-estimate probes).
     const over = spent + reserved >= cap || (maxCostUsd > 0 && spent + reserved + maxCostUsd > cap);
     if (!allotment || over) {
@@ -543,10 +741,10 @@ export async function sharedKeyWeeklyBudgetStatus(
   const row = await prisma.sharedKeyWeekAllotment.findUnique({
     where: { weekStart_userId: { weekStart, userId } },
   });
-  const spendSince = sharedKeySpendWindowStart(weekStart, member.joinedAt);
-  const spentUsd = await prisma.$transaction((tx) =>
-    spentSharedKeyUsd(tx, userId, spendSince, now),
+  const mondaySpend = await prisma.$transaction((tx) =>
+    spentSharedKeyUsd(tx, userId, weekStart, now),
   );
+  const spentUsd = effectiveSharedKeySpendUsd(mondaySpend, row?.preJoinSpendUsd ?? 0);
   const weeklyCapUsd = row?.allotmentUsd ?? fullWeekShareUsd(monthly, 1);
   const reservedUsd = row?.reservedUsd ?? 0;
   return {

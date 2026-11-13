@@ -33,11 +33,11 @@ describe("Google model key classification", () => {
     expect(sharedKeyMaterialMatches("same-key", "different-key")).toBe(false);
   });
 
-  it("uses the configured deployment key when no Google credential exists", async () => {
+  it("does not badge users without a stored Google key as company", async () => {
     const withKey = fixture({ credential: null });
     await expect(
       classifyGoogleModelKeyType(withKey.prisma as never, withKey.secrets, "user-1", "shared-key"),
-    ).resolves.toBe("company");
+    ).resolves.toBe("none");
     expect(withKey.secrets.load).not.toHaveBeenCalled();
 
     const withoutKey = fixture({ credential: null });

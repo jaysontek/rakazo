@@ -752,7 +752,7 @@ msgstr "所有機器人"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "All keys"
-msgstr ""
+msgstr "全部金鑰"
 
 #: src/components/integrations/space-availability.tsx
 msgid "All spaces"
@@ -1029,7 +1029,7 @@ msgstr "附件"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Audit"
-msgstr ""
+msgstr "稽核"
 
 #: src/pages/PluginsOverlay.tsx
 msgid "Authentication"
@@ -3365,7 +3365,7 @@ msgstr "依日期篩選"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Filter by key type"
-msgstr ""
+msgstr "依金鑰類型篩選"
 
 #: src/pages/Artifacts.tsx
 #: src/pages/shell/shell-sidebar.tsx
@@ -3903,7 +3903,7 @@ msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Key type"
-msgstr ""
+msgstr "金鑰類型"
 
 #: src/pages/Shell.tsx
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
@@ -4638,7 +4638,7 @@ msgstr "沒有符合的機器人"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "No key"
-msgstr ""
+msgstr "無金鑰"
 
 #: src/components/AskCard.tsx
 #: src/components/SecretAskCard.tsx
@@ -4693,7 +4693,7 @@ msgstr "沒有符合「{query}」的頁面。"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "No recent requests."
-msgstr ""
+msgstr "沒有最近的請求。"
 
 #: src/components/integrations/IntegrationSetup.tsx
 msgid "No remote MCP servers found"
@@ -5707,7 +5707,7 @@ msgstr ""
 #. placeholder {0}: resetCountdown(budget.resetsAt)
 #: src/pages/AdminOpsPage.tsx
 msgid "Resets in {0}"
-msgstr ""
+msgstr "{0}後重設"
 
 #: src/components/ComputerMaintenanceActions.tsx
 msgid "Resetting…"
@@ -6018,7 +6018,7 @@ msgstr "搜尋"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Search accounts"
-msgstr ""
+msgstr "搜尋帳戶"
 
 #: src/components/integrations/IntegrationSetup.tsx
 #: src/pages/PluginsOverlay.tsx
@@ -6054,7 +6054,7 @@ msgstr "搜尋模型"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Search name or email"
-msgstr ""
+msgstr "搜尋名稱或電子郵件"
 
 #: src/pages/shell/shell-sidebar.tsx
 msgid "Search runs"
@@ -6254,7 +6254,7 @@ msgstr ""
 #. placeholder {0}: accountLabel(account)
 #: src/pages/AdminOpsPage.tsx
 msgid "Shared week usage for {0}"
-msgstr ""
+msgstr "{0} 的共用週用量"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Shared-key week"
@@ -7491,7 +7491,7 @@ msgstr "每週"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Weekly shared-key pool used"
-msgstr ""
+msgstr "本週共用金鑰池用量"
 
 #: src/components/SignupSurvey.tsx
 msgid "Welcome to Rakazo"
