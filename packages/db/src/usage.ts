@@ -12,6 +12,8 @@ export interface UsageAttribution {
   parentRunId?: string;
   operationId?: string;
   operationKind?: UsageOperationKind;
+  /** True when the call used the deployment shared API key. */
+  sharedKey?: boolean;
 }
 
 const USAGE_SUM_FIELDS = ["inputTokens", "outputTokens", "totalTokens", "costUsd"] as const;
@@ -87,6 +89,7 @@ export async function recordUsage(
     callId: event.callId ?? null,
     operationKind: attribution.operationKind ?? event.operationKind ?? "answer",
     agentId: event.agentId ?? null,
+    sharedKey: attribution.sharedKey === true,
   };
   return withTransactionRetry(() =>
     prisma.$transaction(async (tx) => {

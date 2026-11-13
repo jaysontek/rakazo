@@ -86,6 +86,8 @@ ceiling because Node's HTTP client stops waiting at that point on its own.
 | `USER_DEVICES_ENABLED` | on | `false` stops signed-in desktop apps from letting bots run commands on the user's own computer. Set it on the API and worker. |
 | `PI_SESSION_RECORDING` | off | `true` records agent sessions as JSONL under `DATA_DIR/pi-sessions`. The files are not encrypted, so do not use it on a shared or multi-tenant install. |
 | `PRIVACY_POLICY_URL` | Rakazo's policy | The privacy policy linked from the AI data-sharing notice. Set it on the API. |
+| `SHARED_KEY_MONTHLY_BUDGET_USD` | unset | Monthly USD cap for the deployment shared API key; see [shared-key weekly spend budget](./self-host-models.md#shared-key-weekly-spend-budget). |
+| `SHARED_KEY_BUDGET_USER_IDS` | unset | Comma-separated user ids that share that budget. |
 
 ## Web Push (browser background notifications)
 

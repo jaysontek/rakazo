@@ -1,10 +1,12 @@
 import { randomUUID } from "node:crypto";
 import type { AgentRunModel, AgentRuntime, SecretStore } from "@rakazo/adapter-kit";
 import {
+  composeSharedKeyBudgetObserver,
   deploymentModelRole,
   formatCurrentTimeInstruction,
   hasHostedModelCredits,
   hostedModelCreditObserver,
+  isDeploymentSharedKeyUsage,
   parseModelSecret,
   refreshStoredModelCredential,
   resolveMemberMainModel,
@@ -12,6 +14,7 @@ import {
   retireToReconnectMarker,
   secretValuesToRedact,
   serializeModelSecret,
+  sharedKeyBudgetObserver,
   toOAuthCredential,
 } from "@rakazo/adapters";
 import { redactSecrets } from "@rakazo/core";
@@ -172,6 +175,7 @@ export class ModelTeamChatEngagementJudge implements TeamChatEngagementJudge {
               userId: input.bot.userId,
               operationId: judgeId,
               operationKind: "setup",
+              sharedKey: resolved.sharedKey === true,
             });
           },
           prompt,
@@ -203,6 +207,7 @@ export class ModelTeamChatEngagementJudge implements TeamChatEngagementJudge {
             userId: input.bot.userId,
             operationId: judgeId,
             operationKind: "setup",
+            sharedKey: resolved.sharedKey === true,
           });
         }
       }
@@ -218,6 +223,7 @@ export class ModelTeamChatEngagementJudge implements TeamChatEngagementJudge {
 
   private async resolveModel(bot: TeamChatEngagementInput["bot"]): Promise<{
     model: AgentRunModel;
+    sharedKey?: boolean;
   } | null> {
     const settings = await this.deps.prisma.deploymentSettings.findUnique({
       where: { id: "default" },
@@ -259,10 +265,28 @@ export class ModelTeamChatEngagementJudge implements TeamChatEngagementJudge {
     if (!credential || hosted) {
       const apiKey =
         provider === this.deps.deploymentProvider ? this.deps.deploymentModelKey : undefined;
-      const callObserver = settings?.modelCreditsEnabled
+      const sharedKey = isDeploymentSharedKeyUsage({
+        ownCredential: false,
+        provider,
+        scriptedRuntime: false,
+      });
+      const creditObserver = settings?.modelCreditsEnabled
         ? await hostedModelCreditObserver(this.deps.prisma, scope)
         : undefined;
-      return { model: { provider, id: modelId, ...(apiKey ? { apiKey } : {}), callObserver } };
+      const budgetObserver = sharedKey
+        ? await sharedKeyBudgetObserver(this.deps.prisma, scope)
+        : undefined;
+      const callObserver = composeSharedKeyBudgetObserver(budgetObserver, creditObserver);
+      return {
+        model: {
+          provider,
+          id: modelId,
+          ...(apiKey ? { apiKey } : {}),
+          callObserver,
+          usingSharedKey: sharedKey,
+        },
+        sharedKey,
+      };
     }
 
     const secret = await this.deps.prisma.secret.findFirst({

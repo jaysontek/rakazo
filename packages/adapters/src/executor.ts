@@ -1624,6 +1624,7 @@ export function createRunExecutor(executorDeps: ExecutorDeps) {
           allowSilentEmptyRun,
           groupReplyOptional,
           emptyResponseText,
+          sharedKeyUsage: resolved.usingSharedKey === true,
           state,
           settleRunningHelpers: settleHelpers,
           stopHeartbeatAfterCompletion,
@@ -1870,6 +1871,7 @@ export function createRunExecutor(executorDeps: ExecutorDeps) {
                   runId,
                   parentRunId: runId,
                   operationId: runId,
+                  sharedKey: resolved.usingSharedKey === true,
                 });
               },
               prompt,

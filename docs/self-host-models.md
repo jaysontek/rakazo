@@ -47,6 +47,43 @@ the API and worker, for models that have no stored credential.
 
 `RAKAZO_LIVE_MODEL_CATALOG=off` disables provider and Codex live catalog probing; the default is on.
 
+## Shared-key weekly spend budget
+
+Optional. Caps how much each listed user may spend on the **deployment shared API key** in a
+calendar week. Personal keys in **Settings → Models** are fully exempt: they are not hard-stopped
+and do not count toward the budget.
+
+```env
+# Monthly USD cap for the shared key. Split evenly across the users below, then by 4 weeks.
+# Unset or non-positive disables the hard-stop.
+SHARED_KEY_MONTHLY_BUDGET_USD=400
+# Comma-separated user ids that share that budget. When set (even to empty), the API/worker
+# make the member table match this list on startup and re-divide the current week's remainder.
+# Leave unset to manage members only in the database (for a later admin UI).
+SHARED_KEY_BUDGET_USER_IDS=user_abc,user_def
+```
+
+Set both on the API and worker. Restart after changing them. When the monthly cap is set, only
+users on the member list may spend the shared key; anyone else must connect a personal key (or be
+added to the list).
+
+**Week boundary:** Monday 00:00 `America/New_York`. A user added mid-week gets a proportional slice
+of that week (not a full week share). Adding or removing users re-divides whatever budget remains
+in the current week among the new set.
+
+**Hard-stop:** once a member reaches their weekly allotment, further shared-key calls fail until
+the week resets. Starting another thread or bot, or falling back to another model that still uses
+the shared key, does not bypass it. Connect a personal key to keep working.
+
+`usage.summary` includes `sharedKeyWeeklyBudget` (`percentUsed`, `spentUsd`, `weeklyCapUsd`,
+`resetsAt`, `timezone`) for the current user when they are on the member list and a monthly cap is
+configured.
+
+Spend is taken from existing `usage_records` rows marked as shared-key usage (cost from tokens ×
+catalog rates, or provider-reported cost). There is no second ledger. Rows written before this
+feature are not backfilled as shared-key, so a mid-week deploy undercounts earlier-in-week shared
+spend until the next America/New_York Monday reset.
+
 ## Approvals
 
 Approvals have three modes in **Settings → Approvals**: Never ask runs every action, Auto lets an

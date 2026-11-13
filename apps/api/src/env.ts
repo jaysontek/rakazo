@@ -22,6 +22,8 @@ import { parseMinimumClientBuilds, parseNavLinks } from "@rakazo/contracts";
 import { parseCrispWebsiteId } from "@rakazo/contracts/content-security-policy";
 import {
   attachmentCountFromEnv,
+  parseSharedKeyBudgetUserIds,
+  parseSharedKeyMonthlyBudgetUsd,
   phoneCallSettings,
   resolveAuthSecret,
   resolveContentEncryption,
@@ -99,6 +101,13 @@ export interface AppEnv {
   deploymentModelConfigured: boolean;
   /** The deployment default model runs on the host's credentials rather than a key. */
   deploymentModelHostCredentials: boolean;
+  /**
+   * Monthly USD cap for the deployment shared API key (SHARED_KEY_MONTHLY_BUDGET_USD).
+   * Split evenly across SHARED_KEY_BUDGET_USER_IDS, then by 4 weeks (America/New_York).
+   */
+  sharedKeyMonthlyBudgetUsd: number | null;
+  /** User ids that share the deployment key budget (SHARED_KEY_BUDGET_USER_IDS). */
+  sharedKeyBudgetUserIds: string[];
   e2bApiKey: string | undefined;
   novitaApiKey: string | undefined;
   sandboxTemplate: string | undefined;
@@ -286,6 +295,10 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
     deploymentModelKey: deploymentModel.key,
     deploymentModelConfigured: deploymentModel.configured,
     deploymentModelHostCredentials: deploymentModel.hostCredentials,
+    sharedKeyMonthlyBudgetUsd: parseSharedKeyMonthlyBudgetUsd(
+      source.SHARED_KEY_MONTHLY_BUDGET_USD,
+    ),
+    sharedKeyBudgetUserIds: parseSharedKeyBudgetUserIds(source.SHARED_KEY_BUDGET_USER_IDS),
     e2bApiKey: source.E2B_API_KEY,
     novitaApiKey: source.NOVITA_API_KEY,
     sandboxTemplate: source.SANDBOX_TEMPLATE,

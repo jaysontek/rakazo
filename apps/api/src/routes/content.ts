@@ -4,7 +4,13 @@ import { resolveBotWorkspacePath } from "@rakazo/adapters";
 import type { ExportManifest } from "@rakazo/contracts";
 import { attachmentMaxBytes, resolveBotAvatarSet } from "@rakazo/contracts";
 import { AttachmentValidationError } from "@rakazo/core";
-import { completeUsageSums, IsolationError, LISTED_ARTIFACT, parseComputerMode } from "@rakazo/db";
+import {
+  completeUsageSums,
+  IsolationError,
+  LISTED_ARTIFACT,
+  parseComputerMode,
+  sharedKeyWeeklyBudgetStatus,
+} from "@rakazo/db";
 import {
   ArtifactListCursorError,
   createOwnedArtifact,
@@ -153,7 +159,7 @@ export function contentRoutes(ctx: RouterContext) {
           costUsd: true,
         } as const;
         const counts = { _all: true, ...sums } as const;
-        const [result, modelGroups, runGroups] = await Promise.all([
+        const [result, modelGroups, runGroups, budget] = await Promise.all([
           deps.prisma.usageRecord.aggregate({ where, _sum: sums, _count: counts }),
           deps.prisma.usageRecord.groupBy({
             by: ["provider", "model"],
@@ -162,6 +168,7 @@ export function contentRoutes(ctx: RouterContext) {
             _count: counts,
           }),
           deps.prisma.usageRecord.groupBy({ by: ["runId", "parentRunId"], where }),
+          sharedKeyWeeklyBudgetStatus(deps.prisma, context.actor.userId),
         ]);
         const runs = new Set(runGroups.map((row) => row.parentRunId ?? row.runId).filter(Boolean))
           .size;
@@ -179,6 +186,16 @@ export function contentRoutes(ctx: RouterContext) {
             .sort(
               (a, b) => (b.totalTokens ?? 0) - (a.totalTokens ?? 0) || b.modelCalls - a.modelCalls,
             ),
+          sharedKeyWeeklyBudget:
+            budget.enabled && budget.member
+              ? {
+                  percentUsed: budget.percentUsed,
+                  spentUsd: budget.spentUsd,
+                  weeklyCapUsd: budget.weeklyCapUsd,
+                  resetsAt: budget.resetsAt,
+                  timezone: budget.timezone,
+                }
+              : null,
         };
       }),
     },

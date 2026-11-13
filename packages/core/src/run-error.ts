@@ -36,6 +36,10 @@ export const MISSING_MODEL_RUN_ERROR = "Connect a model in Settings before runni
 export const HOSTED_MODEL_CREDITS_REQUIRED_ERROR =
   "Connect your own API key in Models or choose Rakazo credits in Billing.";
 
+/** Shared deployment key spend hit this user's weekly cap (America/New_York week). */
+export const SHARED_KEY_WEEKLY_BUDGET_ERROR =
+  "This week's shared API key budget is used up. It resets next week, or connect your own key in Models.";
+
 /** A run in a billing organization without a paid plan, credits, or free period. */
 export const MODEL_ACCESS_REQUIRED_RUN_ERROR = "Subscribe in Billing to keep running bots.";
 
@@ -108,6 +112,7 @@ const MODEL_OUTPUT_RUN_ERRORS = new Set([
 const MODEL_CONNECTION_RUN_ERRORS = new Set([
   MISSING_MODEL_RUN_ERROR,
   HOSTED_MODEL_CREDITS_REQUIRED_ERROR,
+  SHARED_KEY_WEEKLY_BUDGET_ERROR,
 ]);
 const APP_RUN_ERRORS = new Set([
   ...MODEL_OUTPUT_RUN_ERRORS,

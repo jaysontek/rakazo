@@ -130,6 +130,13 @@ export * from "./model-connect.js";
 export * from "./model-connect-check.js";
 export { hostedModelCreditObserver } from "./model-credit-observer.js";
 export * from "./model-credit-reconciler.js";
+export {
+  assertSharedKeyWeeklyBudget,
+  composeSharedKeyBudgetObserver,
+  SharedKeyWeeklyBudgetExceededRunError,
+  sharedKeyBudgetObserver,
+} from "./shared-key-budget-observer.js";
+export { isDeploymentSharedKeyUsage } from "./shared-key-usage.js";
 export * from "./model-roles.js";
 export * from "./model-selection.js";
 export * from "./model-vision.js";

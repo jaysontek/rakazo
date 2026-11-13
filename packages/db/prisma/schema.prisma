@@ -91,6 +91,7 @@ model User {
   signupSurvey                SignupSurvey?
   computerRuns                ComputerRun[]
   devices                     UserDevice[]
+  sharedKeyBudgetMember       SharedKeyBudgetMember?
 
   @@unique([email])
   @@map("user")
@@ -734,10 +735,38 @@ model DeploymentSettings {
   computerProvider                String?
   /// That provider's encrypted connection settings, owned by the deployment rather than a user.
   computerProviderCipher          String?
+  /// Monthly USD cap for the deployment shared API key, split across budget members / 4 weeks.
+  /// Null or non-positive disables the weekly hard-stop. Mirrored from SHARED_KEY_MONTHLY_BUDGET_USD.
+  sharedKeyMonthlyBudgetUsd       Float?
   createdAt                       DateTime @default(now())
   updatedAt                       DateTime @updatedAt
 
   @@map("deployment_settings")
+}
+
+/// Users who share the deployment API key's weekly spend budget. Personal keys are exempt.
+model SharedKeyBudgetMember {
+  userId    String   @id
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// When they joined the shared-key set; mid-week joins get a proportional slice.
+  joinedAt  DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  @@map("shared_key_budget_members")
+}
+
+/// Per-user allotment for one America/New_York week after even split / re-divide.
+model SharedKeyWeekAllotment {
+  weekStart    DateTime
+  userId       String
+  allotmentUsd Float
+  /// Soft holds for in-flight shared-key calls; released in afterCall.
+  reservedUsd  Float    @default(0)
+  updatedAt    DateTime @updatedAt
+
+  @@id([weekStart, userId])
+  @@index([userId, weekStart])
+  @@map("shared_key_week_allotments")
 }
 
 /// Append-only security audit trail. No foreign keys, so an account deletion
@@ -1895,9 +1924,12 @@ model UsageRecord {
   /// Durable attribution, deliberately without lifecycle foreign keys.
   parentRunId        String?
   agentId            String?
+  /// True when the call used the deployment shared API key (not a personal connection).
+  sharedKey          Boolean  @default(false)
   createdAt          DateTime @default(now())
 
   @@index([spaceId, userId, createdAt])
+  @@index([userId, sharedKey, createdAt])
   @@map("usage_records")
 }
 

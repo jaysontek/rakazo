@@ -294,6 +294,8 @@ export interface RunContext {
   /** A group message that named no member: this member may end without replying. */
   groupReplyOptional: boolean;
   emptyResponseText: string | undefined;
+  /** The run's model calls use the deployment shared API key (not a personal connection). */
+  sharedKeyUsage: boolean;
   state: RunState;
   settleRunningHelpers: () => Promise<void>;
   stopHeartbeatAfterCompletion: () => void;

@@ -8,6 +8,7 @@ import { getLogger, unwrapJobPayload } from "@rakazo/logging";
 import { formatCurrentTimeInstruction } from "./current-time.js";
 import { resolveDeploymentModel } from "./deployment-model.js";
 import { loadBotNames, UNKNOWN_BOT_SPEAKER, USER_SPEAKER } from "./history-speakers.js";
+import { isDeploymentSharedKeyUsage } from "./shared-key-usage.js";
 import type {
   ConfiguredMemoryProvider,
   MemoryProviderResolver,
@@ -383,6 +384,18 @@ export async function compactHistory(deps: CompactHistoryDeps, threadId: string)
     return;
   }
 
+  // Same definition as the budget gate: deployment shared key only (not local/compatible/scripted).
+  const sharedKeyUsage =
+    model.usingSharedKey === true ||
+    (!deps.resolveModel &&
+      Boolean(deps.deploymentModelConfigured) &&
+      isDeploymentSharedKeyUsage({
+        ownCredential: false,
+        provider: model.provider,
+        baseUrl: "baseUrl" in model ? model.baseUrl : undefined,
+        scriptedRuntime: model.provider === "scripted",
+      }));
+
   let summary = "";
   let runtimeReportedFailure = false;
   for await (const event of deps.runtime.run(
@@ -398,6 +411,7 @@ export async function compactHistory(deps: CompactHistoryDeps, threadId: string)
           botId: thread.botId!,
           operationId: `compact:${threadId}:${fromSeqExclusive}`,
           operationKind: "compaction",
+          sharedKey: sharedKeyUsage,
         });
       },
       prompt,
@@ -428,6 +442,7 @@ export async function compactHistory(deps: CompactHistoryDeps, threadId: string)
         botId: thread.botId,
         operationId: `compact:${threadId}:${fromSeqExclusive}`,
         operationKind: "compaction",
+        sharedKey: sharedKeyUsage,
       });
     }
     if (event.type === "text" && /^(?:I hit a problem:|Unknown model )/i.test(event.text.trim())) {

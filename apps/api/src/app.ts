@@ -140,6 +140,7 @@ import {
   parsePositiveInteger,
   provisionMessagingIdentity,
   pushSessionExpiresAt,
+  reconcileSharedKeyBudgetMembers,
   requireMembership,
   rowSecurityWarning,
   runAsSystem,
@@ -500,14 +501,30 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
       })
     : undefined;
   const modelCreditsEnabled = billing?.modelCreditsEnabled ?? false;
+  // Leave a DB-only monthly cap alone when SHARED_KEY_MONTHLY_BUDGET_USD is unset (same
+  // pattern as the member list): only write the column when the env var is present.
+  const sharedKeyBudgetEnvSet = process.env.SHARED_KEY_MONTHLY_BUDGET_USD !== undefined;
   await prisma.deploymentSettings.upsert({
     where: { id: "default" },
     create: {
       id: "default",
       modelCreditsEnabled,
+      ...(sharedKeyBudgetEnvSet
+        ? { sharedKeyMonthlyBudgetUsd: env.sharedKeyMonthlyBudgetUsd }
+        : {}),
     },
-    update: { modelCreditsEnabled },
+    update: {
+      modelCreditsEnabled,
+      ...(sharedKeyBudgetEnvSet
+        ? { sharedKeyMonthlyBudgetUsd: env.sharedKeyMonthlyBudgetUsd }
+        : {}),
+    },
   });
+  // When the env list is set, make the member table match it (add/remove + re-divide).
+  // Leave the table alone when the variable is unset so SQL/admin edits survive restarts.
+  if (process.env.SHARED_KEY_BUDGET_USER_IDS !== undefined) {
+    await reconcileSharedKeyBudgetMembers(prisma, env.sharedKeyBudgetUserIds);
+  }
   const installed = new InstalledConnectorProvider(
     prisma,
     secrets,

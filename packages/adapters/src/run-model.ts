@@ -20,6 +20,11 @@ import {
   HostedModelCreditsRequiredError,
   hostedModelCreditObserver,
 } from "./model-credit-observer.js";
+import {
+  composeSharedKeyBudgetObserver,
+  sharedKeyBudgetObserver,
+} from "./shared-key-budget-observer.js";
+import { isDeploymentSharedKeyUsage } from "./shared-key-usage.js";
 import { resolveMemberMainModel, selectConfiguredModel } from "./model-roles.js";
 import {
   enabledOpenAiCompatibleModelIds,
@@ -55,6 +60,7 @@ export function runtimeFallbackModel(runtime: AgentRuntime) {
 }
 
 export function isTerminalModelSetupError(error: unknown): boolean {
+  // Shared-key weekly budget exhaustion is not terminal: a personal-key backup may still run.
   return (
     error instanceof UnavailableModelForAuthError ||
     error instanceof HostedModelCreditsRequiredError ||
@@ -181,9 +187,27 @@ export async function resolveModelKey(...args: Parameters<typeof resolveModelKey
   if (!material.apiKey?.trim() && !runtimeKey?.trim() && !keyless) {
     throw new UnavailableModelForAuthError(MISSING_MODEL_RUN_ERROR);
   }
-  const callObserver =
-    !credential && billingEnabled ? await hostedModelCreditObserver(deps.prisma, scope) : undefined;
-  return { ...material, apiKey: material.apiKey ?? runtimeKey, callObserver };
+  const usingSharedKey = isDeploymentSharedKeyUsage({
+    ownCredential: material.ownCredential,
+    provider,
+    baseUrl: material.baseUrl,
+    scriptedRuntime: Boolean(deps.runtime?.describe().capabilities.scripted),
+  });
+  const creditObserver =
+    !credential && billingEnabled
+      ? await hostedModelCreditObserver(deps.prisma, scope)
+      : undefined;
+  const budgetObserver = usingSharedKey
+    ? await sharedKeyBudgetObserver(deps.prisma, scope)
+    : undefined;
+  const callObserver = composeSharedKeyBudgetObserver(budgetObserver, creditObserver);
+  return {
+    ...material,
+    apiKey: material.apiKey ?? runtimeKey,
+    callObserver,
+    /** Same definition as the budget gate; use for usage_records.sharedKey. */
+    usingSharedKey,
+  };
 }
 
 async function resolveModelKeyMaterial(
@@ -402,6 +426,7 @@ export function resolvedModelRunFields(
   return {
     apiKey: resolved.oauth ? undefined : resolved.apiKey,
     callObserver: resolved.callObserver,
+    usingSharedKey: resolved.usingSharedKey,
     ...(resolved.accountId ? { accountId: resolved.accountId } : {}),
     ...(resolved.gatewayId ? { gatewayId: resolved.gatewayId } : {}),
     baseUrl: resolved.baseUrl,
@@ -584,5 +609,6 @@ export async function resolveRunModel(
     id,
     ...resolvedModelRunFields(resolved),
     thinkingLevel: thinkingLevel ?? resolved.thinkingLevel ?? null,
+    usingSharedKey: resolved.usingSharedKey,
   };
 }
