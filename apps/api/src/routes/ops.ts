@@ -1,6 +1,6 @@
 import { ORPCError } from "@orpc/server";
 import { parseSharedKeyMonthlyBudgetInput } from "@rakazo/core";
-import { setSharedKeyMonthlyBudgetUsd } from "@rakazo/db";
+import { recordSecurityEvent, setSharedKeyMonthlyBudgetUsd } from "@rakazo/db";
 import { requireOpsDashboardAccess } from "../ops-access.js";
 import {
   listOpsAgents,
@@ -67,7 +67,18 @@ export function opsRoutes(ctx: RouterContext) {
             });
           }
           const saved = await setSharedKeyMonthlyBudgetUsd(deps.prisma, monthlyCapUsd);
-          return { monthlyCapUsd: saved };
+          await recordSecurityEvent({
+            type: "deployment.settings.changed",
+            userId: context.actor.userId,
+            spaceId: context.actor.spaceId,
+            metadata: {
+              procedure: "ops.setSharedKeyMonthlyBudget",
+              kind: "shared_key_monthly_budget",
+              monthlyCapUsd: saved.monthlyCapUsd,
+              previousMonthlyCapUsd: saved.previousMonthlyCapUsd,
+            },
+          });
+          return { monthlyCapUsd: saved.monthlyCapUsd };
         },
       ),
     },

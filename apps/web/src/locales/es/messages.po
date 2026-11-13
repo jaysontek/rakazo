@@ -494,7 +494,6 @@ msgstr "Token de acceso (opcional)"
 
 #: src/components/AccountMenu.tsx
 #: src/pages/AccountSettingsOverlay.tsx
-#: src/pages/AdminOpsPage.tsx
 msgid "Account"
 msgstr "Cuenta"
 
@@ -514,10 +513,6 @@ msgstr "Nombre de la cuenta"
 #: src/components/SidebarFooter.tsx
 msgid "Account menu for {name}"
 msgstr "Menú de cuenta de {name}"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Accounts"
-msgstr ""
 
 #. placeholder {0}: bot.name
 #. placeholder {0}: group.spaceName
@@ -661,10 +656,6 @@ msgstr "Agregar URL del servidor"
 msgid "Add skills"
 msgstr "Agregar habilidades"
 
-#: src/components/InstallAppSettings.tsx
-msgid "Add to Home Screen"
-msgstr ""
-
 #: src/components/teach/SkillDraftCard.tsx
 msgid "Add to routine"
 msgstr "Agregar a la rutina"
@@ -713,10 +704,6 @@ msgstr "Avanzado..."
 
 #: src/components/AccountDataSettings.tsx
 msgid "Agent from another app"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Agents"
 msgstr ""
 
 #: src/components/VaultSettings.tsx
@@ -903,10 +890,6 @@ msgstr ""
 msgid "API URL"
 msgstr ""
 
-#: src/components/InstallAppSettings.tsx
-msgid "App"
-msgstr ""
-
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Appearance"
 msgstr "Apariencia"
@@ -1071,7 +1054,6 @@ msgstr "Estudio de avatares"
 #: src/components/integrations/skills-dialog.tsx
 #: src/components/vault/VaultPageHeader.tsx
 #: src/pages/AdminAccessPage.tsx
-#: src/pages/AdminOpsPage.tsx
 #: src/pages/AdminPluginsPage.tsx
 #: src/pages/Auth.tsx
 #: src/pages/Board.tsx
@@ -1095,10 +1077,6 @@ msgstr "Volver al chat"
 #: src/pages/Auth.tsx
 msgid "Back to sign in"
 msgstr "Volver a iniciar sesión"
-
-#: src/components/WebPushSettings.tsx
-msgid "Background alerts"
-msgstr ""
 
 #: src/pages/memory-providers/ConnectionModeFields.tsx
 msgid "Base URL"
@@ -1226,7 +1204,7 @@ msgstr "Explorar servidores MCP"
 msgid "Built-in"
 msgstr "Integrado"
 
-#: src/pages/shell/composer.tsx
+#: src/pages/shell/chat-header.tsx
 msgid "Call"
 msgstr "Llamar"
 
@@ -1235,7 +1213,7 @@ msgid "Call back"
 msgstr "Devolver llamada"
 
 #. placeholder {0}: call.botName
-#: src/components/call/CallStrip.tsx
+#: src/components/call/CallCard.tsx
 msgid "Call with {0}"
 msgstr "Llamada con {0}"
 
@@ -1243,7 +1221,7 @@ msgstr "Llamada con {0}"
 msgid "Calling you…"
 msgstr "Te está llamando…"
 
-#: src/components/call/CallStrip.tsx
+#: src/components/call/CallCard.tsx
 msgid "Calling…"
 msgstr "Llamando…"
 
@@ -1315,10 +1293,6 @@ msgstr "cancelado"
 msgid "Cancelled"
 msgstr "Cancelado"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Cap unset"
-msgstr ""
-
 #: src/components/vault/kinds.tsx
 msgid "Card"
 msgstr ""
@@ -1374,10 +1348,6 @@ msgstr ""
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Chat details"
 msgstr "Detalles del chat"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Chat log"
-msgstr ""
 
 #: src/pages/shell/composer-mentions.tsx
 msgid "Chat Settings"
@@ -1938,7 +1908,6 @@ msgid "Copy rows"
 msgstr "Copiar filas"
 
 #: src/pages/AccountSettingsOverlay.tsx
-#: src/pages/AdminOpsPage.tsx
 msgid "Cost"
 msgstr "Coste"
 
@@ -2521,10 +2490,6 @@ msgstr ""
 msgid "Couldn't update messaging settings"
 msgstr "No se pudo actualizar la configuración de mensajería"
 
-#: src/components/WebPushSettings.tsx
-msgid "Couldn't update notifications"
-msgstr ""
-
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Couldn't update your timezone"
 msgstr "No se pudo actualizar tu zona horaria"
@@ -2670,10 +2635,6 @@ msgstr "Oscuro"
 msgid "Data"
 msgstr "Datos"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Database"
-msgstr ""
-
 #: src/lib/billing.ts
 #: src/lib/cron.ts
 msgid "day"
@@ -2717,10 +2678,6 @@ msgstr "Predeterminado de OpenClaw"
 #: src/pages/MemorySettingsOverlay.tsx
 msgid "Default scope"
 msgstr "Alcance predeterminado"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Degraded"
-msgstr ""
 
 #: src/components/AccountAccess.tsx
 #: src/components/pages/PagesList.tsx
@@ -2914,7 +2871,6 @@ msgstr "Desconectando…"
 
 #: src/components/AskCard.tsx
 #: src/components/ComputerUpdateProgress.tsx
-#: src/components/InstallAppSettings.tsx
 #: src/components/PasskeyOffer.tsx
 #: src/components/SecretAskCard.tsx
 #: src/components/teach/TeachComputerOverlay.tsx
@@ -3116,10 +3072,6 @@ msgstr "Variables de entorno: {names}"
 #: src/pages/shell/sidebar-roster.tsx
 msgid "Error"
 msgstr "Error"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Errors"
-msgstr ""
 
 #: src/lib/cron.ts
 #: src/pages/ExternalConversationSettings.tsx
@@ -3466,7 +3418,7 @@ msgstr "Configuración del grupo"
 msgid "Group updates"
 msgstr "Agrupar actualizaciones"
 
-#: src/components/call/CallStrip.tsx
+#: src/components/call/CallCard.tsx
 msgid "Hang up"
 msgstr "Colgar"
 
@@ -3477,10 +3429,6 @@ msgstr "Cuelga primero y luego ingresa el código en pantalla."
 #: src/lib/call-session.ts
 msgid "Hang up, then enter the code on screen."
 msgstr "Cuelga y luego ingresa el código en pantalla."
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Hard-stopped"
-msgstr ""
 
 #: src/pages/RoutineEditor.tsx
 msgid "header"
@@ -3505,10 +3453,6 @@ msgstr "Valor del encabezado"
 #: src/components/ModelHeadersEditor.tsx
 msgid "Headers"
 msgstr "Encabezados"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Health"
-msgstr ""
 
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Hear a sample"
@@ -3672,18 +3616,6 @@ msgstr "Entrada"
 msgid "Inputs"
 msgstr "Entradas"
 
-#: src/components/InstallAppSettings.tsx
-msgid "Install"
-msgstr ""
-
-#: src/components/InstallAppSettings.tsx
-msgid "Install app"
-msgstr ""
-
-#: src/components/WebPushSettings.tsx
-msgid "Install the app first to enable alerts on this device."
-msgstr ""
-
 #: src/components/SidebarFooter.tsx
 msgid "Install update"
 msgstr "Instalar actualización"
@@ -3822,10 +3754,6 @@ msgstr "Atajos de teclado"
 msgid "Keys"
 msgstr ""
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Kind"
-msgstr ""
-
 #: src/components/vault/LoginFieldsInput.tsx
 #: src/components/vault/VaultItemEditor.tsx
 msgid "Label"
@@ -3887,7 +3815,7 @@ msgstr "Vincular SSO"
 msgid "List view"
 msgstr "Vista de lista"
 
-#: src/components/call/CallStrip.tsx
+#: src/components/call/CallCard.tsx
 msgid "Listening"
 msgstr "Escuchando"
 
@@ -4084,14 +4012,6 @@ msgstr "Servidor MCP"
 msgid "MCP servers"
 msgstr "Servidores MCP"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Median first response"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Median total"
-msgstr ""
-
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/Onboarding.tsx
 msgid "Medium"
@@ -4212,6 +4132,10 @@ msgstr "Minimizar"
 msgid "Minimize bots"
 msgstr "Minimizar bots"
 
+#: src/components/call/CallCard.tsx
+msgid "Minimize call"
+msgstr "Minimizar llamada"
+
 #: src/lib/cron.ts
 msgid "minute"
 msgstr "minuto"
@@ -4230,7 +4154,6 @@ msgid "Mode"
 msgstr "Modo"
 
 #: src/pages/AccountSettingsOverlay.tsx
-#: src/pages/AdminOpsPage.tsx
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/RoutineEditor.tsx
@@ -4290,10 +4213,6 @@ msgstr "mes"
 msgid "Monthly"
 msgstr "Mensual"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Monthly cap"
-msgstr ""
-
 #: src/components/ModelCredits.tsx
 msgid "Monthly credits"
 msgstr "Créditos mensuales"
@@ -4335,11 +4254,11 @@ msgstr "Mover a"
 msgid "Move up"
 msgstr "Subir"
 
-#: src/components/call/CallStrip.tsx
+#: src/components/call/CallCard.tsx
 msgid "Mute"
 msgstr "Silenciar"
 
-#: src/components/call/CallStrip.tsx
+#: src/components/call/CallCard.tsx
 msgid "Muted"
 msgstr "Silenciado"
 
@@ -4571,10 +4490,6 @@ msgstr "No hay modelos coincidentes"
 msgid "No members yet"
 msgstr "Aún no hay miembros"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "No messages for this selection."
-msgstr ""
-
 #: src/pages/PeerMessagesOverlay.tsx
 msgid "No messages with {peerBotName} yet."
 msgstr "Aún no hay mensajes con {peerBotName}."
@@ -4664,10 +4579,6 @@ msgstr "No se agregaron: {0}"
 msgid "Not checked yet"
 msgstr "Aún no comprobado"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Not configured"
-msgstr ""
-
 #: src/pages/shell/agent-import.tsx
 msgid "Not imported"
 msgstr "No importado"
@@ -4684,10 +4595,6 @@ msgstr "No está en el catálogo de plugins"
 #: src/pages/shell/message-cards.tsx
 msgid "Not now"
 msgstr "Ahora no"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Not on roster"
-msgstr ""
 
 #: src/pages/shell/agent-import.tsx
 #: src/pages/shell/import-status.ts
@@ -4706,7 +4613,6 @@ msgstr "No funciona"
 msgid "Nothing remembered yet"
 msgstr "Aún no hay recuerdos"
 
-#: src/components/WebPushSettings.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Notifications"
 msgstr "Notificaciones"
@@ -4742,10 +4648,6 @@ msgstr "OAuth expirado"
 #: src/components/ComputerDeviceSettings.tsx
 msgid "Offline"
 msgstr "Sin conexión"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "OK"
-msgstr ""
 
 #: src/pages/model-settings/connection-controls.tsx
 #: src/pages/Onboarding.tsx
@@ -4814,6 +4716,15 @@ msgstr "Abrir {title}"
 msgid "Open <0>{0}</0> and enter this code:"
 msgstr "Abre <0>{0}</0> e introduce este código:"
 
+#: src/pages/shell/chat-header.tsx
+msgid "Open call"
+msgstr "Abrir llamada"
+
+#. placeholder {0}: call.botName
+#: src/components/call/CallCard.tsx
+msgid "Open chat with {0}"
+msgstr "Abrir chat con {0}"
+
 #: src/components/ComputersUnavailableHint.tsx
 msgid "Open computer settings"
 msgstr "Abrir la configuración de computadoras"
@@ -4859,10 +4770,6 @@ msgstr "OpenClaw o Hermes"
 #: src/components/pages/DownloadPdfButton.tsx
 msgid "Opens your browser's print dialog. Choose Save as PDF as the destination."
 msgstr "Abre el diálogo de impresión del navegador. Elige Guardar como PDF como destino."
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Operations"
-msgstr ""
 
 #: src/components/SignupSurvey.tsx
 #: src/pages/model-settings/connection-controls.tsx
@@ -4912,10 +4819,6 @@ msgstr "Salida"
 #: src/pages/Board.tsx
 msgid "Owner"
 msgstr "Propietario"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "p95 first response"
-msgstr ""
 
 #: src/components/pages/PageCard.tsx
 #: src/components/pages/PageView.tsx
@@ -5048,10 +4951,6 @@ msgstr "En pausa"
 msgid "Pending"
 msgstr "Pendiente"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Performance"
-msgstr ""
-
 #: src/pages/shell/bot-panel.tsx
 msgid "Permissions"
 msgstr "Permisos"
@@ -5063,15 +4962,6 @@ msgstr "Personalidad"
 #: src/components/SignupSurvey.tsx
 msgid "Personal"
 msgstr "Personal"
-
-#. placeholder {0}: money(account.personalKeyCostUsd)
-#: src/pages/AdminOpsPage.tsx
-msgid "Personal {0}"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Personal-key spend"
-msgstr ""
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/vault/VaultItemEditor.tsx
@@ -5554,10 +5444,6 @@ msgstr "Respondiendo a {0}"
 msgid "Request a new code"
 msgstr "Solicita un código nuevo"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Request log"
-msgstr ""
-
 #: src/pages/MessagingSettingsPanel.tsx
 msgid "Requests"
 msgstr "Solicitudes"
@@ -5663,6 +5549,11 @@ msgstr "Reintentar ahora"
 msgid "Retry screen"
 msgstr "Reintentar pantalla"
 
+#. placeholder {0}: call.botName
+#: src/components/call/CallCard.tsx
+msgid "Return to call with {0}"
+msgstr "Volver a la llamada con {0}"
+
 #: src/pages/McpOAuthCallback.tsx
 #: src/pages/SlackInstallCallback.tsx
 msgid "Return to Rakazo"
@@ -5683,10 +5574,6 @@ msgstr ""
 
 #: src/components/ComputerProviderSettings.tsx
 msgid "Root filesystem"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Roster"
 msgstr ""
 
 #: src/pages/RoutineEditor.tsx
@@ -5751,10 +5638,6 @@ msgstr "Ejecuciones"
 msgid "Runs when this bot receives a verified message from this provider."
 msgstr "Se ejecuta cuando este bot recibe un mensaje verificado de este proveedor."
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Runtime"
-msgstr ""
-
 #: src/pages/PluginsOverlay.tsx
 msgid "Sales & CRM"
 msgstr "Ventas y CRM"
@@ -5766,10 +5649,6 @@ msgstr "Igual que {botName}"
 #: src/pages/ModelSettingsOverlay.tsx
 msgid "Same as main model"
 msgstr "Igual que el modelo principal"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Sandbox"
-msgstr ""
 
 #: src/lib/cron.ts
 msgid "Saturday"
@@ -5783,7 +5662,6 @@ msgstr "sábado"
 #: src/components/teach/SkillDraftCard.tsx
 #: src/components/vault/VaultItemEditor.tsx
 #: src/pages/AccountSettingsOverlay.tsx
-#: src/pages/AdminOpsPage.tsx
 #: src/pages/Board.tsx
 #: src/pages/ExternalConversationSettings.tsx
 #: src/pages/GroupPanel.tsx
@@ -6026,7 +5904,7 @@ msgstr "URL del servidor"
 msgid "Set"
 msgstr "Establecer"
 
-#: src/components/call/CallStrip.tsx
+#: src/components/call/CallCard.tsx
 #: src/components/SidebarFooter.tsx
 #: src/pages/MessagingSettingsPanel.tsx
 #: src/pages/SettingsOverlay.tsx
@@ -6079,10 +5957,6 @@ msgstr "Compartir"
 msgid "Share “{title}”"
 msgstr "Compartir «{title}»"
 
-#: src/components/InstallAppSettings.tsx
-msgid "Share → Add to Home Screen"
-msgstr ""
-
 #: src/components/pages/SharePopover.tsx
 msgid "Share, anyone with the link can view"
 msgstr "Compartir, cualquiera con el enlace puede verla"
@@ -6093,26 +5967,9 @@ msgstr "Compartir, cualquiera con el enlace puede verla"
 msgid "Shared"
 msgstr "Compartido"
 
-#. placeholder {0}: money(account.sharedKeyCostUsd)
-#: src/pages/AdminOpsPage.tsx
-msgid "Shared {0}"
-msgstr ""
-
 #: src/pages/KnowledgeSection.tsx
 msgid "Shared memory"
 msgstr "Memoria compartida"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Shared week"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Shared-key spend"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Shared-key week"
-msgstr ""
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/VaultSettings.tsx
@@ -6320,17 +6177,13 @@ msgstr "Hablar"
 msgid "Speak this reply"
 msgstr "Leer esta respuesta"
 
-#: src/components/call/CallStrip.tsx
+#: src/components/call/CallCard.tsx
 msgid "Speaking"
 msgstr "Hablando"
 
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Speech model"
 msgstr "Modelo de habla"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Spend"
-msgstr ""
 
 #: src/components/SpendingLimitSettings.tsx
 msgid "Spending limit"
@@ -6401,7 +6254,6 @@ msgid "State or region"
 msgstr ""
 
 #: src/pages/ActivityList.tsx
-#: src/pages/AdminOpsPage.tsx
 #: src/pages/Board.tsx
 msgid "Status"
 msgstr "Estado"
@@ -6665,7 +6517,7 @@ msgstr "No se puede leer esta configuración guardada. Quítala y vuelve a agreg
 msgid "They get {weeks} weeks free."
 msgstr "Recibe {weeks} semanas gratis."
 
-#: src/components/call/CallStrip.tsx
+#: src/components/call/CallCard.tsx
 #: src/pages/ModelRoleSettings.tsx
 #: src/pages/RoutineEditor.tsx
 #: src/pages/shell/bot-panel.tsx
@@ -6843,7 +6695,6 @@ msgid "Time of day"
 msgstr "Hora del día"
 
 #: src/pages/AccountSettingsOverlay.tsx
-#: src/pages/AdminOpsPage.tsx
 msgid "Timezone"
 msgstr "Zona horaria"
 
@@ -6882,7 +6733,6 @@ msgid "Toggle sidebar"
 msgstr "Mostrar u ocultar barra lateral"
 
 #: src/pages/AccountSettingsOverlay.tsx
-#: src/pages/AdminOpsPage.tsx
 msgid "Tokens"
 msgstr "Tokens"
 
@@ -6908,13 +6758,13 @@ msgstr "Nombre de la herramienta"
 msgid "Tools"
 msgstr "Herramientas"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Total spend"
-msgstr ""
-
 #: src/components/composer/HoldToTalk.tsx
 msgid "Transcribing…"
 msgstr "Transcribiendo…"
+
+#: src/components/call/CallCard.tsx
+msgid "Transcript"
+msgstr "Transcripción"
 
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Transcription model"
@@ -7007,7 +6857,7 @@ msgstr "Desinstalar"
 msgid "Unlink"
 msgstr "Desvincular"
 
-#: src/components/call/CallStrip.tsx
+#: src/components/call/CallCard.tsx
 msgid "Unmute"
 msgstr "Activar el sonido"
 
@@ -7232,7 +7082,6 @@ msgstr "Ver todo"
 msgid "View source"
 msgstr "Ver código fuente"
 
-#: src/components/call/CallStrip.tsx
 #: src/pages/settings-nav.ts
 #: src/pages/shell/bot-panel.tsx
 #: src/pages/SpaceSettingOverrides.tsx
@@ -7283,10 +7132,6 @@ msgstr "miércoles"
 #: src/lib/billing.ts
 msgid "week"
 msgstr "semana"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Week"
-msgstr ""
 
 #: src/lib/cron.ts
 #: src/pages/RoutineEditor.tsx
@@ -7341,10 +7186,6 @@ msgstr "Qué devolver"
 #: src/pages/RoutineEditor.tsx
 msgid "What to watch"
 msgstr "Qué observar"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "When"
-msgstr ""
 
 #: src/pages/RoutineEditor.tsx
 msgid "When a webhook fires"

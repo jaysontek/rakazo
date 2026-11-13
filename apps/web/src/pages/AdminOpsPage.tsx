@@ -4,7 +4,7 @@ import { buttonVariants, Spinner } from "@rakazo/ui-web";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft } from "lucide-react";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { PageLoading } from "../components/PageLoading";
 import { useSpaceQueries } from "../lib/query";
@@ -112,6 +112,10 @@ function BudgetSection({ data, onCapSaved }: { data: OpsOverview; onCapSaved: ()
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setDraft(budget.monthlyCapUsd != null ? String(budget.monthlyCapUsd) : "");
+  }, [budget.monthlyCapUsd]);
 
   async function saveCap() {
     const value = Number(draft);

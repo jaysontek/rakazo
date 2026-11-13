@@ -131,6 +131,8 @@ export interface RouterDeps {
     adminEmails?: string[];
     /** CIDR/IP allowlist for the LAN ops dashboard (plus loopback). */
     opsDashboardAllowlist?: string[];
+    /** SHARED_KEY_MONTHLY_BUDGET_USD fallback when deployment_settings has no override. */
+    sharedKeyMonthlyBudgetUsd?: number | null;
     phoneCallsEnabled?: boolean;
     phoneCallRingSeconds?: number;
     maxUploadSizeBytes?: number;

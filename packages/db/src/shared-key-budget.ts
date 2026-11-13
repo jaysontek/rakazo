@@ -74,26 +74,33 @@ export async function sharedKeyMonthlyBudgetUsd(
 }
 
 /**
- * Persist an admin override for the monthly shared-key cap and re-divide this week's
- * allotments. Rejects non-positive or over-cap values.
+ * Persist an admin override for the monthly shared-key cap and re-base this week's
+ * allotments on the new cap (monthly/4/n), not the leftover old-pool redistrib.
+ * Rejects non-positive or over-cap values. Returns the saved cap and the previous DB value.
  */
 export async function setSharedKeyMonthlyBudgetUsd(
   prisma: Pick<BudgetPrisma, "$transaction" | "deploymentSettings">,
   monthlyCapUsd: number,
   now = new Date(),
-): Promise<number> {
+): Promise<{ monthlyCapUsd: number; previousMonthlyCapUsd: number | null }> {
   const parsed = parseSharedKeyMonthlyBudgetInput(monthlyCapUsd);
   if (parsed == null) throw new Error("Invalid shared-key monthly budget");
+  let previousMonthlyCapUsd: number | null = null;
   await prisma.$transaction(async (tx) => {
     await lockSharedKeyBudget(tx, MEMBERS_LOCK);
+    const existing = await tx.deploymentSettings.findUnique({
+      where: { id: "default" },
+      select: { sharedKeyMonthlyBudgetUsd: true },
+    });
+    previousMonthlyCapUsd = existing?.sharedKeyMonthlyBudgetUsd ?? null;
     await tx.deploymentSettings.upsert({
       where: { id: "default" },
       create: { id: "default", sharedKeyMonthlyBudgetUsd: parsed },
       update: { sharedKeyMonthlyBudgetUsd: parsed },
     });
-    await recomputeSharedKeyWeekAllotmentsTx(tx, now);
+    await recomputeSharedKeyWeekAllotmentsTx(tx, now, { rebaseOnMonthlyCap: true });
   });
-  return parsed;
+  return { monthlyCapUsd: parsed, previousMonthlyCapUsd };
 }
 
 /** True when the user has a personal Google/Gemini model credential. */
@@ -237,6 +244,7 @@ export async function recomputeSharedKeyWeekAllotments(
 async function recomputeSharedKeyWeekAllotmentsTx(
   tx: BudgetTx,
   now: Date,
+  options?: { rebaseOnMonthlyCap?: boolean },
 ): Promise<Map<string, number>> {
   const settings = await tx.deploymentSettings.findUnique({
     where: { id: "default" },
@@ -264,6 +272,7 @@ async function recomputeSharedKeyWeekAllotmentsTx(
     previousAllotments,
     spentByUser: await spentByMembers(tx, priorIds, weekStart, now),
     reservedByUser,
+    rebaseOnMonthlyCap: options?.rebaseOnMonthlyCap === true,
   });
 
   await tx.sharedKeyWeekAllotment.deleteMany({

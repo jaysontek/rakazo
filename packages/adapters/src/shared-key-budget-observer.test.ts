@@ -47,6 +47,12 @@ describe("shared-key budget observer", () => {
     await expect(sharedKeyBudgetObserver({} as never, scope)).resolves.toBeUndefined();
   });
 
+  it("resolves the monthly cap with the env fallback, same as summary/ops", async () => {
+    vi.mocked(sharedKeyMonthlyBudgetUsd).mockResolvedValue(50);
+    await expect(sharedKeyBudgetObserver({} as never, scope, 50)).resolves.toBeDefined();
+    expect(sharedKeyMonthlyBudgetUsd).toHaveBeenCalledWith({}, 50);
+  });
+
   it("hard-stops a shared-key call at the weekly cap", async () => {
     vi.mocked(sharedKeyMonthlyBudgetUsd).mockResolvedValue(400);
     vi.mocked(reserveSharedKeyBudget).mockRejectedValue(new SharedKeyWeeklyBudgetExceededError());

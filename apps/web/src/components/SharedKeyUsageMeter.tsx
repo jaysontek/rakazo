@@ -25,7 +25,8 @@ export function SharedKeyUsageMeter({
       </p>
     );
   }
-  const percent = Math.round(limit.percentUsed);
+  // Floor so 99.5% never displays as 100% while still showing 100 when exhausted.
+  const percent = Math.min(100, Math.floor(limit.percentUsed));
   const reset = formatSharedKeyBudgetResetAt(limit.resetsAt, i18n.locale || "en-US");
   return (
     <div data-testid="shared-key-usage-meter" className={`space-y-1.5 px-2.5 py-2 ${className}`}>

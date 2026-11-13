@@ -494,7 +494,6 @@ msgstr "טוקן גישה (אופציונלי)"
 
 #: src/components/AccountMenu.tsx
 #: src/pages/AccountSettingsOverlay.tsx
-#: src/pages/AdminOpsPage.tsx
 msgid "Account"
 msgstr "חשבון"
 
@@ -514,10 +513,6 @@ msgstr "תווית חשבון"
 #: src/components/SidebarFooter.tsx
 msgid "Account menu for {name}"
 msgstr "תפריט החשבון של {name}"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Accounts"
-msgstr ""
 
 #. placeholder {0}: bot.name
 #. placeholder {0}: group.spaceName
@@ -661,10 +656,6 @@ msgstr "הוספת URL של שרת"
 msgid "Add skills"
 msgstr ""
 
-#: src/components/InstallAppSettings.tsx
-msgid "Add to Home Screen"
-msgstr ""
-
 #: src/components/teach/SkillDraftCard.tsx
 msgid "Add to routine"
 msgstr "הוספה לרוטינה"
@@ -713,10 +704,6 @@ msgstr "מתקדם..."
 
 #: src/components/AccountDataSettings.tsx
 msgid "Agent from another app"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Agents"
 msgstr ""
 
 #: src/components/VaultSettings.tsx
@@ -903,10 +890,6 @@ msgstr ""
 msgid "API URL"
 msgstr ""
 
-#: src/components/InstallAppSettings.tsx
-msgid "App"
-msgstr ""
-
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Appearance"
 msgstr "מראה"
@@ -1071,7 +1054,6 @@ msgstr "Avatar Studio"
 #: src/components/integrations/skills-dialog.tsx
 #: src/components/vault/VaultPageHeader.tsx
 #: src/pages/AdminAccessPage.tsx
-#: src/pages/AdminOpsPage.tsx
 #: src/pages/AdminPluginsPage.tsx
 #: src/pages/Auth.tsx
 #: src/pages/Board.tsx
@@ -1095,10 +1077,6 @@ msgstr "חזרה לצ'אט"
 #: src/pages/Auth.tsx
 msgid "Back to sign in"
 msgstr "חזרה להתחברות"
-
-#: src/components/WebPushSettings.tsx
-msgid "Background alerts"
-msgstr ""
 
 #: src/pages/memory-providers/ConnectionModeFields.tsx
 msgid "Base URL"
@@ -1226,7 +1204,7 @@ msgstr "עיון בשרתי MCP"
 msgid "Built-in"
 msgstr "מובנה"
 
-#: src/pages/shell/composer.tsx
+#: src/pages/shell/chat-header.tsx
 msgid "Call"
 msgstr ""
 
@@ -1235,7 +1213,7 @@ msgid "Call back"
 msgstr ""
 
 #. placeholder {0}: call.botName
-#: src/components/call/CallStrip.tsx
+#: src/components/call/CallCard.tsx
 msgid "Call with {0}"
 msgstr ""
 
@@ -1243,7 +1221,7 @@ msgstr ""
 msgid "Calling you…"
 msgstr ""
 
-#: src/components/call/CallStrip.tsx
+#: src/components/call/CallCard.tsx
 msgid "Calling…"
 msgstr ""
 
@@ -1315,10 +1293,6 @@ msgstr "בוטל"
 msgid "Cancelled"
 msgstr "בוטל"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Cap unset"
-msgstr ""
-
 #: src/components/vault/kinds.tsx
 msgid "Card"
 msgstr ""
@@ -1374,10 +1348,6 @@ msgstr ""
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Chat details"
 msgstr "פרטי הצ׳אט"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Chat log"
-msgstr ""
 
 #: src/pages/shell/composer-mentions.tsx
 msgid "Chat Settings"
@@ -1938,7 +1908,6 @@ msgid "Copy rows"
 msgstr "העתקת שורות"
 
 #: src/pages/AccountSettingsOverlay.tsx
-#: src/pages/AdminOpsPage.tsx
 msgid "Cost"
 msgstr "עלות"
 
@@ -2521,10 +2490,6 @@ msgstr ""
 msgid "Couldn't update messaging settings"
 msgstr "לא ניתן לעדכן את הגדרות ההודעות"
 
-#: src/components/WebPushSettings.tsx
-msgid "Couldn't update notifications"
-msgstr ""
-
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Couldn't update your timezone"
 msgstr ""
@@ -2670,10 +2635,6 @@ msgstr "כהה"
 msgid "Data"
 msgstr ""
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Database"
-msgstr ""
-
 #: src/lib/billing.ts
 #: src/lib/cron.ts
 msgid "day"
@@ -2717,10 +2678,6 @@ msgstr "ברירת מחדל של OpenClaw"
 #: src/pages/MemorySettingsOverlay.tsx
 msgid "Default scope"
 msgstr "היקף ברירת מחדל"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Degraded"
-msgstr ""
 
 #: src/components/AccountAccess.tsx
 #: src/components/pages/PagesList.tsx
@@ -2914,7 +2871,6 @@ msgstr "מנתק…"
 
 #: src/components/AskCard.tsx
 #: src/components/ComputerUpdateProgress.tsx
-#: src/components/InstallAppSettings.tsx
 #: src/components/PasskeyOffer.tsx
 #: src/components/SecretAskCard.tsx
 #: src/components/teach/TeachComputerOverlay.tsx
@@ -3116,10 +3072,6 @@ msgstr "משתני סביבה: {names}"
 #: src/pages/shell/sidebar-roster.tsx
 msgid "Error"
 msgstr "שגיאה"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Errors"
-msgstr ""
 
 #: src/lib/cron.ts
 #: src/pages/ExternalConversationSettings.tsx
@@ -3466,7 +3418,7 @@ msgstr "הגדרות קבוצה"
 msgid "Group updates"
 msgstr "עדכוני קבוצה"
 
-#: src/components/call/CallStrip.tsx
+#: src/components/call/CallCard.tsx
 msgid "Hang up"
 msgstr "ניתוק שיחה"
 
@@ -3477,10 +3429,6 @@ msgstr "יש לנתק קודם את השיחה ואז להזין את הקוד �
 #: src/lib/call-session.ts
 msgid "Hang up, then enter the code on screen."
 msgstr "יש לנתק את השיחה ואז להזין את הקוד שעל המסך."
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Hard-stopped"
-msgstr ""
 
 #: src/pages/RoutineEditor.tsx
 msgid "header"
@@ -3505,10 +3453,6 @@ msgstr "ערך ה-header"
 #: src/components/ModelHeadersEditor.tsx
 msgid "Headers"
 msgstr "Headers"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Health"
-msgstr ""
 
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Hear a sample"
@@ -3672,18 +3616,6 @@ msgstr "קלט"
 msgid "Inputs"
 msgstr "קלטים"
 
-#: src/components/InstallAppSettings.tsx
-msgid "Install"
-msgstr ""
-
-#: src/components/InstallAppSettings.tsx
-msgid "Install app"
-msgstr ""
-
-#: src/components/WebPushSettings.tsx
-msgid "Install the app first to enable alerts on this device."
-msgstr ""
-
 #: src/components/SidebarFooter.tsx
 msgid "Install update"
 msgstr "התקנת עדכון"
@@ -3822,10 +3754,6 @@ msgstr "קיצורי מקלדת"
 msgid "Keys"
 msgstr ""
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Kind"
-msgstr ""
-
 #: src/components/vault/LoginFieldsInput.tsx
 #: src/components/vault/VaultItemEditor.tsx
 msgid "Label"
@@ -3887,7 +3815,7 @@ msgstr "קישור SSO"
 msgid "List view"
 msgstr "תצוגת רשימה"
 
-#: src/components/call/CallStrip.tsx
+#: src/components/call/CallCard.tsx
 msgid "Listening"
 msgstr "מאזין"
 
@@ -4084,14 +4012,6 @@ msgstr ""
 msgid "MCP servers"
 msgstr "שרתי MCP"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Median first response"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Median total"
-msgstr ""
-
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/Onboarding.tsx
 msgid "Medium"
@@ -4212,6 +4132,10 @@ msgstr "מזעור"
 msgid "Minimize bots"
 msgstr "מזעור הבוטים"
 
+#: src/components/call/CallCard.tsx
+msgid "Minimize call"
+msgstr ""
+
 #: src/lib/cron.ts
 msgid "minute"
 msgstr "דקה"
@@ -4230,7 +4154,6 @@ msgid "Mode"
 msgstr "מצב"
 
 #: src/pages/AccountSettingsOverlay.tsx
-#: src/pages/AdminOpsPage.tsx
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/RoutineEditor.tsx
@@ -4290,10 +4213,6 @@ msgstr "חודש"
 msgid "Monthly"
 msgstr "חודשי"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Monthly cap"
-msgstr ""
-
 #: src/components/ModelCredits.tsx
 msgid "Monthly credits"
 msgstr ""
@@ -4335,11 +4254,11 @@ msgstr "העברה אל"
 msgid "Move up"
 msgstr "הזזה למעלה"
 
-#: src/components/call/CallStrip.tsx
+#: src/components/call/CallCard.tsx
 msgid "Mute"
 msgstr "השתקה"
 
-#: src/components/call/CallStrip.tsx
+#: src/components/call/CallCard.tsx
 msgid "Muted"
 msgstr ""
 
@@ -4571,10 +4490,6 @@ msgstr "אין מודלים תואמים"
 msgid "No members yet"
 msgstr ""
 
-#: src/pages/AdminOpsPage.tsx
-msgid "No messages for this selection."
-msgstr ""
-
 #: src/pages/PeerMessagesOverlay.tsx
 msgid "No messages with {peerBotName} yet."
 msgstr "עדיין אין הודעות עם {peerBotName}."
@@ -4664,10 +4579,6 @@ msgstr ""
 msgid "Not checked yet"
 msgstr "טרם נבדק"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Not configured"
-msgstr ""
-
 #: src/pages/shell/agent-import.tsx
 msgid "Not imported"
 msgstr "לא יובא"
@@ -4684,10 +4595,6 @@ msgstr "לא נמצא בקטלוג התוספים"
 #: src/pages/shell/message-cards.tsx
 msgid "Not now"
 msgstr "לא עכשיו"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Not on roster"
-msgstr ""
 
 #: src/pages/shell/agent-import.tsx
 #: src/pages/shell/import-status.ts
@@ -4706,7 +4613,6 @@ msgstr "לא עובד"
 msgid "Nothing remembered yet"
 msgstr "עדיין אין זיכרונות"
 
-#: src/components/WebPushSettings.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Notifications"
 msgstr "התראות"
@@ -4741,10 +4647,6 @@ msgstr "תוקף OAuth פג"
 
 #: src/components/ComputerDeviceSettings.tsx
 msgid "Offline"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "OK"
 msgstr ""
 
 #: src/pages/model-settings/connection-controls.tsx
@@ -4814,6 +4716,15 @@ msgstr "פתיחת {title}"
 msgid "Open <0>{0}</0> and enter this code:"
 msgstr "יש לפתוח את <0>{0}</0> ולהזין את הקוד הזה:"
 
+#: src/pages/shell/chat-header.tsx
+msgid "Open call"
+msgstr ""
+
+#. placeholder {0}: call.botName
+#: src/components/call/CallCard.tsx
+msgid "Open chat with {0}"
+msgstr ""
+
 #: src/components/ComputersUnavailableHint.tsx
 msgid "Open computer settings"
 msgstr "פתיחת הגדרות המחשב"
@@ -4859,10 +4770,6 @@ msgstr "OpenClaw או Hermes"
 #: src/components/pages/DownloadPdfButton.tsx
 msgid "Opens your browser's print dialog. Choose Save as PDF as the destination."
 msgstr "פותח את חלון ההדפסה של הדפדפן. בחר/י „שמירה כ-PDF” כיעד."
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Operations"
-msgstr ""
 
 #: src/components/SignupSurvey.tsx
 #: src/pages/model-settings/connection-controls.tsx
@@ -4912,10 +4819,6 @@ msgstr "פלט"
 #: src/pages/Board.tsx
 msgid "Owner"
 msgstr "בעלים"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "p95 first response"
-msgstr ""
 
 #: src/components/pages/PageCard.tsx
 #: src/components/pages/PageView.tsx
@@ -5048,10 +4951,6 @@ msgstr "מושהה"
 msgid "Pending"
 msgstr ""
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Performance"
-msgstr ""
-
 #: src/pages/shell/bot-panel.tsx
 msgid "Permissions"
 msgstr "הרשאות"
@@ -5062,15 +4961,6 @@ msgstr "פרסונה"
 
 #: src/components/SignupSurvey.tsx
 msgid "Personal"
-msgstr ""
-
-#. placeholder {0}: money(account.personalKeyCostUsd)
-#: src/pages/AdminOpsPage.tsx
-msgid "Personal {0}"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Personal-key spend"
 msgstr ""
 
 #: src/components/vault/VaultItemDetail.tsx
@@ -5554,10 +5444,6 @@ msgstr "תשובה ל-{0}"
 msgid "Request a new code"
 msgstr "יש לבקש קוד חדש"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Request log"
-msgstr ""
-
 #: src/pages/MessagingSettingsPanel.tsx
 msgid "Requests"
 msgstr ""
@@ -5663,6 +5549,11 @@ msgstr "לנסות שוב עכשיו"
 msgid "Retry screen"
 msgstr "טעינת המסך מחדש"
 
+#. placeholder {0}: call.botName
+#: src/components/call/CallCard.tsx
+msgid "Return to call with {0}"
+msgstr ""
+
 #: src/pages/McpOAuthCallback.tsx
 #: src/pages/SlackInstallCallback.tsx
 msgid "Return to Rakazo"
@@ -5683,10 +5574,6 @@ msgstr ""
 
 #: src/components/ComputerProviderSettings.tsx
 msgid "Root filesystem"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Roster"
 msgstr ""
 
 #: src/pages/RoutineEditor.tsx
@@ -5751,10 +5638,6 @@ msgstr "הרצות"
 msgid "Runs when this bot receives a verified message from this provider."
 msgstr "רץ כשהבוט הזה מקבל הודעה מאומתת מהספק הזה."
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Runtime"
-msgstr ""
-
 #: src/pages/PluginsOverlay.tsx
 msgid "Sales & CRM"
 msgstr ""
@@ -5766,10 +5649,6 @@ msgstr "כמו {botName}"
 #: src/pages/ModelSettingsOverlay.tsx
 msgid "Same as main model"
 msgstr "כמו המודל הראשי"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Sandbox"
-msgstr ""
 
 #: src/lib/cron.ts
 msgid "Saturday"
@@ -5783,7 +5662,6 @@ msgstr "שבת"
 #: src/components/teach/SkillDraftCard.tsx
 #: src/components/vault/VaultItemEditor.tsx
 #: src/pages/AccountSettingsOverlay.tsx
-#: src/pages/AdminOpsPage.tsx
 #: src/pages/Board.tsx
 #: src/pages/ExternalConversationSettings.tsx
 #: src/pages/GroupPanel.tsx
@@ -6026,7 +5904,7 @@ msgstr "URL של השרת"
 msgid "Set"
 msgstr "הגדרה"
 
-#: src/components/call/CallStrip.tsx
+#: src/components/call/CallCard.tsx
 #: src/components/SidebarFooter.tsx
 #: src/pages/MessagingSettingsPanel.tsx
 #: src/pages/SettingsOverlay.tsx
@@ -6079,10 +5957,6 @@ msgstr "שיתוף"
 msgid "Share “{title}”"
 msgstr "שיתוף „{title}”"
 
-#: src/components/InstallAppSettings.tsx
-msgid "Share → Add to Home Screen"
-msgstr ""
-
 #: src/components/pages/SharePopover.tsx
 msgid "Share, anyone with the link can view"
 msgstr "שיתוף, כל מי שיש לו את הקישור יכול לצפות"
@@ -6093,26 +5967,9 @@ msgstr "שיתוף, כל מי שיש לו את הקישור יכול לצפות"
 msgid "Shared"
 msgstr "משותף"
 
-#. placeholder {0}: money(account.sharedKeyCostUsd)
-#: src/pages/AdminOpsPage.tsx
-msgid "Shared {0}"
-msgstr ""
-
 #: src/pages/KnowledgeSection.tsx
 msgid "Shared memory"
 msgstr "זיכרון משותף"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Shared week"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Shared-key spend"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Shared-key week"
-msgstr ""
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/VaultSettings.tsx
@@ -6320,17 +6177,13 @@ msgstr "הקראה"
 msgid "Speak this reply"
 msgstr "הקראת התשובה"
 
-#: src/components/call/CallStrip.tsx
+#: src/components/call/CallCard.tsx
 msgid "Speaking"
 msgstr ""
 
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Speech model"
 msgstr "מודל דיבור"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Spend"
-msgstr ""
 
 #: src/components/SpendingLimitSettings.tsx
 msgid "Spending limit"
@@ -6401,7 +6254,6 @@ msgid "State or region"
 msgstr ""
 
 #: src/pages/ActivityList.tsx
-#: src/pages/AdminOpsPage.tsx
 #: src/pages/Board.tsx
 msgid "Status"
 msgstr "סטטוס"
@@ -6665,7 +6517,7 @@ msgstr "לא ניתן לקרוא את ההגדרות השמורות. יש להס
 msgid "They get {weeks} weeks free."
 msgstr "הם מקבלים {weeks} שבועות בחינם."
 
-#: src/components/call/CallStrip.tsx
+#: src/components/call/CallCard.tsx
 #: src/pages/ModelRoleSettings.tsx
 #: src/pages/RoutineEditor.tsx
 #: src/pages/shell/bot-panel.tsx
@@ -6843,7 +6695,6 @@ msgid "Time of day"
 msgstr "שעה ביום"
 
 #: src/pages/AccountSettingsOverlay.tsx
-#: src/pages/AdminOpsPage.tsx
 msgid "Timezone"
 msgstr ""
 
@@ -6882,7 +6733,6 @@ msgid "Toggle sidebar"
 msgstr "הצגה או הסתרה של סרגל הצד"
 
 #: src/pages/AccountSettingsOverlay.tsx
-#: src/pages/AdminOpsPage.tsx
 msgid "Tokens"
 msgstr "טוקנים"
 
@@ -6908,13 +6758,13 @@ msgstr "שם הכלי"
 msgid "Tools"
 msgstr "כלים"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Total spend"
-msgstr ""
-
 #: src/components/composer/HoldToTalk.tsx
 msgid "Transcribing…"
 msgstr ""
+
+#: src/components/call/CallCard.tsx
+msgid "Transcript"
+msgstr "תמליל"
 
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Transcription model"
@@ -7007,7 +6857,7 @@ msgstr "הסרת התקנה"
 msgid "Unlink"
 msgstr "ביטול קישור"
 
-#: src/components/call/CallStrip.tsx
+#: src/components/call/CallCard.tsx
 msgid "Unmute"
 msgstr "ביטול השתקה"
 
@@ -7232,7 +7082,6 @@ msgstr ""
 msgid "View source"
 msgstr ""
 
-#: src/components/call/CallStrip.tsx
 #: src/pages/settings-nav.ts
 #: src/pages/shell/bot-panel.tsx
 #: src/pages/SpaceSettingOverrides.tsx
@@ -7283,10 +7132,6 @@ msgstr "יום רביעי"
 #: src/lib/billing.ts
 msgid "week"
 msgstr "שבוע"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Week"
-msgstr ""
 
 #: src/lib/cron.ts
 #: src/pages/RoutineEditor.tsx
@@ -7340,10 +7185,6 @@ msgstr "מה להחזיר"
 
 #: src/pages/RoutineEditor.tsx
 msgid "What to watch"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "When"
 msgstr ""
 
 #: src/pages/RoutineEditor.tsx

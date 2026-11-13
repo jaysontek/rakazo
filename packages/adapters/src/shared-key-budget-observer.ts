@@ -38,8 +38,9 @@ function decodeHold(reservationId: string): Hold | null {
 export async function sharedKeyBudgetObserver(
   prisma: PrismaClient,
   scope: { userId: string },
+  envFallback: number | null = null,
 ): Promise<ModelCallObserver | undefined> {
-  if (!(await sharedKeyMonthlyBudgetUsd(prisma))) return undefined;
+  if (!(await sharedKeyMonthlyBudgetUsd(prisma, envFallback))) return undefined;
   return {
     beforeCall: async (call) => {
       const maxCostUsd = call.maxCostUsd ?? 0;
@@ -71,8 +72,9 @@ export async function assertSharedKeyWeeklyBudget(
   userId: string,
   estimateCostUsd = 0,
   now = new Date(),
+  envFallback: number | null = null,
 ): Promise<void> {
-  if (!(await sharedKeyMonthlyBudgetUsd(prisma))) return;
+  if (!(await sharedKeyMonthlyBudgetUsd(prisma, envFallback))) return;
   try {
     await reserveSharedKeyBudget(prisma, userId, estimateCostUsd, now);
   } catch (error) {

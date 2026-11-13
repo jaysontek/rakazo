@@ -56,7 +56,7 @@ function fakePrisma(state: {
       ),
     },
     userModelCredential: {
-      findFirst: vi.fn(async () => null),
+      findFirst: vi.fn(async (): Promise<{ id: string } | null> => null),
     },
     user: {
       findMany: vi.fn(async ({ where }: { where: { id: { in: string[] } } }) =>
@@ -487,11 +487,16 @@ describe("shared-key weekly budget", () => {
   });
 
   it("prefers a DB monthly cap over the env fallback", async () => {
-    const state = {
+    const state: {
+      monthly: number | null;
+      members: Member[];
+      allotments: Allotment[];
+      usage: Usage[];
+    } = {
       monthly: 50,
-      members: [] as Member[],
-      allotments: [] as Allotment[],
-      usage: [] as Usage[],
+      members: [],
+      allotments: [],
+      usage: [],
     };
     const { client } = fakePrisma(state);
     expect(await sharedKeyMonthlyBudgetUsd(client as never, 400)).toBe(50);
@@ -511,10 +516,93 @@ describe("shared-key weekly budget", () => {
       usage: [] as Usage[],
     };
     const { client } = fakePrisma(state);
-    await setSharedKeyMonthlyBudgetUsd(client as never, 200, midweek);
+    const saved = await setSharedKeyMonthlyBudgetUsd(client as never, 200, midweek);
+    expect(saved).toEqual({ monthlyCapUsd: 200, previousMonthlyCapUsd: 400 });
     expect(state.monthly).toBe(200);
     // 200 / 2 users / 4 weeks = 25 each.
     expect(state.allotments.map((row) => row.allotmentUsd).sort()).toEqual([25, 25]);
+  });
+
+  it("raises the monthly cap mid-week and re-bases existing allotment rows", async () => {
+    const state = {
+      monthly: 50 as number | null,
+      members: [{ userId: "u1", joinedAt: weekStart }],
+      allotments: [
+        {
+          weekStart,
+          userId: "u1",
+          allotmentUsd: 12.5,
+          reservedUsd: 3,
+          updatedAt: midweek,
+        },
+      ],
+      usage: [
+        {
+          userId: "u1",
+          costUsd: 12.5,
+          sharedKey: true,
+          createdAt: new Date(weekStart.getTime() + 1_000),
+        },
+      ],
+    };
+    const { client } = fakePrisma(state);
+    // At the old $12.50 allotment the member is hard-stopped; raising the monthly cap to
+    // $200 must give them $50 this week (200/1/4) and preserve the in-flight hold.
+    await expect(reserveSharedKeyBudget(client as never, "u1", 0.01, midweek)).rejects.toBeInstanceOf(
+      SharedKeyWeeklyBudgetExceededError,
+    );
+    const saved = await setSharedKeyMonthlyBudgetUsd(client as never, 200, midweek);
+    expect(saved).toEqual({ monthlyCapUsd: 200, previousMonthlyCapUsd: 50 });
+    expect(state.allotments).toEqual([
+      expect.objectContaining({ userId: "u1", allotmentUsd: 50, reservedUsd: 3 }),
+    ]);
+    await expect(reserveSharedKeyBudget(client as never, "u1", 1, midweek)).resolves.toBeUndefined();
+    expect(state.allotments[0]?.reservedUsd).toBe(4);
+  });
+
+  it("lowers the monthly cap mid-week and tightens existing allotment rows", async () => {
+    const state = {
+      monthly: 200 as number | null,
+      members: [
+        { userId: "a", joinedAt: weekStart },
+        { userId: "b", joinedAt: weekStart },
+      ],
+      allotments: [
+        {
+          weekStart,
+          userId: "a",
+          allotmentUsd: 25,
+          reservedUsd: 0,
+          updatedAt: midweek,
+        },
+        {
+          weekStart,
+          userId: "b",
+          allotmentUsd: 25,
+          reservedUsd: 2,
+          updatedAt: midweek,
+        },
+      ],
+      usage: [
+        {
+          userId: "a",
+          costUsd: 20,
+          sharedKey: true,
+          createdAt: new Date(weekStart.getTime() + 1_000),
+        },
+      ],
+    };
+    const { client } = fakePrisma(state);
+    // 40 / 2 / 4 = 5 each. Member a already spent $20, so the lower cap hard-stops them;
+    // b keeps the reserved hold under the new $5 ceiling.
+    await setSharedKeyMonthlyBudgetUsd(client as never, 40, midweek);
+    expect(state.allotments.map((row) => [row.userId, row.allotmentUsd, row.reservedUsd]).sort()).toEqual([
+      ["a", 5, 0],
+      ["b", 5, 2],
+    ]);
+    await expect(reserveSharedKeyBudget(client as never, "a", 0.01, midweek)).rejects.toBeInstanceOf(
+      SharedKeyWeeklyBudgetExceededError,
+    );
   });
 
   it("resolves usage limit percent and reset for shared-key members", async () => {

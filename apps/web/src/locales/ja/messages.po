@@ -494,7 +494,6 @@ msgstr "アクセストークン（任意）"
 
 #: src/components/AccountMenu.tsx
 #: src/pages/AccountSettingsOverlay.tsx
-#: src/pages/AdminOpsPage.tsx
 msgid "Account"
 msgstr "アカウント"
 
@@ -514,10 +513,6 @@ msgstr "アカウントラベル"
 #: src/components/SidebarFooter.tsx
 msgid "Account menu for {name}"
 msgstr "{name}のアカウントメニュー"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Accounts"
-msgstr ""
 
 #. placeholder {0}: bot.name
 #. placeholder {0}: group.spaceName
@@ -661,10 +656,6 @@ msgstr "サーバーURLを追加"
 msgid "Add skills"
 msgstr ""
 
-#: src/components/InstallAppSettings.tsx
-msgid "Add to Home Screen"
-msgstr ""
-
 #: src/components/teach/SkillDraftCard.tsx
 msgid "Add to routine"
 msgstr "ルーティンに追加"
@@ -713,10 +704,6 @@ msgstr "詳細設定..."
 
 #: src/components/AccountDataSettings.tsx
 msgid "Agent from another app"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Agents"
 msgstr ""
 
 #: src/components/VaultSettings.tsx
@@ -903,10 +890,6 @@ msgstr ""
 msgid "API URL"
 msgstr ""
 
-#: src/components/InstallAppSettings.tsx
-msgid "App"
-msgstr ""
-
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Appearance"
 msgstr "外観"
@@ -1071,7 +1054,6 @@ msgstr "Avatar Studio"
 #: src/components/integrations/skills-dialog.tsx
 #: src/components/vault/VaultPageHeader.tsx
 #: src/pages/AdminAccessPage.tsx
-#: src/pages/AdminOpsPage.tsx
 #: src/pages/AdminPluginsPage.tsx
 #: src/pages/Auth.tsx
 #: src/pages/Board.tsx
@@ -1095,10 +1077,6 @@ msgstr "チャットに戻る"
 #: src/pages/Auth.tsx
 msgid "Back to sign in"
 msgstr "ログインに戻る"
-
-#: src/components/WebPushSettings.tsx
-msgid "Background alerts"
-msgstr ""
 
 #: src/pages/memory-providers/ConnectionModeFields.tsx
 msgid "Base URL"
@@ -1226,7 +1204,7 @@ msgstr "MCPサーバーを探す"
 msgid "Built-in"
 msgstr "組み込み"
 
-#: src/pages/shell/composer.tsx
+#: src/pages/shell/chat-header.tsx
 msgid "Call"
 msgstr "通話"
 
@@ -1235,7 +1213,7 @@ msgid "Call back"
 msgstr "折り返し通話"
 
 #. placeholder {0}: call.botName
-#: src/components/call/CallStrip.tsx
+#: src/components/call/CallCard.tsx
 msgid "Call with {0}"
 msgstr "{0}と通話"
 
@@ -1243,7 +1221,7 @@ msgstr "{0}と通話"
 msgid "Calling you…"
 msgstr "着信中…"
 
-#: src/components/call/CallStrip.tsx
+#: src/components/call/CallCard.tsx
 msgid "Calling…"
 msgstr "発信中…"
 
@@ -1315,10 +1293,6 @@ msgstr "キャンセル済み"
 msgid "Cancelled"
 msgstr "キャンセル済み"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Cap unset"
-msgstr ""
-
 #: src/components/vault/kinds.tsx
 msgid "Card"
 msgstr ""
@@ -1374,10 +1348,6 @@ msgstr ""
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Chat details"
 msgstr "チャットの詳細"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Chat log"
-msgstr ""
 
 #: src/pages/shell/composer-mentions.tsx
 msgid "Chat Settings"
@@ -1938,7 +1908,6 @@ msgid "Copy rows"
 msgstr "行をコピー"
 
 #: src/pages/AccountSettingsOverlay.tsx
-#: src/pages/AdminOpsPage.tsx
 msgid "Cost"
 msgstr "コスト"
 
@@ -2521,10 +2490,6 @@ msgstr ""
 msgid "Couldn't update messaging settings"
 msgstr "メッセージ設定を更新できませんでした"
 
-#: src/components/WebPushSettings.tsx
-msgid "Couldn't update notifications"
-msgstr ""
-
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Couldn't update your timezone"
 msgstr "タイムゾーンを更新できませんでした"
@@ -2670,10 +2635,6 @@ msgstr "ダーク"
 msgid "Data"
 msgstr ""
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Database"
-msgstr ""
-
 #: src/lib/billing.ts
 #: src/lib/cron.ts
 msgid "day"
@@ -2717,10 +2678,6 @@ msgstr "OpenClawの初期設定"
 #: src/pages/MemorySettingsOverlay.tsx
 msgid "Default scope"
 msgstr "デフォルトの範囲"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Degraded"
-msgstr ""
 
 #: src/components/AccountAccess.tsx
 #: src/components/pages/PagesList.tsx
@@ -2914,7 +2871,6 @@ msgstr "切断中…"
 
 #: src/components/AskCard.tsx
 #: src/components/ComputerUpdateProgress.tsx
-#: src/components/InstallAppSettings.tsx
 #: src/components/PasskeyOffer.tsx
 #: src/components/SecretAskCard.tsx
 #: src/components/teach/TeachComputerOverlay.tsx
@@ -3116,10 +3072,6 @@ msgstr "環境変数: {names}"
 #: src/pages/shell/sidebar-roster.tsx
 msgid "Error"
 msgstr "エラー"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Errors"
-msgstr ""
 
 #: src/lib/cron.ts
 #: src/pages/ExternalConversationSettings.tsx
@@ -3466,7 +3418,7 @@ msgstr "グループ設定"
 msgid "Group updates"
 msgstr "更新をまとめる"
 
-#: src/components/call/CallStrip.tsx
+#: src/components/call/CallCard.tsx
 msgid "Hang up"
 msgstr "通話を終了"
 
@@ -3477,10 +3429,6 @@ msgstr "先に通話を終了してから、画面に表示されたコードを
 #: src/lib/call-session.ts
 msgid "Hang up, then enter the code on screen."
 msgstr "通話を終了してから、画面に表示されたコードを入力してください。"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Hard-stopped"
-msgstr ""
 
 #: src/pages/RoutineEditor.tsx
 msgid "header"
@@ -3505,10 +3453,6 @@ msgstr "ヘッダー値"
 #: src/components/ModelHeadersEditor.tsx
 msgid "Headers"
 msgstr "ヘッダー"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Health"
-msgstr ""
 
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Hear a sample"
@@ -3672,18 +3616,6 @@ msgstr "入力"
 msgid "Inputs"
 msgstr "入力"
 
-#: src/components/InstallAppSettings.tsx
-msgid "Install"
-msgstr ""
-
-#: src/components/InstallAppSettings.tsx
-msgid "Install app"
-msgstr ""
-
-#: src/components/WebPushSettings.tsx
-msgid "Install the app first to enable alerts on this device."
-msgstr ""
-
 #: src/components/SidebarFooter.tsx
 msgid "Install update"
 msgstr "アップデートをインストール"
@@ -3822,10 +3754,6 @@ msgstr "キーボードショートカット"
 msgid "Keys"
 msgstr ""
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Kind"
-msgstr ""
-
 #: src/components/vault/LoginFieldsInput.tsx
 #: src/components/vault/VaultItemEditor.tsx
 msgid "Label"
@@ -3887,7 +3815,7 @@ msgstr "SSOを連携"
 msgid "List view"
 msgstr "リスト表示"
 
-#: src/components/call/CallStrip.tsx
+#: src/components/call/CallCard.tsx
 msgid "Listening"
 msgstr "聞いています"
 
@@ -4084,14 +4012,6 @@ msgstr ""
 msgid "MCP servers"
 msgstr "MCPサーバー"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Median first response"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Median total"
-msgstr ""
-
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/Onboarding.tsx
 msgid "Medium"
@@ -4212,6 +4132,10 @@ msgstr "最小化"
 msgid "Minimize bots"
 msgstr "ボットを最小化"
 
+#: src/components/call/CallCard.tsx
+msgid "Minimize call"
+msgstr "通話を最小化"
+
 #: src/lib/cron.ts
 msgid "minute"
 msgstr "分"
@@ -4230,7 +4154,6 @@ msgid "Mode"
 msgstr "モード"
 
 #: src/pages/AccountSettingsOverlay.tsx
-#: src/pages/AdminOpsPage.tsx
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/RoutineEditor.tsx
@@ -4290,10 +4213,6 @@ msgstr "月"
 msgid "Monthly"
 msgstr "毎月"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Monthly cap"
-msgstr ""
-
 #: src/components/ModelCredits.tsx
 msgid "Monthly credits"
 msgstr "月間クレジット"
@@ -4335,11 +4254,11 @@ msgstr "移動先"
 msgid "Move up"
 msgstr "上へ移動"
 
-#: src/components/call/CallStrip.tsx
+#: src/components/call/CallCard.tsx
 msgid "Mute"
 msgstr "ミュート"
 
-#: src/components/call/CallStrip.tsx
+#: src/components/call/CallCard.tsx
 msgid "Muted"
 msgstr "ミュート中"
 
@@ -4571,10 +4490,6 @@ msgstr "一致するモデルはありません"
 msgid "No members yet"
 msgstr "メンバーはまだいません"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "No messages for this selection."
-msgstr ""
-
 #: src/pages/PeerMessagesOverlay.tsx
 msgid "No messages with {peerBotName} yet."
 msgstr "{peerBotName}とのメッセージはまだありません。"
@@ -4664,10 +4579,6 @@ msgstr ""
 msgid "Not checked yet"
 msgstr "未確認"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Not configured"
-msgstr ""
-
 #: src/pages/shell/agent-import.tsx
 msgid "Not imported"
 msgstr "インポートされていません"
@@ -4684,10 +4595,6 @@ msgstr "プラグインカタログにありません"
 #: src/pages/shell/message-cards.tsx
 msgid "Not now"
 msgstr "今はしない"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Not on roster"
-msgstr ""
 
 #: src/pages/shell/agent-import.tsx
 #: src/pages/shell/import-status.ts
@@ -4706,7 +4613,6 @@ msgstr "動作していません"
 msgid "Nothing remembered yet"
 msgstr "記憶はまだありません"
 
-#: src/components/WebPushSettings.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Notifications"
 msgstr "通知"
@@ -4741,10 +4647,6 @@ msgstr "OAuthの有効期限切れ"
 
 #: src/components/ComputerDeviceSettings.tsx
 msgid "Offline"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "OK"
 msgstr ""
 
 #: src/pages/model-settings/connection-controls.tsx
@@ -4814,6 +4716,15 @@ msgstr "{title} を開く"
 msgid "Open <0>{0}</0> and enter this code:"
 msgstr "<0>{0}</0>を開いて、このコードを入力してください:"
 
+#: src/pages/shell/chat-header.tsx
+msgid "Open call"
+msgstr "通話を開く"
+
+#. placeholder {0}: call.botName
+#: src/components/call/CallCard.tsx
+msgid "Open chat with {0}"
+msgstr "{0}とのチャットを開く"
+
 #: src/components/ComputersUnavailableHint.tsx
 msgid "Open computer settings"
 msgstr "コンピューター設定を開く"
@@ -4859,10 +4770,6 @@ msgstr "OpenClawまたはHermes"
 #: src/components/pages/DownloadPdfButton.tsx
 msgid "Opens your browser's print dialog. Choose Save as PDF as the destination."
 msgstr "ブラウザの印刷ダイアログを開きます。送信先に「PDF に保存」を選んでください。"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Operations"
-msgstr ""
 
 #: src/components/SignupSurvey.tsx
 #: src/pages/model-settings/connection-controls.tsx
@@ -4912,10 +4819,6 @@ msgstr "出力"
 #: src/pages/Board.tsx
 msgid "Owner"
 msgstr "オーナー"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "p95 first response"
-msgstr ""
 
 #: src/components/pages/PageCard.tsx
 #: src/components/pages/PageView.tsx
@@ -5048,10 +4951,6 @@ msgstr "一時停止中"
 msgid "Pending"
 msgstr ""
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Performance"
-msgstr ""
-
 #: src/pages/shell/bot-panel.tsx
 msgid "Permissions"
 msgstr "権限"
@@ -5063,15 +4962,6 @@ msgstr "ペルソナ"
 #: src/components/SignupSurvey.tsx
 msgid "Personal"
 msgstr "個人"
-
-#. placeholder {0}: money(account.personalKeyCostUsd)
-#: src/pages/AdminOpsPage.tsx
-msgid "Personal {0}"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Personal-key spend"
-msgstr ""
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/vault/VaultItemEditor.tsx
@@ -5554,10 +5444,6 @@ msgstr "{0}に返信中"
 msgid "Request a new code"
 msgstr "新しいコードをリクエスト"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Request log"
-msgstr ""
-
 #: src/pages/MessagingSettingsPanel.tsx
 msgid "Requests"
 msgstr ""
@@ -5663,6 +5549,11 @@ msgstr "今すぐ再試行"
 msgid "Retry screen"
 msgstr "画面を再試行"
 
+#. placeholder {0}: call.botName
+#: src/components/call/CallCard.tsx
+msgid "Return to call with {0}"
+msgstr "{0}との通話に戻る"
+
 #: src/pages/McpOAuthCallback.tsx
 #: src/pages/SlackInstallCallback.tsx
 msgid "Return to Rakazo"
@@ -5683,10 +5574,6 @@ msgstr ""
 
 #: src/components/ComputerProviderSettings.tsx
 msgid "Root filesystem"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Roster"
 msgstr ""
 
 #: src/pages/RoutineEditor.tsx
@@ -5751,10 +5638,6 @@ msgstr "実行"
 msgid "Runs when this bot receives a verified message from this provider."
 msgstr "このボットがこのプロバイダーから検証済みのメッセージを受信したときに実行されます。"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Runtime"
-msgstr ""
-
 #: src/pages/PluginsOverlay.tsx
 msgid "Sales & CRM"
 msgstr ""
@@ -5766,10 +5649,6 @@ msgstr "{botName}と同じ"
 #: src/pages/ModelSettingsOverlay.tsx
 msgid "Same as main model"
 msgstr "メインモデルと同じ"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Sandbox"
-msgstr ""
 
 #: src/lib/cron.ts
 msgid "Saturday"
@@ -5783,7 +5662,6 @@ msgstr "土曜日"
 #: src/components/teach/SkillDraftCard.tsx
 #: src/components/vault/VaultItemEditor.tsx
 #: src/pages/AccountSettingsOverlay.tsx
-#: src/pages/AdminOpsPage.tsx
 #: src/pages/Board.tsx
 #: src/pages/ExternalConversationSettings.tsx
 #: src/pages/GroupPanel.tsx
@@ -6026,7 +5904,7 @@ msgstr "サーバーURL"
 msgid "Set"
 msgstr "設定"
 
-#: src/components/call/CallStrip.tsx
+#: src/components/call/CallCard.tsx
 #: src/components/SidebarFooter.tsx
 #: src/pages/MessagingSettingsPanel.tsx
 #: src/pages/SettingsOverlay.tsx
@@ -6079,10 +5957,6 @@ msgstr "共有"
 msgid "Share “{title}”"
 msgstr "「{title}」を共有"
 
-#: src/components/InstallAppSettings.tsx
-msgid "Share → Add to Home Screen"
-msgstr ""
-
 #: src/components/pages/SharePopover.tsx
 msgid "Share, anyone with the link can view"
 msgstr "共有、リンクを知っている人は誰でも閲覧可能"
@@ -6093,26 +5967,9 @@ msgstr "共有、リンクを知っている人は誰でも閲覧可能"
 msgid "Shared"
 msgstr "共有"
 
-#. placeholder {0}: money(account.sharedKeyCostUsd)
-#: src/pages/AdminOpsPage.tsx
-msgid "Shared {0}"
-msgstr ""
-
 #: src/pages/KnowledgeSection.tsx
 msgid "Shared memory"
 msgstr "共有メモリ"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Shared week"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Shared-key spend"
-msgstr ""
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Shared-key week"
-msgstr ""
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/VaultSettings.tsx
@@ -6320,17 +6177,13 @@ msgstr "読み上げ"
 msgid "Speak this reply"
 msgstr "この返信を読み上げ"
 
-#: src/components/call/CallStrip.tsx
+#: src/components/call/CallCard.tsx
 msgid "Speaking"
 msgstr "話しています"
 
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Speech model"
 msgstr "音声モデル"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Spend"
-msgstr ""
 
 #: src/components/SpendingLimitSettings.tsx
 msgid "Spending limit"
@@ -6401,7 +6254,6 @@ msgid "State or region"
 msgstr ""
 
 #: src/pages/ActivityList.tsx
-#: src/pages/AdminOpsPage.tsx
 #: src/pages/Board.tsx
 msgid "Status"
 msgstr "ステータス"
@@ -6665,7 +6517,7 @@ msgstr "保存された設定を読み取れません。削除してから再度
 msgid "They get {weeks} weeks free."
 msgstr "友だちは{weeks}週間無料で使えます。"
 
-#: src/components/call/CallStrip.tsx
+#: src/components/call/CallCard.tsx
 #: src/pages/ModelRoleSettings.tsx
 #: src/pages/RoutineEditor.tsx
 #: src/pages/shell/bot-panel.tsx
@@ -6843,7 +6695,6 @@ msgid "Time of day"
 msgstr "時刻"
 
 #: src/pages/AccountSettingsOverlay.tsx
-#: src/pages/AdminOpsPage.tsx
 msgid "Timezone"
 msgstr "タイムゾーン"
 
@@ -6882,7 +6733,6 @@ msgid "Toggle sidebar"
 msgstr "サイドバーの表示切り替え"
 
 #: src/pages/AccountSettingsOverlay.tsx
-#: src/pages/AdminOpsPage.tsx
 msgid "Tokens"
 msgstr "トークン"
 
@@ -6908,13 +6758,13 @@ msgstr "ツール名"
 msgid "Tools"
 msgstr "ツール"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Total spend"
-msgstr ""
-
 #: src/components/composer/HoldToTalk.tsx
 msgid "Transcribing…"
 msgstr "文字起こし中…"
+
+#: src/components/call/CallCard.tsx
+msgid "Transcript"
+msgstr "文字起こし"
 
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Transcription model"
@@ -7007,7 +6857,7 @@ msgstr "アンインストール"
 msgid "Unlink"
 msgstr "リンクを解除"
 
-#: src/components/call/CallStrip.tsx
+#: src/components/call/CallCard.tsx
 msgid "Unmute"
 msgstr "ミュート解除"
 
@@ -7232,7 +7082,6 @@ msgstr ""
 msgid "View source"
 msgstr ""
 
-#: src/components/call/CallStrip.tsx
 #: src/pages/settings-nav.ts
 #: src/pages/shell/bot-panel.tsx
 #: src/pages/SpaceSettingOverrides.tsx
@@ -7283,10 +7132,6 @@ msgstr "水曜日"
 #: src/lib/billing.ts
 msgid "week"
 msgstr "週"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "Week"
-msgstr ""
 
 #: src/lib/cron.ts
 #: src/pages/RoutineEditor.tsx
@@ -7341,10 +7186,6 @@ msgstr "返す内容"
 #: src/pages/RoutineEditor.tsx
 msgid "What to watch"
 msgstr "監視する対象"
-
-#: src/pages/AdminOpsPage.tsx
-msgid "When"
-msgstr ""
 
 #: src/pages/RoutineEditor.tsx
 msgid "When a webhook fires"

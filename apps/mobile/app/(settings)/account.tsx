@@ -859,7 +859,8 @@ function MobileSharedKeyUsageMeter({ limit }: { limit: UsageLimit | null | undef
       </View>
     );
   }
-  const percent = Math.round(limit.percentUsed);
+  // Floor so 99.5% never displays as 100% while still showing 100 when exhausted.
+  const percent = Math.min(100, Math.floor(limit.percentUsed));
   const reset = formatSharedKeyBudgetResetAt(limit.resetsAt, dateLocaleForUi(locale));
   return (
     <View

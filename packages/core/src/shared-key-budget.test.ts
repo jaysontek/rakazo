@@ -152,6 +152,36 @@ describe("shared-key weekly budget math", () => {
     expect(allotments.get("b")!).toBeCloseTo(0 + 0 + 35, 5);
   });
 
+  it("re-bases on the new monthly cap instead of the old allotment pool", () => {
+    const weekStart = new Date("2026-11-02T05:00:00.000Z");
+    const now = new Date("2026-11-05T17:00:00.000Z");
+    const allotments = redivideWeeklyAllotments({
+      monthlyCapUsd: 200,
+      members: [
+        { userId: "a", joinedAt: weekStart },
+        { userId: "b", joinedAt: weekStart },
+        { userId: "c", joinedAt: now },
+      ],
+      weekStart,
+      now,
+      // Old $50 monthly → $12.50 each. Without rebaseOnMonthlyCap these would stick.
+      previousAllotments: new Map([
+        ["a", 12.5],
+        ["b", 12.5],
+      ]),
+      spentByUser: new Map([
+        ["a", 12.5],
+        ["b", 0],
+      ]),
+      rebaseOnMonthlyCap: true,
+    });
+    // 200 / 3 / 4; mid-week joiner c is pro-rated by remaining fraction.
+    const fullShare = fullWeekShareUsd(200, 3);
+    expect(allotments.get("a")).toBeCloseTo(fullShare, 5);
+    expect(allotments.get("b")).toBeCloseTo(fullShare, 5);
+    expect(allotments.get("c")).toBeCloseTo(fullShare * weekFractionRemaining(now, weekStart), 5);
+  });
+
   it("ends the week at the next America/New_York Monday, not a fixed 7*24h", () => {
     // Fall-back week: Monday starts in EDT and the next Monday is EST (+1h in UTC).
     const weekStart = sharedKeyWeekStart(new Date("2026-10-28T12:00:00.000Z"));

@@ -198,7 +198,7 @@ export async function resolveModelKey(...args: Parameters<typeof resolveModelKey
       ? await hostedModelCreditObserver(deps.prisma, scope)
       : undefined;
   const budgetObserver = usingSharedKey
-    ? await sharedKeyBudgetObserver(deps.prisma, scope)
+    ? await sharedKeyBudgetObserver(deps.prisma, scope, deps.sharedKeyMonthlyBudgetUsd ?? null)
     : undefined;
   const callObserver = composeSharedKeyBudgetObserver(budgetObserver, creditObserver);
   return {

@@ -67,11 +67,7 @@ export const AUDITED_PROCEDURES: Record<string, AuditedProcedure> = {
     type: "deployment.settings.changed",
     fields: ["signupsEnabled", "computerHost"],
   },
-  "ops.setSharedKeyMonthlyBudget": {
-    type: "deployment.settings.changed",
-    kind: "shared_key_monthly_budget",
-    fields: ["monthlyCapUsd"],
-  },
+  // Audited in the ops handler so the previous cap is recorded alongside the new one.
   "computerProvider.update": {
     type: "credential.changed",
     kind: "computer_provider",

@@ -737,6 +737,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
     artifacts,
     connector: stack.connector,
     connectors: stack.connector,
+    sharedKeyMonthlyBudgetUsd: env.sharedKeyMonthlyBudgetUsd,
     listConnectedPluginSlugs: async (userId) => {
       const provider = await integrationSettings.resolve("composio");
       if (!provider) return [];
@@ -941,6 +942,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
       navLinks: env.navLinks,
       adminEmails: env.adminEmails,
       opsDashboardAllowlist: env.opsDashboardAllowlist,
+      sharedKeyMonthlyBudgetUsd: env.sharedKeyMonthlyBudgetUsd,
       maxUploadSizeBytes: env.maxUploadSizeBytes,
       maxAttachmentsPerMessage: env.maxAttachmentsPerMessage,
       agentRuntime: env.agentRuntime,
@@ -1351,6 +1353,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
               deploymentProvider: env.defaultProvider,
               deploymentModel: env.defaultModel,
               deploymentModelKey: env.deploymentModelKey,
+              sharedKeyMonthlyBudgetUsd: env.sharedKeyMonthlyBudgetUsd,
               allowPrivateEndpoint: env.mcpAllowPrivateEndpoint,
               providerOverride: env.teamChatJudgeProvider,
               modelOverride: env.teamChatJudgeModel,
@@ -1362,6 +1365,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
               deploymentProvider: env.defaultProvider,
               deploymentModel: env.defaultModel,
               deploymentModelKey: env.deploymentModelKey,
+              sharedKeyMonthlyBudgetUsd: env.sharedKeyMonthlyBudgetUsd,
               allowPrivateEndpoint: env.mcpAllowPrivateEndpoint,
             });
       const bridge = new TeamChatBridge({
