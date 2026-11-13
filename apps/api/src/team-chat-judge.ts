@@ -122,6 +122,7 @@ interface ModelTeamChatEngagementJudgeDeps {
   deploymentModelKey?: string;
   /** SHARED_KEY_MONTHLY_BUDGET_USD fallback when deployment_settings has no override. */
   sharedKeyMonthlyBudgetUsd?: number | null;
+  sharedKeyEnrollmentPolicy?: import("@rakazo/db").SharedKeyBudgetEnrollmentPolicy;
   providerOverride?: string;
   modelOverride?: string;
   /** The instance flag (`MCP_ALLOW_PRIVATE_ENDPOINT`). */
@@ -282,6 +283,7 @@ export class ModelTeamChatEngagementJudge implements TeamChatEngagementJudge {
             this.deps.prisma,
             scope,
             this.deps.sharedKeyMonthlyBudgetUsd ?? null,
+            this.deps.sharedKeyEnrollmentPolicy,
           )
         : undefined;
       const callObserver = composeSharedKeyBudgetObserver(budgetObserver, creditObserver);

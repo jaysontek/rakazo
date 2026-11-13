@@ -675,6 +675,10 @@ msgstr "Dodaj do ekranu głównego"
 msgid "Add to routine"
 msgstr "Dodaj do rutyny"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Add to shared budget"
+msgstr "Dodaj do wspólnego budżetu"
+
 #: src/pages/RoutineEditor.tsx
 msgid "Add trigger"
 msgstr "Dodaj wyzwalacz"
@@ -1692,6 +1696,10 @@ msgstr "Kompaktowy"
 msgid "Company"
 msgstr "Firmowy"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Company key — pending admin approval"
+msgstr "Klucz firmowy — oczekuje na zatwierdzenie administratora"
+
 #: src/pages/ScratchpadSection.tsx
 msgid "Complete"
 msgstr "Zakończ"
@@ -1990,6 +1998,10 @@ msgstr "Nie udało się dodać serwera MCP"
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Could not add skills"
 msgstr "Nie udało się dodać umiejętności"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not add to shared budget"
+msgstr "Nie udało się dodać do wspólnego budżetu"
 
 #: src/pages/PluginSubmissionsPanel.tsx
 msgid "Could not approve plugin"
@@ -5148,6 +5160,10 @@ msgid "Pending"
 msgstr "Oczekuje"
 
 #: src/pages/AdminOpsPage.tsx
+msgid "Pending admin approval"
+msgstr "Oczekuje na zatwierdzenie administratora"
+
+#: src/pages/AdminOpsPage.tsx
 msgid "Performance"
 msgstr "Wydajność"
 
@@ -6991,6 +7007,11 @@ msgstr "To logowanie przez subskrypcję nie jest jeszcze dostępne w Rakazo. Uż
 msgid "This week"
 msgstr "Ten tydzień"
 
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "This week's shared API key budget is used up. It resets next week, or connect your own key in Models."
+msgstr "Tygodniowy budżet wspólnego klucza API został wyczerpany. Resetuje się w przyszłym tygodniu albo podłącz własny klucz w Modelach."
+
 #: src/lib/cron.ts
 msgid "Thursday"
 msgstr "czwartek"
@@ -7638,6 +7659,11 @@ msgstr "Otrzymasz bezpłatny miesiąc, gdy rozpoczną okres próbny z nową kart
 #: src/pages/shell/computer-overlay.tsx
 msgid "You have control"
 msgstr "Sterujesz komputerem"
+
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "You're not on the shared-key budget yet. Ask an admin."
+msgstr "Nie jesteś jeszcze na budżecie wspólnego klucza. Poproś administratora."
 
 #. js-lingui-explicit-id
 #: src/lib/run-error.ts

@@ -123,8 +123,8 @@ import {
   PLUGIN_SUBMISSIONS_PATH,
   SERVER_BUILD_HEADER,
 } from "@rakazo/contracts";
-import { encryptionKeyWarning, signupPolicyFromEnv } from "@rakazo/core";
-import type { Pool, PrismaClient } from "@rakazo/db";
+import { encryptionKeyWarning, isGatedSharedKeyDeployment, signupPolicyFromEnv } from "@rakazo/core";
+import type { Pool, PrismaClient, SharedKeyBudgetEnrollmentPolicy } from "@rakazo/db";
 import {
   configureProviderTransactionPool,
   createBoardEvents,
@@ -736,6 +736,15 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
   const codexCatalog = new CodexCatalogCache();
   // One instance: chat runs submit videos and, in single-process mode, background polls finish them.
   const mediaGeneration = createMediaGenerationProvider();
+  const sharedKeyEnrollmentPolicy: SharedKeyBudgetEnrollmentPolicy = {
+    gatedDeployment: isGatedSharedKeyDeployment({
+      signupsEnabled: env.signupsEnabled,
+      signupAllowlist: env.signupAllowlist,
+      singleAccount: Boolean(env.desktopStackToken),
+      directoryProvisioning: Boolean(directory),
+    }),
+    adminEmails: env.adminEmails,
+  };
   const executor = createRunExecutor({
     billingEnabled: modelCreditsEnabled,
     maxUploadSizeBytes: env.maxUploadSizeBytes,
@@ -752,6 +761,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
     connector: stack.connector,
     connectors: stack.connector,
     sharedKeyMonthlyBudgetUsd: env.sharedKeyMonthlyBudgetUsd,
+    sharedKeyEnrollmentPolicy,
     listConnectedPluginSlugs: async (userId) => {
       const provider = await integrationSettings.resolve("composio");
       if (!provider) return [];
@@ -1403,6 +1413,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
               deploymentModel: env.defaultModel,
               deploymentModelKey: env.deploymentModelKey,
               sharedKeyMonthlyBudgetUsd: env.sharedKeyMonthlyBudgetUsd,
+              sharedKeyEnrollmentPolicy,
               allowPrivateEndpoint: env.mcpAllowPrivateEndpoint,
               providerOverride: env.teamChatJudgeProvider,
               modelOverride: env.teamChatJudgeModel,
@@ -1415,6 +1426,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
               deploymentModel: env.defaultModel,
               deploymentModelKey: env.deploymentModelKey,
               sharedKeyMonthlyBudgetUsd: env.sharedKeyMonthlyBudgetUsd,
+              sharedKeyEnrollmentPolicy,
               allowPrivateEndpoint: env.mcpAllowPrivateEndpoint,
             });
       const bridge = new TeamChatBridge({

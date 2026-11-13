@@ -1,9 +1,14 @@
 import type { ModelCallObserver } from "@rakazo/adapter-kit";
-import { SHARED_KEY_WEEKLY_BUDGET_ERROR } from "@rakazo/core";
-import type { PrismaClient } from "@rakazo/db";
 import {
+  SHARED_KEY_BUDGET_NOT_ENROLLED_ERROR,
+  SHARED_KEY_WEEKLY_BUDGET_ERROR,
+} from "@rakazo/core";
+import type { PrismaClient, SharedKeyBudgetEnrollmentPolicy } from "@rakazo/db";
+import {
+  DEFAULT_SHARED_KEY_ENROLLMENT_POLICY,
   releaseSharedKeyBudgetHold,
   reserveSharedKeyBudget,
+  SharedKeyBudgetNotEnrolledError,
   SharedKeyWeeklyBudgetExceededError,
   sharedKeyMonthlyBudgetUsd,
 } from "@rakazo/db";
@@ -12,6 +17,13 @@ export class SharedKeyWeeklyBudgetExceededRunError extends Error {
   constructor(message = SHARED_KEY_WEEKLY_BUDGET_ERROR) {
     super(message);
     this.name = "SharedKeyWeeklyBudgetExceededRunError";
+  }
+}
+
+export class SharedKeyBudgetNotEnrolledRunError extends Error {
+  constructor(message = SHARED_KEY_BUDGET_NOT_ENROLLED_ERROR) {
+    super(message);
+    this.name = "SharedKeyBudgetNotEnrolledRunError";
   }
 }
 
@@ -39,14 +51,18 @@ export async function sharedKeyBudgetObserver(
   prisma: PrismaClient,
   scope: { userId: string },
   envFallback: number | null = null,
+  enrollmentPolicy: SharedKeyBudgetEnrollmentPolicy = DEFAULT_SHARED_KEY_ENROLLMENT_POLICY,
 ): Promise<ModelCallObserver | undefined> {
   if (!(await sharedKeyMonthlyBudgetUsd(prisma, envFallback))) return undefined;
   return {
     beforeCall: async (call) => {
       const maxCostUsd = call.maxCostUsd ?? 0;
       try {
-        await reserveSharedKeyBudget(prisma, scope.userId, maxCostUsd);
+        await reserveSharedKeyBudget(prisma, scope.userId, maxCostUsd, new Date(), enrollmentPolicy);
       } catch (error) {
+        if (error instanceof SharedKeyBudgetNotEnrolledError) {
+          throw new SharedKeyBudgetNotEnrolledRunError();
+        }
         if (error instanceof SharedKeyWeeklyBudgetExceededError) {
           throw new SharedKeyWeeklyBudgetExceededRunError();
         }
@@ -73,11 +89,15 @@ export async function assertSharedKeyWeeklyBudget(
   estimateCostUsd = 0,
   now = new Date(),
   envFallback: number | null = null,
+  enrollmentPolicy: SharedKeyBudgetEnrollmentPolicy = DEFAULT_SHARED_KEY_ENROLLMENT_POLICY,
 ): Promise<void> {
   if (!(await sharedKeyMonthlyBudgetUsd(prisma, envFallback))) return;
   try {
-    await reserveSharedKeyBudget(prisma, userId, estimateCostUsd, now);
+    await reserveSharedKeyBudget(prisma, userId, estimateCostUsd, now, enrollmentPolicy);
   } catch (error) {
+    if (error instanceof SharedKeyBudgetNotEnrolledError) {
+      throw new SharedKeyBudgetNotEnrolledRunError();
+    }
     if (error instanceof SharedKeyWeeklyBudgetExceededError) {
       throw new SharedKeyWeeklyBudgetExceededRunError();
     }

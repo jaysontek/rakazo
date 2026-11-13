@@ -675,6 +675,10 @@ msgstr ""
 msgid "Add to routine"
 msgstr "자동 실행에 추가"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Add to shared budget"
+msgstr "공유 예산에 추가"
+
 #: src/pages/RoutineEditor.tsx
 msgid "Add trigger"
 msgstr "트리거 추가"
@@ -1692,6 +1696,10 @@ msgstr ""
 msgid "Company"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Company key — pending admin approval"
+msgstr "회사 키 — 관리자 승인 대기"
+
 #: src/pages/ScratchpadSection.tsx
 msgid "Complete"
 msgstr "완료"
@@ -1990,6 +1998,10 @@ msgstr "MCP 서버를 추가하지 못했습니다."
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Could not add skills"
 msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not add to shared budget"
+msgstr "공유 예산에 추가할 수 없음"
 
 #: src/pages/PluginSubmissionsPanel.tsx
 msgid "Could not approve plugin"
@@ -5148,6 +5160,10 @@ msgid "Pending"
 msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
+msgid "Pending admin approval"
+msgstr "관리자 승인 대기"
+
+#: src/pages/AdminOpsPage.tsx
 msgid "Performance"
 msgstr ""
 
@@ -6991,6 +7007,11 @@ msgstr "이 구독 로그인 방식은 아직 Rakazo에서 지원되지 않습�
 msgid "This week"
 msgstr ""
 
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "This week's shared API key budget is used up. It resets next week, or connect your own key in Models."
+msgstr "이번 주 공유 API 키 예산이 소진되었습니다. 다음 주에 초기화되거나 모델에서 내 키를 연결하세요."
+
 #: src/lib/cron.ts
 msgid "Thursday"
 msgstr "목요일"
@@ -7638,6 +7659,11 @@ msgstr "친구가 새 카드로 체험을 시작하면 나는 한 달 무료를 
 #: src/pages/shell/computer-overlay.tsx
 msgid "You have control"
 msgstr "직접 조작 중"
+
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "You're not on the shared-key budget yet. Ask an admin."
+msgstr "아직 공유 키 예산에 없습니다. 관리자에게 요청하세요."
 
 #. js-lingui-explicit-id
 #: src/lib/run-error.ts

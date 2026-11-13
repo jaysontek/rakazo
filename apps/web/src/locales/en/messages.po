@@ -675,6 +675,10 @@ msgstr "Add to Home Screen"
 msgid "Add to routine"
 msgstr "Add to routine"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Add to shared budget"
+msgstr "Add to shared budget"
+
 #: src/pages/RoutineEditor.tsx
 msgid "Add trigger"
 msgstr "Add trigger"
@@ -1692,6 +1696,10 @@ msgstr "Compact"
 msgid "Company"
 msgstr "Company"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Company key — pending admin approval"
+msgstr "Company key — pending admin approval"
+
 #: src/pages/ScratchpadSection.tsx
 msgid "Complete"
 msgstr "Complete"
@@ -1990,6 +1998,10 @@ msgstr "Could not add MCP server"
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Could not add skills"
 msgstr "Could not add skills"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not add to shared budget"
+msgstr "Could not add to shared budget"
 
 #: src/pages/PluginSubmissionsPanel.tsx
 msgid "Could not approve plugin"
@@ -5148,6 +5160,10 @@ msgid "Pending"
 msgstr "Pending"
 
 #: src/pages/AdminOpsPage.tsx
+msgid "Pending admin approval"
+msgstr "Pending admin approval"
+
+#: src/pages/AdminOpsPage.tsx
 msgid "Performance"
 msgstr "Performance"
 
@@ -6991,6 +7007,11 @@ msgstr "This subscription sign-in is not available in Rakazo yet. Use a deployme
 msgid "This week"
 msgstr "This week"
 
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "This week's shared API key budget is used up. It resets next week, or connect your own key in Models."
+msgstr "This week's shared API key budget is used up. It resets next week, or connect your own key in Models."
+
 #: src/lib/cron.ts
 msgid "Thursday"
 msgstr "Thursday"
@@ -7638,6 +7659,11 @@ msgstr "You get a free month when they start their trial with a new card."
 #: src/pages/shell/computer-overlay.tsx
 msgid "You have control"
 msgstr "You have control"
+
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "You're not on the shared-key budget yet. Ask an admin."
+msgstr "You're not on the shared-key budget yet. Ask an admin."
 
 #. js-lingui-explicit-id
 #: src/lib/run-error.ts

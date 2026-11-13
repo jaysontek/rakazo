@@ -675,6 +675,10 @@ msgstr ""
 msgid "Add to routine"
 msgstr "Ajouter à la routine"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Add to shared budget"
+msgstr "Ajouter au budget partagé"
+
 #: src/pages/RoutineEditor.tsx
 msgid "Add trigger"
 msgstr "Ajouter un déclencheur"
@@ -1692,6 +1696,10 @@ msgstr ""
 msgid "Company"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Company key — pending admin approval"
+msgstr "Clé d'entreprise — en attente d'approbation admin"
+
 #: src/pages/ScratchpadSection.tsx
 msgid "Complete"
 msgstr "Terminé"
@@ -1990,6 +1998,10 @@ msgstr "Impossible d'ajouter le serveur MCP"
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Could not add skills"
 msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not add to shared budget"
+msgstr "Impossible d'ajouter au budget partagé"
 
 #: src/pages/PluginSubmissionsPanel.tsx
 msgid "Could not approve plugin"
@@ -5148,6 +5160,10 @@ msgid "Pending"
 msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
+msgid "Pending admin approval"
+msgstr "En attente d'approbation admin"
+
+#: src/pages/AdminOpsPage.tsx
 msgid "Performance"
 msgstr ""
 
@@ -6991,6 +7007,11 @@ msgstr "Cette connexion par abonnement n'est pas encore disponible dans Rakazo. 
 msgid "This week"
 msgstr "Cette semaine"
 
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "This week's shared API key budget is used up. It resets next week, or connect your own key in Models."
+msgstr "Le budget hebdomadaire de la clé API partagée est épuisé. Il se réinitialise la semaine prochaine, ou connectez votre propre clé dans Modèles."
+
 #: src/lib/cron.ts
 msgid "Thursday"
 msgstr "jeudi"
@@ -7638,6 +7659,11 @@ msgstr "Vous obtenez un mois offert quand ils démarrent leur essai avec une nou
 #: src/pages/shell/computer-overlay.tsx
 msgid "You have control"
 msgstr "Vous avez le contrôle"
+
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "You're not on the shared-key budget yet. Ask an admin."
+msgstr "Vous n'êtes pas encore sur le budget de la clé partagée. Demandez à un admin."
 
 #. js-lingui-explicit-id
 #: src/lib/run-error.ts

@@ -177,20 +177,19 @@ describe("shared-key weekly budget math", () => {
       ]),
       rebaseOnMonthlyCap: true,
     });
-    // Pool $50; committed $12.5; free $37.5 split by want shares.
+    // Pool $50; committed $12.5; free $37.5 split among members still under their want.
     const fullShare = fullWeekShareUsd(200, 3);
     const wantA = fullShare;
     const wantB = fullShare;
     const wantC = fullShare * midWeekJoinFraction(now, weekStart);
-    const wantSum = wantA + wantB + wantC;
     const free = 50 - 12.5;
+    // a spent 12.5 < want ≈16.67 so still a receiver.
+    const wantSum = wantA + wantB + wantC;
     expect(allotments.get("a")).toBeCloseTo(12.5 + (free * wantA) / wantSum, 5);
-    expect(allotments.get("b")).toBeCloseTo(0 + (free * wantB) / wantSum, 5);
-    expect(allotments.get("c")).toBeCloseTo(0 + (free * wantC) / wantSum, 5);
+    expect(allotments.get("b")).toBeCloseTo((free * wantB) / wantSum, 5);
+    expect(allotments.get("c")).toBeCloseTo((free * wantC) / wantSum, 5);
     const committed =
       (allotments.get("a") ?? 0) + (allotments.get("b") ?? 0) + (allotments.get("c") ?? 0);
-    // a already spent 12.5 counted inside allotment; total allotments ≤ pool + is wrong —
-    // allotments include spent. Sum of (allot - nothing extra) should equal pool when free>0.
     expect(committed).toBeCloseTo(50, 5);
   });
 
@@ -223,9 +222,40 @@ describe("shared-key weekly budget math", () => {
     const wantA = fullShare;
     const wantC = fullShare * midWeekJoinFraction(joinedAt, weekStart);
     const free = Math.max(0, 100 - 15);
+    // Neither is overspent vs want; free splits by join-time wants.
     expect(allotments.get("c")).toBeCloseTo(5 + (free * wantC) / (wantA + wantC), 5);
     expect(wantC).toBeGreaterThan(fullShare * weekFractionRemaining(laterSave, weekStart));
     expect(allotments.get("a")).toBeCloseTo(10 + (free * wantA) / (wantA + wantC), 5);
+  });
+
+  it("never raises an overspent member on rebase", () => {
+    const weekStart = new Date("2026-11-02T05:00:00.000Z");
+    const now = new Date("2026-11-05T17:00:00.000Z");
+    // Same $100 cap re-save: A spent past new share, B under.
+    const allotments = redivideWeeklyAllotments({
+      monthlyCapUsd: 100,
+      members: [
+        { userId: "a", joinedAt: weekStart },
+        { userId: "b", joinedAt: weekStart },
+      ],
+      weekStart,
+      now,
+      previousAllotments: new Map([
+        ["a", 12.5],
+        ["b", 12.5],
+      ]),
+      spentByUser: new Map([
+        ["a", 12.5],
+        ["b", 2],
+      ]),
+      rebaseOnMonthlyCap: true,
+    });
+    const fullShare = fullWeekShareUsd(100, 2); // 12.5
+    const free = Math.max(0, 25 - 14.5);
+    expect(allotments.get("a")).toBeCloseTo(12.5, 5);
+    expect(allotments.get("a")!).toBeLessThanOrEqual(12.5 + 1e-9);
+    expect(allotments.get("b")).toBeCloseTo(2 + free, 5);
+    expect(fullShare).toBe(12.5);
   });
 
   it("never raises a drained continuing member when throwaway accounts enroll", () => {

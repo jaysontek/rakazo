@@ -675,6 +675,10 @@ msgstr ""
 msgid "Add to routine"
 msgstr "ルーティンに追加"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Add to shared budget"
+msgstr "共有予算に追加"
+
 #: src/pages/RoutineEditor.tsx
 msgid "Add trigger"
 msgstr "トリガーを追加"
@@ -1692,6 +1696,10 @@ msgstr "コンパクト"
 msgid "Company"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Company key — pending admin approval"
+msgstr "会社キー — 管理者の承認待ち"
+
 #: src/pages/ScratchpadSection.tsx
 msgid "Complete"
 msgstr "完了"
@@ -1990,6 +1998,10 @@ msgstr "MCPサーバーを追加できませんでした"
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Could not add skills"
 msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not add to shared budget"
+msgstr "共有予算に追加できませんでした"
 
 #: src/pages/PluginSubmissionsPanel.tsx
 msgid "Could not approve plugin"
@@ -5148,6 +5160,10 @@ msgid "Pending"
 msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
+msgid "Pending admin approval"
+msgstr "管理者の承認待ち"
+
+#: src/pages/AdminOpsPage.tsx
 msgid "Performance"
 msgstr ""
 
@@ -6991,6 +7007,11 @@ msgstr "このサブスクリプションでのログインはRakazoではまだ
 msgid "This week"
 msgstr "今週"
 
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "This week's shared API key budget is used up. It resets next week, or connect your own key in Models."
+msgstr "今週の共有APIキー予算を使い切りました。来週にリセットされるか、モデルで自分のキーを接続してください。"
+
 #: src/lib/cron.ts
 msgid "Thursday"
 msgstr "木曜日"
@@ -7638,6 +7659,11 @@ msgstr "友だちが新しいカードでトライアルを始めると、あな
 #: src/pages/shell/computer-overlay.tsx
 msgid "You have control"
 msgstr "あなたが操作中"
+
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "You're not on the shared-key budget yet. Ask an admin."
+msgstr "まだ共有キー予算に入っていません。管理者に依頼してください。"
 
 #. js-lingui-explicit-id
 #: src/lib/run-error.ts

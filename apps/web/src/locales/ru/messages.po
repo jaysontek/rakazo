@@ -675,6 +675,10 @@ msgstr ""
 msgid "Add to routine"
 msgstr "Добавить в задачу"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Add to shared budget"
+msgstr "Добавить в общий бюджет"
+
 #: src/pages/RoutineEditor.tsx
 msgid "Add trigger"
 msgstr "Добавить триггер"
@@ -1692,6 +1696,10 @@ msgstr ""
 msgid "Company"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Company key — pending admin approval"
+msgstr "Корпоративный ключ — ожидает одобрения администратора"
+
 #: src/pages/ScratchpadSection.tsx
 msgid "Complete"
 msgstr "Завершить"
@@ -1990,6 +1998,10 @@ msgstr "Не удалось добавить сервер MCP."
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Could not add skills"
 msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not add to shared budget"
+msgstr "Не удалось добавить в общий бюджет"
 
 #: src/pages/PluginSubmissionsPanel.tsx
 msgid "Could not approve plugin"
@@ -5148,6 +5160,10 @@ msgid "Pending"
 msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
+msgid "Pending admin approval"
+msgstr "Ожидает одобрения администратора"
+
+#: src/pages/AdminOpsPage.tsx
 msgid "Performance"
 msgstr ""
 
@@ -6991,6 +7007,11 @@ msgstr "Вход по этой подписке пока недоступен в
 msgid "This week"
 msgstr ""
 
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "This week's shared API key budget is used up. It resets next week, or connect your own key in Models."
+msgstr "Недельный бюджет общего API-ключа исчерпан. Он сбросится на следующей неделе, или подключите свой ключ в «Моделях»."
+
 #: src/lib/cron.ts
 msgid "Thursday"
 msgstr "четверг"
@@ -7638,6 +7659,11 @@ msgstr "Вы получите бесплатный месяц, когда дру
 #: src/pages/shell/computer-overlay.tsx
 msgid "You have control"
 msgstr "Вы управляете"
+
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "You're not on the shared-key budget yet. Ask an admin."
+msgstr "Вас ещё нет в бюджете общего ключа. Попросите администратора."
 
 #. js-lingui-explicit-id
 #: src/lib/run-error.ts

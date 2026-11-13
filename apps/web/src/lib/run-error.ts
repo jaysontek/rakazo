@@ -42,6 +42,19 @@ export const translateRunError: RunErrorTranslator = (message, values) => {
         message: "Connect your own API key in Models or choose Rakazo credits in Billing.",
         values,
       });
+    case "This week's shared API key budget is used up. It resets next week, or connect your own key in Models.":
+      return i18n._({
+        id: "This week's shared API key budget is used up. It resets next week, or connect your own key in Models.",
+        message:
+          "This week's shared API key budget is used up. It resets next week, or connect your own key in Models.",
+        values,
+      });
+    case "You're not on the shared-key budget yet. Ask an admin.":
+      return i18n._({
+        id: "You're not on the shared-key budget yet. Ask an admin.",
+        message: "You're not on the shared-key budget yet. Ask an admin.",
+        values,
+      });
     case "The model provider returned an error.":
       return i18n._({
         id: "The model provider returned an error.",

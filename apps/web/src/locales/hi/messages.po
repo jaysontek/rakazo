@@ -675,6 +675,10 @@ msgstr ""
 msgid "Add to routine"
 msgstr "रूटीन में जोड़ें"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Add to shared budget"
+msgstr "साझा बजट में जोड़ें"
+
 #: src/pages/RoutineEditor.tsx
 msgid "Add trigger"
 msgstr ""
@@ -1692,6 +1696,10 @@ msgstr ""
 msgid "Company"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Company key — pending admin approval"
+msgstr "कंपनी कुंजी — व्यवस्थापक अनुमोदन लंबित"
+
 #: src/pages/ScratchpadSection.tsx
 msgid "Complete"
 msgstr "पूर्ण"
@@ -1990,6 +1998,10 @@ msgstr "MCP सर्वर जोड़ा नहीं जा सका"
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Could not add skills"
 msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not add to shared budget"
+msgstr "साझा बजट में नहीं जोड़ा जा सका"
 
 #: src/pages/PluginSubmissionsPanel.tsx
 msgid "Could not approve plugin"
@@ -5148,6 +5160,10 @@ msgid "Pending"
 msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
+msgid "Pending admin approval"
+msgstr "व्यवस्थापक अनुमोदन लंबित"
+
+#: src/pages/AdminOpsPage.tsx
 msgid "Performance"
 msgstr ""
 
@@ -6991,6 +7007,11 @@ msgstr "यह सब्सक्रिप्शन साइन-इन अभ�
 msgid "This week"
 msgstr ""
 
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "This week's shared API key budget is used up. It resets next week, or connect your own key in Models."
+msgstr "इस सप्ताह का साझा API कुंजी बजट समाप्त हो गया। यह अगले सप्ताह रीसेट होगा, या मॉडल में अपनी कुंजी जोड़ें।"
+
 #: src/lib/cron.ts
 msgid "Thursday"
 msgstr "गुरुवार"
@@ -7638,6 +7659,11 @@ msgstr "जब वे नए कार्ड से अपना ट्राय
 #: src/pages/shell/computer-overlay.tsx
 msgid "You have control"
 msgstr "नियंत्रण आपके पास है"
+
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "You're not on the shared-key budget yet. Ask an admin."
+msgstr "आप अभी साझा-कुंजी बजट पर नहीं हैं। किसी व्यवस्थापक से पूछें।"
 
 #. js-lingui-explicit-id
 #: src/lib/run-error.ts

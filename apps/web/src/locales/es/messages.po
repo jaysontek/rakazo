@@ -675,6 +675,10 @@ msgstr ""
 msgid "Add to routine"
 msgstr "Agregar a la rutina"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Add to shared budget"
+msgstr "Añadir al presupuesto compartido"
+
 #: src/pages/RoutineEditor.tsx
 msgid "Add trigger"
 msgstr "Agregar disparador"
@@ -1692,6 +1696,10 @@ msgstr "Compacta"
 msgid "Company"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Company key — pending admin approval"
+msgstr "Clave de empresa — pendiente de aprobación del administrador"
+
 #: src/pages/ScratchpadSection.tsx
 msgid "Complete"
 msgstr "Completado"
@@ -1990,6 +1998,10 @@ msgstr "No se pudo agregar el servidor MCP"
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Could not add skills"
 msgstr "No se pudieron agregar las habilidades"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not add to shared budget"
+msgstr "No se pudo añadir al presupuesto compartido"
 
 #: src/pages/PluginSubmissionsPanel.tsx
 msgid "Could not approve plugin"
@@ -5148,6 +5160,10 @@ msgid "Pending"
 msgstr "Pendiente"
 
 #: src/pages/AdminOpsPage.tsx
+msgid "Pending admin approval"
+msgstr "Pendiente de aprobación del administrador"
+
+#: src/pages/AdminOpsPage.tsx
 msgid "Performance"
 msgstr ""
 
@@ -6991,6 +7007,11 @@ msgstr "Este inicio de sesión por suscripción aún no está disponible en Raka
 msgid "This week"
 msgstr "Esta semana"
 
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "This week's shared API key budget is used up. It resets next week, or connect your own key in Models."
+msgstr "El presupuesto semanal de la clave API compartida se agotó. Se reinicia la próxima semana, o conecta tu propia clave en Modelos."
+
 #: src/lib/cron.ts
 msgid "Thursday"
 msgstr "jueves"
@@ -7638,6 +7659,11 @@ msgstr "Tú recibes un mes gratis cuando empiecen su prueba con una tarjeta nuev
 #: src/pages/shell/computer-overlay.tsx
 msgid "You have control"
 msgstr "Tienes el control"
+
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "You're not on the shared-key budget yet. Ask an admin."
+msgstr "Aún no estás en el presupuesto de la clave compartida. Pídeselo a un administrador."
 
 #. js-lingui-explicit-id
 #: src/lib/run-error.ts

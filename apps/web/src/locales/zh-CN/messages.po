@@ -675,6 +675,10 @@ msgstr ""
 msgid "Add to routine"
 msgstr "加入例行任务"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Add to shared budget"
+msgstr "添加到共享预算"
+
 #: src/pages/RoutineEditor.tsx
 msgid "Add trigger"
 msgstr "添加触发器"
@@ -1692,6 +1696,10 @@ msgstr "紧凑"
 msgid "Company"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Company key — pending admin approval"
+msgstr "公司密钥 — 等待管理员批准"
+
 #: src/pages/ScratchpadSection.tsx
 msgid "Complete"
 msgstr "完成"
@@ -1990,6 +1998,10 @@ msgstr "无法添加 MCP 服务器"
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Could not add skills"
 msgstr "无法添加技能"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not add to shared budget"
+msgstr "无法添加到共享预算"
 
 #: src/pages/PluginSubmissionsPanel.tsx
 msgid "Could not approve plugin"
@@ -5148,6 +5160,10 @@ msgid "Pending"
 msgstr "待处理"
 
 #: src/pages/AdminOpsPage.tsx
+msgid "Pending admin approval"
+msgstr "等待管理员批准"
+
+#: src/pages/AdminOpsPage.tsx
 msgid "Performance"
 msgstr ""
 
@@ -6991,6 +7007,11 @@ msgstr "此订阅登录在 Rakazo 中尚不可用。请使用部署凭据或选�
 msgid "This week"
 msgstr "本周"
 
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "This week's shared API key budget is used up. It resets next week, or connect your own key in Models."
+msgstr "本周共享 API 密钥预算已用完。将于下周重置，或在“模型”中连接你自己的密钥。"
+
 #: src/lib/cron.ts
 msgid "Thursday"
 msgstr "周四"
@@ -7638,6 +7659,11 @@ msgstr "对方用新卡开始试用后，你将获得一个月免费。"
 #: src/pages/shell/computer-overlay.tsx
 msgid "You have control"
 msgstr "你已接管"
+
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "You're not on the shared-key budget yet. Ask an admin."
+msgstr "你还不在共享密钥预算中。请联系管理员。"
 
 #. js-lingui-explicit-id
 #: src/lib/run-error.ts

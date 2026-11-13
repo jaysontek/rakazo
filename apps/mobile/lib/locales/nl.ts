@@ -179,6 +179,10 @@ export const NL_MESSAGES: Record<string, string> = {
     "Verbind een model in Instellingen voordat je bots uitvoert.",
   "Connect your own API key in Models or choose Rakazo credits in Billing.":
     "Verbind je eigen API-sleutel bij Modellen of kies Rakazo-tegoed bij Facturatie.",
+  "This week's shared API key budget is used up. It resets next week, or connect your own key in Models.":
+    "Het gedeelde API-sleutelbudget van deze week is op. Het reset volgende week, of verbind je eigen sleutel bij Modellen.",
+  "You're not on the shared-key budget yet. Ask an admin.":
+    "Je staat nog niet op het gedeelde-sleutelbudget. Vraag een beheerder.",
   "Using your own API key, no shared limit": "Je gebruikt je eigen API-sleutel, geen gedeelde limiet",
   "The model provider returned an error.": "De modelaanbieder heeft een fout teruggegeven.",
   "{provider} is rate limiting requests. Try again shortly.":

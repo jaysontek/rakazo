@@ -1,5 +1,6 @@
 import { createRouterClient } from "@orpc/server";
 import type { Actor } from "@rakazo/contracts";
+import * as db from "@rakazo/db";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { RouterDeps } from "./router.js";
 import { createRouter } from "./router.js";
@@ -213,9 +214,38 @@ describe("ops dashboard routes", () => {
     await expect(client.ops.setSharedKeyMonthlyBudget({ monthlyCapUsd: 10 })).rejects.toMatchObject(
       denied,
     );
+    await expect(
+      client.ops.addSharedKeyBudgetMember({ userId: "user" }),
+    ).rejects.toMatchObject(denied);
     await expect(client.preferences.update({ locale: "en" } as never)).rejects.toMatchObject(
       denied,
     );
     await expect(client.usage.list()).resolves.toBeTruthy();
+  });
+
+  it("lets an admin add a shared-key budget member and denies non-admins", async () => {
+    const add = vi.spyOn(db, "addSharedKeyBudgetMember").mockResolvedValue(true);
+    const deps = makeDeps();
+    const admin = createRouterClient(createRouter(deps), {
+      context: { actor: adminActor, clientIp: "192.168.140.10", sessionId: "session-admin" },
+    });
+    const user = createRouterClient(createRouter(deps), {
+      context: { actor: userActor, clientIp: "192.168.140.10", sessionId: "session-user" },
+    });
+    await expect(user.ops.addSharedKeyBudgetMember({ userId: "user" })).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      message: "Admins only",
+    });
+    await expect(admin.ops.addSharedKeyBudgetMember({ userId: "user" })).resolves.toEqual({
+      ok: true,
+      enrolled: true,
+    });
+    expect(add).toHaveBeenCalledWith(
+      deps.prisma,
+      "user",
+      expect.any(Date),
+      { admin: true, actorUserId: "admin" },
+    );
+    add.mockRestore();
   });
 });

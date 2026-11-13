@@ -675,6 +675,10 @@ msgstr ""
 msgid "Add to routine"
 msgstr "Rutine ekle"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Add to shared budget"
+msgstr "Paylaşılan bütçeye ekle"
+
 #: src/pages/RoutineEditor.tsx
 msgid "Add trigger"
 msgstr "Tetikleyici ekle"
@@ -1692,6 +1696,10 @@ msgstr "Sıkı"
 msgid "Company"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Company key — pending admin approval"
+msgstr "Şirket anahtarı — yönetici onayı bekleniyor"
+
 #: src/pages/ScratchpadSection.tsx
 msgid "Complete"
 msgstr "Tamamlandı"
@@ -1990,6 +1998,10 @@ msgstr "MCP sunucusu eklenemedi"
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Could not add skills"
 msgstr "Beceriler eklenemedi"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not add to shared budget"
+msgstr "Paylaşılan bütçeye eklenemedi"
 
 #: src/pages/PluginSubmissionsPanel.tsx
 msgid "Could not approve plugin"
@@ -5148,6 +5160,10 @@ msgid "Pending"
 msgstr "Beklemede"
 
 #: src/pages/AdminOpsPage.tsx
+msgid "Pending admin approval"
+msgstr "Yönetici onayı bekleniyor"
+
+#: src/pages/AdminOpsPage.tsx
 msgid "Performance"
 msgstr ""
 
@@ -6991,6 +7007,11 @@ msgstr "Bu abonelik girişi Rakazo'da henüz kullanılamıyor. Bir dağıtım ki
 msgid "This week"
 msgstr "Bu hafta"
 
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "This week's shared API key budget is used up. It resets next week, or connect your own key in Models."
+msgstr "Bu haftanın paylaşılan API anahtarı bütçesi tükendi. Gelecek hafta sıfırlanır veya Modeller'de kendi anahtarınızı bağlayın."
+
 #: src/lib/cron.ts
 msgid "Thursday"
 msgstr "Perşembe"
@@ -7638,6 +7659,11 @@ msgstr "Yeni bir kartla deneme sürümünü başlattıklarında sen bir ay ücre
 #: src/pages/shell/computer-overlay.tsx
 msgid "You have control"
 msgstr "Kontrol sende"
+
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "You're not on the shared-key budget yet. Ask an admin."
+msgstr "Henüz paylaşılan anahtar bütçesinde değilsiniz. Bir yöneticiden isteyin."
 
 #. js-lingui-explicit-id
 #: src/lib/run-error.ts

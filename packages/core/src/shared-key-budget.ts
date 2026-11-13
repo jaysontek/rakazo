@@ -125,13 +125,28 @@ export function redivideWeeklyAllotments(args: {
       }
     }
     const free = Math.max(0, weekPool - committed);
-    const wants = members.map((member) => shareOf(member));
-    const wantSum = wants.reduce((sum, value) => sum + value, 0) || 1;
-    members.forEach((member, index) => {
+    // Members already at/over their new share stay at spent+reserved; remaining free
+    // is split among the others by share weight so overspent rows are never raised.
+    const floors = members.map((member) => {
       const spent = effective(member.userId);
       const reserved = reservedByUser.get(member.userId) ?? 0;
-      result.set(member.userId, spent + reserved + (free * wants[index]!) / wantSum);
+      return { member, spent, reserved, floor: spent + reserved, want: shareOf(member) };
     });
+    const overspent = floors.filter((row) => row.floor >= row.want);
+    const receivers = floors.filter((row) => row.floor < row.want);
+    for (const row of overspent) {
+      result.set(row.member.userId, row.floor);
+    }
+    const wantSum = receivers.reduce((sum, row) => sum + row.want, 0);
+    if (wantSum > 0 && free > 0) {
+      for (const row of receivers) {
+        result.set(row.member.userId, row.floor + (free * row.want) / wantSum);
+      }
+    } else {
+      for (const row of receivers) {
+        result.set(row.member.userId, row.floor);
+      }
+    }
     return result;
   }
 

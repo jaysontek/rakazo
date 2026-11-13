@@ -675,6 +675,10 @@ msgstr ""
 msgid "Add to routine"
 msgstr "Adicionar à rotina"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Add to shared budget"
+msgstr "Adicionar ao orçamento compartilhado"
+
 #: src/pages/RoutineEditor.tsx
 msgid "Add trigger"
 msgstr ""
@@ -1692,6 +1696,10 @@ msgstr ""
 msgid "Company"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Company key — pending admin approval"
+msgstr "Chave da empresa — aguardando aprovação do admin"
+
 #: src/pages/ScratchpadSection.tsx
 msgid "Complete"
 msgstr "Concluir"
@@ -1990,6 +1998,10 @@ msgstr "Não foi possível adicionar o servidor MCP"
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Could not add skills"
 msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not add to shared budget"
+msgstr "Não foi possível adicionar ao orçamento compartilhado"
 
 #: src/pages/PluginSubmissionsPanel.tsx
 msgid "Could not approve plugin"
@@ -5148,6 +5160,10 @@ msgid "Pending"
 msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
+msgid "Pending admin approval"
+msgstr "Aguardando aprovação do admin"
+
+#: src/pages/AdminOpsPage.tsx
 msgid "Performance"
 msgstr ""
 
@@ -6991,6 +7007,11 @@ msgstr "Este login de assinatura ainda não está disponível no Rakazo. Use uma
 msgid "This week"
 msgstr ""
 
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "This week's shared API key budget is used up. It resets next week, or connect your own key in Models."
+msgstr "O orçamento semanal da chave de API compartilhada acabou. Ele reinicia na próxima semana, ou conecte sua própria chave em Modelos."
+
 #: src/lib/cron.ts
 msgid "Thursday"
 msgstr "quinta-feira"
@@ -7638,6 +7659,11 @@ msgstr "Você ganha um mês grátis quando eles começarem o teste com um cartã
 #: src/pages/shell/computer-overlay.tsx
 msgid "You have control"
 msgstr "Você tem o controle"
+
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "You're not on the shared-key budget yet. Ask an admin."
+msgstr "Você ainda não está no orçamento da chave compartilhada. Peça a um admin."
 
 #. js-lingui-explicit-id
 #: src/lib/run-error.ts

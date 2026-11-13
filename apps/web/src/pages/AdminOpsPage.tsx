@@ -67,8 +67,21 @@ function accountLabel(account: Pick<OpsAccount, "name" | "email">): string {
   return account.name || account.email;
 }
 
-function KeyBadge({ keyType }: { keyType: OpsAccount["keyType"] }) {
+function KeyBadge({
+  keyType,
+  pendingSharedBudget,
+}: {
+  keyType: OpsAccount["keyType"];
+  pendingSharedBudget?: boolean;
+}) {
   if (keyType === "company") {
+    if (pendingSharedBudget) {
+      return (
+        <Badge variant="secondary">
+          <Trans>Company key — pending admin approval</Trans>
+        </Badge>
+      );
+    }
     return (
       <Badge variant="secondary">
         <Trans>Company</Trans>
@@ -83,6 +96,14 @@ function KeyBadge({ keyType }: { keyType: OpsAccount["keyType"] }) {
     );
   }
   return <span className="text-muted-foreground">—</span>;
+}
+
+function pendingSharedBudgetApproval(account: OpsAccount): boolean {
+  return (
+    account.keyType === "company" &&
+    Boolean(account.sharedKeyBudget?.configured) &&
+    !account.sharedKeyBudget?.member
+  );
 }
 
 function UsageBar({
@@ -512,14 +533,20 @@ function AccountActions({
   account,
   canTransfer,
   transferDisabled,
+  canAddToSharedBudget,
+  addBusy,
   onImpersonate,
   onTransfer,
+  onAddToSharedBudget,
 }: {
   account: OpsAccount;
   canTransfer: boolean;
   transferDisabled: boolean;
+  canAddToSharedBudget: boolean;
+  addBusy: boolean;
   onImpersonate: (account: OpsAccount) => void;
   onTransfer: (account: OpsAccount) => void;
+  onAddToSharedBudget: (account: OpsAccount) => void;
 }) {
   const { t } = useLingui();
   return (
@@ -534,6 +561,11 @@ function AccountActions({
         <DropdownMenuItem onClick={() => onImpersonate(account)}>
           <Trans>Impersonate</Trans>
         </DropdownMenuItem>
+        {canAddToSharedBudget ? (
+          <DropdownMenuItem disabled={addBusy} onClick={() => onAddToSharedBudget(account)}>
+            <Trans>Add to shared budget</Trans>
+          </DropdownMenuItem>
+        ) : null}
         {canTransfer ? (
           <DropdownMenuItem disabled={transferDisabled} onClick={() => onTransfer(account)}>
             <Trans>Transfer</Trans>
@@ -674,6 +706,20 @@ function AccountsSection({
     }
   }
 
+  async function addToSharedBudget(account: OpsAccount) {
+    if (!interactive) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await rpc.ops.addSharedKeyBudgetMember({ userId: account.userId });
+      onChanged();
+    } catch (err) {
+      setError(errorText(err, t`Could not add to shared budget`));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function AccountBudgetCell({ account }: { account: OpsAccount }) {
     const budget = account.sharedKeyBudget;
     if (!budget) return <span className="text-muted-foreground">—</span>;
@@ -684,7 +730,16 @@ function AccountsSection({
         </span>
       );
     }
-    if (!budget.member) return <span className="text-muted-foreground">—</span>;
+    if (!budget.member) {
+      if (pendingSharedBudgetApproval(account)) {
+        return (
+          <span className="text-muted-foreground">
+            <Trans>Pending admin approval</Trans>
+          </span>
+        );
+      }
+      return <span className="text-muted-foreground">—</span>;
+    }
     return (
       <div className="min-w-[7rem] space-y-1">
         <UsageBar
@@ -778,7 +833,10 @@ function AccountsSection({
                     <div className="text-muted-foreground break-all">{account.email}</div>
                   </td>
                   <td className="py-3 pr-3">
-                    <KeyBadge keyType={account.keyType} />
+                    <KeyBadge
+                      keyType={account.keyType}
+                      pendingSharedBudget={pendingSharedBudgetApproval(account)}
+                    />
                   </td>
                   <td className="py-3 pr-3">
                     {account.modelProvider && account.modelId ? (
@@ -806,6 +864,8 @@ function AccountsSection({
                       account={account}
                       canTransfer={Boolean(account.sharedKeyBudget?.member)}
                       transferDisabled={roster.length < 2}
+                      canAddToSharedBudget={pendingSharedBudgetApproval(account)}
+                      addBusy={busy}
                       onImpersonate={(next) => {
                         setError(null);
                         setImpersonate(next);
@@ -813,6 +873,9 @@ function AccountsSection({
                       onTransfer={(next) => {
                         setError(null);
                         setTransferFrom(next);
+                      }}
+                      onAddToSharedBudget={(next) => {
+                        void addToSharedBudget(next);
                       }}
                     />
                   </td>
@@ -836,6 +899,8 @@ function AccountsSection({
                   account={account}
                   canTransfer={Boolean(account.sharedKeyBudget?.member)}
                   transferDisabled={roster.length < 2}
+                  canAddToSharedBudget={pendingSharedBudgetApproval(account)}
+                  addBusy={busy}
                   onImpersonate={(next) => {
                     setError(null);
                     setImpersonate(next);
@@ -844,11 +909,17 @@ function AccountsSection({
                     setError(null);
                     setTransferFrom(next);
                   }}
+                  onAddToSharedBudget={(next) => {
+                    void addToSharedBudget(next);
+                  }}
                 />
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex flex-wrap items-center gap-2">
-                  <KeyBadge keyType={account.keyType} />
+                  <KeyBadge
+                    keyType={account.keyType}
+                    pendingSharedBudget={pendingSharedBudgetApproval(account)}
+                  />
                   {account.modelProvider && account.modelId ? (
                     <Badge variant="outline" className="font-normal">
                       {account.modelProvider}/{account.modelId}

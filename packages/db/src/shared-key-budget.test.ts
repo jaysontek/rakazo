@@ -2,18 +2,19 @@ import { fullWeekShareUsd, sharedKeyWeekEnd } from "@rakazo/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   addSharedKeyBudgetMember,
-  ensureSharedKeyBudgetMember,
   reconcileSharedKeyBudgetMembers,
   releaseSharedKeyBudgetHold,
   removeSharedKeyBudgetMember,
   reserveSharedKeyBudget,
   resolveUsageLimitView,
   SHARED_KEY_BUDGET_HOLD_STALE_MS,
+  SharedKeyBudgetNotEnrolledError,
   SharedKeyWeeklyBudgetExceededError,
   setSharedKeyMonthlyBudgetUsd,
   sharedKeyMonthlyBudgetUsd,
   sharedKeyWeeklyBudgetStatus,
   syncSharedKeyBudgetMembers,
+  type SharedKeyBudgetEnrollmentPolicy,
 } from "./shared-key-budget.js";
 
 vi.mock("@rakazo/logging", () => ({
@@ -66,6 +67,10 @@ function fakePrisma(state: {
   unverifiedUserIds?: string[];
   /** Users with no organization membership. */
   noMembershipUserIds?: string[];
+  /** Multi-member org memberships: userId -> peer user ids in the same org. */
+  orgPeers?: Record<string, string[]>;
+  /** User ids that hold an AdminGrant. */
+  adminGrantUserIds?: string[];
   auditEvents?: Array<Record<string, unknown>>;
   locks?: string[];
 }) {
@@ -74,6 +79,8 @@ function fakePrisma(state: {
   const ineligible = new Set(state.ineligibleUserIds ?? []);
   const unverified = new Set(state.unverifiedUserIds ?? []);
   const noMembership = new Set(state.noMembershipUserIds ?? []);
+  const adminGrants = new Set(state.adminGrantUserIds ?? []);
+  const orgPeers = state.orgPeers ?? {};
   const knownIds = () =>
     state.knownUserIds ?? [
       ...state.members.map((m) => m.userId),
@@ -103,15 +110,48 @@ function fakePrisma(state: {
     space: {
       findUnique: vi.fn(async () => null),
     },
+    adminGrant: {
+      findFirst: vi.fn(
+        async ({ where }: { where: { userId: { in: string[] } } }) => {
+          const hit = where.userId.in.find((id) => adminGrants.has(id));
+          return hit ? { userId: hit } : null;
+        },
+      ),
+      findMany: vi.fn(
+        async ({ where }: { where: { userId: { in: string[] } } }) =>
+          where.userId.in.filter((id) => adminGrants.has(id)).map((userId) => ({ userId })),
+      ),
+    },
     member: {
       findFirst: vi.fn(async ({ where }: { where: { userId: string } }) => {
         if (noMembership.has(where.userId) || ineligible.has(where.userId)) return null;
-        return { organizationId: "org-1" };
+        return { organizationId: `org-${where.userId}` };
       }),
-      findMany: vi.fn(async ({ where }: { where: { userId: string } }) => {
-        if (noMembership.has(where.userId) || ineligible.has(where.userId)) return [];
-        return [{ organizationId: "org-1" }];
-      }),
+      findMany: vi.fn(
+        async ({
+          where,
+        }: {
+          where: { userId?: string; organizationId?: { in: string[] } };
+        }) => {
+          if (where.userId) {
+            if (noMembership.has(where.userId) || ineligible.has(where.userId)) return [];
+            return [{ organizationId: `org-${where.userId}` }];
+          }
+          if (where.organizationId?.in) {
+            const rows: Array<{ organizationId: string; userId: string }> = [];
+            for (const orgId of where.organizationId.in) {
+              const ownerId = orgId.replace(/^org-/, "");
+              const peers = orgPeers[ownerId] ?? [];
+              rows.push({ organizationId: orgId, userId: ownerId });
+              for (const peer of peers) {
+                rows.push({ organizationId: orgId, userId: peer });
+              }
+            }
+            return rows;
+          }
+          return [];
+        },
+      ),
     },
     auditEvent: {
       createMany: vi.fn(async ({ data }: { data: Array<Record<string, unknown>> }) => {
@@ -124,12 +164,23 @@ function fakePrisma(state: {
         async ({
           where,
         }: {
-          where: { id: { in: string[] }; deactivatedAt?: null };
+          where: {
+            id: { in: string[] };
+            deactivatedAt?: null;
+            emailVerified?: boolean;
+          };
         }) =>
           knownIds()
             .filter((id) => where.id.in.includes(id))
             .filter((id) => !ineligible.has(id))
-            .map((id) => ({ id, email: `${id}@example.com`, deactivatedAt: null })),
+            .filter((id) => (where.emailVerified === true ? !unverified.has(id) : true))
+            .filter((id) => (where.deactivatedAt === null ? true : true))
+            .map((id) => ({
+              id,
+              email: `${id}@example.com`,
+              deactivatedAt: null,
+              emailVerified: !unverified.has(id),
+            })),
       ),
       findUnique: vi.fn(
         async ({ where }: { where: { id: string } }) => {
@@ -855,21 +906,6 @@ describe("shared-key weekly budget", () => {
     ]);
   });
 
-  it("ensureSharedKeyBudgetMember is a no-op when already enrolled", async () => {
-    const state = {
-      monthly: 400,
-      members: [{ userId: "u1", joinedAt: weekStart }],
-      allotments: [
-        { weekStart, userId: "u1", allotmentUsd: 100, reservedUsd: 0, updatedAt: weekStart },
-      ] as Allotment[],
-      usage: [] as Usage[],
-    };
-    const { client } = fakePrisma(state);
-    expect(await ensureSharedKeyBudgetMember(client as never, "u1", midweek)).toBe(false);
-    expect(state.members).toHaveLength(1);
-    expect(state.members[0]?.joinedAt).toEqual(weekStart);
-  });
-
   it("remove/re-add within a week keeps join baseline and spend", async () => {
     const state = {
       monthly: 100, // week pool $25
@@ -1120,14 +1156,131 @@ describe("shared-key weekly budget", () => {
     const { client, auditEvents } = fakePrisma(state);
     await expect(
       reserveSharedKeyBudget(client as never, "stranger", 1, midweek),
-    ).rejects.toBeInstanceOf(SharedKeyWeeklyBudgetExceededError);
+    ).rejects.toBeInstanceOf(SharedKeyBudgetNotEnrolledError);
     expect(state.members).toHaveLength(0);
     expect(auditEvents).toHaveLength(0);
 
     // Explicit admin add still applies the bar unless admin bypass is set.
     await addSharedKeyBudgetMember(client as never, "stranger", midweek);
     expect(state.members).toHaveLength(0);
-    await addSharedKeyBudgetMember(client as never, "stranger", midweek, { admin: true });
+    await addSharedKeyBudgetMember(client as never, "stranger", midweek, {
+      admin: true,
+      actorUserId: "ops-admin",
+    });
     expect(state.members.map((m) => m.userId)).toEqual(["stranger"]);
+    expect(auditEvents).toHaveLength(1);
+    expect(auditEvents[0]).toMatchObject({ action: "shared_key_budget.member.added" });
+  });
+
+  it("under open signups, a verified Personal-org-only user is not auto-enrolled", async () => {
+    const open: SharedKeyBudgetEnrollmentPolicy = {
+      gatedDeployment: false,
+      adminEmails: ["admin@example.com"],
+    };
+    const state = {
+      monthly: 400,
+      members: [] as Member[],
+      allotments: [] as Allotment[],
+      usage: [] as Usage[],
+      knownUserIds: ["solo"],
+      // Default org-solo is sole-member (personal).
+      auditEvents: [] as Array<Record<string, unknown>>,
+    };
+    const { client, auditEvents } = fakePrisma(state);
+    await expect(
+      reserveSharedKeyBudget(client as never, "solo", 1, midweek, open),
+    ).rejects.toBeInstanceOf(SharedKeyBudgetNotEnrolledError);
+    expect(state.members).toHaveLength(0);
+    expect(auditEvents).toHaveLength(0);
+  });
+
+  it("under open signups, a user sharing a non-personal org with an admin is enrolled", async () => {
+    const open: SharedKeyBudgetEnrollmentPolicy = {
+      gatedDeployment: false,
+      adminEmails: [],
+    };
+    const state = {
+      monthly: 400,
+      members: [] as Member[],
+      allotments: [] as Allotment[],
+      usage: [] as Usage[],
+      knownUserIds: ["teammate", "boss"],
+      orgPeers: { teammate: ["boss"] },
+      adminGrantUserIds: ["boss"],
+      auditEvents: [] as Array<Record<string, unknown>>,
+    };
+    const { client, auditEvents } = fakePrisma(state);
+    await expect(
+      reserveSharedKeyBudget(client as never, "teammate", 1, midweek, open),
+    ).resolves.toBeUndefined();
+    expect(state.members.map((m) => m.userId)).toEqual(["teammate"]);
+    expect(auditEvents.some((row) => row.action === "shared_key_budget.member.auto_enrolled")).toBe(
+      true,
+    );
+  });
+
+  it("under a gated deployment, a verified member is enrolled", async () => {
+    const gated: SharedKeyBudgetEnrollmentPolicy = {
+      gatedDeployment: true,
+      adminEmails: [],
+    };
+    const state = {
+      monthly: 400,
+      members: [] as Member[],
+      allotments: [] as Allotment[],
+      usage: [] as Usage[],
+      knownUserIds: ["solo"],
+      auditEvents: [] as Array<Record<string, unknown>>,
+    };
+    const { client } = fakePrisma(state);
+    await expect(
+      reserveSharedKeyBudget(client as never, "solo", 1, midweek, gated),
+    ).resolves.toBeUndefined();
+    expect(state.members.map((m) => m.userId)).toEqual(["solo"]);
+  });
+
+  it("admin add enrolls and audits; rebase never raises an overspent member", async () => {
+    const state = {
+      monthly: 100 as number | null,
+      members: [
+        { userId: "a", joinedAt: weekStart },
+        { userId: "b", joinedAt: weekStart },
+      ],
+      allotments: [
+        allotment({ weekStart, userId: "a", allotmentUsd: 12.5, reservedUsd: 0 }),
+        allotment({ weekStart, userId: "b", allotmentUsd: 12.5, reservedUsd: 0 }),
+      ],
+      usage: [
+        {
+          userId: "a",
+          costUsd: 12.5,
+          sharedKey: true,
+          createdAt: new Date(weekStart.getTime() + 1_000),
+        },
+        {
+          userId: "b",
+          costUsd: 2,
+          sharedKey: true,
+          createdAt: new Date(weekStart.getTime() + 1_000),
+        },
+      ] as Usage[],
+      knownUserIds: ["a", "b", "pending"],
+      auditEvents: [] as Array<Record<string, unknown>>,
+    };
+    const { client, auditEvents } = fakePrisma(state);
+    await setSharedKeyMonthlyBudgetUsd(client as never, 100, midweek);
+    expect(state.allotments.find((row) => row.userId === "a")?.allotmentUsd).toBeCloseTo(12.5, 5);
+    expect(state.allotments.find((row) => row.userId === "a")!.allotmentUsd).toBeLessThanOrEqual(
+      12.5 + 1e-9,
+    );
+    expect(state.allotments.find((row) => row.userId === "b")?.allotmentUsd).toBeGreaterThan(2);
+
+    const enrolled = await addSharedKeyBudgetMember(client as never, "pending", midweek, {
+      admin: true,
+      actorUserId: "a",
+    });
+    expect(enrolled).toBe(true);
+    expect(state.members.some((m) => m.userId === "pending")).toBe(true);
+    expect(auditEvents.some((row) => row.action === "shared_key_budget.member.added")).toBe(true);
   });
 });

@@ -184,6 +184,10 @@ export const JA_MESSAGES: Record<string, string> = {
     "ボットを実行する前に、設定でモデルを接続してください。",
   "Connect your own API key in Models or choose Rakazo credits in Billing.":
     "モデルで自分のAPIキーを接続するか、請求でRakazoクレジットを選択してください。",
+  "This week's shared API key budget is used up. It resets next week, or connect your own key in Models.":
+    "今週の共有APIキー予算を使い切りました。来週にリセットされるか、モデルで自分のキーを接続してください。",
+  "You're not on the shared-key budget yet. Ask an admin.":
+    "まだ共有キー予算に入っていません。管理者に依頼してください。",
   "Using your own API key, no shared limit": "自分の API キーを使用中。共有上限はありません",
   "The model provider returned an error.": "モデルプロバイダーがエラーを返しました。",
   "{provider} is rate limiting requests. Try again shortly.":

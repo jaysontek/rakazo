@@ -44,3 +44,20 @@ export function signupPolicyFromEnv(input: {
     allowlist: parseAllowlist(input.signupAllowlist),
   };
 }
+
+/**
+ * Deployments that gate who can create accounts. Open signups (the code default)
+ * need a stricter shared-key auto-enroll bar; gated deployments keep verified + membership.
+ */
+export function isGatedSharedKeyDeployment(input: {
+  signupsEnabled: string | undefined;
+  signupAllowlist: string | undefined;
+  singleAccount?: boolean;
+  directoryProvisioning?: boolean;
+}): boolean {
+  if (!signupsOpen(input.signupsEnabled)) return true;
+  if (parseAllowlist(input.signupAllowlist).length > 0) return true;
+  if (input.singleAccount) return true;
+  if (input.directoryProvisioning) return true;
+  return false;
+}

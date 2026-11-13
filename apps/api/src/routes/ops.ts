@@ -2,6 +2,7 @@ import { ORPCError } from "@orpc/server";
 import { parseSharedKeyMonthlyBudgetInput } from "@rakazo/core";
 import {
   addAdminGrant,
+  addSharedKeyBudgetMember,
   listAdminGrants,
   recordSecurityEvent,
   removeAdminGrant,
@@ -289,6 +290,22 @@ export function opsRoutes(ctx: RouterContext) {
                 );
               },
             });
+          } catch (error) {
+            badRequest(error);
+          }
+        },
+      ),
+      addSharedKeyBudgetMember: authed.ops.addSharedKeyBudgetMember.handler(
+        async ({ context, input }) => {
+          await gate(context);
+          try {
+            const enrolled = await addSharedKeyBudgetMember(
+              deps.prisma,
+              input.userId,
+              new Date(),
+              { admin: true, actorUserId: context.actor.userId },
+            );
+            return { ok: true as const, enrolled };
           } catch (error) {
             badRequest(error);
           }
