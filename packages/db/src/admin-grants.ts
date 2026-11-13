@@ -1,7 +1,8 @@
 import type { PrismaClient } from "./client.js";
+import { Prisma } from "./client.js";
 import { isHiddenOpsEmail } from "./ops-email-filter.js";
 
-type GrantPrisma = Pick<PrismaClient, "adminGrant" | "user">;
+type GrantPrisma = Pick<PrismaClient, "adminGrant" | "user" | "$transaction" | "$executeRaw">;
 
 export type AdminGrantRow = {
   userId: string;
@@ -87,11 +88,11 @@ function isActiveVerified(user: {
 }
 
 /**
- * Effective admins = verified active users whose email is in envEmails, or who
- * hold a DB grant other than `exceptUserId`.
+ * Effective admins match `isAdmin`: verified env-email users count even when
+ * deactivated; DB grants require verified and not deactivated.
  */
 async function countEffectiveAdmins(
-  prisma: GrantPrisma,
+  prisma: Pick<GrantPrisma, "adminGrant" | "user">,
   envEmails: readonly string[],
   exceptUserId: string,
 ): Promise<number> {
@@ -100,11 +101,12 @@ async function countEffectiveAdmins(
 
   if (env.size > 0) {
     const candidates = await prisma.user.findMany({
-      where: { emailVerified: true, deactivatedAt: null },
+      where: { emailVerified: true },
       select: { id: true, email: true, emailVerified: true, deactivatedAt: true },
     });
     for (const user of candidates) {
-      if (env.has(normalizeEmail(user.email)) && isActiveVerified(user)) {
+      // Same as isAdmin: env bootstrap stays effective while deactivated.
+      if (user.emailVerified && env.has(normalizeEmail(user.email))) {
         ids.add(user.id);
       }
     }
@@ -138,9 +140,7 @@ export async function removeAdminGrant(
     select: { email: true },
   });
   if (!user) throw new Error("User not found");
-  if (isHiddenOpsEmail(user.email)) {
-    throw new Error("Cannot remove a hidden ops account admin grant");
-  }
+  // Hidden ops may still have a grant from before filtering; allow revoke, refuse add.
   if (actorUserId != null && userId === actorUserId) {
     throw new Error("Cannot revoke your own admin grant");
   }
@@ -148,9 +148,14 @@ export async function removeAdminGrant(
   if (env.has(normalizeEmail(user.email))) {
     throw new Error("Cannot remove an env bootstrap admin");
   }
-  const remaining = await countEffectiveAdmins(prisma, envEmails, userId);
-  if (remaining === 0) {
-    throw new Error("Cannot remove the last admin");
-  }
-  await prisma.adminGrant.deleteMany({ where: { userId } });
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw(
+      Prisma.sql`SELECT pg_advisory_xact_lock(hashtextextended(${"admin-grants"}, 0))`,
+    );
+    const remaining = await countEffectiveAdmins(tx, envEmails, userId);
+    if (remaining === 0) {
+      throw new Error("Cannot remove the last admin");
+    }
+    await tx.adminGrant.deleteMany({ where: { userId } });
+  });
 }

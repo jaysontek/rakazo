@@ -103,6 +103,19 @@ describe("impersonation", () => {
         return { count: 1 };
       }),
     },
+    userDevice: {
+      updateMany: vi.fn(
+        async ({
+          where,
+        }: {
+          where: { userId: string; sessionId: string; revokedAt: null };
+          data: { revokedAt: Date; revokedBy: string };
+        }) => {
+          deletedPush.push({ table: "userDevice", userId: where.userId, sessionId: where.sessionId });
+          return { count: 1 };
+        },
+      ),
+    },
     $queryRaw: vi.fn(async () => [{ bypass: "off", key: "", login: "test" }]),
     $transaction: vi.fn(async (fn: (tx: typeof prisma) => Promise<unknown>) => fn(prisma)),
   };
@@ -277,6 +290,7 @@ describe("impersonation", () => {
         { table: "pushToken", userId: "user", sessionId: "session-1" },
         { table: "webPush", userId: "user", sessionId: "session-1" },
         { table: "callPush", userId: "user", sessionId: "session-1" },
+        { table: "userDevice", userId: "user", sessionId: "session-1" },
       ]),
     );
     expect(securityEvents).toEqual([

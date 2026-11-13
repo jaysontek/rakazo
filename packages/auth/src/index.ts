@@ -445,12 +445,19 @@ export function createAuth(prisma: PrismaClient, env: AuthEnv) {
           const hooked = await sessionForAuthHook(ctx).catch(() => null);
           const sessionId = hooked?.session?.id;
           if (sessionId) {
-            const row = await prisma.session
-              .findUnique({
+            let row: { impersonatedBy: string | null } | null;
+            try {
+              row = await prisma.session.findUnique({
                 where: { id: sessionId },
                 select: { impersonatedBy: true },
-              })
-              .catch(() => null);
+              });
+            } catch {
+              // Fail closed: a lookup error must not open mutations while possibly impersonating.
+              throw new APIError("FORBIDDEN", {
+                message: "Not allowed while impersonating",
+                code: "IMPERSONATION_READ_ONLY",
+              });
+            }
             if (row?.impersonatedBy) {
               throw new APIError("FORBIDDEN", {
                 message: "Not allowed while impersonating",
@@ -670,21 +677,38 @@ export function createAuth(prisma: PrismaClient, env: AuthEnv) {
       },
       session: {
         update: {
-          before: async (session) => {
+          before: async (session, ctx) => {
             // Session refresh must not push expiresAt past the impersonation hard cap.
-            if (!session.id || session.expiresAt === undefined || !prisma.session?.findUnique) {
+            // better-auth's refresh passes { expiresAt } keyed by token — no session.id.
+            if (session.expiresAt === undefined || !prisma.session?.findUnique) {
               return;
             }
-            const current = await prisma.session
-              .findUnique({
-                where: { id: session.id },
-                select: {
-                  impersonatedBy: true,
-                  impersonationExpiresAt: true,
-                  expiresAt: true,
-                },
-              })
-              .catch(() => null);
+            const endpointSession = (
+              ctx as
+                | {
+                    context?: {
+                      session?: { session?: { id?: string; token?: string } };
+                    };
+                  }
+                | undefined
+            )?.context?.session?.session;
+            const sessionId =
+              typeof session.id === "string" && session.id.length > 0
+                ? session.id
+                : endpointSession?.id;
+            const token =
+              typeof (session as { token?: unknown }).token === "string"
+                ? (session as { token: string }).token
+                : endpointSession?.token;
+            if (!sessionId && !token) return;
+            const current = await prisma.session.findUnique({
+              where: sessionId ? { id: sessionId } : { token: token! },
+              select: {
+                impersonatedBy: true,
+                impersonationExpiresAt: true,
+                expiresAt: true,
+              },
+            });
             if (!current?.impersonatedBy) return;
             const { expiresAt: _ignored, impersonationExpiresAt: _cap, ...rest } = session as {
               expiresAt?: Date;
@@ -692,6 +716,7 @@ export function createAuth(prisma: PrismaClient, env: AuthEnv) {
               id?: string;
               [key: string]: unknown;
             };
+            // Keep the stored expiry (already capped at start); never adopt the refreshed value.
             const capped =
               current.impersonationExpiresAt != null
                 ? new Date(
@@ -797,6 +822,40 @@ export function createAuth(prisma: PrismaClient, env: AuthEnv) {
           },
         },
         delete: {
+          before: async (session, ctx) => {
+            // Sign-out while impersonating: same cleanup/audit as stopImpersonation.
+            if (ctx?.path !== "/sign-out" || !prisma.session?.findUnique) return;
+            const row = await prisma.session.findUnique({
+              where: { id: session.id },
+              select: { impersonatedBy: true, userId: true },
+            });
+            if (!row?.impersonatedBy) return;
+            const adminUserId = row.impersonatedBy;
+            const targetUserId = row.userId;
+            const now = new Date();
+            await Promise.all([
+              prisma.pushToken.deleteMany({ where: { userId: targetUserId, sessionId: session.id } }),
+              prisma.webPushSubscription.deleteMany({
+                where: { userId: targetUserId, sessionId: session.id },
+              }),
+              prisma.callPushDevice.deleteMany({
+                where: { userId: targetUserId, sessionId: session.id },
+              }),
+              prisma.userDevice.updateMany({
+                where: { userId: targetUserId, sessionId: session.id, revokedAt: null },
+                data: { revokedAt: now, revokedBy: "session" },
+              }),
+            ]);
+            await recordSecurityEvent({
+              type: "ops.impersonation.stopped",
+              userId: adminUserId,
+              metadata: {
+                impersonatedBy: adminUserId,
+                targetUserId,
+                procedure: "auth.sign-out",
+              },
+            });
+          },
           after: async (session, ctx) => {
             if (ctx?.path === "/sign-out") {
               await recordSecurityEvent({ type: "auth.sign_out", userId: session.userId });

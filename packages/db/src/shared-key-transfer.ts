@@ -107,7 +107,14 @@ async function spentSharedKeyUsd(
  */
 export async function transferSharedKeyAllotment(
   prisma: TransferPrisma,
-  input: { fromUserId: string; toUserId: string; createdById: string; now?: Date },
+  input: {
+    fromUserId: string;
+    toUserId: string;
+    createdById: string;
+    now?: Date;
+    /** Runs inside the same transaction after the transfer row is written. */
+    audit?: (tx: TransferTx, transfer: AllotmentTransferRow) => Promise<void>;
+  },
 ): Promise<AllotmentTransferRow> {
   if (input.fromUserId === input.toUserId) throw new Error("Cannot transfer to the same user");
   await assertTransferPartiesVisible(prisma, input.fromUserId, input.toUserId);
@@ -149,7 +156,9 @@ export async function transferSharedKeyAllotment(
         createdById: input.createdById,
       },
     });
-    return toRowDto(created);
+    const row = toRowDto(created);
+    if (input.audit) await input.audit(tx, row);
+    return row;
   });
 }
 
@@ -169,7 +178,15 @@ function toRowDto(row: {
 
 export async function reverseSharedKeyAllotmentTransfer(
   prisma: TransferPrisma,
-  input: { transferId: string; now?: Date },
+  input: {
+    transferId: string;
+    now?: Date;
+    /** Runs inside the same transaction after the reverse is written. */
+    audit?: (
+      tx: TransferTx,
+      result: { transfer: AllotmentTransferRow; clamped: boolean },
+    ) => Promise<void>;
+  },
 ): Promise<{ transfer: AllotmentTransferRow; clamped: boolean }> {
   const now = input.now ?? new Date();
   const weekStart = sharedKeyWeekStart(now);
@@ -195,9 +212,10 @@ export async function reverseSharedKeyAllotmentTransfer(
     const toSpent = await spentSharedKeyUsd(tx, transfer.toUserId, weekStart, now);
     const toFloor = toSpent + toRow.reservedUsd;
     const desiredTo = toRow.allotmentUsd - transfer.amountUsd;
-    const clamped = desiredTo < toFloor;
-    const nextTo = Math.max(toFloor, desiredTo);
+    // Never raise the receiver's allotment (overspend must not inflate the pool).
+    const nextTo = Math.min(toRow.allotmentUsd, Math.max(toFloor, desiredTo));
     const restored = Math.max(0, toRow.allotmentUsd - nextTo);
+    const clamped = restored < transfer.amountUsd;
     await tx.sharedKeyWeekAllotment.update({
       where: { weekStart_userId: { weekStart, userId: transfer.toUserId } },
       data: { allotmentUsd: nextTo },
@@ -213,7 +231,9 @@ export async function reverseSharedKeyAllotmentTransfer(
       where: { id: transfer.id },
       data: { reversedAt: now, reverseNote },
     });
-    return { transfer: toRowDto(updated), clamped };
+    const result = { transfer: toRowDto(updated), clamped };
+    if (input.audit) await input.audit(tx, result);
+    return result;
   });
 }
 

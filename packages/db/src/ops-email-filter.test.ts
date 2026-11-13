@@ -13,9 +13,18 @@ describe("isHiddenOpsEmail", () => {
     expect(isHiddenOpsEmail("dev@Corp.BUILDDRIVE.NET")).toBe(true);
   });
 
-  it("strips a single trailing dot on the domain", () => {
+  it("strips trailing dots on the domain, including doubles", () => {
     expect(isHiddenOpsEmail("owner@builddrive.net.")).toBe(true);
     expect(isHiddenOpsEmail("dev@corp.builddrive.net.")).toBe(true);
+    expect(isHiddenOpsEmail("owner@builddrive.net..")).toBe(true);
+    expect(isHiddenOpsEmail("dev@corp.builddrive.net...")).toBe(true);
+  });
+
+  it("treats ideographic and fullwidth dots as separators", () => {
+    expect(isHiddenOpsEmail("owner@builddrive\u3002net")).toBe(true);
+    expect(isHiddenOpsEmail("dev@corp\u3002builddrive\u3002net")).toBe(true);
+    expect(isHiddenOpsEmail("owner@builddrive\uFF0Enet")).toBe(true);
+    expect(isHiddenOpsEmail("owner@builddrive.net\u3002")).toBe(true);
   });
 
   it("strips zero-width characters in the domain", () => {

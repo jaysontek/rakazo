@@ -4,6 +4,7 @@
  *
  * Keep this to reads the support UI needs, plus stopImpersonation.
  * Prefer exact paths — never open a whole mutating namespace.
+ * Every entry must exist on `appContract` in `@rakazo/contracts`.
  */
 const EXACT = new Set<string>([
   "me",
@@ -13,24 +14,16 @@ const EXACT = new Set<string>([
   "usage.summary",
   "aiConsent.status",
   "spaces.list",
-  "spaces.get",
   "organizations.list",
-  "organizations.get",
   "models.list",
   "models.credentials",
-  "models.status",
   "bots.list",
   "bots.listArchived",
   "bots.get",
   "threads.get",
-  "threads.list",
   "threads.messages",
   "threads.subscribe",
-  "threads.events",
-  "threads.presence",
   "computer.status",
-  "computer.screen",
-  "memory.status",
   "memory.providerConfig",
   "memory.list",
   "artifacts.list",

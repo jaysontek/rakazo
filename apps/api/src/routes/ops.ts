@@ -234,54 +234,62 @@ export function opsRoutes(ctx: RouterContext) {
       transferSharedKeyAllotment: authed.ops.transferSharedKeyAllotment.handler(
         async ({ context, input }) => {
           await gate(context);
-          let transfer;
           try {
-            transfer = await transferSharedKeyAllotment(deps.prisma, {
+            return await transferSharedKeyAllotment(deps.prisma, {
               fromUserId: input.fromUserId,
               toUserId: input.toUserId,
               createdById: context.actor.userId,
+              audit: async (tx, transfer) => {
+                await runAsSystemInTransaction(tx, "append a security event", () =>
+                  (tx as typeof deps.prisma).securityEvent.create({
+                    data: {
+                      type: "ops.shared_key_allotment.transferred",
+                      userId: context.actor.userId,
+                      spaceId: context.actor.spaceId,
+                      metadata: {
+                        procedure: "ops.transferSharedKeyAllotment",
+                        transferId: transfer.id,
+                        fromUserId: transfer.fromUserId,
+                        toUserId: transfer.toUserId,
+                        amountUsd: transfer.amountUsd,
+                      },
+                    },
+                  }),
+                );
+              },
             });
           } catch (error) {
             badRequest(error);
           }
-          await recordSecurityEvent({
-            type: "ops.shared_key_allotment.transferred",
-            userId: context.actor.userId,
-            spaceId: context.actor.spaceId,
-            metadata: {
-              procedure: "ops.transferSharedKeyAllotment",
-              transferId: transfer.id,
-              fromUserId: transfer.fromUserId,
-              toUserId: transfer.toUserId,
-              amountUsd: transfer.amountUsd,
-            },
-          });
-          return transfer;
         },
       ),
       reverseSharedKeyAllotmentTransfer: authed.ops.reverseSharedKeyAllotmentTransfer.handler(
         async ({ context, input }) => {
           await gate(context);
-          let result;
           try {
-            result = await reverseSharedKeyAllotmentTransfer(deps.prisma, {
+            return await reverseSharedKeyAllotmentTransfer(deps.prisma, {
               transferId: input.transferId,
+              audit: async (tx, result) => {
+                await runAsSystemInTransaction(tx, "append a security event", () =>
+                  (tx as typeof deps.prisma).securityEvent.create({
+                    data: {
+                      type: "ops.shared_key_allotment.reversed",
+                      userId: context.actor.userId,
+                      spaceId: context.actor.spaceId,
+                      metadata: {
+                        procedure: "ops.reverseSharedKeyAllotmentTransfer",
+                        transferId: result.transfer.id,
+                        clamped: result.clamped,
+                        amountUsd: result.transfer.amountUsd,
+                      },
+                    },
+                  }),
+                );
+              },
             });
           } catch (error) {
             badRequest(error);
           }
-          await recordSecurityEvent({
-            type: "ops.shared_key_allotment.reversed",
-            userId: context.actor.userId,
-            spaceId: context.actor.spaceId,
-            metadata: {
-              procedure: "ops.reverseSharedKeyAllotmentTransfer",
-              transferId: result.transfer.id,
-              clamped: result.clamped,
-              amountUsd: result.transfer.amountUsd,
-            },
-          });
-          return result;
         },
       ),
     },

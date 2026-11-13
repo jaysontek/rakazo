@@ -8,10 +8,21 @@ describe("isImpersonationAllowedProcedure", () => {
     expect(isImpersonationAllowedProcedure(["ops", "stopImpersonation"])).toBe(true);
   });
 
-  it("allows a sample of read procedures", () => {
+  it("allows a sample of read procedures that exist on the contract", () => {
     expect(isImpersonationAllowedProcedure(["usage", "list"])).toBe(true);
     expect(isImpersonationAllowedProcedure(["bots", "list"])).toBe(true);
     expect(isImpersonationAllowedProcedure(["threads", "messages"])).toBe(true);
+    expect(isImpersonationAllowedProcedure(["accessGrants", "list"])).toBe(true);
+  });
+
+  it("does not allow pruned non-contract paths", () => {
+    expect(isImpersonationAllowedProcedure(["spaces", "get"])).toBe(false);
+    expect(isImpersonationAllowedProcedure(["organizations", "get"])).toBe(false);
+    expect(isImpersonationAllowedProcedure(["threads", "list"])).toBe(false);
+    expect(isImpersonationAllowedProcedure(["threads", "presence"])).toBe(false);
+    expect(isImpersonationAllowedProcedure(["computer", "screen"])).toBe(false);
+    expect(isImpersonationAllowedProcedure(["memory", "status"])).toBe(false);
+    expect(isImpersonationAllowedProcedure(["models", "status"])).toBe(false);
   });
 
   it("denies sensitive mutations by default", () => {

@@ -13,6 +13,7 @@ type TxClient = {
   pushToken: ImpersonationDeps["prisma"]["pushToken"];
   webPushSubscription: ImpersonationDeps["prisma"]["webPushSubscription"];
   callPushDevice: ImpersonationDeps["prisma"]["callPushDevice"];
+  userDevice: ImpersonationDeps["prisma"]["userDevice"];
   $queryRaw: ImpersonationDeps["prisma"]["$queryRaw"];
 };
 
@@ -50,11 +51,34 @@ async function clearPushCreatedDuringImpersonation(
   targetUserId: string,
   sessionId: string,
 ): Promise<void> {
+  const now = new Date();
   await Promise.all([
     tx.pushToken.deleteMany({ where: { userId: targetUserId, sessionId } }),
     tx.webPushSubscription.deleteMany({ where: { userId: targetUserId, sessionId } }),
     tx.callPushDevice.deleteMany({ where: { userId: targetUserId, sessionId } }),
+    // Durable desktop tokens paired while viewing as the target must not survive stop.
+    tx.userDevice.updateMany({
+      where: { userId: targetUserId, sessionId, revokedAt: null },
+      data: { revokedAt: now, revokedBy: "session" },
+    }),
   ]);
+}
+
+/** HTTP/device session helpers: impersonated sessions are denied unless explicitly opted in. */
+export function httpActorFromSession<T>(
+  session: { actor: T; impersonatedBy: string | null } | null,
+  options?: { allowImpersonation?: boolean },
+): T | null {
+  if (!session?.actor) return null;
+  if (session.impersonatedBy && !options?.allowImpersonation) return null;
+  return session.actor;
+}
+
+export function deviceSessionFromRequest(
+  session: { actor: { userId: string }; sessionId: string; impersonatedBy: string | null } | null,
+): { userId: string; sessionId: string } | null {
+  if (!session || session.impersonatedBy) return null;
+  return { userId: session.actor.userId, sessionId: session.sessionId };
 }
 
 /**

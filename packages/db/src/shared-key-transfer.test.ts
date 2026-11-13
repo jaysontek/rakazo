@@ -389,6 +389,43 @@ describe("shared-key allotment transfers", () => {
     ]);
   });
 
+  it("does not inflate the pool when the receiver has overspent", async () => {
+    const state = {
+      monthly: 400,
+      members,
+      allotments: [row("from"), row("to")],
+      usage: [] as Usage[],
+    };
+    const { client } = fakePrisma(state);
+    const transfer = await transferSharedKeyAllotment(client as never, {
+      fromUserId: "from",
+      toUserId: "to",
+      createdById: "admin",
+      now,
+    });
+    // After transfer: from=0, to=100. Receiver overspends past the allotment.
+    state.usage.push({
+      userId: "to",
+      costUsd: 103,
+      sharedKey: true,
+      createdAt: new Date(weekStart.getTime() + 1),
+    });
+    const poolBefore = state.allotments.reduce((sum, row) => sum + row.allotmentUsd, 0);
+    const reversed = await reverseSharedKeyAllotmentTransfer(client as never, {
+      transferId: transfer.id,
+      now,
+    });
+    expect(reversed.clamped).toBe(true);
+    // Receiver stays at 100 (not raised to toFloor=103); source gets nothing restored.
+    expect(state.allotments.map(({ userId, allotmentUsd }) => [userId, allotmentUsd])).toEqual([
+      ["from", 0],
+      ["to", 100],
+    ]);
+    const poolAfter = state.allotments.reduce((sum, row) => sum + row.allotmentUsd, 0);
+    expect(poolAfter).toBe(poolBefore);
+    expect(poolAfter).toBeLessThanOrEqual(poolBefore);
+  });
+
   it("rejects transfers involving a hidden ops email", async () => {
     const { client } = fakePrisma({
       monthly: 400,

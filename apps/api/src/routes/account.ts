@@ -149,8 +149,8 @@ export function accountRoutes(ctx: RouterContext) {
       }),
     },
     accessGrants: {
+      // list is on the impersonation allowlist (read-only support view).
       list: authed.accessGrants.list.handler(async ({ context }) => {
-        await requireNotImpersonating(deps, context.sessionId);
         await requireGrantAdmin(deps, context.actor);
         return listAccessGrants(deps.prisma);
       }),

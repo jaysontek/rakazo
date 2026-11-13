@@ -184,7 +184,11 @@ import { loadEnv } from "./env.js";
 import { healthRoutes } from "./health.js";
 import { homeRetentionSweep } from "./home-retention.js";
 import { startHourlySweep } from "./hourly-sweep.js";
-import { enforceImpersonationSession } from "./impersonation.js";
+import {
+  deviceSessionFromRequest,
+  enforceImpersonationSession,
+  httpActorFromSession,
+} from "./impersonation.js";
 import { trackInFlightRequests } from "./in-flight-requests.js";
 import { mountLocalComputerHost } from "./local-settings.js";
 import { marketingEmailRoutes, sendWelcomeEmail } from "./marketing-email.js";
@@ -1145,17 +1149,18 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
       }
     );
   };
-  const sessionActor = async (request: Request) => (await requestSession(request))?.actor ?? null;
+  // Outside /rpc, impersonated sessions are unauthenticated unless a route opts in.
+  const sessionActor = async (
+    request: Request,
+    options?: { allowImpersonation?: boolean },
+  ) => httpActorFromSession(await requestSession(request), options);
   if (userDeviceHub && userDevices) {
     mountUserDeviceRoutes(app, {
       prisma,
       hub: userDeviceHub,
       devices: userDevices,
       forwardSecret: userDeviceSecret,
-      session: async (request) => {
-        const found = await auth.api.getSession({ headers: request.headers });
-        return found ? { userId: found.user.id, sessionId: found.session.id } : null;
-      },
+      session: async (request) => deviceSessionFromRequest(await requestSession(request)),
       trustedOrigin: (origin) => isTrustedOrigin(origin, env),
     });
   }
@@ -1195,9 +1200,12 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
           // Same user in the same space, so leaving the space also ends a stream.
           // A database failure rejects this check; only a missing membership is unauthorized.
           stillAuthorized: async () => {
-            const current = await sessionActor(c.req.raw);
+            // Streams stay live while impersonating; use the full request session.
+            const current = await requestSession(c.req.raw);
             return Boolean(
-              actor && current?.userId === actor.userId && current.spaceId === actor.spaceId,
+              actor &&
+                current?.actor.userId === actor.userId &&
+                current.actor.spaceId === actor.spaceId,
             );
           },
         },

@@ -71,6 +71,8 @@ describe("admin grants", () => {
         grants.delete(where.userId);
       }),
     },
+    $executeRaw: vi.fn(async () => undefined),
+    $transaction: vi.fn(async (fn: (tx: typeof prisma) => Promise<unknown>) => fn(prisma)),
   };
 
   beforeEach(() => {
@@ -129,7 +131,7 @@ describe("admin grants", () => {
     ).rejects.toThrow(/deactivated/);
   });
 
-  it("refuses hidden ops emails on grant and remove", async () => {
+  it("refuses to grant hidden ops emails but allows revoking an existing grant", async () => {
     users.set("ops", {
       id: "ops",
       email: "owner@builddrive.net",
@@ -145,9 +147,22 @@ describe("admin grants", () => {
       grantedById: "admin",
       createdAt: new Date("2026-11-13T12:00:00Z"),
     });
-    await expect(
-      removeAdminGrant(prisma as never, "ops", ["admin@example.test"]),
-    ).rejects.toThrow(/hidden ops/);
+    await removeAdminGrant(prisma as never, "ops", ["admin@example.test"], "admin");
+    expect(await userHasAdminGrant(prisma as never, "ops")).toBe(false);
+  });
+
+  it("counts a deactivated env bootstrap admin as still effective", async () => {
+    users.set("admin", {
+      id: "admin",
+      email: "admin@example.test",
+      name: "Admin",
+      emailVerified: true,
+      deactivatedAt: new Date(),
+    });
+    await addAdminGrant(prisma as never, { userId: "user", grantedById: "admin" }, []);
+    // Deactivated env admin still counts (same as isAdmin), so removal is allowed.
+    await removeAdminGrant(prisma as never, "user", ["admin@example.test"], "admin");
+    expect(await userHasAdminGrant(prisma as never, "user")).toBe(false);
   });
 
   it("will not remove an env bootstrap admin", async () => {
