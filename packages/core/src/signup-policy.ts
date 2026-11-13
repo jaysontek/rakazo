@@ -6,6 +6,17 @@ export function parseAllowlist(raw: string | undefined): string[] {
     .filter(Boolean);
 }
 
+/**
+ * RAKAZO_ADMIN_EMAILS: comma or whitespace separated, lowercased.
+ * Shared by API env loading and the worker so both agree on the admin set.
+ */
+export function parseAdminEmails(raw: string | undefined): string[] {
+  return (raw ?? "")
+    .split(/[\s,]+/)
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+}
+
 export function emailAllowed(email: string, allowlist: string[]): boolean {
   if (allowlist.length === 0) return true;
   const normalized = email.trim().toLowerCase();

@@ -4,6 +4,7 @@ import {
   addSharedKeyBudgetMember,
   GATED_SHARED_KEY_ENROLLMENT_POLICY,
   reconcileSharedKeyBudgetMembers,
+  recordSharedKeyBudgetNotEnrolledHit,
   releaseSharedKeyBudgetHold,
   removeSharedKeyBudgetMember,
   reserveSharedKeyBudget,
@@ -78,13 +79,20 @@ function fakePrisma(state: {
   adminGrantUserIds?: string[];
   /** Deactivated known users (still returned from findUnique). */
   deactivatedUserIds?: string[];
-  enrollmentRequests?: Array<{ weekStart: Date; userId: string }>;
+  enrollmentRequests?: Array<{ weekStart: Date; userId: string; lastHitAt?: Date }>;
   auditEvents?: Array<Record<string, unknown>>;
   locks?: string[];
 }) {
   const locks = state.locks ?? [];
   const auditEvents = state.auditEvents ?? [];
-  const enrollmentRequests = state.enrollmentRequests ?? [];
+  const enrollmentRequests = (state.enrollmentRequests ?? []) as Array<{
+    weekStart: Date;
+    userId: string;
+    lastHitAt: Date;
+  }>;
+  for (const row of enrollmentRequests) {
+    if (!row.lastHitAt) row.lastHitAt = row.weekStart;
+  }
   const ineligible = new Set(state.ineligibleUserIds ?? []);
   const unverified = new Set(state.unverifiedUserIds ?? []);
   const noMembership = new Set(state.noMembershipUserIds ?? []);
@@ -139,13 +147,58 @@ function fakePrisma(state: {
             .filter((row) => row.weekStart.getTime() === where.weekStart.getTime())
             .map((row) => ({ userId: row.userId })),
       ),
+      findUnique: vi.fn(
+        async ({
+          where,
+        }: {
+          where: { weekStart_userId: { weekStart: Date; userId: string } };
+        }) => {
+          const found = enrollmentRequests.find(
+            (row) =>
+              row.weekStart.getTime() === where.weekStart_userId.weekStart.getTime() &&
+              row.userId === where.weekStart_userId.userId,
+          );
+          return found ? { lastHitAt: found.lastHitAt } : null;
+        },
+      ),
+      create: vi.fn(
+        async ({
+          data,
+        }: {
+          data: { weekStart: Date; userId: string; firstHitAt: Date; lastHitAt: Date };
+        }) => {
+          enrollmentRequests.push({
+            weekStart: data.weekStart,
+            userId: data.userId,
+            lastHitAt: data.lastHitAt,
+          });
+          return data;
+        },
+      ),
+      update: vi.fn(
+        async ({
+          where,
+          data,
+        }: {
+          where: { weekStart_userId: { weekStart: Date; userId: string } };
+          data: { lastHitAt: Date };
+        }) => {
+          const found = enrollmentRequests.find(
+            (row) =>
+              row.weekStart.getTime() === where.weekStart_userId.weekStart.getTime() &&
+              row.userId === where.weekStart_userId.userId,
+          );
+          if (found) found.lastHitAt = data.lastHitAt;
+          return found;
+        },
+      ),
       upsert: vi.fn(
         async ({
           where,
           create,
         }: {
           where: { weekStart_userId: { weekStart: Date; userId: string } };
-          create: { weekStart: Date; userId: string };
+          create: { weekStart: Date; userId: string; lastHitAt?: Date };
         }) => {
           const existing = enrollmentRequests.find(
             (row) =>
@@ -156,6 +209,7 @@ function fakePrisma(state: {
             enrollmentRequests.push({
               weekStart: create.weekStart,
               userId: create.userId,
+              lastHitAt: create.lastHitAt ?? create.weekStart,
             });
           }
           return create;
@@ -1513,5 +1567,48 @@ describe("shared-key weekly budget", () => {
         actorUserId: "a",
       }),
     ).resolves.toEqual({ enrolled: false, reason: "zero_slice" });
+  });
+
+  it("throttles not-enrolled lastHitAt updates within a minute", async () => {
+    const state = {
+      monthly: 400,
+      members: [] as Member[],
+      allotments: [] as Allotment[],
+      usage: [] as Usage[],
+      knownUserIds: ["solo"],
+      enrollmentRequests: [
+        { weekStart, userId: "solo", lastHitAt: midweek },
+      ] as Array<{ weekStart: Date; userId: string; lastHitAt?: Date }>,
+    };
+    const { client, enrollmentRequests } = fakePrisma(state);
+    const soon = new Date(midweek.getTime() + 30_000);
+    await recordSharedKeyBudgetNotEnrolledHit(client as never, "solo", soon);
+    expect(enrollmentRequests[0]?.lastHitAt).toEqual(midweek);
+    const later = new Date(midweek.getTime() + 61_000);
+    await recordSharedKeyBudgetNotEnrolledHit(client as never, "solo", later);
+    expect(enrollmentRequests[0]?.lastHitAt).toEqual(later);
+  });
+
+  it("keeps SharedKeyBudgetNotEnrolledError when hit recording fails", async () => {
+    const open: SharedKeyBudgetEnrollmentPolicy = {
+      gatedDeployment: false,
+      adminEmails: [],
+      explicitUserIds: [],
+    };
+    const state = {
+      monthly: 400,
+      members: [] as Member[],
+      allotments: [] as Allotment[],
+      usage: [] as Usage[],
+      knownUserIds: ["solo"],
+      auditEvents: [] as Array<Record<string, unknown>>,
+    };
+    const { client } = fakePrisma(state);
+    vi.mocked(client.sharedKeyBudgetEnrollmentRequest.findUnique).mockRejectedValueOnce(
+      new Error("db down"),
+    );
+    await expect(
+      reserveSharedKeyBudget(client as never, "solo", 1, midweek, open),
+    ).rejects.toBeInstanceOf(SharedKeyBudgetNotEnrolledError);
   });
 });

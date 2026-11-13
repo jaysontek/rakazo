@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { isGatedSharedKeyDeployment, signupsOpen } from "./signup-policy.js";
+import { isGatedSharedKeyDeployment, parseAdminEmails, signupsOpen } from "./signup-policy.js";
+
+describe("parseAdminEmails", () => {
+  it("splits on commas or whitespace and lowercases", () => {
+    expect(parseAdminEmails("Ops@Example.com other@example.com,Third@Example.COM")).toEqual([
+      "ops@example.com",
+      "other@example.com",
+      "third@example.com",
+    ]);
+    expect(parseAdminEmails(undefined)).toEqual([]);
+    expect(parseAdminEmails("  ")).toEqual([]);
+  });
+});
 
 describe("isGatedSharedKeyDeployment", () => {
   it("treats the code default (open signups) as not gated", () => {

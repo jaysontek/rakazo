@@ -763,6 +763,8 @@ function AccountsSection({
     );
   }
 
+  const dialogOpen = Boolean(impersonate || transferFrom);
+
   return (
     <section className="space-y-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -793,6 +795,12 @@ function AccountsSection({
           </NativeSelect>
         </label>
       </div>
+
+      {error && !dialogOpen ? (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      ) : null}
 
       <div className="hidden md:block">
         <div className="overflow-x-auto">

@@ -90,6 +90,7 @@ import {
   withSecretPersistence,
 } from "@rakazo/adapters";
 import {
+  parseAdminEmails,
   parseSharedKeyBudgetUserIds,
   resolveEncryptionKey,
   resolveSupervisorToken,
@@ -297,10 +298,7 @@ async function main() {
     signupAllowlist: process.env.SIGNUP_ALLOWLIST,
     singleAccount: Boolean(process.env.RAKAZO_DESKTOP_STACK_TOKEN?.trim()),
     directoryProvisioning: Boolean(process.env.SCIM_BEARER_TOKEN?.trim()),
-    adminEmails: (process.env.RAKAZO_ADMIN_EMAILS ?? "")
-      .split(",")
-      .map((email) => email.trim().toLowerCase())
-      .filter(Boolean),
+    adminEmails: parseAdminEmails(process.env.RAKAZO_ADMIN_EMAILS),
     explicitUserIds: parseSharedKeyBudgetUserIds(process.env.SHARED_KEY_BUDGET_USER_IDS),
   });
   const executor = createRunExecutor({

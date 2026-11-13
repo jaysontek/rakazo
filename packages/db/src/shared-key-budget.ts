@@ -753,6 +753,9 @@ export async function syncSharedKeyBudgetMembers(
   });
 }
 
+/** Skip lastHitAt churn when hits arrive faster than this. */
+export const SHARED_KEY_BUDGET_NOT_ENROLLED_HIT_MIN_INTERVAL_MS = 60_000;
+
 /** Persist a not-enrolled hit outside the rolled-back reserve transaction. */
 export async function recordSharedKeyBudgetNotEnrolledHit(
   prisma: Pick<BudgetPrisma, "sharedKeyBudgetEnrollmentRequest">,
@@ -760,10 +763,25 @@ export async function recordSharedKeyBudgetNotEnrolledHit(
   now = new Date(),
 ): Promise<void> {
   const weekStart = sharedKeyWeekStart(now);
-  await prisma.sharedKeyBudgetEnrollmentRequest.upsert({
+  const existing = await prisma.sharedKeyBudgetEnrollmentRequest.findUnique({
     where: { weekStart_userId: { weekStart, userId } },
-    create: { weekStart, userId, firstHitAt: now, lastHitAt: now },
-    update: { lastHitAt: now },
+    select: { lastHitAt: true },
+  });
+  if (existing) {
+    if (
+      now.getTime() - existing.lastHitAt.getTime() <
+      SHARED_KEY_BUDGET_NOT_ENROLLED_HIT_MIN_INTERVAL_MS
+    ) {
+      return;
+    }
+    await prisma.sharedKeyBudgetEnrollmentRequest.update({
+      where: { weekStart_userId: { weekStart, userId } },
+      data: { lastHitAt: now },
+    });
+    return;
+  }
+  await prisma.sharedKeyBudgetEnrollmentRequest.create({
+    data: { weekStart, userId, firstHitAt: now, lastHitAt: now },
   });
 }
 
@@ -914,8 +932,16 @@ export async function reserveSharedKeyBudget(
     });
   } catch (error) {
     // Hit row must commit outside the rolled-back reserve transaction.
+    // Never let a hit-write failure replace the enrollment error.
     if (error instanceof SharedKeyBudgetNotEnrolledError) {
-      await recordSharedKeyBudgetNotEnrolledHit(prisma, userId, now);
+      try {
+        await recordSharedKeyBudgetNotEnrolledHit(prisma, userId, now);
+      } catch (hitError) {
+        getLogger().warn("shared-key budget: failed to record not-enrolled hit", {
+          userId,
+          error: hitError,
+        });
+      }
     }
     throw error;
   }
