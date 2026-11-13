@@ -232,11 +232,13 @@ describe("model roles", () => {
       primary: { provider: "settings-provider", modelId: "settings-model" },
       backups: [],
       primarySource: "deployment",
+      backupSource: null,
     });
     await expect(effectiveModelRole(roleClient([]), scope, "main", {})).resolves.toEqual({
       primary: null,
       backups: [],
       primarySource: null,
+      backupSource: null,
     });
   });
 
@@ -250,6 +252,7 @@ describe("model roles", () => {
       primary: { provider: "a", modelId: "m", thinkingLevel: "high" },
       backups: [{ provider: "b", modelId: "n" }],
       primarySource: "member",
+      backupSource: "member",
     });
   });
 
@@ -289,6 +292,36 @@ describe("model roles", () => {
       primary: { provider: "settings-provider", modelId: "settings-model" },
       backups: [{ provider: "b", modelId: "n" }],
       primarySource: "deployment",
+      backupSource: "member",
+    });
+  });
+
+  it("offers the Google deployment's built-in backup when the member chose nothing", async () => {
+    const defaults: DeploymentModelDefaults = {
+      deployment: { provider: "google", model: "gemini-3.8-flash" },
+      env: { PI_DEFAULT_PROVIDER: "google", GEMINI_API_KEY: "shared" },
+    };
+    await expect(effectiveModelRole(roleClient([]), scope, "main", defaults)).resolves.toEqual({
+      primary: { provider: "google", modelId: "gemini-3.8-flash" },
+      backups: [{ provider: "google", modelId: "gemini-3.7-flash" }],
+      primarySource: "deployment",
+      backupSource: "deployment",
+    });
+  });
+
+  it("lets the member's own backups win over the deployment's shared-key backups", async () => {
+    const prisma = roleClient([
+      { role: "main", position: 1, provider: "openrouter", modelId: "backup", thinkingLevel: null },
+    ]);
+    const defaults: DeploymentModelDefaults = {
+      deployment: { provider: "google", model: "gemini-3.8-flash" },
+      env: { PI_DEFAULT_PROVIDER: "google", GEMINI_API_KEY: "shared" },
+    };
+    await expect(effectiveModelRole(prisma, scope, "main", defaults)).resolves.toEqual({
+      primary: { provider: "google", modelId: "gemini-3.8-flash" },
+      backups: [{ provider: "openrouter", modelId: "backup" }],
+      primarySource: "deployment",
+      backupSource: "member",
     });
   });
 
