@@ -373,6 +373,10 @@ async function speakOnDevice(
   if (!isCurrentDeviceSpeechSession(session) || !isCurrentSpeech(mine)) return true;
   await Speech.stop();
   if (!isCurrentDeviceSpeechSession(session) || !isCurrentSpeech(mine)) return true;
+  // expo-speech is silent on iOS when the Ring/Silent switch is on unless the
+  // app audio session allows playback in silent mode (hosted clips already do).
+  await ensureVoicePlaybackAudioMode();
+  if (!isCurrentDeviceSpeechSession(session) || !isCurrentSpeech(mine)) return true;
 
   // Android's TextToSpeech engine has no pause/resume, only stop; iOS's does.
   // Feature-detect rather than trust the platform alone: support has moved
@@ -433,8 +437,10 @@ async function loadExpoSpeech(): Promise<typeof ExpoSpeech> {
 function speakOneUtterance(Speech: typeof ExpoSpeech, text: string, voice?: string): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     // Only offline voices are assigned; without one, use the engine default.
+    // Route through the app session so playsInSilentMode from ensureVoicePlaybackAudioMode applies.
     Speech.speak(text, {
       ...(voice ? { voice } : {}),
+      ...(Platform.OS === "ios" ? { useApplicationAudioSession: true } : {}),
       onDone: () => resolve(),
       // Speech.stop() reports onStopped, not onDone.
       onStopped: () => resolve(),
@@ -631,13 +637,21 @@ async function playWithHtmlAudio(
   }
 }
 
-async function playWithNativeAudio(bytes: Uint8Array, session?: HostedSession): Promise<void> {
-  if (session?.isStopped) return;
+/**
+ * Hosted clips and on-device speech share one session setup: without
+ * playsInSilentMode, iOS mutes both when the Ring/Silent switch is on.
+ */
+async function ensureVoicePlaybackAudioMode(): Promise<void> {
   await setAudioModeAsync({
     playsInSilentMode: true,
     interruptionMode: "mixWithOthers",
     shouldPlayInBackground: playsInBackground,
   });
+}
+
+async function playWithNativeAudio(bytes: Uint8Array, session?: HostedSession): Promise<void> {
+  if (session?.isStopped) return;
+  await ensureVoicePlaybackAudioMode();
   const file = new File(
     Paths.cache,
     `rakazo-voice-${Date.now()}.${speechClipType(bytes).extension}`,
