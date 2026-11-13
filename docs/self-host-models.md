@@ -75,9 +75,11 @@ in the current week among the new set.
 the week resets. Starting another thread or bot, or falling back to another model that still uses
 the shared key, does not bypass it. Connect a personal key to keep working.
 
-`usage.summary` includes `sharedKeyWeeklyBudget` (`percentUsed`, `spentUsd`, `weeklyCapUsd`,
-`resetsAt`, `timezone`) for the current user when they are on the member list and a monthly cap is
-configured.
+`usage.summary` includes `usageLimit` for the account menu (percent + reset, or a personal-key
+note) and `sharedKeyWeeklyBudget` (`percentUsed`, `resetsAt`, `timezone`; admins also get
+`spentUsd` / `weeklyCapUsd`) when the user is on the member list and a monthly cap is configured.
+Non-admins never receive dollar amounts. Admins can change the monthly cap on `/admin/ops`; a DB
+override wins over `SHARED_KEY_MONTHLY_BUDGET_USD`.
 
 Spend is taken from existing `usage_records` rows marked as shared-key usage (cost from tokens ×
 catalog rates, or provider-reported cost). There is no second ledger. Rows written before this

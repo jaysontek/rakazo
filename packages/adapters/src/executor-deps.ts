@@ -48,6 +48,8 @@ export interface ExecutorDeps {
   deploymentModelKey?: string;
   /** The deployment default model can run; see resolveDeploymentModel. */
   deploymentModelConfigured?: boolean;
+  /** SHARED_KEY_MONTHLY_BUDGET_USD fallback when deployment_settings has no override. */
+  sharedKeyMonthlyBudgetUsd?: number | null;
   dataDir?: string;
   notifications?: NotificationProvider;
   jobs: JobPublisher;

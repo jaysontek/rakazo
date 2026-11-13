@@ -44,6 +44,10 @@ export type SharedKeyBudgetMember = { userId: string; joinedAt: Date };
  *   (full-week share) × (fraction of week remaining), not a full share.
  * - Continuing members keep spent + reserved committed; their new allotment is
  *   spent + reserved + evenRemaining so in-flight holds are not redistributed.
+ * - When `rebaseOnMonthlyCap` is set (admin changed the monthly cap), ignore prior
+ *   allotment rows and assign monthlyCap/4/n afresh so raising the cap unblocks this week
+ *   and lowering it tightens it. Mid-week joiners are still pro-rated the same way as a
+ *   fresh week. reservedUsd is preserved by the caller on the allotment row.
  */
 export function redivideWeeklyAllotments(args: {
   monthlyCapUsd: number;
@@ -53,6 +57,8 @@ export function redivideWeeklyAllotments(args: {
   previousAllotments: ReadonlyMap<string, number>;
   spentByUser: ReadonlyMap<string, number>;
   reservedByUser?: ReadonlyMap<string, number>;
+  /** Admin cap edit: re-base this week on monthlyCap/4/n instead of redistributing the old pool. */
+  rebaseOnMonthlyCap?: boolean;
 }): Map<string, number> {
   const {
     monthlyCapUsd,
@@ -62,6 +68,7 @@ export function redivideWeeklyAllotments(args: {
     previousAllotments,
     spentByUser,
     reservedByUser = new Map(),
+    rebaseOnMonthlyCap = false,
   } = args;
   const result = new Map<string, number>();
   const n = members.length;
@@ -71,9 +78,10 @@ export function redivideWeeklyAllotments(args: {
   const fullShare = weekPool / n;
   const fraction = weekFractionRemaining(now, weekStart);
 
-  // Fresh week (no prior allotments): each member gets an even full-week share. Spend and
-  // reserved are counted separately against that cap — do not fold them into the allotment.
-  if (previousAllotments.size === 0) {
+  // Fresh week (no prior allotments) or admin rebased the monthly cap: each member gets an
+  // even full-week share of the (new) cap. Spend and reserved are counted separately against
+  // that allotment — do not fold them into the allotment.
+  if (previousAllotments.size === 0 || rebaseOnMonthlyCap) {
     for (const member of members) {
       const midWeekJoin = member.joinedAt.getTime() > weekStart.getTime();
       result.set(
@@ -128,11 +136,39 @@ export function sharedKeyBudgetPercentUsed(spentUsd: number, allotmentUsd: numbe
   return Math.min(100, Math.max(0, (spentUsd / allotmentUsd) * 100));
 }
 
+/** Upper bound for the admin-editable monthly shared-key cap (USD). */
+export const SHARED_KEY_MONTHLY_BUDGET_MAX_USD = 1_000_000;
+
+/**
+ * Account-menu reset label, e.g. "Mon 12:00 AM", always in America/New_York.
+ */
+export function formatSharedKeyBudgetResetAt(resetsAt: Date | string, locale = "en-US"): string {
+  const date = typeof resetsAt === "string" ? new Date(resetsAt) : resetsAt;
+  const weekday = new Intl.DateTimeFormat(locale, {
+    timeZone: SHARED_KEY_BUDGET_TIMEZONE,
+    weekday: "short",
+  }).format(date);
+  const time = new Intl.DateTimeFormat(locale, {
+    timeZone: SHARED_KEY_BUDGET_TIMEZONE,
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(date);
+  return `${weekday} ${time}`;
+}
+
 /** Parse SHARED_KEY_MONTHLY_BUDGET_USD; null when unset or not a positive number. */
 export function parseSharedKeyMonthlyBudgetUsd(raw: string | undefined): number | null {
   if (raw == null || raw.trim() === "") return null;
   const value = Number(raw);
   return Number.isFinite(value) && value > 0 ? value : null;
+}
+
+/** Validate an admin-entered monthly cap: positive and within the sane upper bound. */
+export function parseSharedKeyMonthlyBudgetInput(value: unknown): number | null {
+  const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
+  if (!Number.isFinite(n) || n <= 0 || n > SHARED_KEY_MONTHLY_BUDGET_MAX_USD) return null;
+  return n;
 }
 
 /** Parse SHARED_KEY_BUDGET_USER_IDS as a comma-separated list of user ids. */

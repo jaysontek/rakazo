@@ -15,6 +15,7 @@ import { Navigate, Outlet, Route, Routes, useLocation, useSearchParams } from "r
 import { LoadingState } from "./components/ai/primitives";
 import { CallLayout } from "./components/call/CallLayout";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { ImpersonationBanner } from "./components/ImpersonationBanner";
 import { MarkdownLinkPrompt } from "./components/markdown-link-prompt";
 import { PageLoading } from "./components/PageLoading";
 import { SubscriptionGate } from "./components/SubscriptionGate";
@@ -187,7 +188,9 @@ function SessionApp() {
   return (
     <QueryUserProvider value={user?.id ?? null}>
       <MarkdownLinkPrompt>
-        <div className="h-full" data-rakazo-app-state="ready">
+        <div className="flex h-full min-h-0 flex-col" data-rakazo-app-state="ready">
+          {user ? <ImpersonationBanner /> : null}
+          <div className="min-h-0 flex-1">
           <Suspense fallback={<PageLoading />}>
             <Routes>
               <Route
@@ -306,6 +309,7 @@ function SessionApp() {
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </Suspense>
+          </div>
         </div>
       </MarkdownLinkPrompt>
     </QueryUserProvider>

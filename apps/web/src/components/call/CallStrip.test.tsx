@@ -24,11 +24,6 @@ vi.mock("@rakazo/ui-web", () => ({
     <option {...props}>{children}</option>
   ),
 }));
-vi.mock("../../lib/auth", () => ({
-  authClient: {
-    useSession: () => ({ data: { user: { name: "Ada", email: "a@test", image: undefined } } }),
-  },
-}));
 vi.mock("../../lib/space-rpc", () => ({
   useSpaceRpc: () => ({
     voice: {
@@ -96,8 +91,9 @@ it("renders an audio-only call strip with no video element or camera capture", (
   expect(view?.querySelector('[aria-label="Hang up"]')).not.toBeNull();
 });
 
-it("shows the account initial instead of a camera preview", () => {
+it("shows the bot name without a local-user tile", () => {
   render({});
-  expect(container.textContent).toContain("A");
+  expect(container.textContent).toContain("Test bot");
+  expect(container.querySelector('[aria-label="You"]')).toBeNull();
   expect(container.querySelector("video")).toBeNull();
 });

@@ -58,7 +58,7 @@ import { useThreadSync } from "../../lib/thread-sync";
 import { useThreadTranscript } from "../../lib/thread-transcript";
 import { useAutoSpeakReply, useSpeakMessages, useThreadVoiceCall } from "../../lib/thread-voice";
 import { liveEndRunError } from "../../lib/thread-window";
-import { CallStripBody, useCallUserInitial } from "../CallCard";
+import { CallStripBody } from "../CallCard";
 import { FailedSendBubble } from "../failed-send-bubble";
 import { GlassSurface } from "../glass-surface";
 import { NewestPageCards } from "../pages/page-card";
@@ -130,7 +130,6 @@ export function Thread({ sessionEpoch, userId }: { sessionEpoch: number; userId:
   const inGroup = Boolean(groupId);
   const call = useCallSession();
   const onCall = Boolean(botId) && call?.botId === botId;
-  const callUserInitial = useCallUserInitial(onCall);
   useEffect(() => {
     if (!onCall) setCallStripHeight(0);
   }, [onCall]);
@@ -626,7 +625,6 @@ export function Thread({ sessionEpoch, userId }: { sessionEpoch: number; userId:
                   botColor={call.botColor}
                   botAvatarSet={call.botAvatarSet}
                   muted={call.muted}
-                  initial={callUserInitial}
                   onSettings={() => router.push("/voice")}
                 />
               </GlassSurface>

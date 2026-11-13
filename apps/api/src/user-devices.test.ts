@@ -342,6 +342,27 @@ describe("device sessions", () => {
     });
   });
 
+  it("on impersonated sign-out revokes the admin's session device and keeps the target's legacy ones", async () => {
+    const { pair, store, rows, signedOutUsers } = setup();
+    // Admin paired this desktop before starting impersonation (same session id).
+    const adminDevice = await (await pair("admin", { session: "shared-session" })).json();
+    // Target has a legacy computer with no session binding (paired before sessions were recorded).
+    const legacyDevice = await (await pair("target", { session: "target-temp" })).json();
+    const legacy = rows.find((row) => row.id === legacyDevice.deviceId)!;
+    legacy.sessionId = null;
+    // Target has no remaining sign-ins — the buggy path would wipe legacy devices.
+    signedOutUsers.add("target");
+
+    await endUserDeviceSession(store, {
+      id: "shared-session",
+      userId: "target",
+      impersonatedBy: "admin",
+    });
+
+    expect(rows.find((row) => row.id === adminDevice.deviceId)?.revokedAt).toBeInstanceOf(Date);
+    expect(rows.find((row) => row.id === legacy.id)?.revokedAt).toBeNull();
+  });
+
   it("keeps a device on the session that replaces its own", async () => {
     const { pair, store, hub, rows } = setup();
     const { token } = await (await pair("user-1", { session: "desktop" })).json();

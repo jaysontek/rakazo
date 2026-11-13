@@ -1,5 +1,6 @@
 import {
   fullWeekShareUsd,
+  parseSharedKeyMonthlyBudgetInput,
   redivideWeeklyAllotments,
   SHARED_KEY_BUDGET_TIMEZONE,
   sharedKeyBudgetPercentUsed,
@@ -9,12 +10,14 @@ import {
 import { getLogger } from "@rakazo/logging";
 import type { PrismaClient } from "./client.js";
 import { Prisma } from "./client.js";
+import { reapplyActiveTransfersTx } from "./shared-key-transfer.js";
 
 type BudgetPrisma = Pick<
   PrismaClient,
   | "deploymentSettings"
   | "sharedKeyBudgetMember"
   | "sharedKeyWeekAllotment"
+  | "sharedKeyAllotmentTransfer"
   | "usageRecord"
   | "user"
   | "$transaction"
@@ -25,6 +28,7 @@ type BudgetTx = Pick<
   Prisma.TransactionClient,
   | "sharedKeyBudgetMember"
   | "sharedKeyWeekAllotment"
+  | "sharedKeyAllotmentTransfer"
   | "usageRecord"
   | "deploymentSettings"
   | "user"
@@ -54,15 +58,85 @@ async function lockSharedKeyBudget(tx: Pick<BudgetTx, "$queryRaw">, key: string)
   `);
 }
 
+/**
+ * Effective monthly shared-key cap: a positive DB value wins; otherwise `envFallback`
+ * (from SHARED_KEY_MONTHLY_BUDGET_USD). Null/non-positive disables the hard-stop.
+ */
 export async function sharedKeyMonthlyBudgetUsd(
   prisma: Pick<BudgetPrisma, "deploymentSettings">,
+  envFallback: number | null = null,
 ): Promise<number | null> {
   const settings = await prisma.deploymentSettings.findUnique({
     where: { id: "default" },
     select: { sharedKeyMonthlyBudgetUsd: true },
   });
-  const value = settings?.sharedKeyMonthlyBudgetUsd;
-  return value != null && value > 0 ? value : null;
+  const db = settings?.sharedKeyMonthlyBudgetUsd;
+  if (db != null && db > 0) return db;
+  return envFallback != null && envFallback > 0 ? envFallback : null;
+}
+
+/**
+ * Persist an admin override for the monthly shared-key cap and re-base this week's
+ * allotments on the new cap (monthly/4/n), not the leftover old-pool redistrib.
+ * Rejects non-positive or over-cap values. Returns the saved cap and the previous DB value.
+ */
+export async function setSharedKeyMonthlyBudgetUsd(
+  prisma: Pick<BudgetPrisma, "$transaction" | "deploymentSettings">,
+  monthlyCapUsd: number,
+  now = new Date(),
+): Promise<{ monthlyCapUsd: number; previousMonthlyCapUsd: number | null }> {
+  const parsed = parseSharedKeyMonthlyBudgetInput(monthlyCapUsd);
+  if (parsed == null) throw new Error("Invalid shared-key monthly budget");
+  let previousMonthlyCapUsd: number | null = null;
+  await prisma.$transaction(async (tx) => {
+    await lockSharedKeyBudget(tx, MEMBERS_LOCK);
+    const existing = await tx.deploymentSettings.findUnique({
+      where: { id: "default" },
+      select: { sharedKeyMonthlyBudgetUsd: true },
+    });
+    previousMonthlyCapUsd = existing?.sharedKeyMonthlyBudgetUsd ?? null;
+    await tx.deploymentSettings.upsert({
+      where: { id: "default" },
+      create: { id: "default", sharedKeyMonthlyBudgetUsd: parsed },
+      update: { sharedKeyMonthlyBudgetUsd: parsed },
+    });
+    await recomputeSharedKeyWeekAllotmentsTx(tx, now, { rebaseOnMonthlyCap: true });
+  });
+  return { monthlyCapUsd: parsed, previousMonthlyCapUsd };
+}
+
+export type UsageLimitView =
+  | {
+      kind: "shared_weekly";
+      percentUsed: number;
+      resetsAt: string;
+      timezone: typeof SHARED_KEY_BUDGET_TIMEZONE;
+    }
+  | { kind: "personal_key" }
+  | { kind: "none" };
+
+/**
+ * Account-menu usage meter: personal-key when the API has classified the effective key,
+ * otherwise shared weekly % when on the roster with a cap.
+ */
+export async function resolveUsageLimitView(
+  prisma: BudgetPrisma,
+  userId: string,
+  now = new Date(),
+  envFallback: number | null = null,
+  options?: { personalKey?: boolean },
+): Promise<UsageLimitView> {
+  if (options?.personalKey) return { kind: "personal_key" };
+  const status = await sharedKeyWeeklyBudgetStatus(prisma, userId, now, envFallback);
+  if (status.enabled && status.member) {
+    return {
+      kind: "shared_weekly",
+      percentUsed: status.percentUsed,
+      resetsAt: status.resetsAt,
+      timezone: status.timezone,
+    };
+  }
+  return { kind: "none" };
 }
 
 export async function listSharedKeyBudgetMembers(
@@ -163,6 +237,7 @@ export async function recomputeSharedKeyWeekAllotments(
 async function recomputeSharedKeyWeekAllotmentsTx(
   tx: BudgetTx,
   now: Date,
+  options?: { rebaseOnMonthlyCap?: boolean },
 ): Promise<Map<string, number>> {
   const settings = await tx.deploymentSettings.findUnique({
     where: { id: "default" },
@@ -182,14 +257,16 @@ async function recomputeSharedKeyWeekAllotmentsTx(
   const priorIds = [...new Set([...memberIds, ...priorRows.map((row) => row.userId)])];
   const previousAllotments = new Map(priorRows.map((row) => [row.userId, row.allotmentUsd]));
   const reservedByUser = new Map(priorRows.map((row) => [row.userId, row.reservedUsd]));
+  const spentByUser = await spentByMembers(tx, priorIds, weekStart, now);
   const allotments = redivideWeeklyAllotments({
     monthlyCapUsd: monthly,
     members,
     weekStart,
     now,
     previousAllotments,
-    spentByUser: await spentByMembers(tx, priorIds, weekStart, now),
+    spentByUser,
     reservedByUser,
+    rebaseOnMonthlyCap: options?.rebaseOnMonthlyCap === true,
   });
 
   await tx.sharedKeyWeekAllotment.deleteMany({
@@ -203,7 +280,10 @@ async function recomputeSharedKeyWeekAllotmentsTx(
       update: { allotmentUsd },
     });
   }
-  return allotments;
+  // Cap rebase / membership redivide must keep active mid-week transfers applied.
+  await reapplyActiveTransfersTx(tx, weekStart, spentByUser, reservedByUser);
+  const refreshed = await previousBudgetRows(tx, weekStart);
+  return new Map(refreshed.map((row) => [row.userId, row.allotmentUsd]));
 }
 
 /** Add a user to the shared-key budget set and re-divide the current week. */
@@ -329,8 +409,7 @@ export async function reserveSharedKeyBudget(
     const reserved = allotment?.reservedUsd ?? 0;
     const spent = await spentSharedKeyUsd(tx, userId, weekStart, now);
     // At or over the cap: refuse every further shared-key call (including zero-estimate probes).
-    const over =
-      spent + reserved >= cap || (maxCostUsd > 0 && spent + reserved + maxCostUsd > cap);
+    const over = spent + reserved >= cap || (maxCostUsd > 0 && spent + reserved + maxCostUsd > cap);
     if (!allotment || over) {
       throw new SharedKeyWeeklyBudgetExceededError();
     }
@@ -371,10 +450,11 @@ export async function sharedKeyWeeklyBudgetStatus(
   prisma: BudgetPrisma,
   userId: string,
   now = new Date(),
+  envFallback: number | null = null,
 ): Promise<SharedKeyWeeklyBudgetStatus> {
   const weekStart = sharedKeyWeekStart(now);
   const resetsAt = sharedKeyWeekEnd(weekStart);
-  const monthly = await sharedKeyMonthlyBudgetUsd(prisma);
+  const monthly = await sharedKeyMonthlyBudgetUsd(prisma, envFallback);
   const member = await prisma.sharedKeyBudgetMember.findUnique({ where: { userId } });
   if (!monthly || !member) {
     return {

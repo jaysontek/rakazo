@@ -215,31 +215,24 @@ describe("CallCard background lifetime", () => {
     expect(activeTags.has("rakazo-call")).toBe(true);
   });
 
-  it("shows the signed-in account's initial after a session change", async () => {
+  it("shows the bot without a local-user tile", async () => {
     const me = vi.mocked(rpc);
-    me.mockResolvedValueOnce({ name: "Alicja" } as never);
     me.mockClear();
-    // The card stays mounted in the app layout; earlier tests left another session's initial.
     act(() => root.render(<CallCard />));
-    act(() => sessionChange.fire());
 
     await act(async () => {
       startCall({ botId: "bot-1", botName: "Rex" }, deps);
     });
-    await vi.waitFor(() => expect(container.textContent).toContain("A"));
-    expect(me).toHaveBeenCalledWith("me");
-    expect(me).toHaveBeenCalledTimes(1);
+    expect(container.textContent).toContain("Rex");
+    expect(container.textContent).not.toMatch(/^[A-Z]$|·/);
+    // Audio-only strip no longer loads the signed-in account for an initial tile.
+    expect(me).not.toHaveBeenCalledWith("me");
 
     await act(async () => endCall());
-    // A different account signs in without an app restart; the card stays mounted.
-    me.mockResolvedValueOnce({ name: "Bartek" } as never);
-    act(() => sessionChange.fire());
-
     await act(async () => {
       startCall({ botId: "bot-2", botName: "Nova" }, deps);
     });
-    await vi.waitFor(() => expect(container.textContent).toContain("B"));
-    expect(me).toHaveBeenCalledTimes(2);
-    expect(container.textContent).not.toContain("A");
+    expect(container.textContent).toContain("Nova");
+    expect(container.textContent).not.toContain("Rex");
   });
 });

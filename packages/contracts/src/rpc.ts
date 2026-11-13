@@ -115,7 +115,9 @@ import {
   ModelCreditAmountSchema,
   ModelOAuthBeginSchema,
   OPENAI_COMPATIBLE_PROVIDER_ID,
+  OpsAdminGrantSchema,
   OpsAgentSchema,
+  OpsAllotmentTransferSchema,
   OpsChatLogSchema,
   OpsOverviewSchema,
   OpsRequestLogRowSchema,
@@ -1403,6 +1405,33 @@ export const appContract = {
           }),
       )
       .output(OpsChatLogSchema),
+    /**
+     * Set the monthly shared Gemini key spend cap (DB override). Re-divides the current
+     * week. Admin + LAN only; never returned to non-admins.
+     */
+    setSharedKeyMonthlyBudget: oc
+      .input(z.strictObject({ monthlyCapUsd: z.number().positive().max(1_000_000) }))
+      .output(z.strictObject({ monthlyCapUsd: z.number().positive() })),
+    listAdminGrants: oc.output(z.array(OpsAdminGrantSchema)),
+    addAdminGrant: oc
+      .input(z.strictObject({ userId: Id }))
+      .output(OpsAdminGrantSchema),
+    removeAdminGrant: oc.input(z.strictObject({ userId: Id })).output(z.object({ ok: z.literal(true) })),
+    startImpersonation: oc
+      .input(z.strictObject({ userId: Id }))
+      .output(MeSchema),
+    stopImpersonation: oc.output(MeSchema),
+    transferSharedKeyAllotment: oc
+      .input(z.strictObject({ fromUserId: Id, toUserId: Id }))
+      .output(OpsAllotmentTransferSchema),
+    reverseSharedKeyAllotmentTransfer: oc
+      .input(z.strictObject({ transferId: Id }))
+      .output(
+        z.object({
+          transfer: OpsAllotmentTransferSchema,
+          clamped: z.boolean(),
+        }),
+      ),
   },
   export: {
     bot: oc.input(botId).output(ExportManifestSchema),

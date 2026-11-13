@@ -67,6 +67,7 @@ export const AUDITED_PROCEDURES: Record<string, AuditedProcedure> = {
     type: "deployment.settings.changed",
     fields: ["signupsEnabled", "computerHost"],
   },
+  // Audited in the ops handler so the previous cap is recorded alongside the new one.
   "computerProvider.update": {
     type: "credential.changed",
     kind: "computer_provider",
@@ -148,7 +149,12 @@ export function procedureSecurityEvent(
     const value = field
       .split(".")
       .reduce<unknown>((parent, key) => (isRecord(parent) ? parent[key] : undefined), fields);
-    if (typeof value === "string" || typeof value === "boolean" || value === null)
+    if (
+      typeof value === "string" ||
+      typeof value === "boolean" ||
+      typeof value === "number" ||
+      value === null
+    )
       metadata[field.split(".").at(-1)!] = value;
   }
   if (procedure === "deployment.update") {

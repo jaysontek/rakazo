@@ -1,3 +1,4 @@
+import { sharedKeyWeekEnd } from "@rakazo/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   addSharedKeyBudgetMember,
@@ -5,8 +6,11 @@ import {
   releaseSharedKeyBudgetHold,
   removeSharedKeyBudgetMember,
   reserveSharedKeyBudget,
+  resolveUsageLimitView,
   SHARED_KEY_BUDGET_HOLD_STALE_MS,
   SharedKeyWeeklyBudgetExceededError,
+  setSharedKeyMonthlyBudgetUsd,
+  sharedKeyMonthlyBudgetUsd,
   sharedKeyWeeklyBudgetStatus,
 } from "./shared-key-budget.js";
 
@@ -23,12 +27,21 @@ type Allotment = {
   updatedAt: Date;
 };
 type Usage = { userId: string; costUsd: number; sharedKey: boolean; createdAt: Date };
+type Transfer = {
+  weekStart: Date;
+  fromUserId: string;
+  toUserId: string;
+  amountUsd: number;
+  createdAt: Date;
+  reversedAt: Date | null;
+};
 
 function fakePrisma(state: {
   monthly: number | null;
   members: Member[];
   allotments: Allotment[];
   usage: Usage[];
+  transfers?: Transfer[];
   knownUserIds?: string[];
   locks?: string[];
 }) {
@@ -38,6 +51,21 @@ function fakePrisma(state: {
       findUnique: vi.fn(async () =>
         state.monthly == null ? null : { sharedKeyMonthlyBudgetUsd: state.monthly },
       ),
+      upsert: vi.fn(
+        async ({
+          create,
+          update,
+        }: {
+          create: { sharedKeyMonthlyBudgetUsd: number };
+          update: { sharedKeyMonthlyBudgetUsd: number };
+        }) => {
+          state.monthly = update.sharedKeyMonthlyBudgetUsd ?? create.sharedKeyMonthlyBudgetUsd;
+          return { sharedKeyMonthlyBudgetUsd: state.monthly };
+        },
+      ),
+    },
+    userModelCredential: {
+      findFirst: vi.fn(async (): Promise<{ id: string } | null> => null),
     },
     user: {
       findMany: vi.fn(async ({ where }: { where: { id: { in: string[] } } }) =>
@@ -50,22 +78,15 @@ function fakePrisma(state: {
       findMany: vi.fn(async () =>
         [...state.members].sort((a, b) => a.joinedAt.getTime() - b.joinedAt.getTime()),
       ),
-      findUnique: vi.fn(async ({ where }: { where: { userId: string } }) =>
-        state.members.find((m) => m.userId === where.userId) ?? null,
+      findUnique: vi.fn(
+        async ({ where }: { where: { userId: string } }) =>
+          state.members.find((m) => m.userId === where.userId) ?? null,
       ),
-      upsert: vi.fn(
-        async ({
-          where,
-          create,
-        }: {
-          where: { userId: string };
-          create: Member;
-        }) => {
-          if (!state.members.some((m) => m.userId === where.userId)) {
-            state.members.push({ userId: create.userId, joinedAt: create.joinedAt });
-          }
-        },
-      ),
+      upsert: vi.fn(async ({ where, create }: { where: { userId: string }; create: Member }) => {
+        if (!state.members.some((m) => m.userId === where.userId)) {
+          state.members.push({ userId: create.userId, joinedAt: create.joinedAt });
+        }
+      }),
       create: vi.fn(async ({ data }: { data: Member }) => {
         state.members.push({ userId: data.userId, joinedAt: data.joinedAt });
       }),
@@ -75,6 +96,18 @@ function fakePrisma(state: {
       deleteMany: vi.fn(async ({ where }: { where: { userId: string } }) => {
         state.members = state.members.filter((m) => m.userId !== where.userId);
       }),
+    },
+    sharedKeyAllotmentTransfer: {
+      findMany: vi.fn(
+        async ({ where }: { where: { weekStart: Date; reversedAt: null } }): Promise<Transfer[]> =>
+          (state.transfers ?? [])
+            .filter(
+              (row) =>
+                row.weekStart.getTime() === where.weekStart.getTime() &&
+                row.reversedAt === where.reversedAt,
+            )
+            .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()),
+      ),
     },
     sharedKeyWeekAllotment: {
       findMany: vi.fn(async ({ where }: { where: { weekStart: Date } }) =>
@@ -89,11 +122,7 @@ function fakePrisma(state: {
           ) ?? null,
       ),
       deleteMany: vi.fn(
-        async ({
-          where,
-        }: {
-          where: { weekStart: Date; userId?: { notIn: string[] } };
-        }) => {
+        async ({ where }: { where: { weekStart: Date; userId?: { notIn: string[] } } }) => {
           state.allotments = state.allotments.filter((row) => {
             if (row.weekStart.getTime() !== where.weekStart.getTime()) return true;
             if (where.userId?.notIn) return where.userId.notIn.includes(row.userId);
@@ -465,5 +494,167 @@ describe("shared-key weekly budget", () => {
     expect(state.allotments[0]?.reservedUsd).toBe(12);
     await releaseSharedKeyBudgetHold(client as never, "u1", 12, midweek);
     expect(state.allotments[0]?.reservedUsd).toBe(0);
+  });
+
+  it("prefers a DB monthly cap over the env fallback", async () => {
+    const state: {
+      monthly: number | null;
+      members: Member[];
+      allotments: Allotment[];
+      usage: Usage[];
+    } = {
+      monthly: 50,
+      members: [],
+      allotments: [],
+      usage: [],
+    };
+    const { client } = fakePrisma(state);
+    expect(await sharedKeyMonthlyBudgetUsd(client as never, 400)).toBe(50);
+    state.monthly = null;
+    expect(await sharedKeyMonthlyBudgetUsd(client as never, 400)).toBe(400);
+    expect(await sharedKeyMonthlyBudgetUsd(client as never, null)).toBeNull();
+  });
+
+  it("persists an admin monthly cap and re-divides the week", async () => {
+    const state = {
+      monthly: 400 as number | null,
+      members: [
+        { userId: "a", joinedAt: weekStart },
+        { userId: "b", joinedAt: weekStart },
+      ],
+      allotments: [] as Allotment[],
+      usage: [] as Usage[],
+    };
+    const { client } = fakePrisma(state);
+    const saved = await setSharedKeyMonthlyBudgetUsd(client as never, 200, midweek);
+    expect(saved).toEqual({ monthlyCapUsd: 200, previousMonthlyCapUsd: 400 });
+    expect(state.monthly).toBe(200);
+    // 200 / 2 users / 4 weeks = 25 each.
+    expect(state.allotments.map((row) => row.allotmentUsd).sort()).toEqual([25, 25]);
+  });
+
+  it("raises the monthly cap mid-week and re-bases existing allotment rows", async () => {
+    const state = {
+      monthly: 50 as number | null,
+      members: [{ userId: "u1", joinedAt: weekStart }],
+      allotments: [
+        {
+          weekStart,
+          userId: "u1",
+          allotmentUsd: 12.5,
+          reservedUsd: 3,
+          updatedAt: midweek,
+        },
+      ],
+      usage: [
+        {
+          userId: "u1",
+          costUsd: 12.5,
+          sharedKey: true,
+          createdAt: new Date(weekStart.getTime() + 1_000),
+        },
+      ],
+    };
+    const { client } = fakePrisma(state);
+    // At the old $12.50 allotment the member is hard-stopped; raising the monthly cap to
+    // $200 must give them $50 this week (200/1/4) and preserve the in-flight hold.
+    await expect(
+      reserveSharedKeyBudget(client as never, "u1", 0.01, midweek),
+    ).rejects.toBeInstanceOf(SharedKeyWeeklyBudgetExceededError);
+    const saved = await setSharedKeyMonthlyBudgetUsd(client as never, 200, midweek);
+    expect(saved).toEqual({ monthlyCapUsd: 200, previousMonthlyCapUsd: 50 });
+    expect(state.allotments).toEqual([
+      expect.objectContaining({ userId: "u1", allotmentUsd: 50, reservedUsd: 3 }),
+    ]);
+    await expect(
+      reserveSharedKeyBudget(client as never, "u1", 1, midweek),
+    ).resolves.toBeUndefined();
+    expect(state.allotments[0]?.reservedUsd).toBe(4);
+  });
+
+  it("lowers the monthly cap mid-week and tightens existing allotment rows", async () => {
+    const state = {
+      monthly: 200 as number | null,
+      members: [
+        { userId: "a", joinedAt: weekStart },
+        { userId: "b", joinedAt: weekStart },
+      ],
+      allotments: [
+        {
+          weekStart,
+          userId: "a",
+          allotmentUsd: 25,
+          reservedUsd: 0,
+          updatedAt: midweek,
+        },
+        {
+          weekStart,
+          userId: "b",
+          allotmentUsd: 25,
+          reservedUsd: 2,
+          updatedAt: midweek,
+        },
+      ],
+      usage: [
+        {
+          userId: "a",
+          costUsd: 20,
+          sharedKey: true,
+          createdAt: new Date(weekStart.getTime() + 1_000),
+        },
+      ],
+    };
+    const { client } = fakePrisma(state);
+    // 40 / 2 / 4 = 5 each. Member a already spent $20, so the lower cap hard-stops them;
+    // b keeps the reserved hold under the new $5 ceiling.
+    await setSharedKeyMonthlyBudgetUsd(client as never, 40, midweek);
+    expect(
+      state.allotments.map((row) => [row.userId, row.allotmentUsd, row.reservedUsd]).sort(),
+    ).toEqual([
+      ["a", 5, 0],
+      ["b", 5, 2],
+    ]);
+    await expect(
+      reserveSharedKeyBudget(client as never, "a", 0.01, midweek),
+    ).rejects.toBeInstanceOf(SharedKeyWeeklyBudgetExceededError);
+  });
+
+  it("resolves usage limit percent and reset for shared-key members", async () => {
+    const state = {
+      monthly: 400,
+      members: [{ userId: "u1", joinedAt: weekStart }],
+      allotments: [] as Allotment[],
+      usage: [
+        {
+          userId: "u1",
+          costUsd: 50,
+          sharedKey: true,
+          createdAt: new Date(weekStart.getTime() + 1_000),
+        },
+      ],
+    };
+    const { client } = fakePrisma(state);
+    const limit = await resolveUsageLimitView(client as never, "u1", midweek);
+    expect(limit).toMatchObject({
+      kind: "shared_weekly",
+      percentUsed: 50,
+      timezone: "America/New_York",
+    });
+    if (limit.kind === "shared_weekly") {
+      expect(limit.resetsAt).toBe(sharedKeyWeekEnd(weekStart).toISOString());
+    }
+  });
+
+  it("resolves personal-key usage only when the caller classified a personal key", async () => {
+    const state = {
+      monthly: 400,
+      members: [{ userId: "u1", joinedAt: weekStart }],
+      allotments: [] as Allotment[],
+      usage: [] as Usage[],
+    };
+    const { client } = fakePrisma(state);
+    expect(
+      await resolveUsageLimitView(client as never, "u1", midweek, null, { personalKey: true }),
+    ).toEqual({ kind: "personal_key" });
   });
 });

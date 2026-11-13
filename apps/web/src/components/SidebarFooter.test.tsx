@@ -152,6 +152,66 @@ it("opens integrations and keeps the existing account actions and links", async 
     "Account menu for Demo User",
   );
 });
+
+it("shows Admin Dashboard only for effective admins who are not impersonating", async () => {
+  const onAdminDashboard = vi.fn();
+  await act(async () =>
+    root.render(
+      <DesktopUpdatesProvider>
+        <SidebarFooter
+          name="Admin"
+          initials="A"
+          email="admin@example.test"
+          open
+          onOpenChange={() => {}}
+          onIntegrations={vi.fn()}
+          onSkills={vi.fn()}
+          onArtifacts={() => {}}
+          onSettings={() => {}}
+          onLogOut={() => {}}
+          signingOut={false}
+          logOutError={null}
+          showAdminDashboard
+          onAdminDashboard={onAdminDashboard}
+        />
+      </DesktopUpdatesProvider>,
+    ),
+  );
+  const link = document.querySelector('[data-testid="admin-dashboard-link"]')!;
+  expect(link.textContent).toContain("Admin Dashboard");
+  await act(async () => (link as HTMLButtonElement).click());
+  expect(onAdminDashboard).toHaveBeenCalledOnce();
+});
+
+it("hides Admin Dashboard for non-admins", async () => {
+  await render();
+  expect(document.querySelector('[data-testid="admin-dashboard-link"]')).toBeNull();
+});
+
+it("hides Admin Dashboard while impersonating (showAdminDashboard false)", async () => {
+  await act(async () =>
+    root.render(
+      <DesktopUpdatesProvider>
+        <SidebarFooter
+          name="Target"
+          initials="T"
+          email="user@example.test"
+          open
+          onOpenChange={() => {}}
+          onIntegrations={vi.fn()}
+          onSkills={vi.fn()}
+          onArtifacts={() => {}}
+          onSettings={() => {}}
+          onLogOut={() => {}}
+          signingOut={false}
+          logOutError={null}
+          showAdminDashboard={false}
+        />
+      </DesktopUpdatesProvider>,
+    ),
+  );
+  expect(document.querySelector('[data-testid="admin-dashboard-link"]')).toBeNull();
+});
 it("omits Board when unavailable", async () => {
   await render();
   expect(document.querySelector('[data-slot="popover-content"]')?.textContent).not.toContain(

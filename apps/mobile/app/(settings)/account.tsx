@@ -1,6 +1,6 @@
 import { MenuView } from "@expo/ui/community/menu";
-import type { AccountSecurity, UsageSummary } from "@rakazo/contracts";
-import { accountDisplay, displayName } from "@rakazo/core";
+import type { AccountSecurity, UsageLimit, UsageSummary } from "@rakazo/contracts";
+import { accountDisplay, displayName, formatSharedKeyBudgetResetAt } from "@rakazo/core";
 import * as Notifications from "expo-notifications";
 import type { Href } from "expo-router";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
@@ -226,12 +226,15 @@ export default function Account() {
     currency: "USD",
   });
   const tokens = (value: number | null | undefined) => (value == null ? "—" : count.format(value));
+  // Cost only when the API included it (admins). Non-admins never see dollars.
   const cost = (value: number | null | undefined) =>
     value == null
       ? undefined
       : value > 0 && value < 0.01
         ? `<${usd.format(0.01)}`
         : usd.format(value);
+  const showCost = usage != null && "costUsd" in usage && usage.costUsd !== undefined;
+  const usageLimitBlock = <MobileSharedKeyUsageMeter limit={usage?.usageLimit} />;
   const usageBlock = (
     <SettingsRow
       accessible
@@ -244,7 +247,7 @@ export default function Account() {
             })
           : undefined
       }
-      value={cost(usage?.costUsd)}
+      value={showCost ? cost(usage?.costUsd) : undefined}
     />
   );
   const usageModels = usage?.models?.length ? (
@@ -258,7 +261,7 @@ export default function Account() {
             calls: count.format(row.modelCalls),
             tokens: tokens(row.totalTokens),
           })}`}
-          value={cost(row.costUsd)}
+          value={showCost ? cost(row.costUsd) : undefined}
         />
       ))}
     </SettingsGroup>
@@ -427,6 +430,7 @@ export default function Account() {
       >
         {focus === "usage" ? (
           <>
+            {usageLimitBlock}
             <SettingsGroup>{usageBlock}</SettingsGroup>
             {usageModels}
           </>
@@ -449,7 +453,12 @@ export default function Account() {
             dimmed={namePending}
             onPress={editName}
           />
-          {focus !== "usage" ? usageBlock : null}
+          {focus !== "usage" ? (
+            <>
+              {usageLimitBlock}
+              {usageBlock}
+            </>
+          ) : null}
         </SettingsGroup>
 
         {organizations ? (
@@ -837,6 +846,80 @@ export default function Account() {
       {deletion.dialog}
     </SafeAreaView>
   );
+}
+
+function MobileSharedKeyUsageMeter({ limit }: { limit: UsageLimit | null | undefined }) {
+  const { t, locale } = useI18n();
+  const styles = useThemedStyles(createUsageMeterStyles);
+  if (!limit || limit.kind === "none") return null;
+  if (limit.kind === "personal_key") {
+    return (
+      <View accessibilityRole="text" style={styles.meter} testID="shared-key-usage-personal">
+        <Text style={styles.personal}>{t("Using your own API key, no shared limit")}</Text>
+      </View>
+    );
+  }
+  // Floor so 99.5% never displays as 100% while still showing 100 when exhausted.
+  const percent = Math.min(100, Math.floor(limit.percentUsed));
+  const reset = formatSharedKeyBudgetResetAt(limit.resetsAt, dateLocaleForUi(locale));
+  return (
+    <View
+      accessibilityRole="progressbar"
+      accessibilityValue={{ now: percent, min: 0, max: 100, text: `${percent}%` }}
+      style={styles.meter}
+      testID="shared-key-usage-meter"
+    >
+      <View style={styles.meterHeader}>
+        <Text style={styles.percent}>{percent}%</Text>
+        <Text style={styles.reset}>{t("Resets {date}.", { date: reset })}</Text>
+      </View>
+      <View style={styles.track}>
+        <View style={[styles.fill, { width: `${Math.min(100, Math.max(0, percent))}%` }]} />
+      </View>
+    </View>
+  );
+}
+
+function createUsageMeterStyles() {
+  const tokens = mobileTokens();
+  return StyleSheet.create({
+    meter: {
+      gap: 8,
+      paddingHorizontal: 4,
+      paddingVertical: 4,
+    },
+    meterHeader: {
+      flexDirection: "row",
+      alignItems: "baseline",
+      justifyContent: "space-between",
+      gap: 8,
+    },
+    percent: {
+      color: tokens.foreground,
+      fontSize: 13,
+      fontVariant: ["tabular-nums"],
+    },
+    reset: {
+      color: native.secondaryLabel,
+      flexShrink: 1,
+      fontSize: 13,
+    },
+    personal: {
+      color: native.secondaryLabel,
+      fontSize: 13,
+    },
+    track: {
+      backgroundColor: tokens.muted,
+      borderRadius: 999,
+      height: 6,
+      overflow: "hidden",
+    },
+    fill: {
+      backgroundColor: tokens.foreground,
+      borderRadius: 999,
+      height: "100%",
+    },
+  });
 }
 
 function createAccountStyles() {

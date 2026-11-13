@@ -120,6 +120,8 @@ interface ModelTeamChatEngagementJudgeDeps {
   deploymentProvider: string;
   deploymentModel: string;
   deploymentModelKey?: string;
+  /** SHARED_KEY_MONTHLY_BUDGET_USD fallback when deployment_settings has no override. */
+  sharedKeyMonthlyBudgetUsd?: number | null;
   providerOverride?: string;
   modelOverride?: string;
   /** The instance flag (`MCP_ALLOW_PRIVATE_ENDPOINT`). */
@@ -274,7 +276,11 @@ export class ModelTeamChatEngagementJudge implements TeamChatEngagementJudge {
         ? await hostedModelCreditObserver(this.deps.prisma, scope)
         : undefined;
       const budgetObserver = sharedKey
-        ? await sharedKeyBudgetObserver(this.deps.prisma, scope)
+        ? await sharedKeyBudgetObserver(
+            this.deps.prisma,
+            scope,
+            this.deps.sharedKeyMonthlyBudgetUsd ?? null,
+          )
         : undefined;
       const callObserver = composeSharedKeyBudgetObserver(budgetObserver, creditObserver);
       return {

@@ -38,6 +38,7 @@ import {
   ComputersUnavailableHint,
   computersAreUnavailable,
 } from "../components/ComputersUnavailableHint";
+import { SharedKeyUsageMeter } from "../components/SharedKeyUsageMeter";
 import { DesktopUpdateSection } from "../components/DesktopUpdates";
 import { InstallAppSettings } from "../components/InstallAppSettings";
 import { PasskeySettings } from "../components/PasskeySettings";
@@ -546,15 +547,23 @@ export function UsageSettingsPanel({
   const cost = (value: number | null | undefined) =>
     value == null ? "—" : value > 0 && value < 0.01 ? `<${usd.format(0.01)}` : usd.format(value);
   const models = usage?.models ?? [];
+  // Cost columns only when the API included them (admins). Non-admins never see dollars.
+  const showCost = usage != null && "costUsd" in usage && usage.costUsd !== undefined;
+  const stats = [
+    { label: t`Runs`, value: number(usage?.runs) },
+    { label: t`Tokens`, value: number(usage?.totalTokens) },
+    ...(showCost ? [{ label: t`Cost`, value: cost(usage?.costUsd) }] : []),
+  ];
   return (
     <div ref={panelRef} tabIndex={-1} data-testid="usage-settings" className="outline-none">
+      {usage?.usageLimit && usage.usageLimit.kind !== "none" ? (
+        <div className="mb-4 rounded-xl border border-border px-2 py-1">
+          <SharedKeyUsageMeter limit={usage.usageLimit} />
+        </div>
+      ) : null}
       {usage ? (
-        <dl className="grid grid-cols-3 gap-3">
-          {[
-            { label: t`Runs`, value: number(usage.runs) },
-            { label: t`Tokens`, value: number(usage.totalTokens) },
-            { label: t`Cost`, value: cost(usage.costUsd) },
-          ].map((stat) => (
+        <dl className={`grid gap-3 ${showCost ? "grid-cols-3" : "grid-cols-2"}`}>
+          {stats.map((stat) => (
             <div key={stat.label} className="rounded-xl border border-border px-4 py-3">
               <dt className="text-[12.5px] text-muted-foreground">{stat.label}</dt>
               <dd className="mt-1 text-[18px] font-medium tabular-nums text-foreground">
@@ -581,9 +590,11 @@ export function UsageSettingsPanel({
                 <TableHead className="text-right text-muted-foreground">
                   <Trans>Output</Trans>
                 </TableHead>
-                <TableHead className="text-right text-muted-foreground">
-                  <Trans>Cost</Trans>
-                </TableHead>
+                {showCost ? (
+                  <TableHead className="text-right text-muted-foreground">
+                    <Trans>Cost</Trans>
+                  </TableHead>
+                ) : null}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -602,7 +613,9 @@ export function UsageSettingsPanel({
                   <TableCell className="text-right tabular-nums">
                     {number(row.outputTokens)}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">{cost(row.costUsd)}</TableCell>
+                  {showCost ? (
+                    <TableCell className="text-right tabular-nums">{cost(row.costUsd)}</TableCell>
+                  ) : null}
                 </TableRow>
               ))}
             </TableBody>

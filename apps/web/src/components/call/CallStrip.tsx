@@ -1,6 +1,5 @@
 import { useLingui } from "@lingui/react/macro";
 import type { VoiceInfo } from "@rakazo/contracts";
-import { accountDisplay } from "@rakazo/core";
 import {
   BotAvatar,
   Button,
@@ -10,7 +9,6 @@ import {
 } from "@rakazo/ui-web";
 import { Mic, MicOff, PhoneOff, Settings } from "lucide-react";
 import { useEffect, useId, useState } from "react";
-import { authClient } from "../../lib/auth";
 import type { CallState } from "../../lib/call-session";
 import { endCall, toggleMute, useCallSession } from "../../lib/call-session";
 import { useSpaceRpc } from "../../lib/space-rpc";
@@ -94,8 +92,8 @@ function CallVoicePicker() {
 }
 
 /**
- * In-call chrome for the top of the chat: participant tiles and call controls.
- * Agent calls are audio-only — account image/initial for the user, never camera or video UI.
+ * In-call chrome for the top of the chat: bot identity and call controls.
+ * Agent calls are audio-only — no local-user tile leftover from video layout.
  * Keeps the thread visible; never covers the app as a modal.
  */
 export function CallStrip({
@@ -108,9 +106,6 @@ export function CallStrip({
   const { t } = useLingui();
   const call = useCallSession();
   const elapsed = useCallElapsed(call);
-  const session = authClient.useSession();
-  const user = session.data?.user;
-  const { label: userName, initial } = accountDisplay(user ?? {}, t`You`);
   if (!call) return null;
   const ringing = call.phase === "ringing";
   const speaking = call.phase === "speaking";
@@ -133,37 +128,22 @@ export function CallStrip({
         className,
       )}
     >
-      <div className="flex shrink-0 items-center gap-1.5">
-        <div
-          className="relative size-10 overflow-hidden rounded-[12px] bg-muted"
-          aria-label={t`You`}
-          title={userName}
-        >
-          {user?.image ? (
-            <img src={user.image} alt="" className="size-full object-cover" />
-          ) : (
-            <span className="grid size-full place-items-center text-[13px] font-semibold text-muted-foreground">
-              {initial}
-            </span>
-          )}
-        </div>
-        <div
-          className={cn(
-            "relative grid size-10 place-items-center overflow-hidden rounded-[12px] bg-muted",
-            speaking ? "ring-2 ring-foreground/40" : "",
-          )}
-          aria-label={call.botName}
-          title={call.botName}
-        >
-          <BotAvatar
-            avatarSet={call.botAvatarSet}
-            color={call.botColor}
-            identity={call.botId}
-            size={40}
-            activity={speaking ? "working" : call.phase === "thinking" ? "reading" : "idle"}
-            status={speaking || call.phase === "thinking" ? "running" : undefined}
-          />
-        </div>
+      <div
+        className={cn(
+          "relative grid size-10 shrink-0 place-items-center overflow-hidden rounded-[12px] bg-muted",
+          speaking ? "ring-2 ring-foreground/40" : "",
+        )}
+        aria-label={call.botName}
+        title={call.botName}
+      >
+        <BotAvatar
+          avatarSet={call.botAvatarSet}
+          color={call.botColor}
+          identity={call.botId}
+          size={40}
+          activity={speaking ? "working" : call.phase === "thinking" ? "reading" : "idle"}
+          status={speaking || call.phase === "thinking" ? "running" : undefined}
+        />
       </div>
       <div className="min-w-0 flex-1">
         <div className="truncate text-[13px] font-medium text-foreground" dir="auto">

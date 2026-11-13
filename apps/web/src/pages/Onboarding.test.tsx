@@ -8,8 +8,14 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 const account = vi.hoisted(() => ({ load: (_me: unknown) => {} }));
 
+vi.mock("../components/AccountMenu", () => ({
+  AccountMenu: () => null,
+}));
 vi.mock("../lib/rpc", () => ({
   selectedSpaceId: () => null,
+  createSpaceRpc: () => ({
+    me: vi.fn(async () => ({ impersonating: null, isAdmin: false })),
+  }),
   rpc: {
     me: vi.fn(
       () =>

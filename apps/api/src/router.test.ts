@@ -602,6 +602,12 @@ describe("billing", () => {
   ) {
     const prisma = {
       user: {
+        findUnique: vi.fn().mockResolvedValue({
+          email: "user@rakazo.test",
+          emailVerified: true,
+          deactivatedAt: null,
+          adminGrant: null,
+        }),
         findUniqueOrThrow: vi.fn().mockResolvedValue({
           email: "user@rakazo.test",
           name: "Test User",
@@ -609,6 +615,9 @@ describe("billing", () => {
           signupSurvey,
           secrets: [],
         }),
+      },
+      session: {
+        findUnique: vi.fn().mockResolvedValue({ impersonatedBy: null, expiresAt: new Date() }),
       },
       signupSurvey: { upsert: upsertSignupSurvey },
       userModelPreference: { findFirst: vi.fn().mockResolvedValue(null) },
@@ -749,11 +758,24 @@ describe("model setup gate", () => {
   }) {
     const prisma = {
       user: {
+        findUnique: vi.fn().mockResolvedValue({
+          email: "user@rakazo.test",
+          emailVerified: true,
+          deactivatedAt: null,
+          adminGrant: null,
+        }),
         findUniqueOrThrow: vi.fn().mockResolvedValue({
           email: "user@rakazo.test",
           name: "Test User",
           avatarStyle: "robot",
           secrets: [],
+        }),
+      },
+      session: {
+        findUnique: vi.fn().mockResolvedValue({
+          impersonatedBy: null,
+          impersonationExpiresAt: null,
+          expiresAt: new Date(),
         }),
       },
       // A bot that follows the main model.

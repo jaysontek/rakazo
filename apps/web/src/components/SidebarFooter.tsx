@@ -1,5 +1,5 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import type { NavLink } from "@rakazo/contracts";
+import type { NavLink, UsageLimit } from "@rakazo/contracts";
 import { ANDROID_APP_STORE_URL, IOS_APP_STORE_URL } from "@rakazo/contracts";
 import {
   AppMarkStack,
@@ -19,6 +19,7 @@ import {
   Plug,
   ScrollText,
   Settings,
+  Shield,
   Smartphone,
   SquareKanban,
   UserPlus,
@@ -28,6 +29,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import type { Organization } from "../lib/organizations";
 import { useSidebarUpdate } from "./DesktopUpdates";
 import { IconTooltip } from "./IconTooltip";
+import { SharedKeyUsageMeter } from "./SharedKeyUsageMeter";
 
 type Props = {
   mini?: boolean;
@@ -52,6 +54,11 @@ type Props = {
   organizations?: Organization[];
   activeOrganizationId?: string | null;
   onSwitchOrganization?: (organization: Organization) => void;
+  /** Shared-key / personal-key usage for non-admin account menus. */
+  usageLimit?: UsageLimit | null;
+  /** Server-derived effective admin (env bootstrap or DB grant). Hidden while impersonating. */
+  showAdminDashboard?: boolean;
+  onAdminDashboard?: () => void;
 };
 
 // Marks are 24px wide, overlap by 2px, and need 2px for the outer ring.
@@ -82,6 +89,9 @@ export function SidebarFooter({
   organizations = [],
   activeOrganizationId,
   onSwitchOrganization,
+  usageLimit = null,
+  showAdminDashboard = false,
+  onAdminDashboard,
 }: Props) {
   const { t } = useLingui();
   const update = useSidebarUpdate();
@@ -149,6 +159,12 @@ export function SidebarFooter({
                 <p className="truncate text-xs text-muted-foreground">{email}</p>
               ) : null}
             </div>
+            {usageLimit && usageLimit.kind !== "none" ? (
+              <>
+                <SharedKeyUsageMeter limit={usageLimit} />
+                <div className="my-1 border-t border-border" />
+              </>
+            ) : null}
             {organizations.length > 1 ? (
               <>
                 {organizations.map((organization) => {
@@ -177,6 +193,17 @@ export function SidebarFooter({
               >
                 <Plug className="text-muted-foreground" strokeWidth={1.75} />
                 <Trans>Connect apps</Trans>
+              </Button>
+            ) : null}
+            {showAdminDashboard ? (
+              <Button
+                variant="ghost"
+                className="h-9 w-full justify-start gap-2.5 font-normal"
+                data-testid="admin-dashboard-link"
+                onClick={onAdminDashboard}
+              >
+                <Shield className="text-muted-foreground" strokeWidth={1.75} />
+                <Trans>Admin Dashboard</Trans>
               </Button>
             ) : null}
             <Button

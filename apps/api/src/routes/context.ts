@@ -83,6 +83,8 @@ export function createRouterContext(deps: RouterDeps) {
     signal?: AbortSignal;
     /** Resolved client IP from the request (for LAN-gated admin surfaces). */
     clientIp?: string;
+    /** Real admin user id while this request runs under an impersonated session. */
+    impersonatedBy?: string | null;
     /** Re-runs the request's auth so a long-lived stream notices sign-out and revocation. */
     stillAuthorized?: () => Promise<boolean>;
   }>();
@@ -367,10 +369,28 @@ export function createRouterContext(deps: RouterDeps) {
       if (!actor) throw new ORPCError("UNAUTHORIZED");
       return asTenant(actor, () => next({ context: { ...context, actor } }));
     })
+    .use(async ({ context, next, path }) => {
+      // Deny-by-default while impersonating: only an explicit read allowlist + stop.
+      if (context.impersonatedBy) {
+        const { isImpersonationAllowedProcedure } = await import("../impersonation-allowlist.js");
+        if (!isImpersonationAllowedProcedure(path)) {
+          throw new ORPCError("FORBIDDEN", { message: "Not allowed while impersonating" });
+        }
+      }
+      return next();
+    })
     .use(async ({ context, next, path }, input) => {
       const result = await next();
       const event = procedureSecurityEvent(path, input, context.actor);
-      if (event) await recordSecurityEvent(event);
+      if (event) {
+        await recordSecurityEvent({
+          ...event,
+          metadata: {
+            ...event.metadata,
+            ...(context.impersonatedBy ? { impersonatedBy: context.impersonatedBy } : {}),
+          },
+        });
+      }
       return result;
     });
 

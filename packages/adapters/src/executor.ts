@@ -1093,6 +1093,7 @@ export function createRunExecutor(executorDeps: ExecutorDeps) {
                     persistOAuth: pinnedComputerModels.main.oauth?.persist,
                     refreshOAuth: pinnedComputerModels.main.oauth?.refresh,
                     retireOAuth: pinnedComputerModels.main.oauth?.retire,
+                    usingSharedKey: pinnedComputerModels.main.usingSharedKey ?? false,
                     redact: [],
                   }
                 : await resolveModelKey(

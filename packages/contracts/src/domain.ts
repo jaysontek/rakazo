@@ -1273,21 +1273,44 @@ const UsageTotalsSchema = z.object({
 export const SharedKeyWeeklyBudgetSchema = z.object({
   /** 0–100 of this user's weekly shared-key allotment already spent. */
   percentUsed: z.number().min(0).max(100),
-  spentUsd: z.number().nonnegative(),
-  weeklyCapUsd: z.number().nonnegative(),
+  /** Absolute spend; omitted for non-admins. */
+  spentUsd: z.number().nonnegative().optional(),
+  /** Weekly allotment in USD; omitted for non-admins. */
+  weeklyCapUsd: z.number().nonnegative().optional(),
   /** ISO timestamp when the America/New_York week resets. */
   resetsAt: z.string(),
   timezone: z.literal("America/New_York"),
 });
 export type SharedKeyWeeklyBudget = z.infer<typeof SharedKeyWeeklyBudgetSchema>;
 
+/** Account-menu usage meter: shared weekly bar, personal-key note, or hidden. */
+export const UsageLimitSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("shared_weekly"),
+    percentUsed: z.number().min(0).max(100),
+    resetsAt: z.string(),
+    timezone: z.literal("America/New_York"),
+  }),
+  z.object({ kind: z.literal("personal_key") }),
+  z.object({ kind: z.literal("none") }),
+]);
+export type UsageLimit = z.infer<typeof UsageLimitSchema>;
+
 export const UsageSummarySchema = UsageTotalsSchema.extend({
   runs: z.number(),
   models: z
-    .array(UsageTotalsSchema.required().extend({ provider: z.string(), model: z.string() }))
+    .array(
+      UsageTotalsSchema.extend({ provider: z.string(), model: z.string() }).extend({
+        // modelCalls is always present for per-model rows; costUsd stays optional so
+        // non-admin responses can omit dollar amounts.
+        modelCalls: z.number(),
+      }),
+    )
     .optional(),
   /** Present when this user is on the shared-key budget set and a monthly cap is configured. */
   sharedKeyWeeklyBudget: SharedKeyWeeklyBudgetSchema.nullable().optional(),
+  /** Account-menu usage view for regular users (no dollar amounts). */
+  usageLimit: UsageLimitSchema.optional(),
 });
 export type UsageSummary = z.infer<typeof UsageSummarySchema>;
 
@@ -1314,6 +1337,8 @@ export const OpsAccountSchema = z.object({
   deactivated: z.boolean(),
   modelProvider: z.string().nullable(),
   modelId: z.string().nullable(),
+  /** Live classification: company shared key, distinct personal key, or none. */
+  keyType: z.enum(["company", "personal", "none"]).default("none"),
   totalTokens: z.number().nullable(),
   totalCostUsd: z.number().nullable(),
   sharedKeyCostUsd: z.number().nonnegative(),
@@ -1321,6 +1346,30 @@ export const OpsAccountSchema = z.object({
   sharedKeyBudget: OpsSharedKeyBudgetSchema.nullable(),
 });
 export type OpsAccount = z.infer<typeof OpsAccountSchema>;
+
+export const OpsAdminGrantSchema = z.object({
+  userId: Id,
+  email: z.string(),
+  name: z.string(),
+  grantedById: Id.nullable(),
+  grantedByEmail: z.string().nullable(),
+  createdAt: z.string(),
+  envBootstrap: z.boolean(),
+});
+export type OpsAdminGrant = z.infer<typeof OpsAdminGrantSchema>;
+
+export const OpsAllotmentTransferSchema = z.object({
+  id: Id,
+  weekStart: z.string(),
+  fromUserId: Id,
+  toUserId: Id,
+  amountUsd: z.number().nonnegative(),
+  createdById: Id.nullable(),
+  createdAt: z.string(),
+  reversedAt: z.string().nullable(),
+  reverseNote: z.string().nullable(),
+});
+export type OpsAllotmentTransfer = z.infer<typeof OpsAllotmentTransferSchema>;
 
 export const OpsAgentSchema = z.object({
   id: Id,
@@ -1410,6 +1459,10 @@ export const OpsOverviewSchema = z.object({
     runtime: z.string().nullable(),
     sandbox: z.string().nullable(),
   }),
+  adminGrants: z.array(OpsAdminGrantSchema).default([]),
+  /** Env bootstrap admin emails (not removable). */
+  envBootstrapAdmins: z.array(z.string()).default([]),
+  allotmentTransfers: z.array(OpsAllotmentTransferSchema).default([]),
 });
 export type OpsOverview = z.infer<typeof OpsOverviewSchema>;
 
@@ -1670,6 +1723,11 @@ export const ModelCredentialSchema = z.object({
    * owner has to sign in again. Model choices on this connection are kept.
    */
   reconnectRequired: z.boolean().optional(),
+  /**
+   * True when the saved API key material matches the deployment shared key for
+   * this provider. Spend still counts as company/shared; never includes the key.
+   */
+  matchesDeploymentSharedKey: z.boolean().optional(),
 });
 export type ModelCredential = z.infer<typeof ModelCredentialSchema>;
 
@@ -2071,8 +2129,22 @@ export const MeSchema = z.object({
   spaceId: Id,
   /** Deprecated: app accounts never have server administrator privileges. Always false. */
   isDeploymentOwner: z.boolean(),
-  /** Listed in RAKAZO_ADMIN_EMAILS with a verified email: reviews plugins, adds stdio MCP servers, grants access. */
+  /** Listed in RAKAZO_ADMIN_EMAILS with a verified email, or holding a DB admin grant. */
   isAdmin: z.boolean().default(false),
+  /**
+   * When set, this session is an admin viewing as another user. The banner uses these
+   * fields; isAdmin is false while impersonating so admin chrome stays hidden.
+   */
+  impersonating: z
+    .object({
+      adminUserId: Id,
+      targetUserId: Id,
+      targetName: z.string(),
+      targetEmail: z.string(),
+      expiresAt: z.string(),
+    })
+    .nullable()
+    .optional(),
   needsModel: z.boolean(),
   defaultProvider: z.string().nullable(),
   defaultModel: z.string().nullable(),

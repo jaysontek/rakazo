@@ -146,6 +146,7 @@ import {
   runAsSystem,
   securityEventRetentionDays,
   verifyContentKeys,
+  withSecurityRequest,
 } from "@rakazo/db";
 import type { Logger } from "@rakazo/logging";
 import {
@@ -183,6 +184,11 @@ import { loadEnv } from "./env.js";
 import { healthRoutes } from "./health.js";
 import { homeRetentionSweep } from "./home-retention.js";
 import { startHourlySweep } from "./hourly-sweep.js";
+import {
+  deviceSessionFromRequest,
+  enforceImpersonationSession,
+  httpActorFromSession,
+} from "./impersonation.js";
 import { trackInFlightRequests } from "./in-flight-requests.js";
 import { mountLocalComputerHost } from "./local-settings.js";
 import { marketingEmailRoutes, sendWelcomeEmail } from "./marketing-email.js";
@@ -501,9 +507,15 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
       })
     : undefined;
   const modelCreditsEnabled = billing?.modelCreditsEnabled ?? false;
-  // Leave a DB-only monthly cap alone when SHARED_KEY_MONTHLY_BUDGET_USD is unset (same
-  // pattern as the member list): only write the column when the env var is present.
+  // Seed the monthly cap from SHARED_KEY_MONTHLY_BUDGET_USD only when the DB has no
+  // value yet. An admin override in deployment_settings wins over later env changes.
   const sharedKeyBudgetEnvSet = process.env.SHARED_KEY_MONTHLY_BUDGET_USD !== undefined;
+  const existingSharedKeyBudget = await prisma.deploymentSettings.findUnique({
+    where: { id: "default" },
+    select: { sharedKeyMonthlyBudgetUsd: true },
+  });
+  const seedSharedKeyBudget =
+    sharedKeyBudgetEnvSet && existingSharedKeyBudget?.sharedKeyMonthlyBudgetUsd == null;
   await prisma.deploymentSettings.upsert({
     where: { id: "default" },
     create: {
@@ -515,9 +527,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
     },
     update: {
       modelCreditsEnabled,
-      ...(sharedKeyBudgetEnvSet
-        ? { sharedKeyMonthlyBudgetUsd: env.sharedKeyMonthlyBudgetUsd }
-        : {}),
+      ...(seedSharedKeyBudget ? { sharedKeyMonthlyBudgetUsd: env.sharedKeyMonthlyBudgetUsd } : {}),
     },
   });
   // When the env list is set, make the member table match it (add/remove + re-divide).
@@ -648,6 +658,14 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
     extraOrigins: MOBILE_AUTH_ORIGINS,
     androidAppCertFingerprints: env.passkeyAndroidCertFingerprints,
     beforeDeleteUser: async (userId) => {
+      // An admin viewing as this account must not be able to delete it as the target.
+      const impersonating = await prisma.session.findFirst({
+        where: { userId, impersonatedBy: { not: null } },
+        select: { id: true },
+      });
+      if (impersonating) {
+        throw new Error("Not allowed while impersonating");
+      }
       // Billing cancels inside, after the account's spaces are claimed and before anything is
       // destroyed, so a provider failure aborts deletion with the account as it was.
       await deleteAccountContent(
@@ -677,6 +695,8 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
       await webPushSubscriptions
         .endSession(session.userId, session.id)
         .catch((error) => getLogger().error("web push removal failed", error));
+      // Impersonated sign-out: session.userId is the target — pass impersonatedBy so we
+      // revoke the admin's session-bound desktops and leave the target's legacy ones alone.
       await endUserDeviceSession(deviceSessions, session).catch((error) =>
         getLogger().error("user device revocation failed", error),
       );
@@ -733,6 +753,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
     artifacts,
     connector: stack.connector,
     connectors: stack.connector,
+    sharedKeyMonthlyBudgetUsd: env.sharedKeyMonthlyBudgetUsd,
     listConnectedPluginSlugs: async (userId) => {
       const provider = await integrationSettings.resolve("composio");
       if (!provider) return [];
@@ -937,6 +958,8 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
       navLinks: env.navLinks,
       adminEmails: env.adminEmails,
       opsDashboardAllowlist: env.opsDashboardAllowlist,
+      sharedKeyMonthlyBudgetUsd: env.sharedKeyMonthlyBudgetUsd,
+      deploymentModelKey: env.deploymentModelKey ?? null,
       maxUploadSizeBytes: env.maxUploadSizeBytes,
       maxAttachmentsPerMessage: env.maxAttachmentsPerMessage,
       agentRuntime: env.agentRuntime,
@@ -1103,6 +1126,15 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
     // The bearer plugin turns a signed `Authorization: Bearer` into the session cookie.
     const session = await auth.api.getSession({ headers: request.headers });
     if (!session?.user) return null;
+    const enforcement = await enforceImpersonationSession(
+      { prisma, env },
+      session.session.id,
+      {
+        ip: request.headers.get("x-rakazo-client-ip"),
+        userAgent: request.headers.get("user-agent"),
+      },
+    );
+    if (!enforcement.ok) return null;
     const actor = await actorFromMembership(
       requireMembership(
         prisma,
@@ -1111,19 +1143,26 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
         session.session.id,
       ),
     );
-    return actor && { actor, sessionId: session.session.id };
+    return (
+      actor && {
+        actor,
+        sessionId: session.session.id,
+        impersonatedBy: enforcement.impersonatedBy,
+      }
+    );
   };
-  const sessionActor = async (request: Request) => (await requestSession(request))?.actor ?? null;
+  // Outside /rpc, impersonated sessions are unauthenticated unless a route opts in.
+  const sessionActor = async (
+    request: Request,
+    options?: { allowImpersonation?: boolean },
+  ) => httpActorFromSession(await requestSession(request), options);
   if (userDeviceHub && userDevices) {
     mountUserDeviceRoutes(app, {
       prisma,
       hub: userDeviceHub,
       devices: userDevices,
       forwardSecret: userDeviceSecret,
-      session: async (request) => {
-        const found = await auth.api.getSession({ headers: request.headers });
-        return found ? { userId: found.user.id, sessionId: found.session.id } : null;
-      },
+      session: async (request) => deviceSessionFromRequest(await requestSession(request)),
       trustedOrigin: (origin) => isTrustedOrigin(origin, env),
     });
   }
@@ -1151,25 +1190,43 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
     if (actor) {
       enrichLogContext({ "user.id": actor.userId, "space.id": actor.spaceId });
     }
-    const { matched, response } = await rpc.handle(c.req.raw, {
-      prefix: "/rpc",
-      context: {
-        actor,
-        sessionId: session?.sessionId,
-        signal: c.req.raw.signal,
-        clientIp: requestClientIp(c),
-        // Same user in the same space, so leaving the space also ends a stream.
-        // A database failure rejects this check; only a missing membership is unauthorized.
-        stillAuthorized: async () => {
-          const current = await sessionActor(c.req.raw);
-          return Boolean(
-            actor && current?.userId === actor.userId && current.spaceId === actor.spaceId,
-          );
+    const handle = async () => {
+      const { matched, response } = await rpc.handle(c.req.raw, {
+        prefix: "/rpc",
+        context: {
+          actor,
+          sessionId: session?.sessionId,
+          signal: c.req.raw.signal,
+          clientIp: requestClientIp(c),
+          impersonatedBy: session?.impersonatedBy ?? null,
+          // Same user in the same space, so leaving the space also ends a stream.
+          // A database failure rejects this check; only a missing membership is unauthorized.
+          stillAuthorized: async () => {
+            // Streams stay live while impersonating; use the full request session.
+            const current = await requestSession(c.req.raw);
+            return Boolean(
+              actor &&
+                current?.actor.userId === actor.userId &&
+                current.actor.spaceId === actor.spaceId,
+            );
+          },
         },
-      },
-    });
-    if (matched) return c.newResponse(response.body, response);
-    await next();
+      });
+      if (matched) return c.newResponse(response.body, response);
+      await next();
+      return undefined;
+    };
+    if (session?.impersonatedBy) {
+      return withSecurityRequest(
+        {
+          ip: requestClientIp(c),
+          userAgent: c.req.header("user-agent"),
+          impersonatedBy: session.impersonatedBy,
+        },
+        handle,
+      );
+    }
+    return handle();
   });
   mountAccountExportRoute(app, { prisma, auth, artifacts, home });
   mountAuditExportRoute(app, { prisma, sessionActor });
@@ -1347,6 +1404,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
               deploymentProvider: env.defaultProvider,
               deploymentModel: env.defaultModel,
               deploymentModelKey: env.deploymentModelKey,
+              sharedKeyMonthlyBudgetUsd: env.sharedKeyMonthlyBudgetUsd,
               allowPrivateEndpoint: env.mcpAllowPrivateEndpoint,
               providerOverride: env.teamChatJudgeProvider,
               modelOverride: env.teamChatJudgeModel,
@@ -1358,6 +1416,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
               deploymentProvider: env.defaultProvider,
               deploymentModel: env.defaultModel,
               deploymentModelKey: env.deploymentModelKey,
+              sharedKeyMonthlyBudgetUsd: env.sharedKeyMonthlyBudgetUsd,
               allowPrivateEndpoint: env.mcpAllowPrivateEndpoint,
             });
       const bridge = new TeamChatBridge({

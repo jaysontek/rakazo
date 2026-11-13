@@ -1,4 +1,3 @@
-import { accountDisplay } from "@rakazo/core";
 import { typeScale } from "@rakazo/ui-tokens";
 import { AudioModule } from "expo-audio";
 import { useKeepAwake } from "expo-keep-awake";
@@ -7,13 +6,11 @@ import type { ComponentProps } from "react";
 import { useEffect, useRef, useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { rpc } from "../lib/api";
 import { startCallBackground, stopCallBackground } from "../lib/call-background";
 import { endCall, toggleMute, useCallSession } from "../lib/call-session";
 import { useI18n } from "../lib/i18n";
 import { useMobileTokens } from "../lib/native";
 import { HEADER_CONTROL_SIZE } from "../lib/native-controls";
-import { currentSessionGeneration, subscribeSessionGeneration } from "../lib/session";
 import { setVoiceBackgroundPlayback } from "../lib/voice";
 import { BotAvatar } from "./bot-avatar";
 import { CallVoicePicker } from "./call-voice-picker";
@@ -24,38 +21,10 @@ import type { NativeSymbol } from "./native-symbol";
 const START_RETRY_MS = 3000;
 const START_ATTEMPTS = 20;
 
-let cachedInitial: string | null = null;
-
 /** Fallback until the native call service owns the call. */
 function KeepCallAwake() {
   useKeepAwake("rakazo-call");
   return null;
-}
-
-/** The signed-in user's initial for the user tile. */
-export function useCallUserInitial(onCall: boolean): string {
-  const { t } = useI18n();
-  const [initial, setInitial] = useState(cachedInitial ?? "");
-  useEffect(() => {
-    if (!onCall || cachedInitial !== null) return;
-    const generation = currentSessionGeneration();
-    void rpc("me")
-      .then((me) => {
-        if (generation !== currentSessionGeneration()) return;
-        cachedInitial = accountDisplay(me, t("You")).initial ?? "";
-        setInitial(cachedInitial);
-      })
-      .catch(() => undefined);
-  }, [onCall, t]);
-  useEffect(
-    () =>
-      subscribeSessionGeneration(() => {
-        cachedInitial = null;
-        setInitial("");
-      }),
-    [],
-  );
-  return initial;
 }
 
 /**
@@ -68,7 +37,6 @@ export function CallCard() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams<{ botId?: string }>();
-  const initial = useCallUserInitial(Boolean(call));
   const [serviceStarted, setServiceStarted] = useState(false);
   const serviceStartedFor = useRef<string | null>(null);
   const startSeq = useRef(0);
@@ -156,7 +124,6 @@ export function CallCard() {
         botColor={call.botColor}
         botAvatarSet={call.botAvatarSet}
         muted={call.muted}
-        initial={initial}
         onOpenThread={() =>
           router.push({ pathname: "/thread", params: { botId: call.botId, name: call.botName } })
         }
@@ -173,7 +140,6 @@ export function CallStripBody({
   botColor,
   botAvatarSet,
   muted,
-  initial,
   onOpenThread,
   onSettings,
 }: {
@@ -182,7 +148,6 @@ export function CallStripBody({
   botColor: string;
   botAvatarSet?: ComponentProps<typeof BotAvatar>["avatarSet"];
   muted: boolean;
-  initial: string;
   onOpenThread?: () => void;
   onSettings: () => void;
 }) {
@@ -192,27 +157,20 @@ export function CallStripBody({
   const speaking = call?.phase === "speaking";
   return (
     <View testID="call-view" style={styles.strip}>
-      <View style={styles.tiles}>
-        <View style={[styles.tile, { backgroundColor: tokens.muted }]}>
-          <Text style={[styles.initialText, { color: tokens.mutedForeground }]}>
-            {initial || "·"}
-          </Text>
-        </View>
-        <View
-          style={[
-            styles.tile,
-            { backgroundColor: tokens.muted },
-            speaking ? { borderColor: tokens.foreground, borderWidth: 2 } : null,
-          ]}
-        >
-          <BotAvatar
-            color={botColor}
-            avatarSet={botAvatarSet}
-            identity={botId}
-            size={36}
-            motion="live"
-          />
-        </View>
+      <View
+        style={[
+          styles.tile,
+          { backgroundColor: tokens.muted },
+          speaking ? { borderColor: tokens.foreground, borderWidth: 2 } : null,
+        ]}
+      >
+        <BotAvatar
+          color={botColor}
+          avatarSet={botAvatarSet}
+          identity={botId}
+          size={36}
+          motion="live"
+        />
       </View>
       <Pressable
         accessibilityRole="button"
@@ -317,7 +275,6 @@ const styles = StyleSheet.create({
     minWidth: 0,
     overflow: "hidden",
   },
-  tiles: { flexDirection: "row", alignItems: "center", gap: 6, flexShrink: 0 },
   tile: {
     width: 36,
     height: 36,
@@ -325,10 +282,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
+    flexShrink: 0,
   },
-  initialText: { fontSize: 13, fontWeight: "600" },
-  // No minWidth: on ~375 the voice picker + three controls already fill the row.
-  namePress: { flexShrink: 1, minWidth: 0, maxWidth: 96 },
+  // Extra room for the name now that the local-user tile is gone (~375 still fits).
+  namePress: { flexShrink: 1, minWidth: 0, maxWidth: 120 },
   name: { ...typeScale.cardTitle, writingDirection: "auto" },
   buttonFallback: { borderWidth: StyleSheet.hairlineWidth },
 });

@@ -42,6 +42,7 @@ import {
 import { getLogger } from "@rakazo/logging";
 import { createAccessGrant, listAccessGrants, revokeAccessGrant } from "../access-grants.js";
 import { requireAdmin } from "../admins.js";
+import { requireNotImpersonating } from "../impersonation.js";
 import { aiConsentStatus, allowAiConsent } from "../ai-consent.js";
 import type { BillingService } from "../billing.js";
 import { firstModelConnectAnalytics } from "../model-connect-analytics.js";
@@ -92,7 +93,9 @@ export function accountRoutes(ctx: RouterContext) {
       }),
     },
     health: os.health.handler(async () => ({ ok: true as const, version: "0.1.0" })),
-    me: authed.me.handler(async ({ context }): Promise<Me> => meDto(deps, context.actor)),
+    me: authed.me.handler(async ({ context }): Promise<Me> =>
+      meDto(deps, context.actor, context.sessionId),
+    ),
     billing: {
       selectFunding: authed.billing.selectFunding.handler(async ({ context, input }) => {
         const billing = requireBilling(deps);
@@ -146,15 +149,18 @@ export function accountRoutes(ctx: RouterContext) {
       }),
     },
     accessGrants: {
+      // list is on the impersonation allowlist (read-only support view).
       list: authed.accessGrants.list.handler(async ({ context }) => {
         await requireGrantAdmin(deps, context.actor);
         return listAccessGrants(deps.prisma);
       }),
       create: authed.accessGrants.create.handler(async ({ context, input }) => {
+        await requireNotImpersonating(deps, context.sessionId);
         await requireGrantAdmin(deps, context.actor);
         return createAccessGrant(deps.prisma, context.actor.userId, input);
       }),
       revoke: authed.accessGrants.revoke.handler(async ({ context, input }) => {
+        await requireNotImpersonating(deps, context.sessionId);
         await requireGrantAdmin(deps, context.actor);
         return revokeAccessGrant(deps.prisma, input.id);
       }),
@@ -223,7 +229,7 @@ export function accountRoutes(ctx: RouterContext) {
             });
           }
         }
-        return meDto(deps, context.actor);
+        return meDto(deps, context.actor, context.sessionId);
       }),
       adoptTimezone: authed.preferences.adoptTimezone.handler(
         async ({ context, input }): Promise<Me> => {
@@ -232,7 +238,7 @@ export function accountRoutes(ctx: RouterContext) {
             where: { id: context.actor.userId, timezone: null },
             data: { timezone: input.timezone },
           });
-          return meDto(deps, context.actor);
+          return meDto(deps, context.actor, context.sessionId);
         },
       ),
     },
