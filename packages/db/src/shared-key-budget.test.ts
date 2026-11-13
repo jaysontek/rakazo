@@ -1,3 +1,4 @@
+import { sharedKeyWeekEnd } from "@rakazo/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   addSharedKeyBudgetMember,
@@ -5,8 +6,11 @@ import {
   releaseSharedKeyBudgetHold,
   removeSharedKeyBudgetMember,
   reserveSharedKeyBudget,
+  resolveUsageLimitView,
+  setSharedKeyMonthlyBudgetUsd,
   SHARED_KEY_BUDGET_HOLD_STALE_MS,
   SharedKeyWeeklyBudgetExceededError,
+  sharedKeyMonthlyBudgetUsd,
   sharedKeyWeeklyBudgetStatus,
 } from "./shared-key-budget.js";
 
@@ -38,6 +42,21 @@ function fakePrisma(state: {
       findUnique: vi.fn(async () =>
         state.monthly == null ? null : { sharedKeyMonthlyBudgetUsd: state.monthly },
       ),
+      upsert: vi.fn(
+        async ({
+          create,
+          update,
+        }: {
+          create: { sharedKeyMonthlyBudgetUsd: number };
+          update: { sharedKeyMonthlyBudgetUsd: number };
+        }) => {
+          state.monthly = update.sharedKeyMonthlyBudgetUsd ?? create.sharedKeyMonthlyBudgetUsd;
+          return { sharedKeyMonthlyBudgetUsd: state.monthly };
+        },
+      ),
+    },
+    userModelCredential: {
+      findFirst: vi.fn(async () => null),
     },
     user: {
       findMany: vi.fn(async ({ where }: { where: { id: { in: string[] } } }) =>
@@ -465,5 +484,76 @@ describe("shared-key weekly budget", () => {
     expect(state.allotments[0]?.reservedUsd).toBe(12);
     await releaseSharedKeyBudgetHold(client as never, "u1", 12, midweek);
     expect(state.allotments[0]?.reservedUsd).toBe(0);
+  });
+
+  it("prefers a DB monthly cap over the env fallback", async () => {
+    const state = {
+      monthly: 50,
+      members: [] as Member[],
+      allotments: [] as Allotment[],
+      usage: [] as Usage[],
+    };
+    const { client } = fakePrisma(state);
+    expect(await sharedKeyMonthlyBudgetUsd(client as never, 400)).toBe(50);
+    state.monthly = null;
+    expect(await sharedKeyMonthlyBudgetUsd(client as never, 400)).toBe(400);
+    expect(await sharedKeyMonthlyBudgetUsd(client as never, null)).toBeNull();
+  });
+
+  it("persists an admin monthly cap and re-divides the week", async () => {
+    const state = {
+      monthly: 400 as number | null,
+      members: [
+        { userId: "a", joinedAt: weekStart },
+        { userId: "b", joinedAt: weekStart },
+      ],
+      allotments: [] as Allotment[],
+      usage: [] as Usage[],
+    };
+    const { client } = fakePrisma(state);
+    await setSharedKeyMonthlyBudgetUsd(client as never, 200, midweek);
+    expect(state.monthly).toBe(200);
+    // 200 / 2 users / 4 weeks = 25 each.
+    expect(state.allotments.map((row) => row.allotmentUsd).sort()).toEqual([25, 25]);
+  });
+
+  it("resolves usage limit percent and reset for shared-key members", async () => {
+    const state = {
+      monthly: 400,
+      members: [{ userId: "u1", joinedAt: weekStart }],
+      allotments: [] as Allotment[],
+      usage: [
+        {
+          userId: "u1",
+          costUsd: 50,
+          sharedKey: true,
+          createdAt: new Date(weekStart.getTime() + 1_000),
+        },
+      ],
+    };
+    const { client } = fakePrisma(state);
+    const limit = await resolveUsageLimitView(client as never, "u1", midweek);
+    expect(limit).toMatchObject({
+      kind: "shared_weekly",
+      percentUsed: 50,
+      timezone: "America/New_York",
+    });
+    if (limit.kind === "shared_weekly") {
+      expect(limit.resetsAt).toBe(sharedKeyWeekEnd(weekStart).toISOString());
+    }
+  });
+
+  it("resolves personal-key usage when a Google credential exists", async () => {
+    const state = {
+      monthly: 400,
+      members: [{ userId: "u1", joinedAt: weekStart }],
+      allotments: [] as Allotment[],
+      usage: [] as Usage[],
+    };
+    const { client } = fakePrisma(state);
+    client.userModelCredential.findFirst = vi.fn(async () => ({ id: "cred" }));
+    expect(await resolveUsageLimitView(client as never, "u1", midweek)).toEqual({
+      kind: "personal_key",
+    });
   });
 });

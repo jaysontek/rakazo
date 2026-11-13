@@ -33,6 +33,7 @@ function makeDeps(allowlist = ["192.168.140.0/24"]): RouterDeps {
     usageRecord: {
       groupBy: async () => [],
       findMany: async () => [],
+      aggregate: async () => ({ _sum: { costUsd: 0 } }),
     },
     bot: {
       findMany: async () => [],
@@ -46,6 +47,16 @@ function makeDeps(allowlist = ["192.168.140.0/24"]): RouterDeps {
     },
     deploymentSettings: {
       findUnique: async () => null,
+      upsert: async ({
+        create,
+        update,
+      }: {
+        create: { sharedKeyMonthlyBudgetUsd?: number };
+        update: { sharedKeyMonthlyBudgetUsd?: number };
+      }) => {
+        const value = update.sharedKeyMonthlyBudgetUsd ?? create.sharedKeyMonthlyBudgetUsd ?? null;
+        return { sharedKeyMonthlyBudgetUsd: value };
+      },
     },
     sharedKeyBudgetMember: {
       findUnique: async () => null,
@@ -53,6 +64,10 @@ function makeDeps(allowlist = ["192.168.140.0/24"]): RouterDeps {
     },
     sharedKeyWeekAllotment: {
       findUnique: async () => null,
+      findMany: async () => [],
+      deleteMany: async () => ({ count: 0 }),
+      upsert: async () => ({}),
+      updateMany: async () => ({ count: 0 }),
     },
     $queryRaw: async () => [{ "?column?": 1 }],
     $transaction: async (fn: (tx: unknown) => unknown) => fn(prisma),
@@ -63,6 +78,7 @@ function makeDeps(allowlist = ["192.168.140.0/24"]): RouterDeps {
     env: {
       adminEmails: ["admin@example.test"],
       opsDashboardAllowlist: allowlist,
+      sharedKeyMonthlyBudgetUsd: 50,
       agentRuntime: "pi",
       defaultProvider: "openai",
       defaultModel: "gpt-test",
@@ -130,8 +146,29 @@ describe("ops dashboard routes", () => {
     });
     const overview = await client.ops.overview();
     expect(overview.accounts).toEqual([]);
-    expect(overview.sharedKeyBudget.monthlyCapUsd).toBeNull();
+    // Env fallback (50) when DB has no override.
+    expect(overview.sharedKeyBudget.monthlyCapUsd).toBe(50);
     expect(overview.sharedKeyBudget.rosterConfigured).toBe(false);
     expect(overview.agents.total).toBe(0);
+  });
+
+  it("lets an admin set the monthly shared-key cap and denies non-admins", async () => {
+    const deps = makeDeps();
+    const admin = createRouterClient(createRouter(deps), {
+      context: { actor: adminActor, clientIp: "192.168.140.10" },
+    });
+    const user = createRouterClient(createRouter(deps), {
+      context: { actor: userActor, clientIp: "192.168.140.10" },
+    });
+    await expect(user.ops.setSharedKeyMonthlyBudget({ monthlyCapUsd: 75 })).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      message: "Admins only",
+    });
+    await expect(
+      admin.ops.setSharedKeyMonthlyBudget({ monthlyCapUsd: 75 }),
+    ).resolves.toEqual({ monthlyCapUsd: 75 });
+    await expect(admin.ops.setSharedKeyMonthlyBudget({ monthlyCapUsd: 0 })).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+    });
   });
 });

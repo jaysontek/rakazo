@@ -1403,6 +1403,13 @@ export const appContract = {
           }),
       )
       .output(OpsChatLogSchema),
+    /**
+     * Set the monthly shared Gemini key spend cap (DB override). Re-divides the current
+     * week. Admin + LAN only; never returned to non-admins.
+     */
+    setSharedKeyMonthlyBudget: oc
+      .input(z.strictObject({ monthlyCapUsd: z.number().positive().max(1_000_000) }))
+      .output(z.strictObject({ monthlyCapUsd: z.number().positive() })),
   },
   export: {
     bot: oc.input(botId).output(ExportManifestSchema),

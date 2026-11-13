@@ -87,7 +87,12 @@ function OpsDashboard() {
   const data = overview.data;
   return (
     <>
-      <BudgetSection data={data} />
+      <BudgetSection
+        data={data}
+        onCapSaved={() => {
+          void overview.refetch();
+        }}
+      />
       <AccountsSection accounts={data.accounts} />
       <AgentsSection data={data} />
       <PerformanceSection data={data} />
@@ -99,13 +104,79 @@ function OpsDashboard() {
   );
 }
 
-function BudgetSection({ data }: { data: OpsOverview }) {
+function BudgetSection({ data, onCapSaved }: { data: OpsOverview; onCapSaved: () => void }) {
+  const { t } = useLingui();
   const budget = data.sharedKeyBudget;
+  const [draft, setDraft] = useState(
+    budget.monthlyCapUsd != null ? String(budget.monthlyCapUsd) : "",
+  );
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function saveCap() {
+    const value = Number(draft);
+    if (!Number.isFinite(value) || value <= 0 || value > 1_000_000) {
+      setError(t`Enter a positive amount up to $1,000,000`);
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      const result = await rpc.ops.setSharedKeyMonthlyBudget({ monthlyCapUsd: value });
+      setDraft(String(result.monthlyCapUsd));
+      onCapSaved();
+    } catch (err) {
+      setError(errorText(err, "Could not save monthly cap"));
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <section className="space-y-3">
       <h2 className="font-medium">
         <Trans>Shared-key week</Trans>
       </h2>
+      <div
+        data-testid="shared-key-monthly-cap"
+        className="flex flex-wrap items-end gap-3 rounded-xl border border-border px-4 py-3"
+      >
+        <label className="min-w-[10rem] flex-1 space-y-1 text-sm">
+          <span className="text-muted-foreground">
+            <Trans>Monthly shared Gemini key cap</Trans>
+          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground" aria-hidden="true">
+              $
+            </span>
+            <input
+              type="number"
+              min={0.01}
+              max={1_000_000}
+              step="any"
+              inputMode="decimal"
+              aria-label={t`Monthly shared Gemini key cap`}
+              className="h-9 w-full min-w-0 rounded-md border border-border bg-background px-3 text-sm tabular-nums"
+              value={draft}
+              disabled={saving}
+              onChange={(event) => setDraft(event.target.value)}
+            />
+          </div>
+        </label>
+        <button
+          type="button"
+          className={buttonVariants({ variant: "outline", size: "sm" })}
+          disabled={saving}
+          onClick={() => void saveCap()}
+        >
+          {saving ? <Spinner className="size-4" /> : <Trans>Save</Trans>}
+        </button>
+      </div>
+      {error ? (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      ) : null}
       <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-sm">
         <Stat
           label={<Trans>Monthly cap</Trans>}

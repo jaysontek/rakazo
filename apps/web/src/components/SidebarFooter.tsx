@@ -1,5 +1,5 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import type { NavLink } from "@rakazo/contracts";
+import type { NavLink, UsageLimit } from "@rakazo/contracts";
 import { ANDROID_APP_STORE_URL, IOS_APP_STORE_URL } from "@rakazo/contracts";
 import {
   AppMarkStack,
@@ -28,6 +28,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import type { Organization } from "../lib/organizations";
 import { useSidebarUpdate } from "./DesktopUpdates";
 import { IconTooltip } from "./IconTooltip";
+import { SharedKeyUsageMeter } from "./SharedKeyUsageMeter";
 
 type Props = {
   mini?: boolean;
@@ -52,6 +53,8 @@ type Props = {
   organizations?: Organization[];
   activeOrganizationId?: string | null;
   onSwitchOrganization?: (organization: Organization) => void;
+  /** Shared-key / personal-key usage for non-admin account menus. */
+  usageLimit?: UsageLimit | null;
 };
 
 // Marks are 24px wide, overlap by 2px, and need 2px for the outer ring.
@@ -82,6 +85,7 @@ export function SidebarFooter({
   organizations = [],
   activeOrganizationId,
   onSwitchOrganization,
+  usageLimit = null,
 }: Props) {
   const { t } = useLingui();
   const update = useSidebarUpdate();
@@ -149,6 +153,12 @@ export function SidebarFooter({
                 <p className="truncate text-xs text-muted-foreground">{email}</p>
               ) : null}
             </div>
+            {usageLimit && usageLimit.kind !== "none" ? (
+              <>
+                <SharedKeyUsageMeter limit={usageLimit} />
+                <div className="my-1 border-t border-border" />
+              </>
+            ) : null}
             {organizations.length > 1 ? (
               <>
                 {organizations.map((organization) => {

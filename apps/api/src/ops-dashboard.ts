@@ -182,6 +182,7 @@ export async function loadOpsOverview(
     sandbox?: string | null;
   } = {},
   now = new Date(),
+  envSharedKeyMonthlyBudgetUsd: number | null = null,
 ): Promise<OpsOverview> {
   return runAsSystem("operations dashboard overview", async () => {
     const weekAgo = new Date(now.getTime() - RECENT_RUN_WINDOW_MS);
@@ -251,7 +252,7 @@ export async function loadOpsOverview(
         orderBy: { createdAt: "desc" },
         take: LATENCY_SAMPLE_LIMIT,
       }),
-      sharedKeyMonthlyBudgetUsd(prisma),
+      sharedKeyMonthlyBudgetUsd(prisma, envSharedKeyMonthlyBudgetUsd),
       listSharedKeyBudgetMembers(prisma),
       probeDatabase(prisma),
     ]);
@@ -282,7 +283,12 @@ export async function loadOpsOverview(
       const model = latestModel.get(user.id);
       let budget: OpsAccountRow["sharedKeyBudget"] = null;
       if (monthlyCap != null || memberIds.has(user.id)) {
-        const status = await sharedKeyWeeklyBudgetStatus(prisma, user.id, now);
+        const status = await sharedKeyWeeklyBudgetStatus(
+          prisma,
+          user.id,
+          now,
+          envSharedKeyMonthlyBudgetUsd,
+        );
         const remainingUsd = Math.max(
           0,
           status.weeklyCapUsd - status.spentUsd - status.reservedUsd,

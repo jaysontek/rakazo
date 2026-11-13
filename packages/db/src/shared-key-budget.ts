@@ -1,5 +1,6 @@
 import {
   fullWeekShareUsd,
+  parseSharedKeyMonthlyBudgetInput,
   redivideWeeklyAllotments,
   SHARED_KEY_BUDGET_TIMEZONE,
   sharedKeyBudgetPercentUsed,
@@ -9,6 +10,7 @@ import {
 import { getLogger } from "@rakazo/logging";
 import type { PrismaClient } from "./client.js";
 import { Prisma } from "./client.js";
+import { findNewestUserModelCredential } from "./model-credentials.js";
 
 type BudgetPrisma = Pick<
   PrismaClient,
@@ -54,15 +56,87 @@ async function lockSharedKeyBudget(tx: Pick<BudgetTx, "$queryRaw">, key: string)
   `);
 }
 
+/**
+ * Effective monthly shared-key cap: a positive DB value wins; otherwise `envFallback`
+ * (from SHARED_KEY_MONTHLY_BUDGET_USD). Null/non-positive disables the hard-stop.
+ */
 export async function sharedKeyMonthlyBudgetUsd(
   prisma: Pick<BudgetPrisma, "deploymentSettings">,
+  envFallback: number | null = null,
 ): Promise<number | null> {
   const settings = await prisma.deploymentSettings.findUnique({
     where: { id: "default" },
     select: { sharedKeyMonthlyBudgetUsd: true },
   });
-  const value = settings?.sharedKeyMonthlyBudgetUsd;
-  return value != null && value > 0 ? value : null;
+  const db = settings?.sharedKeyMonthlyBudgetUsd;
+  if (db != null && db > 0) return db;
+  return envFallback != null && envFallback > 0 ? envFallback : null;
+}
+
+/**
+ * Persist an admin override for the monthly shared-key cap and re-divide this week's
+ * allotments. Rejects non-positive or over-cap values.
+ */
+export async function setSharedKeyMonthlyBudgetUsd(
+  prisma: Pick<BudgetPrisma, "$transaction" | "deploymentSettings">,
+  monthlyCapUsd: number,
+  now = new Date(),
+): Promise<number> {
+  const parsed = parseSharedKeyMonthlyBudgetInput(monthlyCapUsd);
+  if (parsed == null) throw new Error("Invalid shared-key monthly budget");
+  await prisma.$transaction(async (tx) => {
+    await lockSharedKeyBudget(tx, MEMBERS_LOCK);
+    await tx.deploymentSettings.upsert({
+      where: { id: "default" },
+      create: { id: "default", sharedKeyMonthlyBudgetUsd: parsed },
+      update: { sharedKeyMonthlyBudgetUsd: parsed },
+    });
+    await recomputeSharedKeyWeekAllotmentsTx(tx, now);
+  });
+  return parsed;
+}
+
+/** True when the user has a personal Google/Gemini model credential. */
+export async function userHasPersonalGoogleModelCredential(
+  prisma: Pick<PrismaClient, "userModelCredential">,
+  userId: string,
+): Promise<boolean> {
+  return (await findNewestUserModelCredential(prisma, userId, "google")) != null;
+}
+
+export type UsageLimitView =
+  | {
+      kind: "shared_weekly";
+      percentUsed: number;
+      resetsAt: string;
+      timezone: typeof SHARED_KEY_BUDGET_TIMEZONE;
+    }
+  | { kind: "personal_key" }
+  | { kind: "none" };
+
+/**
+ * Account-menu usage meter: shared weekly % when on the roster with a cap; a personal-key
+ * note when they have their own Google credential; otherwise hide.
+ */
+export async function resolveUsageLimitView(
+  prisma: BudgetPrisma & Pick<PrismaClient, "userModelCredential">,
+  userId: string,
+  now = new Date(),
+  envFallback: number | null = null,
+): Promise<UsageLimitView> {
+  if (await userHasPersonalGoogleModelCredential(prisma, userId)) {
+    return { kind: "personal_key" };
+  }
+  const status = await sharedKeyWeeklyBudgetStatus(prisma, userId, now, envFallback);
+  if (status.enabled && status.member) {
+    return {
+      kind: "shared_weekly",
+      percentUsed: status.percentUsed,
+      resetsAt: status.resetsAt,
+      timezone: status.timezone,
+    };
+  }
+  return { kind: "none" };
 }
 
 export async function listSharedKeyBudgetMembers(
@@ -371,10 +445,11 @@ export async function sharedKeyWeeklyBudgetStatus(
   prisma: BudgetPrisma,
   userId: string,
   now = new Date(),
+  envFallback: number | null = null,
 ): Promise<SharedKeyWeeklyBudgetStatus> {
   const weekStart = sharedKeyWeekStart(now);
   const resetsAt = sharedKeyWeekEnd(weekStart);
-  const monthly = await sharedKeyMonthlyBudgetUsd(prisma);
+  const monthly = await sharedKeyMonthlyBudgetUsd(prisma, envFallback);
   const member = await prisma.sharedKeyBudgetMember.findUnique({ where: { userId } });
   if (!monthly || !member) {
     return {

@@ -1,4 +1,6 @@
 import { ORPCError } from "@orpc/server";
+import { parseSharedKeyMonthlyBudgetInput } from "@rakazo/core";
+import { setSharedKeyMonthlyBudgetUsd } from "@rakazo/db";
 import { requireOpsDashboardAccess } from "../ops-access.js";
 import {
   listOpsAgents,
@@ -20,12 +22,17 @@ export function opsRoutes(ctx: RouterContext) {
       overview: authed.ops.overview.handler(async ({ context }) => {
         await gate(context);
         const secretsDegraded = deps.secrets?.describe().capabilities.degraded === true;
-        return loadOpsOverview(deps.prisma, {
-          degraded: secretsDegraded,
-          revision: deps.env.gitSha ?? null,
-          runtime: deps.env.agentRuntime,
-          sandbox: deps.env.sandboxProvider,
-        });
+        return loadOpsOverview(
+          deps.prisma,
+          {
+            degraded: secretsDegraded,
+            revision: deps.env.gitSha ?? null,
+            runtime: deps.env.agentRuntime,
+            sandbox: deps.env.sandboxProvider,
+          },
+          undefined,
+          deps.env.sharedKeyMonthlyBudgetUsd ?? null,
+        );
       }),
       agents: authed.ops.agents.handler(async ({ context }) => {
         await gate(context);
@@ -50,6 +57,19 @@ export function opsRoutes(ctx: RouterContext) {
           throw error;
         }
       }),
+      setSharedKeyMonthlyBudget: authed.ops.setSharedKeyMonthlyBudget.handler(
+        async ({ context, input }) => {
+          await gate(context);
+          const monthlyCapUsd = parseSharedKeyMonthlyBudgetInput(input.monthlyCapUsd);
+          if (monthlyCapUsd == null) {
+            throw new ORPCError("BAD_REQUEST", {
+              message: "monthlyCapUsd must be a positive number within the allowed range",
+            });
+          }
+          const saved = await setSharedKeyMonthlyBudgetUsd(deps.prisma, monthlyCapUsd);
+          return { monthlyCapUsd: saved };
+        },
+      ),
     },
   };
 }

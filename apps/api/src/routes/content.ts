@@ -9,8 +9,10 @@ import {
   IsolationError,
   LISTED_ARTIFACT,
   parseComputerMode,
+  resolveUsageLimitView,
   sharedKeyWeeklyBudgetStatus,
 } from "@rakazo/db";
+import { isAdmin } from "../admins.js";
 import {
   ArtifactListCursorError,
   createOwnedArtifact,
@@ -120,6 +122,7 @@ export function contentRoutes(ctx: RouterContext) {
     },
     usage: {
       list: authed.usage.list.handler(async ({ context }) => {
+        const admin = await isAdmin(deps, context.actor.userId);
         const rows = await deps.prisma.usageRecord.findMany({
           where: { spaceId: context.actor.spaceId, userId: context.actor.userId },
           orderBy: { createdAt: "desc" },
@@ -138,9 +141,13 @@ export function contentRoutes(ctx: RouterContext) {
           cacheWrite1hTokens: row.cacheWrite1hTokens,
           reasoningTokens: row.reasoningTokens,
           totalTokens: row.totalTokens,
-          costUsd: row.costUsd,
-          costSource: row.costSource,
-          pricingVersion: row.pricingVersion,
+          ...(admin
+            ? {
+                costUsd: row.costUsd,
+                costSource: row.costSource,
+                pricingVersion: row.pricingVersion,
+              }
+            : {}),
           usageSource: row.usageSource,
           callId: row.callId,
           operationId: row.operationId,
@@ -152,6 +159,8 @@ export function contentRoutes(ctx: RouterContext) {
       }),
       summary: authed.usage.summary.handler(async ({ context }) => {
         const where = { spaceId: context.actor.spaceId, userId: context.actor.userId };
+        const admin = await isAdmin(deps, context.actor.userId);
+        const envBudget = deps.env.sharedKeyMonthlyBudgetUsd ?? null;
         const sums = {
           inputTokens: true,
           outputTokens: true,
@@ -159,7 +168,7 @@ export function contentRoutes(ctx: RouterContext) {
           costUsd: true,
         } as const;
         const counts = { _all: true, ...sums } as const;
-        const [result, modelGroups, runGroups, budget] = await Promise.all([
+        const [result, modelGroups, runGroups, budget, usageLimit] = await Promise.all([
           deps.prisma.usageRecord.aggregate({ where, _sum: sums, _count: counts }),
           deps.prisma.usageRecord.groupBy({
             by: ["provider", "model"],
@@ -168,34 +177,45 @@ export function contentRoutes(ctx: RouterContext) {
             _count: counts,
           }),
           deps.prisma.usageRecord.groupBy({ by: ["runId", "parentRunId"], where }),
-          sharedKeyWeeklyBudgetStatus(deps.prisma, context.actor.userId),
+          sharedKeyWeeklyBudgetStatus(deps.prisma, context.actor.userId, undefined, envBudget),
+          resolveUsageLimitView(deps.prisma, context.actor.userId, undefined, envBudget),
         ]);
         const runs = new Set(runGroups.map((row) => row.parentRunId ?? row.runId).filter(Boolean))
           .size;
         // A total that skips rows without a count would understate spend, so it reads as unknown.
         // Historical Gemini rows may lack totalTokens; completeUsageSums derives input+output then.
+        const totals = completeUsageSums(result);
+        const models = modelGroups
+          .map((group) => ({
+            provider: group.provider,
+            model: group.model,
+            ...completeUsageSums(group),
+          }))
+          .sort(
+            (a, b) => (b.totalTokens ?? 0) - (a.totalTokens ?? 0) || b.modelCalls - a.modelCalls,
+          );
+        const sharedKeyWeeklyBudget =
+          budget.enabled && budget.member
+            ? {
+                percentUsed: budget.percentUsed,
+                resetsAt: budget.resetsAt,
+                timezone: budget.timezone,
+                ...(admin
+                  ? { spentUsd: budget.spentUsd, weeklyCapUsd: budget.weeklyCapUsd }
+                  : {}),
+              }
+            : null;
+        if (admin) {
+          return { ...totals, runs, models, sharedKeyWeeklyBudget, usageLimit };
+        }
+        // Non-admins never see dollar amounts — strip cost fields from totals and models.
+        const { costUsd: _cost, ...safeTotals } = totals;
         return {
-          ...completeUsageSums(result),
+          ...safeTotals,
           runs,
-          models: modelGroups
-            .map((group) => ({
-              provider: group.provider,
-              model: group.model,
-              ...completeUsageSums(group),
-            }))
-            .sort(
-              (a, b) => (b.totalTokens ?? 0) - (a.totalTokens ?? 0) || b.modelCalls - a.modelCalls,
-            ),
-          sharedKeyWeeklyBudget:
-            budget.enabled && budget.member
-              ? {
-                  percentUsed: budget.percentUsed,
-                  spentUsd: budget.spentUsd,
-                  weeklyCapUsd: budget.weeklyCapUsd,
-                  resetsAt: budget.resetsAt,
-                  timezone: budget.timezone,
-                }
-              : null,
+          models: models.map(({ costUsd: _modelCost, ...model }) => model),
+          sharedKeyWeeklyBudget,
+          usageLimit,
         };
       }),
     },

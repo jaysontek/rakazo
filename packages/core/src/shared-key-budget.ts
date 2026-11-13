@@ -128,11 +128,39 @@ export function sharedKeyBudgetPercentUsed(spentUsd: number, allotmentUsd: numbe
   return Math.min(100, Math.max(0, (spentUsd / allotmentUsd) * 100));
 }
 
+/** Upper bound for the admin-editable monthly shared-key cap (USD). */
+export const SHARED_KEY_MONTHLY_BUDGET_MAX_USD = 1_000_000;
+
+/**
+ * Account-menu reset label, e.g. "Mon 12:00 AM", always in America/New_York.
+ */
+export function formatSharedKeyBudgetResetAt(resetsAt: Date | string, locale = "en-US"): string {
+  const date = typeof resetsAt === "string" ? new Date(resetsAt) : resetsAt;
+  const weekday = new Intl.DateTimeFormat(locale, {
+    timeZone: SHARED_KEY_BUDGET_TIMEZONE,
+    weekday: "short",
+  }).format(date);
+  const time = new Intl.DateTimeFormat(locale, {
+    timeZone: SHARED_KEY_BUDGET_TIMEZONE,
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(date);
+  return `${weekday} ${time}`;
+}
+
 /** Parse SHARED_KEY_MONTHLY_BUDGET_USD; null when unset or not a positive number. */
 export function parseSharedKeyMonthlyBudgetUsd(raw: string | undefined): number | null {
   if (raw == null || raw.trim() === "") return null;
   const value = Number(raw);
   return Number.isFinite(value) && value > 0 ? value : null;
+}
+
+/** Validate an admin-entered monthly cap: positive and within the sane upper bound. */
+export function parseSharedKeyMonthlyBudgetInput(value: unknown): number | null {
+  const n = typeof value === "number" ? value : typeof value === "string" ? Number(value) : NaN;
+  if (!Number.isFinite(n) || n <= 0 || n > SHARED_KEY_MONTHLY_BUDGET_MAX_USD) return null;
+  return n;
 }
 
 /** Parse SHARED_KEY_BUDGET_USER_IDS as a comma-separated list of user ids. */

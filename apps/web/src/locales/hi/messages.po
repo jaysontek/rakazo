@@ -494,6 +494,7 @@ msgstr "एक्सेस टोकन (वैकल्पिक)"
 
 #: src/components/AccountMenu.tsx
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Account"
 msgstr "खाता"
 
@@ -513,6 +514,10 @@ msgstr ""
 #: src/components/SidebarFooter.tsx
 msgid "Account menu for {name}"
 msgstr "{name} का खाता मेन्यू"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Accounts"
+msgstr ""
 
 #. placeholder {0}: bot.name
 #. placeholder {0}: group.spaceName
@@ -656,6 +661,10 @@ msgstr ""
 msgid "Add skills"
 msgstr ""
 
+#: src/components/InstallAppSettings.tsx
+msgid "Add to Home Screen"
+msgstr ""
+
 #: src/components/teach/SkillDraftCard.tsx
 msgid "Add to routine"
 msgstr "रूटीन में जोड़ें"
@@ -704,6 +713,10 @@ msgstr ""
 
 #: src/components/AccountDataSettings.tsx
 msgid "Agent from another app"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Agents"
 msgstr ""
 
 #: src/components/VaultSettings.tsx
@@ -890,6 +903,10 @@ msgstr ""
 msgid "API URL"
 msgstr ""
 
+#: src/components/InstallAppSettings.tsx
+msgid "App"
+msgstr ""
+
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Appearance"
 msgstr "रूप"
@@ -1054,6 +1071,7 @@ msgstr "अवतार स्टूडियो"
 #: src/components/integrations/skills-dialog.tsx
 #: src/components/vault/VaultPageHeader.tsx
 #: src/pages/AdminAccessPage.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/AdminPluginsPage.tsx
 #: src/pages/Auth.tsx
 #: src/pages/Board.tsx
@@ -1077,6 +1095,10 @@ msgstr "चैट पर वापस जाएँ"
 #: src/pages/Auth.tsx
 msgid "Back to sign in"
 msgstr "साइन इन पर वापस जाएँ"
+
+#: src/components/WebPushSettings.tsx
+msgid "Background alerts"
+msgstr ""
 
 #: src/pages/memory-providers/ConnectionModeFields.tsx
 msgid "Base URL"
@@ -1204,7 +1226,7 @@ msgstr ""
 msgid "Built-in"
 msgstr "अंतर्निहित"
 
-#: src/pages/shell/chat-header.tsx
+#: src/pages/shell/composer.tsx
 msgid "Call"
 msgstr "कॉल करें"
 
@@ -1213,7 +1235,7 @@ msgid "Call back"
 msgstr "वापस कॉल करें"
 
 #. placeholder {0}: call.botName
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Call with {0}"
 msgstr "{0} के साथ कॉल"
 
@@ -1221,7 +1243,7 @@ msgstr "{0} के साथ कॉल"
 msgid "Calling you…"
 msgstr "आपको कॉल कर रहा है…"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Calling…"
 msgstr "कॉल हो रही है…"
 
@@ -1293,6 +1315,10 @@ msgstr "रद्द"
 msgid "Cancelled"
 msgstr "रद्द किया गया"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Cap unset"
+msgstr ""
+
 #: src/components/vault/kinds.tsx
 msgid "Card"
 msgstr ""
@@ -1348,6 +1374,10 @@ msgstr ""
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Chat details"
 msgstr "चैट विवरण"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Chat log"
+msgstr ""
 
 #: src/pages/shell/composer-mentions.tsx
 msgid "Chat Settings"
@@ -1908,6 +1938,7 @@ msgid "Copy rows"
 msgstr "पंक्तियाँ कॉपी करें"
 
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Cost"
 msgstr "लागत"
 
@@ -2490,6 +2521,10 @@ msgstr ""
 msgid "Couldn't update messaging settings"
 msgstr ""
 
+#: src/components/WebPushSettings.tsx
+msgid "Couldn't update notifications"
+msgstr ""
+
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Couldn't update your timezone"
 msgstr ""
@@ -2635,6 +2670,10 @@ msgstr "डार्क"
 msgid "Data"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Database"
+msgstr ""
+
 #: src/lib/billing.ts
 #: src/lib/cron.ts
 msgid "day"
@@ -2678,6 +2717,10 @@ msgstr "OpenClaw का डिफ़ॉल्ट"
 #: src/pages/MemorySettingsOverlay.tsx
 msgid "Default scope"
 msgstr "डिफ़ॉल्ट स्कोप"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Degraded"
+msgstr ""
 
 #: src/components/AccountAccess.tsx
 #: src/components/pages/PagesList.tsx
@@ -2871,6 +2914,7 @@ msgstr "डिस्कनेक्ट हो रहा है…"
 
 #: src/components/AskCard.tsx
 #: src/components/ComputerUpdateProgress.tsx
+#: src/components/InstallAppSettings.tsx
 #: src/components/PasskeyOffer.tsx
 #: src/components/SecretAskCard.tsx
 #: src/components/teach/TeachComputerOverlay.tsx
@@ -3029,6 +3073,10 @@ msgstr ""
 msgid "Enter a password"
 msgstr "पासवर्ड दर्ज करें"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Enter a positive amount up to $1,000,000"
+msgstr ""
+
 #: src/lib/user-error.ts
 msgid "Enter a valid email"
 msgstr "मान्य ईमेल दर्ज करें"
@@ -3067,6 +3115,10 @@ msgstr "एनवायरनमेंट वेरिएबल: {names}"
 #: src/lib/roster-status.ts
 #: src/pages/shell/sidebar-roster.tsx
 msgid "Error"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Errors"
 msgstr ""
 
 #: src/lib/cron.ts
@@ -3414,7 +3466,7 @@ msgstr "समूह सेटिंग्स"
 msgid "Group updates"
 msgstr ""
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Hang up"
 msgstr "कॉल समाप्त करें"
 
@@ -3425,6 +3477,10 @@ msgstr "पहले कॉल समाप्त करें, फिर स्
 #: src/lib/call-session.ts
 msgid "Hang up, then enter the code on screen."
 msgstr "कॉल समाप्त करें, फिर स्क्रीन पर कोड डालें।"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Hard-stopped"
+msgstr ""
 
 #: src/pages/RoutineEditor.tsx
 msgid "header"
@@ -3449,6 +3505,10 @@ msgstr "हेडर मान"
 #: src/components/ModelHeadersEditor.tsx
 msgid "Headers"
 msgstr "हेडर"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Health"
+msgstr ""
 
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Hear a sample"
@@ -3612,6 +3672,18 @@ msgstr "इनपुट"
 msgid "Inputs"
 msgstr "इनपुट"
 
+#: src/components/InstallAppSettings.tsx
+msgid "Install"
+msgstr ""
+
+#: src/components/InstallAppSettings.tsx
+msgid "Install app"
+msgstr ""
+
+#: src/components/WebPushSettings.tsx
+msgid "Install the app first to enable alerts on this device."
+msgstr ""
+
 #: src/components/SidebarFooter.tsx
 msgid "Install update"
 msgstr "अपडेट इंस्टॉल करें"
@@ -3750,6 +3822,10 @@ msgstr "कीबोर्ड शॉर्टकट"
 msgid "Keys"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Kind"
+msgstr ""
+
 #: src/components/vault/LoginFieldsInput.tsx
 #: src/components/vault/VaultItemEditor.tsx
 msgid "Label"
@@ -3811,7 +3887,7 @@ msgstr "SSO लिंक करें"
 msgid "List view"
 msgstr ""
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Listening"
 msgstr "सुन रहा है"
 
@@ -4008,6 +4084,14 @@ msgstr ""
 msgid "MCP servers"
 msgstr "MCP सर्वर"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Median first response"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Median total"
+msgstr ""
+
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/Onboarding.tsx
 msgid "Medium"
@@ -4128,10 +4212,6 @@ msgstr "छोटा करें"
 msgid "Minimize bots"
 msgstr ""
 
-#: src/components/call/CallCard.tsx
-msgid "Minimize call"
-msgstr "कॉल छोटी करें"
-
 #: src/lib/cron.ts
 msgid "minute"
 msgstr "मिनट"
@@ -4150,6 +4230,7 @@ msgid "Mode"
 msgstr "मोड"
 
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/RoutineEditor.tsx
@@ -4209,12 +4290,20 @@ msgstr ""
 msgid "Monthly"
 msgstr "मासिक"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Monthly cap"
+msgstr ""
+
 #: src/components/ModelCredits.tsx
 msgid "Monthly credits"
 msgstr ""
 
 #: src/components/ModelCredits.tsx
 msgid "Monthly credits expire at renewal. Top-ups do not expire."
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Monthly shared Gemini key cap"
 msgstr ""
 
 #: src/pages/PluginsOverlay.tsx
@@ -4246,11 +4335,11 @@ msgstr "यहां ले जाएं"
 msgid "Move up"
 msgstr "ऊपर ले जाएँ"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Mute"
 msgstr "म्यूट करें"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Muted"
 msgstr "माइक बंद है"
 
@@ -4482,6 +4571,10 @@ msgstr ""
 msgid "No members yet"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "No messages for this selection."
+msgstr ""
+
 #: src/pages/PeerMessagesOverlay.tsx
 msgid "No messages with {peerBotName} yet."
 msgstr "{peerBotName} के साथ अभी कोई संदेश नहीं."
@@ -4571,6 +4664,10 @@ msgstr ""
 msgid "Not checked yet"
 msgstr "अभी तक जाँच नहीं हुई"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Not configured"
+msgstr ""
+
 #: src/pages/shell/agent-import.tsx
 msgid "Not imported"
 msgstr "इंपोर्ट नहीं हुआ"
@@ -4587,6 +4684,10 @@ msgstr ""
 #: src/pages/shell/message-cards.tsx
 msgid "Not now"
 msgstr "अभी नहीं"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Not on roster"
+msgstr ""
 
 #: src/pages/shell/agent-import.tsx
 #: src/pages/shell/import-status.ts
@@ -4605,6 +4706,7 @@ msgstr "काम नहीं कर रहा"
 msgid "Nothing remembered yet"
 msgstr "अभी तक कुछ याद नहीं किया गया"
 
+#: src/components/WebPushSettings.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Notifications"
 msgstr "सूचनाएं"
@@ -4639,6 +4741,10 @@ msgstr "OAuth की समय-सीमा समाप्त हो गई"
 
 #: src/components/ComputerDeviceSettings.tsx
 msgid "Offline"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "OK"
 msgstr ""
 
 #: src/pages/model-settings/connection-controls.tsx
@@ -4708,15 +4814,6 @@ msgstr "{title} खोलें"
 msgid "Open <0>{0}</0> and enter this code:"
 msgstr ""
 
-#: src/pages/shell/chat-header.tsx
-msgid "Open call"
-msgstr "कॉल खोलें"
-
-#. placeholder {0}: call.botName
-#: src/components/call/CallCard.tsx
-msgid "Open chat with {0}"
-msgstr "{0} के साथ चैट खोलें"
-
 #: src/components/ComputersUnavailableHint.tsx
 msgid "Open computer settings"
 msgstr "कंप्यूटर सेटिंग्स खोलें"
@@ -4762,6 +4859,10 @@ msgstr "OpenClaw या Hermes"
 #: src/components/pages/DownloadPdfButton.tsx
 msgid "Opens your browser's print dialog. Choose Save as PDF as the destination."
 msgstr "आपके ब्राउज़र का प्रिंट डायलॉग खोलता है। गंतव्य के रूप में Save as PDF चुनें।"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Operations"
+msgstr ""
 
 #: src/components/SignupSurvey.tsx
 #: src/pages/model-settings/connection-controls.tsx
@@ -4811,6 +4912,10 @@ msgstr "आउटपुट"
 #: src/pages/Board.tsx
 msgid "Owner"
 msgstr "मालिक"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "p95 first response"
+msgstr ""
 
 #: src/components/pages/PageCard.tsx
 #: src/components/pages/PageView.tsx
@@ -4943,6 +5048,10 @@ msgstr ""
 msgid "Pending"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Performance"
+msgstr ""
+
 #: src/pages/shell/bot-panel.tsx
 msgid "Permissions"
 msgstr "अनुमतियाँ"
@@ -4953,6 +5062,15 @@ msgstr "व्यक्तित्व"
 
 #: src/components/SignupSurvey.tsx
 msgid "Personal"
+msgstr ""
+
+#. placeholder {0}: money(account.personalKeyCostUsd)
+#: src/pages/AdminOpsPage.tsx
+msgid "Personal {0}"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Personal-key spend"
 msgstr ""
 
 #: src/components/vault/VaultItemDetail.tsx
@@ -5436,6 +5554,10 @@ msgstr ""
 msgid "Request a new code"
 msgstr "नया कोड मँगाएँ"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Request log"
+msgstr ""
+
 #: src/pages/MessagingSettingsPanel.tsx
 msgid "Requests"
 msgstr ""
@@ -5473,6 +5595,10 @@ msgstr "अपना पासवर्ड रीसेट करें"
 #: src/components/SpendingLimitSettings.tsx
 msgid "Resets"
 msgstr "रीसेट"
+
+#: src/components/SharedKeyUsageMeter.tsx
+msgid "Resets {reset}"
+msgstr ""
 
 #: src/components/ComputerMaintenanceActions.tsx
 msgid "Resetting…"
@@ -5537,11 +5663,6 @@ msgstr "अभी पुनः प्रयास करें"
 msgid "Retry screen"
 msgstr ""
 
-#. placeholder {0}: call.botName
-#: src/components/call/CallCard.tsx
-msgid "Return to call with {0}"
-msgstr "{0} के साथ कॉल पर लौटें"
-
 #: src/pages/McpOAuthCallback.tsx
 #: src/pages/SlackInstallCallback.tsx
 msgid "Return to Rakazo"
@@ -5562,6 +5683,10 @@ msgstr ""
 
 #: src/components/ComputerProviderSettings.tsx
 msgid "Root filesystem"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Roster"
 msgstr ""
 
 #: src/pages/RoutineEditor.tsx
@@ -5626,6 +5751,10 @@ msgstr "रन"
 msgid "Runs when this bot receives a verified message from this provider."
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Runtime"
+msgstr ""
+
 #: src/pages/PluginsOverlay.tsx
 msgid "Sales & CRM"
 msgstr ""
@@ -5637,6 +5766,10 @@ msgstr "{botName} जैसा"
 #: src/pages/ModelSettingsOverlay.tsx
 msgid "Same as main model"
 msgstr "मुख्य मॉडल जैसा"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Sandbox"
+msgstr ""
 
 #: src/lib/cron.ts
 msgid "Saturday"
@@ -5650,6 +5783,7 @@ msgstr "शनिवार"
 #: src/components/teach/SkillDraftCard.tsx
 #: src/components/vault/VaultItemEditor.tsx
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/Board.tsx
 #: src/pages/ExternalConversationSettings.tsx
 #: src/pages/GroupPanel.tsx
@@ -5892,7 +6026,7 @@ msgstr "सर्वर URL"
 msgid "Set"
 msgstr "सेट करें"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 #: src/components/SidebarFooter.tsx
 #: src/pages/MessagingSettingsPanel.tsx
 #: src/pages/SettingsOverlay.tsx
@@ -5945,6 +6079,10 @@ msgstr "शेयर करें"
 msgid "Share “{title}”"
 msgstr "“{title}” शेयर करें"
 
+#: src/components/InstallAppSettings.tsx
+msgid "Share → Add to Home Screen"
+msgstr ""
+
 #: src/components/pages/SharePopover.tsx
 msgid "Share, anyone with the link can view"
 msgstr "शेयर करें, लिंक वाला कोई भी देख सकता है"
@@ -5955,9 +6093,26 @@ msgstr "शेयर करें, लिंक वाला कोई भी �
 msgid "Shared"
 msgstr "साझा"
 
+#. placeholder {0}: money(account.sharedKeyCostUsd)
+#: src/pages/AdminOpsPage.tsx
+msgid "Shared {0}"
+msgstr ""
+
 #: src/pages/KnowledgeSection.tsx
 msgid "Shared memory"
 msgstr "साझा मेमोरी"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Shared week"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Shared-key spend"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Shared-key week"
+msgstr ""
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/VaultSettings.tsx
@@ -6165,13 +6320,17 @@ msgstr "बोलें"
 msgid "Speak this reply"
 msgstr "यह उत्तर बोलकर सुनाएं"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Speaking"
 msgstr "बोल रहा है"
 
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Speech model"
 msgstr "वाक् मॉडल"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Spend"
+msgstr ""
 
 #: src/components/SpendingLimitSettings.tsx
 msgid "Spending limit"
@@ -6242,6 +6401,7 @@ msgid "State or region"
 msgstr ""
 
 #: src/pages/ActivityList.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/Board.tsx
 msgid "Status"
 msgstr ""
@@ -6505,7 +6665,7 @@ msgstr ""
 msgid "They get {weeks} weeks free."
 msgstr "उन्हें {weeks} हफ़्ते मुफ़्त मिलते हैं।"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 #: src/pages/ModelRoleSettings.tsx
 #: src/pages/RoutineEditor.tsx
 #: src/pages/shell/bot-panel.tsx
@@ -6683,6 +6843,7 @@ msgid "Time of day"
 msgstr "दिन का समय"
 
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Timezone"
 msgstr ""
 
@@ -6721,6 +6882,7 @@ msgid "Toggle sidebar"
 msgstr "साइडबार दिखाएं या छिपाएं"
 
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Tokens"
 msgstr "टोकन"
 
@@ -6746,13 +6908,13 @@ msgstr "टूल का नाम"
 msgid "Tools"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Total spend"
+msgstr ""
+
 #: src/components/composer/HoldToTalk.tsx
 msgid "Transcribing…"
 msgstr "लिप्यंतरण हो रहा है…"
-
-#: src/components/call/CallCard.tsx
-msgid "Transcript"
-msgstr "ट्रांसक्रिप्ट"
 
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Transcription model"
@@ -6845,7 +7007,7 @@ msgstr ""
 msgid "Unlink"
 msgstr ""
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Unmute"
 msgstr "अनम्यूट करें"
 
@@ -7021,6 +7183,10 @@ msgstr ""
 msgid "Using your API key. Free plan ends {freeUntil}."
 msgstr "आपकी API कुंजी इस्तेमाल हो रही है। मुफ़्त प्लान {freeUntil} को खत्म होगा।"
 
+#: src/components/SharedKeyUsageMeter.tsx
+msgid "Using your own API key, no shared limit"
+msgstr ""
+
 #: src/components/vault/LoginFieldsInput.tsx
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/vault/VaultItemEditor.tsx
@@ -7066,6 +7232,7 @@ msgstr ""
 msgid "View source"
 msgstr ""
 
+#: src/components/call/CallStrip.tsx
 #: src/pages/settings-nav.ts
 #: src/pages/shell/bot-panel.tsx
 #: src/pages/SpaceSettingOverrides.tsx
@@ -7115,6 +7282,10 @@ msgstr "बुधवार"
 
 #: src/lib/billing.ts
 msgid "week"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Week"
 msgstr ""
 
 #: src/lib/cron.ts
@@ -7170,6 +7341,10 @@ msgstr "क्या लौटाना है"
 #: src/pages/RoutineEditor.tsx
 msgid "What to watch"
 msgstr "किसकी निगरानी करें"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "When"
+msgstr ""
 
 #: src/pages/RoutineEditor.tsx
 msgid "When a webhook fires"

@@ -495,6 +495,7 @@ msgstr "存取權杖（選填）"
 
 #: src/components/AccountMenu.tsx
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Account"
 msgstr "帳號"
 
@@ -514,6 +515,10 @@ msgstr "帳號標籤"
 #: src/components/SidebarFooter.tsx
 msgid "Account menu for {name}"
 msgstr "{name} 的帳號選單"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Accounts"
+msgstr ""
 
 #. placeholder {0}: bot.name
 #. placeholder {0}: group.spaceName
@@ -657,6 +662,10 @@ msgstr "新增伺服器網址"
 msgid "Add skills"
 msgstr ""
 
+#: src/components/InstallAppSettings.tsx
+msgid "Add to Home Screen"
+msgstr ""
+
 #: src/components/teach/SkillDraftCard.tsx
 msgid "Add to routine"
 msgstr "加入例行任務"
@@ -705,6 +714,10 @@ msgstr "進階..."
 
 #: src/components/AccountDataSettings.tsx
 msgid "Agent from another app"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Agents"
 msgstr ""
 
 #: src/components/VaultSettings.tsx
@@ -891,6 +904,10 @@ msgstr ""
 msgid "API URL"
 msgstr ""
 
+#: src/components/InstallAppSettings.tsx
+msgid "App"
+msgstr ""
+
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Appearance"
 msgstr "外觀"
@@ -1055,6 +1072,7 @@ msgstr "頭像工作室"
 #: src/components/integrations/skills-dialog.tsx
 #: src/components/vault/VaultPageHeader.tsx
 #: src/pages/AdminAccessPage.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/AdminPluginsPage.tsx
 #: src/pages/Auth.tsx
 #: src/pages/Board.tsx
@@ -1078,6 +1096,10 @@ msgstr "返回聊天"
 #: src/pages/Auth.tsx
 msgid "Back to sign in"
 msgstr "返回登入"
+
+#: src/components/WebPushSettings.tsx
+msgid "Background alerts"
+msgstr ""
 
 #: src/pages/memory-providers/ConnectionModeFields.tsx
 msgid "Base URL"
@@ -1205,7 +1227,7 @@ msgstr "瀏覽 MCP 伺服器"
 msgid "Built-in"
 msgstr "內建"
 
-#: src/pages/shell/chat-header.tsx
+#: src/pages/shell/composer.tsx
 msgid "Call"
 msgstr "通話"
 
@@ -1214,7 +1236,7 @@ msgid "Call back"
 msgstr "回撥"
 
 #. placeholder {0}: call.botName
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Call with {0}"
 msgstr "與 {0} 通話"
 
@@ -1222,7 +1244,7 @@ msgstr "與 {0} 通話"
 msgid "Calling you…"
 msgstr "正在打給你…"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Calling…"
 msgstr "撥號中…"
 
@@ -1294,6 +1316,10 @@ msgstr "已取消"
 msgid "Cancelled"
 msgstr "已取消"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Cap unset"
+msgstr ""
+
 #: src/components/vault/kinds.tsx
 msgid "Card"
 msgstr ""
@@ -1349,6 +1375,10 @@ msgstr ""
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Chat details"
 msgstr "聊天詳細資料"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Chat log"
+msgstr ""
 
 #: src/pages/shell/composer-mentions.tsx
 msgid "Chat Settings"
@@ -1909,6 +1939,7 @@ msgid "Copy rows"
 msgstr "複製列"
 
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Cost"
 msgstr "費用"
 
@@ -2491,6 +2522,10 @@ msgstr ""
 msgid "Couldn't update messaging settings"
 msgstr "無法更新訊息設定"
 
+#: src/components/WebPushSettings.tsx
+msgid "Couldn't update notifications"
+msgstr ""
+
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Couldn't update your timezone"
 msgstr "無法更新你的時區"
@@ -2636,6 +2671,10 @@ msgstr "深色"
 msgid "Data"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Database"
+msgstr ""
+
 #: src/lib/billing.ts
 #: src/lib/cron.ts
 msgid "day"
@@ -2679,6 +2718,10 @@ msgstr "OpenClaw 預設內容"
 #: src/pages/MemorySettingsOverlay.tsx
 msgid "Default scope"
 msgstr "預設範圍"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Degraded"
+msgstr ""
 
 #: src/components/AccountAccess.tsx
 #: src/components/pages/PagesList.tsx
@@ -2872,6 +2915,7 @@ msgstr "正在中斷…"
 
 #: src/components/AskCard.tsx
 #: src/components/ComputerUpdateProgress.tsx
+#: src/components/InstallAppSettings.tsx
 #: src/components/PasskeyOffer.tsx
 #: src/components/SecretAskCard.tsx
 #: src/components/teach/TeachComputerOverlay.tsx
@@ -3030,6 +3074,10 @@ msgstr ""
 msgid "Enter a password"
 msgstr "請輸入密碼"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Enter a positive amount up to $1,000,000"
+msgstr ""
+
 #: src/lib/user-error.ts
 msgid "Enter a valid email"
 msgstr "請輸入有效的電子郵件地址"
@@ -3069,6 +3117,10 @@ msgstr "環境變數：{names}"
 #: src/pages/shell/sidebar-roster.tsx
 msgid "Error"
 msgstr "錯誤"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Errors"
+msgstr ""
 
 #: src/lib/cron.ts
 #: src/pages/ExternalConversationSettings.tsx
@@ -3415,7 +3467,7 @@ msgstr "群組設定"
 msgid "Group updates"
 msgstr "群組更新"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Hang up"
 msgstr "結束通話"
 
@@ -3426,6 +3478,10 @@ msgstr "請先結束通話，再輸入螢幕上的驗證碼。"
 #: src/lib/call-session.ts
 msgid "Hang up, then enter the code on screen."
 msgstr "請結束通話，再輸入螢幕上的驗證碼。"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Hard-stopped"
+msgstr ""
 
 #: src/pages/RoutineEditor.tsx
 msgid "header"
@@ -3450,6 +3506,10 @@ msgstr "標頭值"
 #: src/components/ModelHeadersEditor.tsx
 msgid "Headers"
 msgstr "標頭"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Health"
+msgstr ""
 
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Hear a sample"
@@ -3613,6 +3673,18 @@ msgstr "輸入"
 msgid "Inputs"
 msgstr "輸入"
 
+#: src/components/InstallAppSettings.tsx
+msgid "Install"
+msgstr ""
+
+#: src/components/InstallAppSettings.tsx
+msgid "Install app"
+msgstr ""
+
+#: src/components/WebPushSettings.tsx
+msgid "Install the app first to enable alerts on this device."
+msgstr ""
+
 #: src/components/SidebarFooter.tsx
 msgid "Install update"
 msgstr "安裝更新"
@@ -3751,6 +3823,10 @@ msgstr "鍵盤快速鍵"
 msgid "Keys"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Kind"
+msgstr ""
+
 #: src/components/vault/LoginFieldsInput.tsx
 #: src/components/vault/VaultItemEditor.tsx
 msgid "Label"
@@ -3812,7 +3888,7 @@ msgstr "關聯 SSO"
 msgid "List view"
 msgstr "清單檢視"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Listening"
 msgstr "聆聽中"
 
@@ -4009,6 +4085,14 @@ msgstr ""
 msgid "MCP servers"
 msgstr "MCP 伺服器"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Median first response"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Median total"
+msgstr ""
+
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/Onboarding.tsx
 msgid "Medium"
@@ -4129,10 +4213,6 @@ msgstr "最小化"
 msgid "Minimize bots"
 msgstr "最小化機器人面板"
 
-#: src/components/call/CallCard.tsx
-msgid "Minimize call"
-msgstr "最小化通話"
-
 #: src/lib/cron.ts
 msgid "minute"
 msgstr "分鐘"
@@ -4151,6 +4231,7 @@ msgid "Mode"
 msgstr "模式"
 
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/RoutineEditor.tsx
@@ -4210,6 +4291,10 @@ msgstr "月"
 msgid "Monthly"
 msgstr "每月"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Monthly cap"
+msgstr ""
+
 #: src/components/ModelCredits.tsx
 msgid "Monthly credits"
 msgstr "每月額度"
@@ -4217,6 +4302,10 @@ msgstr "每月額度"
 #: src/components/ModelCredits.tsx
 msgid "Monthly credits expire at renewal. Top-ups do not expire."
 msgstr "每月額度在續訂時到期。單次加值額度不會過期。"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Monthly shared Gemini key cap"
+msgstr ""
 
 #: src/pages/PluginsOverlay.tsx
 #: src/pages/shell/message-hover-actions.tsx
@@ -4247,11 +4336,11 @@ msgstr "移動到"
 msgid "Move up"
 msgstr "上移"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Mute"
 msgstr "靜音"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Muted"
 msgstr "已靜音"
 
@@ -4483,6 +4572,10 @@ msgstr "沒有符合的模型"
 msgid "No members yet"
 msgstr "尚無成員"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "No messages for this selection."
+msgstr ""
+
 #: src/pages/PeerMessagesOverlay.tsx
 msgid "No messages with {peerBotName} yet."
 msgstr "還沒有與 {peerBotName} 的訊息。"
@@ -4572,6 +4665,10 @@ msgstr ""
 msgid "Not checked yet"
 msgstr "尚未檢查"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Not configured"
+msgstr ""
+
 #: src/pages/shell/agent-import.tsx
 msgid "Not imported"
 msgstr "未匯入"
@@ -4588,6 +4685,10 @@ msgstr "不在外掛程式目錄中"
 #: src/pages/shell/message-cards.tsx
 msgid "Not now"
 msgstr "暫不"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Not on roster"
+msgstr ""
 
 #: src/pages/shell/agent-import.tsx
 #: src/pages/shell/import-status.ts
@@ -4606,6 +4707,7 @@ msgstr "無法正常工作"
 msgid "Nothing remembered yet"
 msgstr "尚無記憶"
 
+#: src/components/WebPushSettings.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Notifications"
 msgstr "通知"
@@ -4640,6 +4742,10 @@ msgstr "OAuth 已過期"
 
 #: src/components/ComputerDeviceSettings.tsx
 msgid "Offline"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "OK"
 msgstr ""
 
 #: src/pages/model-settings/connection-controls.tsx
@@ -4709,15 +4815,6 @@ msgstr "開啟 {title}"
 msgid "Open <0>{0}</0> and enter this code:"
 msgstr "開啟 <0>{0}</0> 並輸入以下代碼："
 
-#: src/pages/shell/chat-header.tsx
-msgid "Open call"
-msgstr "開啟通話"
-
-#. placeholder {0}: call.botName
-#: src/components/call/CallCard.tsx
-msgid "Open chat with {0}"
-msgstr "開啟與 {0} 的對話"
-
 #: src/components/ComputersUnavailableHint.tsx
 msgid "Open computer settings"
 msgstr "開啟電腦設定"
@@ -4763,6 +4860,10 @@ msgstr "OpenClaw 或 Hermes"
 #: src/components/pages/DownloadPdfButton.tsx
 msgid "Opens your browser's print dialog. Choose Save as PDF as the destination."
 msgstr "開啟瀏覽器的列印對話框。目的地請選擇「另存為 PDF」。"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Operations"
+msgstr ""
 
 #: src/components/SignupSurvey.tsx
 #: src/pages/model-settings/connection-controls.tsx
@@ -4812,6 +4913,10 @@ msgstr "輸出"
 #: src/pages/Board.tsx
 msgid "Owner"
 msgstr "擁有者"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "p95 first response"
+msgstr ""
 
 #: src/components/pages/PageCard.tsx
 #: src/components/pages/PageView.tsx
@@ -4944,6 +5049,10 @@ msgstr "已暫停"
 msgid "Pending"
 msgstr "待處理"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Performance"
+msgstr ""
+
 #: src/pages/shell/bot-panel.tsx
 msgid "Permissions"
 msgstr "權限"
@@ -4955,6 +5064,15 @@ msgstr "人設"
 #: src/components/SignupSurvey.tsx
 msgid "Personal"
 msgstr "個人"
+
+#. placeholder {0}: money(account.personalKeyCostUsd)
+#: src/pages/AdminOpsPage.tsx
+msgid "Personal {0}"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Personal-key spend"
+msgstr ""
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/vault/VaultItemEditor.tsx
@@ -5437,6 +5555,10 @@ msgstr "正在回覆 {0}"
 msgid "Request a new code"
 msgstr "請重新獲取驗證碼"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Request log"
+msgstr ""
+
 #: src/pages/MessagingSettingsPanel.tsx
 msgid "Requests"
 msgstr "請求"
@@ -5474,6 +5596,10 @@ msgstr "重設你的密碼"
 #: src/components/SpendingLimitSettings.tsx
 msgid "Resets"
 msgstr "重設"
+
+#: src/components/SharedKeyUsageMeter.tsx
+msgid "Resets {reset}"
+msgstr ""
 
 #: src/components/ComputerMaintenanceActions.tsx
 msgid "Resetting…"
@@ -5538,11 +5664,6 @@ msgstr "立即重試"
 msgid "Retry screen"
 msgstr "重新連線螢幕"
 
-#. placeholder {0}: call.botName
-#: src/components/call/CallCard.tsx
-msgid "Return to call with {0}"
-msgstr "返回與 {0} 的通話"
-
 #: src/pages/McpOAuthCallback.tsx
 #: src/pages/SlackInstallCallback.tsx
 msgid "Return to Rakazo"
@@ -5563,6 +5684,10 @@ msgstr ""
 
 #: src/components/ComputerProviderSettings.tsx
 msgid "Root filesystem"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Roster"
 msgstr ""
 
 #: src/pages/RoutineEditor.tsx
@@ -5627,6 +5752,10 @@ msgstr "執行"
 msgid "Runs when this bot receives a verified message from this provider."
 msgstr "當此機器人收到來自這個供應商且通過驗證的訊息時執行。"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Runtime"
+msgstr ""
+
 #: src/pages/PluginsOverlay.tsx
 msgid "Sales & CRM"
 msgstr ""
@@ -5638,6 +5767,10 @@ msgstr "與 {botName} 相同"
 #: src/pages/ModelSettingsOverlay.tsx
 msgid "Same as main model"
 msgstr "與主模型相同"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Sandbox"
+msgstr ""
 
 #: src/lib/cron.ts
 msgid "Saturday"
@@ -5651,6 +5784,7 @@ msgstr "週六"
 #: src/components/teach/SkillDraftCard.tsx
 #: src/components/vault/VaultItemEditor.tsx
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/Board.tsx
 #: src/pages/ExternalConversationSettings.tsx
 #: src/pages/GroupPanel.tsx
@@ -5893,7 +6027,7 @@ msgstr "伺服器 URL"
 msgid "Set"
 msgstr "設定"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 #: src/components/SidebarFooter.tsx
 #: src/pages/MessagingSettingsPanel.tsx
 #: src/pages/SettingsOverlay.tsx
@@ -5946,6 +6080,10 @@ msgstr "分享"
 msgid "Share “{title}”"
 msgstr "分享「{title}」"
 
+#: src/components/InstallAppSettings.tsx
+msgid "Share → Add to Home Screen"
+msgstr ""
+
 #: src/components/pages/SharePopover.tsx
 msgid "Share, anyone with the link can view"
 msgstr "共用，任何擁有連結的人都能檢視"
@@ -5956,9 +6094,26 @@ msgstr "共用，任何擁有連結的人都能檢視"
 msgid "Shared"
 msgstr "共享"
 
+#. placeholder {0}: money(account.sharedKeyCostUsd)
+#: src/pages/AdminOpsPage.tsx
+msgid "Shared {0}"
+msgstr ""
+
 #: src/pages/KnowledgeSection.tsx
 msgid "Shared memory"
 msgstr "共用記憶"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Shared week"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Shared-key spend"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Shared-key week"
+msgstr ""
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/VaultSettings.tsx
@@ -6166,13 +6321,17 @@ msgstr "朗讀"
 msgid "Speak this reply"
 msgstr "朗讀這條回覆"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Speaking"
 msgstr "說話中"
 
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Speech model"
 msgstr "語音模型"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Spend"
+msgstr ""
 
 #: src/components/SpendingLimitSettings.tsx
 msgid "Spending limit"
@@ -6243,6 +6402,7 @@ msgid "State or region"
 msgstr ""
 
 #: src/pages/ActivityList.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/Board.tsx
 msgid "Status"
 msgstr "狀態"
@@ -6506,7 +6666,7 @@ msgstr "無法讀取已儲存的設定，請移除後重新新增。"
 msgid "They get {weeks} weeks free."
 msgstr "對方可免費使用 {weeks} 週。"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 #: src/pages/ModelRoleSettings.tsx
 #: src/pages/RoutineEditor.tsx
 #: src/pages/shell/bot-panel.tsx
@@ -6684,6 +6844,7 @@ msgid "Time of day"
 msgstr "時間"
 
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Timezone"
 msgstr "時區"
 
@@ -6722,6 +6883,7 @@ msgid "Toggle sidebar"
 msgstr "顯示或隱藏側邊欄"
 
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Tokens"
 msgstr "Token"
 
@@ -6747,13 +6909,13 @@ msgstr "工具名稱"
 msgid "Tools"
 msgstr "工具"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Total spend"
+msgstr ""
+
 #: src/components/composer/HoldToTalk.tsx
 msgid "Transcribing…"
 msgstr "轉錄中…"
-
-#: src/components/call/CallCard.tsx
-msgid "Transcript"
-msgstr "文字紀錄"
 
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Transcription model"
@@ -6846,7 +7008,7 @@ msgstr "解除安裝"
 msgid "Unlink"
 msgstr "取消關聯"
 
-#: src/components/call/CallCard.tsx
+#: src/components/call/CallStrip.tsx
 msgid "Unmute"
 msgstr "取消靜音"
 
@@ -7022,6 +7184,10 @@ msgstr "使用你的 API 金鑰"
 msgid "Using your API key. Free plan ends {freeUntil}."
 msgstr "正在使用你的 API 金鑰。免費方案將於 {freeUntil} 結束。"
 
+#: src/components/SharedKeyUsageMeter.tsx
+msgid "Using your own API key, no shared limit"
+msgstr ""
+
 #: src/components/vault/LoginFieldsInput.tsx
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/vault/VaultItemEditor.tsx
@@ -7067,6 +7233,7 @@ msgstr ""
 msgid "View source"
 msgstr ""
 
+#: src/components/call/CallStrip.tsx
 #: src/pages/settings-nav.ts
 #: src/pages/shell/bot-panel.tsx
 #: src/pages/SpaceSettingOverrides.tsx
@@ -7117,6 +7284,10 @@ msgstr "週三"
 #: src/lib/billing.ts
 msgid "week"
 msgstr "週"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Week"
+msgstr ""
 
 #: src/lib/cron.ts
 #: src/pages/RoutineEditor.tsx
@@ -7171,6 +7342,10 @@ msgstr "回傳內容"
 #: src/pages/RoutineEditor.tsx
 msgid "What to watch"
 msgstr "監視內容"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "When"
+msgstr ""
 
 #: src/pages/RoutineEditor.tsx
 msgid "When a webhook fires"

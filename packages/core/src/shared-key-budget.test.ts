@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatSharedKeyBudgetResetAt,
   fullWeekShareUsd,
+  parseSharedKeyMonthlyBudgetInput,
   redivideWeeklyAllotments,
   SHARED_KEY_BUDGET_TIMEZONE,
   sharedKeyBudgetPercentUsed,
@@ -165,5 +167,13 @@ describe("shared-key weekly budget math", () => {
     expect(sharedKeyBudgetPercentUsed(12.5, 25)).toBe(50);
     expect(sharedKeyBudgetPercentUsed(30, 25)).toBe(100);
     expect(sharedKeyBudgetPercentUsed(1, 0)).toBe(100);
+  });
+
+  it("formats the America/New_York reset label for the account menu", () => {
+    // Monday 00:00 America/New_York on 2026-11-09 is 05:00 UTC.
+    expect(formatSharedKeyBudgetResetAt("2026-11-09T05:00:00.000Z", "en-US")).toBe("Mon 12:00 AM");
+    expect(parseSharedKeyMonthlyBudgetInput(50)).toBe(50);
+    expect(parseSharedKeyMonthlyBudgetInput(0)).toBeNull();
+    expect(parseSharedKeyMonthlyBudgetInput(2_000_000)).toBeNull();
   });
 });

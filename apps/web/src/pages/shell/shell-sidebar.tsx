@@ -9,6 +9,7 @@ import {
   InputGroupInput,
   Sidebar,
 } from "@rakazo/ui-web";
+import { useQuery } from "@tanstack/react-query";
 import { Search, SlidersHorizontal } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
@@ -19,7 +20,7 @@ import { useBilling } from "../../components/SubscriptionGate";
 import { formatBillingDate } from "../../lib/billing";
 import type { BotsSidebarDensity } from "../../lib/bots-sidebar-density-pref";
 import { switchOrganization, useOrganizations } from "../../lib/organizations";
-import { useQueryUserId } from "../../lib/query";
+import { useQueryUserId, useSpaceQueries } from "../../lib/query";
 import type { Panel } from "../../lib/right-panel-state";
 import { useSignOut } from "../../lib/sign-out";
 import { ActivityList } from "../ActivityList";
@@ -324,6 +325,7 @@ function ShellSidebarFooter({
 }) {
   const { t, i18n } = useLingui();
   const userId = useQueryUserId();
+  const queries = useSpaceQueries();
   const { organizations, activeOrganizationId } = useOrganizations();
   const { status: billing, showPlans } = useBilling();
   const freeUntil =
@@ -340,6 +342,11 @@ function ShellSidebarFooter({
     // A failed sign-out reloads the page: reopen the menu so its error shows.
     setMenuOpen(true);
     setLogOutError(message);
+  });
+  // Load usage when the account menu opens so the shared-key meter can render.
+  const usageQuery = useQuery({
+    ...queries.usage.summary.queryOptions(),
+    enabled: menuOpen,
   });
   const { label: userName, initial: initials } = accountDisplay(user ?? {}, t`You`);
   const day = freeUntil ? formatBillingDate(freeUntil, i18n.locale || "en") : "";
@@ -369,6 +376,7 @@ function ShellSidebarFooter({
           setMenuOpen(open);
           if (!open) setLogOutError(null);
         }}
+        usageLimit={usageQuery.data?.usageLimit}
         onIntegrations={() => {
           setMenuOpen(false);
           openIntegrations();

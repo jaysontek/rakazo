@@ -1273,21 +1273,44 @@ const UsageTotalsSchema = z.object({
 export const SharedKeyWeeklyBudgetSchema = z.object({
   /** 0–100 of this user's weekly shared-key allotment already spent. */
   percentUsed: z.number().min(0).max(100),
-  spentUsd: z.number().nonnegative(),
-  weeklyCapUsd: z.number().nonnegative(),
+  /** Absolute spend; omitted for non-admins. */
+  spentUsd: z.number().nonnegative().optional(),
+  /** Weekly allotment in USD; omitted for non-admins. */
+  weeklyCapUsd: z.number().nonnegative().optional(),
   /** ISO timestamp when the America/New_York week resets. */
   resetsAt: z.string(),
   timezone: z.literal("America/New_York"),
 });
 export type SharedKeyWeeklyBudget = z.infer<typeof SharedKeyWeeklyBudgetSchema>;
 
+/** Account-menu usage meter: shared weekly bar, personal-key note, or hidden. */
+export const UsageLimitSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("shared_weekly"),
+    percentUsed: z.number().min(0).max(100),
+    resetsAt: z.string(),
+    timezone: z.literal("America/New_York"),
+  }),
+  z.object({ kind: z.literal("personal_key") }),
+  z.object({ kind: z.literal("none") }),
+]);
+export type UsageLimit = z.infer<typeof UsageLimitSchema>;
+
 export const UsageSummarySchema = UsageTotalsSchema.extend({
   runs: z.number(),
   models: z
-    .array(UsageTotalsSchema.required().extend({ provider: z.string(), model: z.string() }))
+    .array(
+      UsageTotalsSchema.extend({ provider: z.string(), model: z.string() }).extend({
+        // modelCalls is always present for per-model rows; costUsd stays optional so
+        // non-admin responses can omit dollar amounts.
+        modelCalls: z.number(),
+      }),
+    )
     .optional(),
   /** Present when this user is on the shared-key budget set and a monthly cap is configured. */
   sharedKeyWeeklyBudget: SharedKeyWeeklyBudgetSchema.nullable().optional(),
+  /** Account-menu usage view for regular users (no dollar amounts). */
+  usageLimit: UsageLimitSchema.optional(),
 });
 export type UsageSummary = z.infer<typeof UsageSummarySchema>;
 

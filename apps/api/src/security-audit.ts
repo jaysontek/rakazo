@@ -67,6 +67,11 @@ export const AUDITED_PROCEDURES: Record<string, AuditedProcedure> = {
     type: "deployment.settings.changed",
     fields: ["signupsEnabled", "computerHost"],
   },
+  "ops.setSharedKeyMonthlyBudget": {
+    type: "deployment.settings.changed",
+    kind: "shared_key_monthly_budget",
+    fields: ["monthlyCapUsd"],
+  },
   "computerProvider.update": {
     type: "credential.changed",
     kind: "computer_provider",
@@ -148,7 +153,12 @@ export function procedureSecurityEvent(
     const value = field
       .split(".")
       .reduce<unknown>((parent, key) => (isRecord(parent) ? parent[key] : undefined), fields);
-    if (typeof value === "string" || typeof value === "boolean" || value === null)
+    if (
+      typeof value === "string" ||
+      typeof value === "boolean" ||
+      typeof value === "number" ||
+      value === null
+    )
       metadata[field.split(".").at(-1)!] = value;
   }
   if (procedure === "deployment.update") {

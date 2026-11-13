@@ -501,9 +501,15 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
       })
     : undefined;
   const modelCreditsEnabled = billing?.modelCreditsEnabled ?? false;
-  // Leave a DB-only monthly cap alone when SHARED_KEY_MONTHLY_BUDGET_USD is unset (same
-  // pattern as the member list): only write the column when the env var is present.
+  // Seed the monthly cap from SHARED_KEY_MONTHLY_BUDGET_USD only when the DB has no
+  // value yet. An admin override in deployment_settings wins over later env changes.
   const sharedKeyBudgetEnvSet = process.env.SHARED_KEY_MONTHLY_BUDGET_USD !== undefined;
+  const existingSharedKeyBudget = await prisma.deploymentSettings.findUnique({
+    where: { id: "default" },
+    select: { sharedKeyMonthlyBudgetUsd: true },
+  });
+  const seedSharedKeyBudget =
+    sharedKeyBudgetEnvSet && existingSharedKeyBudget?.sharedKeyMonthlyBudgetUsd == null;
   await prisma.deploymentSettings.upsert({
     where: { id: "default" },
     create: {
@@ -515,9 +521,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
     },
     update: {
       modelCreditsEnabled,
-      ...(sharedKeyBudgetEnvSet
-        ? { sharedKeyMonthlyBudgetUsd: env.sharedKeyMonthlyBudgetUsd }
-        : {}),
+      ...(seedSharedKeyBudget ? { sharedKeyMonthlyBudgetUsd: env.sharedKeyMonthlyBudgetUsd } : {}),
     },
   });
   // When the env list is set, make the member table match it (add/remove + re-divide).
