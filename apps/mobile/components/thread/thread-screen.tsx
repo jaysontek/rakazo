@@ -34,6 +34,7 @@ import { useSplitView } from "../../lib/split-view";
 import { useIncomingShareImport, useThreadAttachments } from "../../lib/thread-attachments";
 import { useThreadBots } from "../../lib/thread-bots";
 import {
+  THREAD_HEADER_PILL_BOTTOM_INSET,
   threadColumnPadding,
   threadHeaderClearance,
   threadHeaderFloats,
@@ -57,7 +58,9 @@ import { useThreadSync } from "../../lib/thread-sync";
 import { useThreadTranscript } from "../../lib/thread-transcript";
 import { useAutoSpeakReply, useSpeakMessages, useThreadVoiceCall } from "../../lib/thread-voice";
 import { liveEndRunError } from "../../lib/thread-window";
+import { CallStripBody, useCallUserInitial } from "../CallCard";
 import { FailedSendBubble } from "../failed-send-bubble";
+import { GlassSurface } from "../glass-surface";
 import { NewestPageCards } from "../pages/page-card";
 import { RunErrorSheet } from "../run-error-sheet";
 import { SelectTextSheet } from "../select-text-sheet";
@@ -71,6 +74,8 @@ import { LoadEarlierButton, ThreadWorkingFooter } from "./thread-list-controls";
 import { ThreadMessageList } from "./thread-message-list";
 import { useLatestRowActions, useThreadRows } from "./thread-rows";
 import { useThreadRunError } from "./thread-run-error";
+
+const CALL_STRIP_GAP = 8;
 
 function isActiveStatus(status: string | undefined): boolean {
   return isRunWorking(status) || isRunWaitingOnUser(status);
@@ -92,8 +97,9 @@ export function Thread({ sessionEpoch, userId }: { sessionEpoch: number; userId:
   const { inboxShown, contentWidth: windowWidth } = useSplitView();
   const nativeHeaderHeight = useHeaderHeight();
   const headerHeight = threadHeaderFloats() ? nativeHeaderHeight : 0;
-  const headerClearance = threadHeaderClearance(headerHeight);
+  const baseHeaderClearance = threadHeaderClearance(headerHeight);
   const insets = useSafeAreaInsets();
+  const [callStripHeight, setCallStripHeight] = useState(0);
   // An unfolded or tablet window keeps messages and the composer in a centred reading column.
   const columnInsets = readableGutters(windowWidth, {
     left: inboxShown ? 0 : insets.left,
@@ -124,6 +130,22 @@ export function Thread({ sessionEpoch, userId }: { sessionEpoch: number; userId:
   const inGroup = Boolean(groupId);
   const call = useCallSession();
   const onCall = Boolean(botId) && call?.botId === botId;
+  const callUserInitial = useCallUserInitial(onCall);
+  useEffect(() => {
+    if (!onCall) setCallStripHeight(0);
+  }, [onCall]);
+  const callStripOffset = onCall && callStripHeight > 0 ? callStripHeight + CALL_STRIP_GAP : 0;
+  const headerClearance =
+    callStripOffset > 0
+      ? {
+          padding: baseHeaderClearance.padding + callStripOffset,
+          anchor: baseHeaderClearance.anchor + callStripOffset,
+          minHeight:
+            baseHeaderClearance.minHeight > 0 ? baseHeaderClearance.minHeight + callStripOffset : 0,
+        }
+      : baseHeaderClearance;
+  const callStripTop =
+    (headerHeight > 0 ? headerHeight - THREAD_HEADER_PILL_BOTTOM_INSET : 0) + CALL_STRIP_GAP;
   // The composer floats over the list, which scrolls underneath; this keeps the newest message
   // clear of it. A read-only chat has no composer.
   const [dockHeight, setDockHeight] = useState(0);
@@ -573,6 +595,43 @@ export function Thread({ sessionEpoch, userId }: { sessionEpoch: number; userId:
       >
         {/* The keyboard's padding shrinks this, so the floating composer rides above it. */}
         <View style={{ flex: 1 }}>
+          {onCall && call ? (
+            <View
+              pointerEvents="box-none"
+              style={[
+                {
+                  position: "absolute",
+                  top: callStripTop,
+                  left: 0,
+                  right: 0,
+                  zIndex: 20,
+                },
+                columnPadding,
+              ]}
+              onLayout={(event) => setCallStripHeight(event.nativeEvent.layout.height)}
+            >
+              <GlassSurface
+                shape="roundedRectangle"
+                style={{ padding: 10, borderRadius: 18 }}
+                fallbackStyle={{
+                  backgroundColor: tokens.card,
+                  borderColor: tokens.border,
+                  borderWidth: 1,
+                  borderRadius: 18,
+                }}
+              >
+                <CallStripBody
+                  botId={call.botId}
+                  botName={call.botName}
+                  botColor={call.botColor}
+                  botAvatarSet={call.botAvatarSet}
+                  muted={call.muted}
+                  initial={callUserInitial}
+                  onSettings={() => router.push("/voice")}
+                />
+              </GlassSurface>
+            </View>
+          ) : null}
           <NewestPageCards.Provider value={newestPages}>
             <ThreadMessageList
               scroll={scroll}

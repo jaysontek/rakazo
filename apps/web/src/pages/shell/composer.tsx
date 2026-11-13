@@ -31,7 +31,6 @@ import {
   useSyncExternalStore,
 } from "react";
 import { createPortal } from "react-dom";
-import { CallStrip } from "../../components/call/CallStrip";
 import {
   HoldToTalkControls,
   HoldToTalkStrip,
@@ -94,9 +93,8 @@ const ComposerBody = memo(function Composer({
   dictationTranscribe,
   voiceReady,
   onStartCall,
-  /** True when this thread's bot is the one on the call; hosts the strip and hides the dock. */
+  /** True when this thread's bot is the one on the call; hides Call and keeps Send available. */
   hostingCall,
-  onCallSettings,
   replyTarget,
   replyQuote,
   replyTargetName,
@@ -142,7 +140,6 @@ const ComposerBody = memo(function Composer({
   /** When set, Call occupies the empty-draft slot; Send returns once there is a draft. */
   onStartCall?: () => void;
   hostingCall?: boolean;
-  onCallSettings?: () => void;
   artifactTarget: ArtifactTarget;
   replyTarget?: ThreadMessage | null;
   replyQuote?: string | null;
@@ -686,9 +683,6 @@ const ComposerBody = memo(function Composer({
             textareaRef.current?.focus();
           }}
         />
-      ) : null}
-      {stripHosted && onCallSettings ? (
-        <CallStrip onSettings={onCallSettings} className="mb-2" />
       ) : null}
       {attachmentNotice ? (
         <div className="mb-3 rounded-[14px] border border-warning/40 bg-warning/10 px-4 py-2 text-[13px] text-warning">

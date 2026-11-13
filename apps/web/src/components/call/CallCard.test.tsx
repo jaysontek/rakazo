@@ -97,10 +97,13 @@ it("hides the floating dock on the matching bot thread", () => {
   expect(container.querySelector('[data-testid="call-view"]')).toBeNull();
 });
 
-it("shows a compact dock when away from the called bot", () => {
+it("shows a compact top dock when away from the called bot", () => {
   routeBotId = "other";
   render({});
-  expect(container.querySelector('[data-testid="call-view"]')).not.toBeNull();
+  const dock = container.querySelector('[data-testid="call-view"]')?.parentElement;
+  expect(dock).not.toBeNull();
+  expect(dock?.className).toContain("top-0");
+  expect(dock?.className).not.toContain("bottom-0");
 });
 
 it("hangs up on Escape without covering the composer", () => {

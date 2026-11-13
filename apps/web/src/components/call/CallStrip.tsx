@@ -94,7 +94,7 @@ function CallVoicePicker() {
 }
 
 /**
- * In-call chrome for the composer field bar: participant tiles and call controls.
+ * In-call chrome for the top of the chat: participant tiles and call controls.
  * Agent calls are audio-only — account image/initial for the user, never camera or video UI.
  * Keeps the thread visible; never covers the app as a modal.
  */

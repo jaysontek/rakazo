@@ -24,7 +24,6 @@ import {
   truncateSlashDescription,
 } from "@rakazo/core";
 import { MAX_FONT_SCALE } from "@rakazo/ui-tokens";
-import { useRouter } from "expo-router";
 import type { Ref } from "react";
 import { useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import type { ViewStyle } from "react-native";
@@ -37,14 +36,12 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { useCallSession } from "../lib/call-session";
 import type { ComposerDraftScope } from "../lib/composer-draft";
 import { readComposerDraft, writeComposerDraft } from "../lib/composer-draft";
 import { useI18n } from "../lib/i18n";
 import { useMobileTokens, useResolvedAppearance } from "../lib/native";
 import type { ComposerSnapshot } from "../lib/thread-feedback";
 import { BotAvatar } from "./bot-avatar";
-import { CallStripBody, useCallUserInitial } from "./CallCard";
 import { GlassSurface } from "./glass-surface";
 import { NativeSymbol } from "./native-symbol";
 
@@ -121,9 +118,6 @@ export function ThreadComposer({
   onSlashAction,
   onEmptied,
 }: ThreadComposerProps) {
-  const router = useRouter();
-  const call = useCallSession();
-  const userInitial = useCallUserInitial(onCall);
   const tokens = useMobileTokens();
   // A mention is plain text in the link blue; it turns bold while a backspace has it selected.
   const mentionStyle = (selected: boolean) => ({
@@ -524,30 +518,6 @@ export function ThreadComposer({
             </Pressable>
           ))}
         </ScrollView>
-      ) : null}
-      {onCall && call ? (
-        <View style={{ marginTop: 8, minWidth: 0 }}>
-          <GlassSurface
-            shape="roundedRectangle"
-            style={{ padding: 10, borderRadius: 18, minWidth: 0, overflow: "hidden" }}
-            fallbackStyle={{
-              backgroundColor: tokens.card,
-              borderColor: tokens.border,
-              borderWidth: 1,
-              borderRadius: 18,
-            }}
-          >
-            <CallStripBody
-              botId={call.botId}
-              botName={call.botName}
-              botColor={call.botColor}
-              botAvatarSet={call.botAvatarSet}
-              muted={call.muted}
-              initial={userInitial}
-              onSettings={() => router.push("/voice")}
-            />
-          </GlassSurface>
-        </View>
       ) : null}
       <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 10, marginTop: 8 }}>
         <MenuView

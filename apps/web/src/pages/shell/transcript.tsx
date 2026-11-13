@@ -72,6 +72,8 @@ export const Transcript = memo(function Transcript({
   loadingOlder,
   answerableAskIds,
   dismissableAskIds,
+  /** When a top call strip already clears the floating header, use a small gap instead. */
+  headerClearance = "header",
   running,
   workingBots,
   userBubble,
@@ -113,6 +115,7 @@ export const Transcript = memo(function Transcript({
   loadingOlder: boolean;
   answerableAskIds: Set<string>;
   dismissableAskIds: Set<string>;
+  headerClearance?: "header" | "call";
   running: boolean;
   workingBots: GroupAvatarMember[];
   /** Your bubbles take the bot's color in its own chat. */
@@ -509,7 +512,13 @@ export const Transcript = memo(function Transcript({
             following.current = false;
           }
         }}
-        className={`rk-scroll isolate flex min-h-0 flex-1 flex-col gap-2 overflow-x-hidden overflow-y-auto scroll-pt-16 scroll-pb-7 pt-20 pb-12 md:pt-[84px] md:pb-13 ${TRANSCRIPT_CONTENT_PADDING}`}
+        className={cn(
+          "rk-scroll isolate flex min-h-0 flex-1 flex-col gap-2 overflow-x-hidden overflow-y-auto scroll-pb-7 pb-12 md:pb-13",
+          headerClearance === "call"
+            ? "scroll-pt-2 pt-2 md:pt-2"
+            : "scroll-pt-16 pt-20 md:pt-[84px]",
+          TRANSCRIPT_CONTENT_PADDING,
+        )}
         style={
           userBubble
             ? ({

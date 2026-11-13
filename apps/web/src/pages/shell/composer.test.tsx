@@ -16,10 +16,6 @@ vi.mock("@lingui/react/macro", () => {
   return { useLingui: () => ({ t }), Trans: ({ children }: { children: ReactNode }) => children };
 });
 
-vi.mock("../../components/call/CallStrip", () => ({
-  CallStrip: () => <div data-testid="call-view" />,
-}));
-
 import { dictation } from "../../lib/dictation";
 import { createPageSession, PagesProvider } from "../../lib/pages";
 import { Composer } from "./composer";
@@ -668,7 +664,6 @@ describe("Composer", () => {
       phoneCallsEnabled: true,
       voiceReady: true,
       onStartCall: vi.fn(),
-      onCallSettings: vi.fn(),
     });
     expect(container?.querySelector('button[aria-label="Send"]')).toBeNull();
     const call = container?.querySelector<HTMLButtonElement>('[data-testid="call-button"]');
@@ -683,7 +678,6 @@ describe("Composer", () => {
       phoneCallsEnabled: true,
       voiceReady: true,
       onStartCall,
-      onCallSettings: vi.fn(),
     });
     type(textarea, "hello from web");
     expect(container?.querySelector('[data-testid="call-button"]')).toBeNull();
@@ -699,7 +693,6 @@ describe("Composer", () => {
       phoneCallsEnabled: true,
       voiceReady: true,
       onStartCall: vi.fn(),
-      onCallSettings: vi.fn(),
       enterToSend: false,
     });
     expect(container?.querySelector('[data-testid="call-button"]')).not.toBeNull();
@@ -709,17 +702,16 @@ describe("Composer", () => {
     expect(textarea.value).toBe("");
   });
 
-  it("hosts the call strip only when this thread's bot is on the call", () => {
+  it("hides Call while this thread's bot is on the call", () => {
     renderComposer(vi.fn(), {
       phoneCallsEnabled: true,
       onStartCall: vi.fn(),
-      onCallSettings: vi.fn(),
       hostingCall: true,
     });
-    expect(container?.querySelector('[data-testid="call-view"]')).not.toBeNull();
     expect(container?.querySelector('[data-testid="call-button"]')).toBeNull();
+    expect(container?.querySelector('button[aria-label="Send"]')).not.toBeNull();
     rerenderComposer({ hostingCall: false });
-    expect(container?.querySelector('[data-testid="call-view"]')).toBeNull();
+    expect(container?.querySelector('[data-testid="call-button"]')).not.toBeNull();
   });
 
   it("clears the draft once the message is sent", async () => {

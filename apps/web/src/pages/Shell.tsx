@@ -38,6 +38,7 @@ import {
 import { useParams } from "react-router-dom";
 import { ComputerUpdateProgress } from "../components/ComputerUpdateProgress";
 import { CallCard } from "../components/call/CallCard";
+import { CallStrip } from "../components/call/CallStrip";
 import { IncomingCall } from "../components/call/IncomingCall";
 import { PageLoading } from "../components/PageLoading";
 import { PageViewHost } from "../components/pages/PageViewHost";
@@ -1110,6 +1111,11 @@ function SpaceShell() {
             onOpenNavigation={() => setMobileSidebarOpen(true)}
             onTogglePanel={toggleChatPanel}
           />
+          {active && call?.botId === active.id ? (
+            <div className="relative z-20 shrink-0 px-3 pb-2 pt-[68px] md:px-[22px] md:pt-[76px]">
+              <CallStrip onSettings={() => openSettings("voice")} />
+            </div>
+          ) : null}
           {!active && !activeGroup && initialBotsLoaded ? (
             <div className="grid flex-1 place-items-center">
               <Button onClick={() => dialogs.setCreateBotOpen(true)}>
@@ -1133,6 +1139,7 @@ function SpaceShell() {
               loadingOlder={loadingOlder}
               answerableAskIds={answerableAskIds}
               dismissableAskIds={dismissableAskIds}
+              headerClearance={active && call?.botId === active.id ? "call" : "header"}
               running={transcriptRunning}
               workingBots={workingBots}
               userBubble={userBubble}
@@ -1217,7 +1224,6 @@ function SpaceShell() {
                   : undefined
               }
               hostingCall={Boolean(active && call?.botId === active.id)}
-              onCallSettings={() => openSettings("voice")}
               artifactTarget={transcriptArtifactTarget}
               replyTarget={composer.replyTarget}
               replyQuote={composer.replyQuote}

@@ -24,11 +24,11 @@ export function CallCard({ onSettings }: { onSettings: () => void }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onCall]);
-  // Composer hosts the strip only for this call's bot; dock only when that strip is not up.
+  // Chat chrome hosts the strip only for this call's bot; dock only when that strip is not up.
   // Escape still hangs up above even when this dock is hidden.
   if (!call || botId === call.botId) return null;
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center p-3 pb-[max(env(safe-area-inset-bottom),12px)] md:inset-x-auto md:end-4 md:bottom-4 md:justify-end md:p-0">
+    <div className="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center p-3 pt-[max(env(safe-area-inset-top),12px)] md:inset-x-auto md:end-4 md:top-4 md:justify-end md:p-0">
       <CallStrip
         onSettings={onSettings}
         className="pointer-events-auto w-full max-w-md shadow-lg md:w-[360px]"
