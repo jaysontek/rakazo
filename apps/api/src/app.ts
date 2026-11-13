@@ -146,6 +146,7 @@ import {
   runAsSystem,
   securityEventRetentionDays,
   verifyContentKeys,
+  withSecurityRequest,
 } from "@rakazo/db";
 import type { Logger } from "@rakazo/logging";
 import {
@@ -183,6 +184,7 @@ import { loadEnv } from "./env.js";
 import { healthRoutes } from "./health.js";
 import { homeRetentionSweep } from "./home-retention.js";
 import { startHourlySweep } from "./hourly-sweep.js";
+import { enforceImpersonationSession } from "./impersonation.js";
 import { trackInFlightRequests } from "./in-flight-requests.js";
 import { mountLocalComputerHost } from "./local-settings.js";
 import { marketingEmailRoutes, sendWelcomeEmail } from "./marketing-email.js";
@@ -1118,6 +1120,15 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
     // The bearer plugin turns a signed `Authorization: Bearer` into the session cookie.
     const session = await auth.api.getSession({ headers: request.headers });
     if (!session?.user) return null;
+    const enforcement = await enforceImpersonationSession(
+      { prisma, env },
+      session.session.id,
+      {
+        ip: request.headers.get("x-rakazo-client-ip"),
+        userAgent: request.headers.get("user-agent"),
+      },
+    );
+    if (!enforcement.ok) return null;
     const actor = await actorFromMembership(
       requireMembership(
         prisma,
@@ -1126,7 +1137,13 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
         session.session.id,
       ),
     );
-    return actor && { actor, sessionId: session.session.id };
+    return (
+      actor && {
+        actor,
+        sessionId: session.session.id,
+        impersonatedBy: enforcement.impersonatedBy,
+      }
+    );
   };
   const sessionActor = async (request: Request) => (await requestSession(request))?.actor ?? null;
   if (userDeviceHub && userDevices) {
@@ -1166,25 +1183,40 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
     if (actor) {
       enrichLogContext({ "user.id": actor.userId, "space.id": actor.spaceId });
     }
-    const { matched, response } = await rpc.handle(c.req.raw, {
-      prefix: "/rpc",
-      context: {
-        actor,
-        sessionId: session?.sessionId,
-        signal: c.req.raw.signal,
-        clientIp: requestClientIp(c),
-        // Same user in the same space, so leaving the space also ends a stream.
-        // A database failure rejects this check; only a missing membership is unauthorized.
-        stillAuthorized: async () => {
-          const current = await sessionActor(c.req.raw);
-          return Boolean(
-            actor && current?.userId === actor.userId && current.spaceId === actor.spaceId,
-          );
+    const handle = async () => {
+      const { matched, response } = await rpc.handle(c.req.raw, {
+        prefix: "/rpc",
+        context: {
+          actor,
+          sessionId: session?.sessionId,
+          signal: c.req.raw.signal,
+          clientIp: requestClientIp(c),
+          impersonatedBy: session?.impersonatedBy ?? null,
+          // Same user in the same space, so leaving the space also ends a stream.
+          // A database failure rejects this check; only a missing membership is unauthorized.
+          stillAuthorized: async () => {
+            const current = await sessionActor(c.req.raw);
+            return Boolean(
+              actor && current?.userId === actor.userId && current.spaceId === actor.spaceId,
+            );
+          },
         },
-      },
-    });
-    if (matched) return c.newResponse(response.body, response);
-    await next();
+      });
+      if (matched) return c.newResponse(response.body, response);
+      await next();
+      return undefined;
+    };
+    if (session?.impersonatedBy) {
+      return withSecurityRequest(
+        {
+          ip: requestClientIp(c),
+          userAgent: c.req.header("user-agent"),
+          impersonatedBy: session.impersonatedBy,
+        },
+        handle,
+      );
+    }
+    return handle();
   });
   mountAccountExportRoute(app, { prisma, auth, artifacts, home });
   mountAuditExportRoute(app, { prisma, sessionActor });

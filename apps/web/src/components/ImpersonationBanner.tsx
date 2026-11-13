@@ -3,7 +3,6 @@ import { buttonVariants } from "@rakazo/ui-web";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useSpaceQueries } from "../lib/query";
 import { rpc } from "../lib/rpc";
 import { errorText } from "../lib/user-error";
 
@@ -11,9 +10,11 @@ import { errorText } from "../lib/user-error";
 export function ImpersonationBanner() {
   const { t } = useLingui();
   const navigate = useNavigate();
-  const queries = useSpaceQueries();
   const queryClient = useQueryClient();
-  const me = useQuery(queries.me.queryOptions());
+  const me = useQuery({
+    queryKey: ["me", "impersonation-banner"],
+    queryFn: () => rpc.me(),
+  });
   const [stopping, setStopping] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,7 +29,7 @@ export function ImpersonationBanner() {
     setError(null);
     try {
       const next = await rpc.ops.stopImpersonation();
-      queryClient.setQueryData(queries.me.queryKey(), next);
+      queryClient.setQueryData(["me", "impersonation-banner"], next);
       await queryClient.invalidateQueries();
       navigate("/app", { replace: true });
     } catch (err) {

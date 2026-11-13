@@ -128,7 +128,10 @@ model Session {
   userId               String
   user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   activeOrganizationId String?
+  /// Real admin user id while this session is viewing as `userId`.
   impersonatedBy       String?
+  /// Hard cap for impersonation; independent of better-auth session refresh.
+  impersonationExpiresAt DateTime?
 
   @@unique([token])
   @@index([userId])
@@ -138,8 +141,9 @@ model Session {
 model AdminGrant {
   userId      String   @id
   user        User     @relation("AdminGrantUser", fields: [userId], references: [id], onDelete: Cascade)
-  grantedById String
-  grantedBy   User     @relation("AdminGrantGrantedBy", fields: [grantedById], references: [id], onDelete: Cascade)
+  /// Nullable so deleting the granting admin keeps the grant (and audit history).
+  grantedById String?
+  grantedBy   User?    @relation("AdminGrantGrantedBy", fields: [grantedById], references: [id], onDelete: SetNull)
   createdAt   DateTime @default(now())
 
   @@map("admin_grants")
@@ -795,8 +799,9 @@ model SharedKeyAllotmentTransfer {
   toUserId    String
   toUser      User      @relation("SharedKeyTransferTo", fields: [toUserId], references: [id], onDelete: Cascade)
   amountUsd   Float
-  createdById String
-  createdBy   User      @relation("SharedKeyTransferCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  /// Nullable so deleting the creating admin keeps the transfer row (audit history).
+  createdById String?
+  createdBy   User?     @relation("SharedKeyTransferCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   createdAt   DateTime  @default(now())
   reversedAt  DateTime?
   /// Set when a reverse could only partially restore the receiver (they had already spent).

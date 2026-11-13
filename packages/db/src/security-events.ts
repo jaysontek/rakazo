@@ -22,17 +22,21 @@ export interface SecurityEventInput {
   metadata?: Record<string, string | number | boolean | null | undefined>;
 }
 
-const securityRequest = new AsyncLocalStorage<{ ip?: string; userAgent?: string }>();
+type SecurityRequestStore = {
+  ip?: string;
+  userAgent?: string;
+  /** Real admin user id while the request runs under an impersonated session. */
+  impersonatedBy?: string;
+};
+
+const securityRequest = new AsyncLocalStorage<SecurityRequestStore>();
 
 /** Keep caller details available only to security events within this request. */
-export function withSecurityRequest<T>(
-  caller: { ip?: string; userAgent?: string },
-  fn: () => T,
-): T {
+export function withSecurityRequest<T>(caller: SecurityRequestStore, fn: () => T): T {
   return securityRequest.run(caller, fn);
 }
 
-export function securityRequestCaller(): { ip?: string; userAgent?: string } | undefined {
+export function securityRequestCaller(): SecurityRequestStore | undefined {
   return securityRequest.getStore();
 }
 
@@ -70,13 +74,20 @@ export function installSecurityEventStore(db: SecurityEventDb | undefined): void
 export async function recordSecurityEvent(input: SecurityEventInput): Promise<void> {
   const context = getLogContext();
   const caller = securityRequest.getStore();
+  const impersonatedBy =
+    (typeof input.metadata?.impersonatedBy === "string"
+      ? input.metadata.impersonatedBy
+      : undefined) ?? caller?.impersonatedBy;
   const event = {
     type: input.type,
     userId: bounded(input.userId ?? context["user.id"], 128),
     spaceId: bounded(input.spaceId ?? context["space.id"], 128),
     ip: bounded(input.ip ?? caller?.ip, 64),
     userAgent: bounded(input.userAgent ?? caller?.userAgent, 512),
-    metadata: securityEventMetadata(input.metadata),
+    metadata: securityEventMetadata({
+      ...input.metadata,
+      ...(impersonatedBy ? { impersonatedBy } : {}),
+    }),
   };
   const level = FAILURE_TYPES.has(event.type) ? "warn" : "info";
   getLogger()[level]("security.event", {

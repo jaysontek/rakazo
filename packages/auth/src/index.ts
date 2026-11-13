@@ -438,6 +438,27 @@ export function createAuth(prisma: PrismaClient, env: AuthEnv) {
     ],
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
+        // While impersonating, better-auth mutations (passkey, link-social, revoke-sessions,
+        // etc.) stay closed. Only session read and sign-out remain; stop uses our RPC.
+        const impersonationAllowedAuth = new Set(["/get-session", "/sign-out"]);
+        if (ctx.path && !impersonationAllowedAuth.has(ctx.path) && prisma.session?.findUnique) {
+          const hooked = await sessionForAuthHook(ctx).catch(() => null);
+          const sessionId = hooked?.session?.id;
+          if (sessionId) {
+            const row = await prisma.session
+              .findUnique({
+                where: { id: sessionId },
+                select: { impersonatedBy: true },
+              })
+              .catch(() => null);
+            if (row?.impersonatedBy) {
+              throw new APIError("FORBIDDEN", {
+                message: "Not allowed while impersonating",
+                code: "IMPERSONATION_READ_ONLY",
+              });
+            }
+          }
+        }
         if (
           ctx.path === "/sign-in/social" &&
           ctx.body?.provider === "oidc" &&
@@ -648,6 +669,47 @@ export function createAuth(prisma: PrismaClient, env: AuthEnv) {
         },
       },
       session: {
+        update: {
+          before: async (session) => {
+            // Session refresh must not push expiresAt past the impersonation hard cap.
+            if (!session.id || session.expiresAt === undefined || !prisma.session?.findUnique) {
+              return;
+            }
+            const current = await prisma.session
+              .findUnique({
+                where: { id: session.id },
+                select: {
+                  impersonatedBy: true,
+                  impersonationExpiresAt: true,
+                  expiresAt: true,
+                },
+              })
+              .catch(() => null);
+            if (!current?.impersonatedBy) return;
+            const { expiresAt: _ignored, impersonationExpiresAt: _cap, ...rest } = session as {
+              expiresAt?: Date;
+              impersonationExpiresAt?: Date | null;
+              id?: string;
+              [key: string]: unknown;
+            };
+            const capped =
+              current.impersonationExpiresAt != null
+                ? new Date(
+                    Math.min(
+                      current.expiresAt.getTime(),
+                      current.impersonationExpiresAt.getTime(),
+                    ),
+                  )
+                : current.expiresAt;
+            return {
+              data: {
+                ...rest,
+                expiresAt: capped,
+                impersonationExpiresAt: current.impersonationExpiresAt,
+              },
+            };
+          },
+        },
         create: {
           before: async (session, ctx) => {
             // The auth adapter can still be inside the signup transaction.

@@ -7,10 +7,10 @@ import {
   removeAdminGrant,
   requireMembership,
   reverseSharedKeyAllotmentTransfer,
+  runAsSystemInTransaction,
   setSharedKeyMonthlyBudgetUsd,
   transferSharedKeyAllotment,
 } from "@rakazo/db";
-import { isAdmin } from "../admins.js";
 import {
   requireNotImpersonating,
   startImpersonation,
@@ -45,9 +45,13 @@ export function opsRoutes(ctx: RouterContext) {
     await requireOpsDashboardAccess(deps, context.actor.userId, context.clientIp);
   }
 
-  const sharedGoogleApiKey =
-    deps.env.defaultProvider === "google" ? (deps.env.deploymentModelKey ?? null) : null;
-  const envBootstrapAdmins = deps.env.adminEmails ?? [];
+  function sharedGoogleApiKey(): string | null {
+    return deps.env?.defaultProvider === "google" ? (deps.env.deploymentModelKey ?? null) : null;
+  }
+
+  function envBootstrapAdmins(): string[] {
+    return deps.env?.adminEmails ?? [];
+  }
 
   return {
     ops: {
@@ -58,16 +62,16 @@ export function opsRoutes(ctx: RouterContext) {
           deps.prisma,
           {
             degraded: secretsDegraded,
-            revision: deps.env.gitSha ?? null,
-            runtime: deps.env.agentRuntime,
-            sandbox: deps.env.sandboxProvider,
+            revision: deps.env?.gitSha ?? null,
+            runtime: deps.env?.agentRuntime,
+            sandbox: deps.env?.sandboxProvider,
           },
           undefined,
-          deps.env.sharedKeyMonthlyBudgetUsd ?? null,
+          deps.env?.sharedKeyMonthlyBudgetUsd ?? null,
           {
             secrets: deps.secrets,
-            sharedGoogleApiKey,
-            envBootstrapAdmins,
+            sharedGoogleApiKey: sharedGoogleApiKey(),
+            envBootstrapAdmins: envBootstrapAdmins(),
           },
         );
       }),
@@ -120,47 +124,65 @@ export function opsRoutes(ctx: RouterContext) {
       ),
       listAdminGrants: authed.ops.listAdminGrants.handler(async ({ context }) => {
         await gate(context);
-        return listAdminGrants(deps.prisma, envBootstrapAdmins);
+        return listAdminGrants(deps.prisma, envBootstrapAdmins());
       }),
       addAdminGrant: authed.ops.addAdminGrant.handler(async ({ context, input }) => {
         await gate(context);
         let grant;
         try {
-          grant = await addAdminGrant(
-            deps.prisma,
-            { userId: input.userId, grantedById: context.actor.userId },
-            envBootstrapAdmins,
-          );
+          grant = await deps.prisma.$transaction(async (tx) => {
+            const created = await addAdminGrant(
+              tx as typeof deps.prisma,
+              { userId: input.userId, grantedById: context.actor.userId },
+              envBootstrapAdmins(),
+            );
+            await runAsSystemInTransaction(tx, "append a security event", () =>
+              (tx as typeof deps.prisma).securityEvent.create({
+                data: {
+                  type: "ops.admin_grant.added",
+                  userId: context.actor.userId,
+                  spaceId: context.actor.spaceId,
+                  metadata: {
+                    procedure: "ops.addAdminGrant",
+                    targetUserId: created.userId,
+                  },
+                },
+              }),
+            );
+            return created;
+          });
         } catch (error) {
           badRequest(error);
         }
-        await recordSecurityEvent({
-          type: "ops.admin_grant.added",
-          userId: context.actor.userId,
-          spaceId: context.actor.spaceId,
-          metadata: {
-            procedure: "ops.addAdminGrant",
-            targetUserId: grant.userId,
-          },
-        });
         return grant;
       }),
       removeAdminGrant: authed.ops.removeAdminGrant.handler(async ({ context, input }) => {
         await gate(context);
         try {
-          await removeAdminGrant(deps.prisma, input.userId, envBootstrapAdmins);
+          await deps.prisma.$transaction(async (tx) => {
+            await removeAdminGrant(
+              tx as typeof deps.prisma,
+              input.userId,
+              envBootstrapAdmins(),
+              context.actor.userId,
+            );
+            await runAsSystemInTransaction(tx, "append a security event", () =>
+              (tx as typeof deps.prisma).securityEvent.create({
+                data: {
+                  type: "ops.admin_grant.removed",
+                  userId: context.actor.userId,
+                  spaceId: context.actor.spaceId,
+                  metadata: {
+                    procedure: "ops.removeAdminGrant",
+                    targetUserId: input.userId,
+                  },
+                },
+              }),
+            );
+          });
         } catch (error) {
           badRequest(error);
         }
-        await recordSecurityEvent({
-          type: "ops.admin_grant.removed",
-          userId: context.actor.userId,
-          spaceId: context.actor.spaceId,
-          metadata: {
-            procedure: "ops.removeAdminGrant",
-            targetUserId: input.userId,
-          },
-        });
         return { ok: true as const };
       }),
       startImpersonation: authed.ops.startImpersonation.handler(async ({ context, input }) => {
@@ -170,15 +192,8 @@ export function opsRoutes(ctx: RouterContext) {
           sessionId: context.sessionId,
           adminUserId: context.actor.userId,
           targetUserId: input.userId,
-        });
-        await recordSecurityEvent({
-          type: "ops.impersonation.started",
-          userId: context.actor.userId,
           spaceId: context.actor.spaceId,
-          metadata: {
-            procedure: "ops.startImpersonation",
-            targetUserId: input.userId,
-          },
+          ip: context.clientIp,
         });
         const targetActor = await requireMembership(
           deps.prisma,
@@ -190,6 +205,7 @@ export function opsRoutes(ctx: RouterContext) {
       }),
       stopImpersonation: authed.ops.stopImpersonation.handler(async ({ context }) => {
         // While impersonating, actor.userId is the target — do not use the ops gate.
+        // Always allow exit; do not re-check that the impersonator is still an admin.
         if (!context.sessionId) throw new ORPCError("UNAUTHORIZED");
         const session = await deps.prisma.session.findUnique({
           where: { id: context.sessionId },
@@ -198,27 +214,21 @@ export function opsRoutes(ctx: RouterContext) {
         if (!session?.impersonatedBy) {
           throw new ORPCError("BAD_REQUEST", { message: "Not impersonating" });
         }
-        if (!(await isAdmin(deps, session.impersonatedBy))) {
-          throw new ORPCError("FORBIDDEN", { message: "Admins only" });
-        }
-        const { adminUserId, targetUserId } = await stopImpersonation(deps, {
+        const { adminUserId, endedSession } = await stopImpersonation(deps, {
           sessionId: context.sessionId,
+          expectedAdminUserId: session.impersonatedBy,
+          spaceId: context.actor.spaceId,
+          ip: context.clientIp,
         });
+        if (endedSession) {
+          throw new ORPCError("UNAUTHORIZED", { message: "Session ended" });
+        }
         const adminActor = await requireMembership(
           deps.prisma,
           adminUserId,
           null,
           context.sessionId,
         );
-        await recordSecurityEvent({
-          type: "ops.impersonation.stopped",
-          userId: adminUserId,
-          spaceId: adminActor.spaceId,
-          metadata: {
-            procedure: "ops.stopImpersonation",
-            targetUserId,
-          },
-        });
         return meDto(deps, adminActor, context.sessionId);
       }),
       transferSharedKeyAllotment: authed.ops.transferSharedKeyAllotment.handler(

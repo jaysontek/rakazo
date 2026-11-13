@@ -82,6 +82,12 @@ it("refuses a signed-out caller before querying the board", async () => {
 it.each([false, true])("includes the board capability in me (%s)", async (ticketBoardEnabled) => {
   const prisma = {
     user: {
+      findUnique: vi.fn(async () => ({
+        email: "user@rakazo.test",
+        emailVerified: true,
+        deactivatedAt: null,
+        adminGrant: null,
+      })),
       findUniqueOrThrow: vi.fn(async () => ({
         email: "user@rakazo.test",
         name: "Test",
@@ -89,6 +95,7 @@ it.each([false, true])("includes the board capability in me (%s)", async (ticket
         secrets: [],
       })),
     },
+    session: { findUnique: vi.fn(async () => ({ impersonatedBy: null, expiresAt: new Date() })) },
     userModelPreference: { findFirst: vi.fn(async () => null) },
     spaceSettingOverride: { findUnique: vi.fn(async () => null) },
     userModelRoleChoice: { findMany: vi.fn(async () => []) },

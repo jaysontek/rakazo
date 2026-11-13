@@ -1,6 +1,7 @@
 import { sharedKeyWeekStart } from "@rakazo/core";
 import type { PrismaClient } from "./client.js";
 import { Prisma } from "./client.js";
+import { isHiddenOpsEmail } from "./ops-email-filter.js";
 
 type TransferPrisma = Pick<
   PrismaClient,
@@ -8,6 +9,7 @@ type TransferPrisma = Pick<
   | "sharedKeyWeekAllotment"
   | "sharedKeyBudgetMember"
   | "usageRecord"
+  | "user"
   | "$transaction"
   | "$queryRaw"
 >;
@@ -27,7 +29,7 @@ export type AllotmentTransferRow = {
   fromUserId: string;
   toUserId: string;
   amountUsd: number;
-  createdById: string;
+  createdById: string | null;
   createdAt: string;
   reversedAt: string | null;
   reverseNote: string | null;
@@ -47,7 +49,7 @@ function toRow(row: {
   fromUserId: string;
   toUserId: string;
   amountUsd: number;
-  createdById: string;
+  createdById: string | null;
   createdAt: Date;
   reversedAt: Date | null;
   reverseNote: string | null;
@@ -63,6 +65,23 @@ function toRow(row: {
     reversedAt: row.reversedAt?.toISOString() ?? null,
     reverseNote: row.reverseNote,
   };
+}
+
+async function assertTransferPartiesVisible(
+  prisma: Pick<TransferPrisma, "user">,
+  fromUserId: string,
+  toUserId: string,
+): Promise<void> {
+  const users = await prisma.user.findMany({
+    where: { id: { in: [fromUserId, toUserId] } },
+    select: { id: true, email: true },
+  });
+  if (users.length !== 2) throw new Error("Both users must exist");
+  for (const user of users) {
+    if (isHiddenOpsEmail(user.email)) {
+      throw new Error("Cannot transfer to or from a hidden ops account");
+    }
+  }
 }
 
 async function spentSharedKeyUsd(
@@ -91,6 +110,7 @@ export async function transferSharedKeyAllotment(
   input: { fromUserId: string; toUserId: string; createdById: string; now?: Date },
 ): Promise<AllotmentTransferRow> {
   if (input.fromUserId === input.toUserId) throw new Error("Cannot transfer to the same user");
+  await assertTransferPartiesVisible(prisma, input.fromUserId, input.toUserId);
   const now = input.now ?? new Date();
   const weekStart = sharedKeyWeekStart(now);
   return prisma.$transaction(async (tx) => {
@@ -139,7 +159,7 @@ function toRowDto(row: {
   fromUserId: string;
   toUserId: string;
   amountUsd: number;
-  createdById: string;
+  createdById: string | null;
   createdAt: Date;
   reversedAt: Date | null;
   reverseNote: string | null;
@@ -184,7 +204,7 @@ export async function reverseSharedKeyAllotmentTransfer(
     });
     await tx.sharedKeyWeekAllotment.update({
       where: { weekStart_userId: { weekStart, userId: transfer.fromUserId } },
-      data: { allotmentUsd: fromRow.allotmentUsd + transfer.amountUsd },
+      data: { allotmentUsd: fromRow.allotmentUsd + restored },
     });
     const reverseNote = clamped
       ? `Receiver had already spent or reserved part of the transfer; restored $${restored.toFixed(2)} of $${transfer.amountUsd.toFixed(2)}.`

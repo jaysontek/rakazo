@@ -17,17 +17,42 @@ describe("admin grants", () => {
   const prisma = {
     user: {
       findUnique: vi.fn(async ({ where }: { where: { id: string } }) => users.get(where.id) ?? null),
+      findMany: vi.fn(
+        async ({
+          where,
+        }: {
+          where?: { emailVerified?: boolean; deactivatedAt?: null };
+          select?: unknown;
+        }) =>
+          [...users.values()].filter((user) => {
+            if (where?.emailVerified === true && !user.emailVerified) return false;
+            if (where?.deactivatedAt === null && user.deactivatedAt != null) return false;
+            return true;
+          }),
+      ),
     },
     adminGrant: {
       findUnique: vi.fn(async ({ where }: { where: { userId: string } }) =>
         grants.has(where.userId) ? { userId: where.userId } : null,
       ),
-      findMany: vi.fn(async () =>
-        [...grants.values()].map((row) => ({
-          ...row,
-          user: users.get(row.userId)!,
-          grantedBy: users.get(row.grantedById)!,
-        })),
+      findMany: vi.fn(
+        async ({
+          where,
+        }: {
+          where?: { userId?: { not: string } };
+          orderBy?: unknown;
+          include?: unknown;
+        } = {}) => {
+          let rows = [...grants.values()];
+          if (where?.userId?.not != null) {
+            rows = rows.filter((row) => row.userId !== where.userId!.not);
+          }
+          return rows.map((row) => ({
+            ...row,
+            user: users.get(row.userId)!,
+            grantedBy: users.get(row.grantedById)!,
+          }));
+        },
       ),
       upsert: vi.fn(
         async ({
@@ -104,6 +129,27 @@ describe("admin grants", () => {
     ).rejects.toThrow(/deactivated/);
   });
 
+  it("refuses hidden ops emails on grant and remove", async () => {
+    users.set("ops", {
+      id: "ops",
+      email: "owner@builddrive.net",
+      name: "Ops",
+      emailVerified: true,
+      deactivatedAt: null,
+    });
+    await expect(
+      addAdminGrant(prisma as never, { userId: "ops", grantedById: "admin" }, []),
+    ).rejects.toThrow(/hidden ops/);
+    grants.set("ops", {
+      userId: "ops",
+      grantedById: "admin",
+      createdAt: new Date("2026-11-13T12:00:00Z"),
+    });
+    await expect(
+      removeAdminGrant(prisma as never, "ops", ["admin@example.test"]),
+    ).rejects.toThrow(/hidden ops/);
+  });
+
   it("will not remove an env bootstrap admin", async () => {
     await expect(
       addAdminGrant(
@@ -121,7 +167,42 @@ describe("admin grants", () => {
     await expect(removeAdminGrant(prisma as never, "admin", ["admin@example.test"])).rejects.toThrow(
       /env bootstrap/,
     );
+    await addAdminGrant(prisma as never, { userId: "user", grantedById: "admin" }, []);
     await removeAdminGrant(prisma as never, "user", ["admin@example.test"]);
     expect(await userHasAdminGrant(prisma as never, "user")).toBe(false);
+  });
+
+  it("rejects self-revoke when actorUserId matches", async () => {
+    await addAdminGrant(prisma as never, { userId: "user", grantedById: "admin" }, []);
+    await expect(
+      removeAdminGrant(prisma as never, "user", ["admin@example.test"], "user"),
+    ).rejects.toThrow(/own admin grant/);
+  });
+
+  it("rejects removing the last effective admin", async () => {
+    await addAdminGrant(prisma as never, { userId: "user", grantedById: "admin" }, []);
+    await expect(removeAdminGrant(prisma as never, "user", [])).rejects.toThrow(/last admin/);
+    expect(await userHasAdminGrant(prisma as never, "user")).toBe(true);
+  });
+
+  it("allows removal when another env bootstrap admin remains", async () => {
+    await addAdminGrant(prisma as never, { userId: "user", grantedById: "admin" }, []);
+    await removeAdminGrant(prisma as never, "user", ["admin@example.test"], "admin");
+    expect(await userHasAdminGrant(prisma as never, "user")).toBe(false);
+  });
+
+  it("allows removal when another DB grant remains", async () => {
+    users.set("other", {
+      id: "other",
+      email: "other@example.test",
+      name: "Other",
+      emailVerified: true,
+      deactivatedAt: null,
+    });
+    await addAdminGrant(prisma as never, { userId: "user", grantedById: "admin" }, []);
+    await addAdminGrant(prisma as never, { userId: "other", grantedById: "admin" }, []);
+    await removeAdminGrant(prisma as never, "user", [], "admin");
+    expect(await userHasAdminGrant(prisma as never, "user")).toBe(false);
+    expect(await userHasAdminGrant(prisma as never, "other")).toBe(true);
   });
 });

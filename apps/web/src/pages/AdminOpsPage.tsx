@@ -147,23 +147,31 @@ function BudgetSection({ data, onCapSaved }: { data: OpsOverview; onCapSaved: ()
     budget.monthlyCapUsd != null ? String(budget.monthlyCapUsd) : "",
   );
   const [saving, setSaving] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setDraft(budget.monthlyCapUsd != null ? String(budget.monthlyCapUsd) : "");
   }, [budget.monthlyCapUsd]);
 
-  async function saveCap() {
+  function requestSaveCap() {
     const value = Number(draft);
     if (!Number.isFinite(value) || value <= 0 || value > 1_000_000) {
       setError(t`Enter a positive amount up to $1,000,000`);
       return;
     }
+    setError(null);
+    setConfirmOpen(true);
+  }
+
+  async function confirmSaveCap() {
+    const value = Number(draft);
     setSaving(true);
     setError(null);
     try {
       const result = await rpc.ops.setSharedKeyMonthlyBudget({ monthlyCapUsd: value });
       setDraft(String(result.monthlyCapUsd));
+      setConfirmOpen(false);
       onCapSaved();
     } catch (err) {
       setError(errorText(err, "Could not save monthly cap"));
@@ -207,11 +215,34 @@ function BudgetSection({ data, onCapSaved }: { data: OpsOverview; onCapSaved: ()
           type="button"
           className={buttonVariants({ variant: "outline", size: "sm" })}
           disabled={saving}
-          onClick={() => void saveCap()}
+          onClick={() => requestSaveCap()}
         >
           {saving ? <Spinner className="size-4" /> : <Trans>Save</Trans>}
         </button>
       </div>
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              <Trans>Save monthly shared-key cap?</Trans>
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              <Trans>
+                This sets the deployment monthly cap for the shared Gemini key to{" "}
+                {money(Number(draft) || 0)}.
+              </Trans>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={saving}>
+              <Trans>Cancel</Trans>
+            </AlertDialogCancel>
+            <AlertDialogAction disabled={saving} onClick={() => void confirmSaveCap()}>
+              <Trans>Save</Trans>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       {error ? (
         <p role="alert" className="text-sm text-destructive">
           {error}
@@ -553,19 +584,22 @@ function AdminGrantsSection({ data, onChanged }: { data: OpsOverview; onChanged:
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [removeTarget, setRemoveTarget] = useState<(typeof grants)[number] | null>(null);
+  const [addConfirmOpen, setAddConfirmOpen] = useState(false);
   const candidateIds = candidates.map((account) => account.userId).join("\0");
+  const addCandidate = candidates.find((account) => account.userId === userId) ?? null;
 
   useEffect(() => {
     const ids = candidateIds ? candidateIds.split("\0") : [];
     setUserId((current) => (ids.includes(current) ? current : (ids[0] ?? "")));
   }, [candidateIds]);
 
-  async function addGrant() {
+  async function confirmAddGrant() {
     if (!userId) return;
     setBusy("add");
     setError(null);
     try {
       await rpc.ops.addAdminGrant({ userId });
+      setAddConfirmOpen(false);
       onChanged();
     } catch (err) {
       setError(errorText(err, t`Could not add admin`));
@@ -644,16 +678,48 @@ function AdminGrantsSection({ data, onChanged }: { data: OpsOverview; onChanged:
             type="button"
             className={buttonVariants({ variant: "outline", size: "sm" })}
             disabled={busy !== null || !userId}
-            onClick={() => void addGrant()}
+            onClick={() => {
+              setError(null);
+              setAddConfirmOpen(true);
+            }}
           >
             {busy === "add" ? <Spinner className="size-4" /> : <Trans>Grant</Trans>}
           </button>
         </div>
       ) : null}
-      {error && !removeTarget ? (
+      {error && !removeTarget && !addConfirmOpen ? (
         <p role="alert" className="text-sm text-destructive">
           {error}
         </p>
+      ) : null}
+
+      {addConfirmOpen && addCandidate ? (
+        <AlertDialog
+          open
+          onOpenChange={(open) => {
+            if (!open && busy === null) setAddConfirmOpen(false);
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                <Trans>Grant admin to {accountLabel(addCandidate)}?</Trans>
+              </AlertDialogTitle>
+              <AlertDialogDescription className="sr-only">
+                <Trans>Grant admin to {accountLabel(addCandidate)}?</Trans>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={busy !== null}>
+                <Trans>Cancel</Trans>
+              </AlertDialogCancel>
+              <AlertDialogAction disabled={busy !== null} onClick={() => void confirmAddGrant()}>
+                {busy === "add" ? <Trans>Granting…</Trans> : <Trans>Grant</Trans>}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       ) : null}
 
       {removeTarget ? (

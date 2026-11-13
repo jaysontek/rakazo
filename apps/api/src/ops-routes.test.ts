@@ -26,12 +26,24 @@ const users = [
 function makeDeps(allowlist = ["192.168.140.0/24"]): RouterDeps {
   const prisma = {
     user: {
-      findUnique: async ({ where }: { where: { id: string } }) =>
-        users.find((user) => user.id === where.id) ?? null,
+      findUnique: async ({ where }: { where: { id: string } }) => {
+        const user = users.find((row) => row.id === where.id);
+        return user
+          ? { ...user, deactivatedAt: null, adminGrant: null, name: user.email }
+          : null;
+      },
       findMany: async () => [],
     },
     session: {
-      findUnique: async () => ({ impersonatedBy: null }),
+      findUnique: async () => ({
+        impersonatedBy: null,
+        impersonationExpiresAt: null,
+        expiresAt: new Date(),
+        userId: "admin",
+      }),
+    },
+    securityEvent: {
+      create: async () => ({}),
     },
     adminGrant: {
       findMany: async () => [],
@@ -182,5 +194,26 @@ describe("ops dashboard routes", () => {
     await expect(admin.ops.setSharedKeyMonthlyBudget({ monthlyCapUsd: 0 })).rejects.toMatchObject({
       code: "BAD_REQUEST",
     });
+  });
+
+  it("denies mutations while impersonating via the central allowlist", async () => {
+    const deps = makeDeps();
+    const client = createRouterClient(createRouter(deps), {
+      context: {
+        actor: userActor,
+        clientIp: "192.168.140.10",
+        sessionId: "session-1",
+        impersonatedBy: "admin",
+      },
+    });
+    const denied = { code: "FORBIDDEN", message: "Not allowed while impersonating" };
+    await expect(client.ops.startImpersonation({ userId: "user" })).rejects.toMatchObject(denied);
+    await expect(client.ops.setSharedKeyMonthlyBudget({ monthlyCapUsd: 10 })).rejects.toMatchObject(
+      denied,
+    );
+    await expect(client.preferences.update({ locale: "en" } as never)).rejects.toMatchObject(
+      denied,
+    );
+    await expect(client.usage.list()).resolves.toBeTruthy();
   });
 });

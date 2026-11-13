@@ -34,7 +34,12 @@ export async function meDto(
   const session = sessionId
     ? await deps.prisma.session.findUnique({
         where: { id: sessionId },
-        select: { impersonatedBy: true, expiresAt: true, userId: true },
+        select: {
+          impersonatedBy: true,
+          impersonationExpiresAt: true,
+          expiresAt: true,
+          userId: true,
+        },
       })
     : null;
   const impersonatedBy = session?.impersonatedBy ?? null;
@@ -74,7 +79,11 @@ export async function meDto(
           targetUserId: actor.userId,
           targetName: user.name,
           targetEmail: user.email,
-          expiresAt: (session?.expiresAt ?? new Date()).toISOString(),
+          expiresAt: (
+            session?.impersonationExpiresAt ??
+            session?.expiresAt ??
+            new Date()
+          ).toISOString(),
         }
       : null,
     needsModel: setup.needsModel,

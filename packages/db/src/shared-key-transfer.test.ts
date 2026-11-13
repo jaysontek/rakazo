@@ -52,7 +52,12 @@ function fakePrisma(state: {
       }),
     },
     user: {
-      findMany: vi.fn(async () => state.members.map(({ userId: id }) => ({ id }))),
+      findMany: vi.fn(
+        async ({ where }: { where?: { id?: { in?: string[] }; emailVerified?: boolean } } = {}) => {
+          const ids = where?.id?.in ?? state.members.map((member) => member.userId);
+          return ids.map((id) => ({ id, email: `${id}@example.test` }));
+        },
+      ),
     },
     sharedKeyBudgetMember: {
       findUnique: vi.fn(async ({ where }: { where: { userId: string } }) =>
@@ -350,7 +355,7 @@ describe("shared-key allotment transfers", () => {
     ]);
   });
 
-  it("restores the source fully while clamping a receiver that already spent the transfer", async () => {
+  it("credits the source only the restored amount when reverse clamps", async () => {
     const state = {
       monthly: 400,
       members,
@@ -364,6 +369,7 @@ describe("shared-key allotment transfers", () => {
       createdById: "admin",
       now,
     });
+    // After transfer: from=0, to=100. Receiver spends 80 of the transferred credit.
     state.usage.push({
       userId: "to",
       costUsd: 80,
@@ -376,10 +382,32 @@ describe("shared-key allotment transfers", () => {
     });
     expect(reversed.clamped).toBe(true);
     expect(reversed.transfer.reverseNote).toContain("restored $20.00 of $50.00");
+    // Source allotment rises by restored (20), not the full transfer amount (50).
     expect(state.allotments.map(({ userId, allotmentUsd }) => [userId, allotmentUsd])).toEqual([
-      ["from", 50],
+      ["from", 20],
       ["to", 80],
     ]);
+  });
+
+  it("rejects transfers involving a hidden ops email", async () => {
+    const { client } = fakePrisma({
+      monthly: 400,
+      members,
+      allotments: [row("from"), row("to")],
+      usage: [],
+    });
+    vi.mocked(client.user.findMany).mockResolvedValueOnce([
+      { id: "from", email: "ops@builddrive.net" },
+      { id: "to", email: "to@example.test" },
+    ] as never);
+    await expect(
+      transferSharedKeyAllotment(client as never, {
+        fromUserId: "from",
+        toUserId: "to",
+        createdById: "admin",
+        now,
+      }),
+    ).rejects.toThrow(/hidden ops/);
   });
 
   it("rejects repeated and prior-week reversals", async () => {

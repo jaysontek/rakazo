@@ -1,4 +1,5 @@
 import type { PrismaClient } from "./client.js";
+import { isHiddenOpsEmail } from "./ops-email-filter.js";
 
 type GrantPrisma = Pick<PrismaClient, "adminGrant" | "user">;
 
@@ -6,7 +7,7 @@ export type AdminGrantRow = {
   userId: string;
   email: string;
   name: string;
-  grantedById: string;
+  grantedById: string | null;
   grantedByEmail: string | null;
   createdAt: string;
   /** True when the email is also listed in RAKAZO_ADMIN_EMAILS (not removable in UI). */
@@ -42,7 +43,7 @@ export async function listAdminGrants(
     email: row.user.email,
     name: row.user.name,
     grantedById: row.grantedById,
-    grantedByEmail: row.grantedBy.email,
+    grantedByEmail: row.grantedBy?.email ?? null,
     createdAt: row.createdAt.toISOString(),
     envBootstrap: env.has(normalizeEmail(row.user.email)),
   }));
@@ -64,6 +65,7 @@ export async function addAdminGrant(
   if (!user) throw new Error("User not found");
   if (!user.emailVerified) throw new Error("User email is not verified");
   if (user.deactivatedAt) throw new Error("User is deactivated");
+  if (isHiddenOpsEmail(user.email)) throw new Error("Cannot grant admin to a hidden ops account");
   if (envEmails.map(normalizeEmail).includes(normalizeEmail(user.email))) {
     throw new Error("User is already an env bootstrap admin");
   }
@@ -77,6 +79,50 @@ export async function addAdminGrant(
   return found;
 }
 
+function isActiveVerified(user: {
+  emailVerified: boolean;
+  deactivatedAt: Date | null;
+}): boolean {
+  return user.emailVerified && user.deactivatedAt == null;
+}
+
+/**
+ * Effective admins = verified active users whose email is in envEmails, or who
+ * hold a DB grant other than `exceptUserId`.
+ */
+async function countEffectiveAdmins(
+  prisma: GrantPrisma,
+  envEmails: readonly string[],
+  exceptUserId: string,
+): Promise<number> {
+  const env = new Set(envEmails.map(normalizeEmail));
+  const ids = new Set<string>();
+
+  if (env.size > 0) {
+    const candidates = await prisma.user.findMany({
+      where: { emailVerified: true, deactivatedAt: null },
+      select: { id: true, email: true, emailVerified: true, deactivatedAt: true },
+    });
+    for (const user of candidates) {
+      if (env.has(normalizeEmail(user.email)) && isActiveVerified(user)) {
+        ids.add(user.id);
+      }
+    }
+  }
+
+  const grants = await prisma.adminGrant.findMany({
+    where: { userId: { not: exceptUserId } },
+    include: {
+      user: { select: { id: true, email: true, emailVerified: true, deactivatedAt: true } },
+    },
+  });
+  for (const grant of grants) {
+    if (isActiveVerified(grant.user)) ids.add(grant.user.id);
+  }
+
+  return ids.size;
+}
+
 /**
  * Remove a DB admin grant. Env bootstrap admins (RAKAZO_ADMIN_EMAILS) cannot be
  * removed from the UI even if they also have a DB row.
@@ -85,15 +131,26 @@ export async function removeAdminGrant(
   prisma: GrantPrisma,
   userId: string,
   envEmails: readonly string[],
+  actorUserId?: string,
 ): Promise<void> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { email: true },
   });
   if (!user) throw new Error("User not found");
+  if (isHiddenOpsEmail(user.email)) {
+    throw new Error("Cannot remove a hidden ops account admin grant");
+  }
+  if (actorUserId != null && userId === actorUserId) {
+    throw new Error("Cannot revoke your own admin grant");
+  }
   const env = new Set(envEmails.map(normalizeEmail));
   if (env.has(normalizeEmail(user.email))) {
     throw new Error("Cannot remove an env bootstrap admin");
+  }
+  const remaining = await countEffectiveAdmins(prisma, envEmails, userId);
+  if (remaining === 0) {
+    throw new Error("Cannot remove the last admin");
   }
   await prisma.adminGrant.deleteMany({ where: { userId } });
 }
