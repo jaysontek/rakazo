@@ -57,16 +57,14 @@ export type SharedKeyBudgetMember = { userId: string; joinedAt: Date };
 /**
  * Recompute each member's weekly allotment after a membership change or at week open.
  *
- * - The week's pool starts as monthlyCap/4, or as the sum of unspent *and unreserved* prior
- *   allotments when redistributing mid-week (including unused remainder from removed users).
- * - That remaining pool is split evenly across the current member set.
- * - A member who joined after this week's start and has no prior allotment is capped at
- *   (full-week share) × (fraction of week remaining at join time).
- * - Continuing members keep effectiveSpent + reserved committed; their new allotment is
- *   effectiveSpent + reserved + evenRemaining.
- * - When `rebaseOnMonthlyCap` is set, ignore prior allotment amounts and assign
- *   monthlyCap/4/n (join-time pro-rated for mid-week joiners). Callers preserve each row's
- *   joinedAt / preJoinSpendUsd / reservedUsd.
+ * - Fresh week (no prior rows): each member gets monthlyCap/4/n, join-time pro-rated.
+ * - Cap rebase: free = max(0, newPool − Σ(eff+res) over all rows); each member gets
+ *   eff+res + free × share_i / Σshare. Never invents budget above the new pool.
+ * - Mid-week membership change: never raise a continuing member. Joiners are funded
+ *   only from headroom — first freed headroom of removed rows, then a proportional
+ *   take from continuing members' headroom. Joiner slice =
+ *   min(fullShare × joinFraction, totalHeadroom / n). Re-added members keep their
+ *   week row, so they are capped at the prior allotment.
  * - `spentByUser` must be Monday→now totals; `preJoinSpendByUser` supplies baselines so
  *   effective spend = monday − preJoin.
  */
@@ -79,7 +77,7 @@ export function redivideWeeklyAllotments(args: {
   spentByUser: ReadonlyMap<string, number>;
   reservedByUser?: ReadonlyMap<string, number>;
   preJoinSpendByUser?: ReadonlyMap<string, number>;
-  /** Admin cap edit: re-base this week on monthlyCap/4/n instead of redistributing the old pool. */
+  /** Admin cap edit: re-base this week on the new pool minus already-committed spend. */
   rebaseOnMonthlyCap?: boolean;
 }): Map<string, number> {
   const {
@@ -102,53 +100,68 @@ export function redivideWeeklyAllotments(args: {
   const effective = (userId: string) =>
     effectiveSharedKeySpendUsd(spentByUser.get(userId) ?? 0, preJoinSpendByUser.get(userId) ?? 0);
 
-  // Fresh week (no prior allotments) or admin rebased the monthly cap: each member gets an
-  // even full-week share of the (new) cap. Spend and reserved are counted separately against
-  // that allotment — do not fold them into the allotment.
-  if (previousAllotments.size === 0 || rebaseOnMonthlyCap) {
+  const shareOf = (member: SharedKeyBudgetMember) =>
+    member.joinedAt.getTime() > weekStart.getTime()
+      ? fullShare * midWeekJoinFraction(member.joinedAt, weekStart)
+      : fullShare;
+
+  // Fresh week: even full-week shares (join-time pro-rated). Spend is counted separately.
+  if (previousAllotments.size === 0) {
     for (const member of members) {
-      const midWeekJoin = member.joinedAt.getTime() > weekStart.getTime();
-      result.set(
-        member.userId,
-        midWeekJoin ? fullShare * midWeekJoinFraction(member.joinedAt, weekStart) : fullShare,
-      );
+      result.set(member.userId, shareOf(member));
     }
     return result;
   }
 
-  let remainingPool = 0;
+  if (rebaseOnMonthlyCap) {
+    // New pool minus everything already committed (all prior rows, including removed).
+    let committed = 0;
+    for (const [userId] of previousAllotments) {
+      committed += effective(userId) + (reservedByUser.get(userId) ?? 0);
+    }
+    for (const member of members) {
+      if (!previousAllotments.has(member.userId)) {
+        committed += effective(member.userId) + (reservedByUser.get(member.userId) ?? 0);
+      }
+    }
+    const free = Math.max(0, weekPool - committed);
+    const wants = members.map((member) => shareOf(member));
+    const wantSum = wants.reduce((sum, value) => sum + value, 0) || 1;
+    members.forEach((member, index) => {
+      const spent = effective(member.userId);
+      const reserved = reservedByUser.get(member.userId) ?? 0;
+      result.set(member.userId, spent + reserved + (free * wants[index]!) / wantSum);
+    });
+    return result;
+  }
+
+  // Never raise a continuing member; joiners are funded only from existing headroom.
+  const headroom = new Map<string, number>();
+  let freed = 0;
   for (const [userId, allotment] of previousAllotments) {
+    const head = Math.max(0, allotment - effective(userId) - (reservedByUser.get(userId) ?? 0));
+    if (members.some((member) => member.userId === userId)) headroom.set(userId, head);
+    else freed += head;
+  }
+
+  const joiners = members.filter((member) => !previousAllotments.has(member.userId));
+  const totalHeadroom = [...headroom.values()].reduce((sum, value) => sum + value, 0) + freed;
+  let taken = 0;
+  for (const joiner of joiners) {
+    const slice = Math.min(shareOf(joiner), totalHeadroom / n);
+    result.set(joiner.userId, slice);
+    taken += slice;
+  }
+
+  const fromContinuing = Math.max(0, taken - freed);
+  const continuingHeadroom = [...headroom.values()].reduce((sum, value) => sum + value, 0);
+  for (const [userId, head] of headroom) {
+    const take = continuingHeadroom > 0 ? (fromContinuing * head) / continuingHeadroom : 0;
+    const prev = previousAllotments.get(userId) ?? 0;
     const spent = effective(userId);
     const reserved = reservedByUser.get(userId) ?? 0;
-    remainingPool += Math.max(0, allotment - spent - reserved);
-  }
-
-  const evenRemaining = remainingPool / n;
-  let surplus = 0;
-  const continuing: string[] = [];
-
-  for (const member of members) {
-    const spent = effective(member.userId);
-    const reserved = reservedByUser.get(member.userId) ?? 0;
-    const midWeekJoin =
-      member.joinedAt.getTime() > weekStart.getTime() && !previousAllotments.has(member.userId);
-    if (midWeekJoin) {
-      const proportional = fullShare * midWeekJoinFraction(member.joinedAt, weekStart);
-      const slice = Math.min(evenRemaining, proportional);
-      surplus += evenRemaining - slice;
-      result.set(member.userId, slice);
-    } else {
-      continuing.push(member.userId);
-      // Keep spent and in-flight reserved; remaining budget becomes an even slice of the pool.
-      result.set(member.userId, spent + reserved + evenRemaining);
-    }
-  }
-
-  if (surplus > 0 && continuing.length > 0) {
-    const extra = surplus / continuing.length;
-    for (const userId of continuing) {
-      result.set(userId, (result.get(userId) ?? 0) + extra);
-    }
+    // Cap at prior allotment so remove→re-add cannot grow, and drained members stay drained.
+    result.set(userId, Math.min(prev, spent + reserved + head - take));
   }
 
   return result;
