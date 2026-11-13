@@ -82,7 +82,7 @@ function CallVoicePicker() {
           .catch(() => setVoiceId(previous))
           .finally(() => setSaving(false));
       }}
-      className="max-w-28 shrink-0"
+      className="max-w-[4.5rem] min-w-0 shrink sm:max-w-28"
     >
       {voices.map((voice) => (
         <NativeSelectOption key={voice.id} value={voice.id}>
@@ -129,7 +129,7 @@ export function CallStrip({
       role="region"
       aria-label={t`Call with ${call.botName}`}
       className={cn(
-        "flex min-w-0 items-center gap-2 rounded-[18px] border border-border bg-card px-2.5 py-2",
+        "flex min-w-0 items-center gap-2 overflow-hidden rounded-[18px] border border-border bg-card px-2.5 py-2",
         className,
       )}
     >
@@ -170,11 +170,11 @@ export function CallStrip({
           {call.botName}
         </div>
         <div
-          className="flex gap-1.5 text-[12px] tabular-nums text-muted-foreground"
+          className="flex min-w-0 gap-1.5 text-[12px] tabular-nums text-muted-foreground"
           aria-live="polite"
         >
-          {!ringing ? <span>{callClock(elapsed)}</span> : null}
-          <span>{activity}</span>
+          {!ringing ? <span className="shrink-0">{callClock(elapsed)}</span> : null}
+          <span className="truncate">{activity}</span>
         </div>
       </div>
       <CallVoicePicker />

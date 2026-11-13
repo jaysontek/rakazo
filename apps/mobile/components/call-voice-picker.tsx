@@ -40,47 +40,51 @@ export function CallVoicePicker() {
   if (!voices.length) return null;
   const label = voices.find((voice) => voice.id === voiceId)?.label ?? t("Voice");
   return (
-    <MenuView
-      actions={voices.map((voice) => ({
-        id: voice.id,
-        title: voice.label,
-        state: voice.id === voiceId ? ("on" as const) : ("off" as const),
-      }))}
-      onPressAction={(event) => {
-        const next = event.nativeEvent.event;
-        if (!next || next === voiceId) return;
-        setVoiceId(next);
-        void rpc("voice/setVoice", { voiceId: next, provider: provider ?? undefined }).catch(
-          () => undefined,
-        );
-      }}
-    >
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t("Voice")}
-        hitSlop={6}
-        style={{
-          maxWidth: 88,
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 2,
-          paddingHorizontal: 6,
-          paddingVertical: 4,
-          borderRadius: 8,
-          borderWidth: 1,
-          borderColor: tokens.border,
+    <View style={{ flexShrink: 1, minWidth: 0, maxWidth: 88 }}>
+      <MenuView
+        actions={voices.map((voice) => ({
+          id: voice.id,
+          title: voice.label,
+          state: voice.id === voiceId ? ("on" as const) : ("off" as const),
+        }))}
+        onPressAction={(event) => {
+          const next = event.nativeEvent.event;
+          if (!next || next === voiceId) return;
+          setVoiceId(next);
+          void rpc("voice/setVoice", { voiceId: next, provider: provider ?? undefined }).catch(
+            () => undefined,
+          );
         }}
       >
-        <Text numberOfLines={1} style={{ flexShrink: 1, color: tokens.foreground, fontSize: 12 }}>
-          {label}
-        </Text>
-        <NativeSymbol
-          ios="chevron.down"
-          android="chevron-down"
-          size={12}
-          color={tokens.mutedForeground}
-        />
-      </Pressable>
-    </MenuView>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t("Voice")}
+          hitSlop={6}
+          style={{
+            flexShrink: 1,
+            minWidth: 0,
+            maxWidth: 88,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 2,
+            paddingHorizontal: 6,
+            paddingVertical: 4,
+            borderRadius: 8,
+            borderWidth: 1,
+            borderColor: tokens.border,
+          }}
+        >
+          <Text numberOfLines={1} style={{ flexShrink: 1, color: tokens.foreground, fontSize: 12 }}>
+            {label}
+          </Text>
+          <NativeSymbol
+            ios="chevron.down"
+            android="chevron-down"
+            size={12}
+            color={tokens.mutedForeground}
+          />
+        </Pressable>
+      </MenuView>
+    </View>
   );
 }
