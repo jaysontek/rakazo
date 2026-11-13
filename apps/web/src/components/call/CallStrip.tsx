@@ -9,12 +9,11 @@ import {
   NativeSelectOption,
 } from "@rakazo/ui-web";
 import { Mic, MicOff, PhoneOff, Settings } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { authClient } from "../../lib/auth";
 import type { CallState } from "../../lib/call-session";
 import { endCall, toggleMute, useCallSession } from "../../lib/call-session";
 import { useSpaceRpc } from "../../lib/space-rpc";
-import { cameraPreviewAlreadyGranted } from "./call-camera-preview";
 
 function callClock(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
@@ -31,57 +30,6 @@ function useCallElapsed(call: CallState | null): number {
     return () => clearInterval(timer);
   }, [connectedAt]);
   return connectedAt === null ? 0 : Math.max(0, Math.floor((now - connectedAt) / 1000));
-}
-
-/**
- * Optional local camera preview for the user tile.
- * Only attaches when camera permission is already granted — never prompts mid-call.
- * Falls back to the account image/initial. Never touches the call audio path.
- */
-function useUserVideoPreview(active: boolean) {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [hasVideo, setHasVideo] = useState(false);
-  useEffect(() => {
-    if (!active) {
-      setHasVideo(false);
-      return;
-    }
-    const media = navigator.mediaDevices;
-    if (!media?.getUserMedia) return;
-    let stream: MediaStream | null = null;
-    let cancelled = false;
-    const preview = cameraPreviewAlreadyGranted()
-      .then((granted) => {
-        if (!granted || cancelled) return null;
-        return media.getUserMedia({ video: { facingMode: "user" }, audio: false });
-      })
-      .then((next) => {
-        if (!next || cancelled) {
-          if (next) for (const track of next.getTracks()) track.stop();
-          return;
-        }
-        stream = next;
-        const node = videoRef.current;
-        if (node) {
-          node.srcObject = next;
-          void node.play().catch(() => undefined);
-        }
-        setHasVideo(true);
-      })
-      .catch(() => {
-        if (!cancelled) setHasVideo(false);
-      });
-    return () => {
-      cancelled = true;
-      setHasVideo(false);
-      void preview.then(() => {
-        if (stream) for (const track of stream.getTracks()) track.stop();
-      });
-      const node = videoRef.current;
-      if (node) node.srcObject = null;
-    };
-  }, [active]);
-  return { videoRef, hasVideo };
 }
 
 function CallVoicePicker() {
@@ -147,6 +95,7 @@ function CallVoicePicker() {
 
 /**
  * In-call chrome for the composer field bar: participant tiles and call controls.
+ * Agent calls are audio-only — account image/initial for the user, never camera or video UI.
  * Keeps the thread visible; never covers the app as a modal.
  */
 export function CallStrip({
@@ -162,7 +111,6 @@ export function CallStrip({
   const session = authClient.useSession();
   const user = session.data?.user;
   const { label: userName, initial } = accountDisplay(user ?? {}, t`You`);
-  const { videoRef, hasVideo } = useUserVideoPreview(Boolean(call));
   if (!call) return null;
   const ringing = call.phase === "ringing";
   const speaking = call.phase === "speaking";
@@ -191,25 +139,13 @@ export function CallStrip({
           aria-label={t`You`}
           title={userName}
         >
-          <video
-            ref={videoRef}
-            muted
-            playsInline
-            autoPlay
-            className={cn(
-              "size-full object-cover",
-              hasVideo ? "opacity-100" : "pointer-events-none absolute opacity-0",
-            )}
-          />
-          {!hasVideo ? (
-            user?.image ? (
-              <img src={user.image} alt="" className="size-full object-cover" />
-            ) : (
-              <span className="grid size-full place-items-center text-[13px] font-semibold text-muted-foreground">
-                {initial}
-              </span>
-            )
-          ) : null}
+          {user?.image ? (
+            <img src={user.image} alt="" className="size-full object-cover" />
+          ) : (
+            <span className="grid size-full place-items-center text-[13px] font-semibold text-muted-foreground">
+              {initial}
+            </span>
+          )}
         </div>
         <div
           className={cn(

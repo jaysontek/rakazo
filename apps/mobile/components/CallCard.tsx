@@ -31,7 +31,7 @@ function KeepCallAwake() {
   return null;
 }
 
-/** The signed-in user's initial for the user video tile. */
+/** The signed-in user's initial for the user tile. */
 export function useCallUserInitial(onCall: boolean): string {
   const { t } = useI18n();
   const [initial, setInitial] = useState(cachedInitial ?? "");
