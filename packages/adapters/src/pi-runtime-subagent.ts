@@ -217,6 +217,7 @@ export async function executeSubagent(
               imageTokens: estimatePiImageTokens,
               recordUsage: host.request.onUsage,
               onProviderError: (message) => providerFailures.add(message.content),
+              phaseTiming: host.phaseTiming,
               onUsage: (usage) => {
                 contextPolicy.onUsage(usage);
                 const decision = contextPolicy.getDecision();
