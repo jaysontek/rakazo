@@ -37,7 +37,7 @@ import {
 } from "react";
 import { useParams } from "react-router-dom";
 import { ComputerUpdateProgress } from "../components/ComputerUpdateProgress";
-import { CallCard, CallReturnBar } from "../components/call/CallCard";
+import { CallCard } from "../components/call/CallCard";
 import { IncomingCall } from "../components/call/IncomingCall";
 import { PageLoading } from "../components/PageLoading";
 import { PageViewHost } from "../components/pages/PageViewHost";
@@ -50,7 +50,7 @@ import {
   subscribeBotsSidebarDensity,
 } from "../lib/bots-sidebar-density-pref";
 import { readBotsSidebarCollapsed, writeBotsSidebarCollapsed } from "../lib/bots-sidebar-pref";
-import { setCallMinimized, startCall, useCallSession } from "../lib/call-session";
+import { startCall, useCallSession } from "../lib/call-session";
 import {
   getComposerEnterToSend,
   subscribeComposerEnterToSend,
@@ -1085,7 +1085,6 @@ function SpaceShell() {
             className="absolute bottom-20 start-0 top-16 z-20 w-8 touch-none md:hidden"
           />
         ) : null}
-        <CallReturnBar />
         {/* The header floats so the transcript scrolls under its buttons. */}
         <div ref={chatColumnRef} className="relative flex min-h-0 flex-1 flex-col">
           {/* Only the pills take input; the gaps pass clicks and scrolling to the transcript. */}
@@ -1107,19 +1106,9 @@ function SpaceShell() {
             active={active}
             activeGroup={activeGroup}
             activeSnapshot={activeSnapshot}
-            phoneCallsEnabled={Boolean(bootstrapMe?.phoneCallsEnabled)}
-            voiceReady={Boolean(voiceStatus?.ready)}
-            inCall={Boolean(active) && call?.botId === active?.id}
             panelOpen={chatPanelOpen}
             onOpenNavigation={() => setMobileSidebarOpen(true)}
             onTogglePanel={toggleChatPanel}
-            onCall={(bot) => {
-              if (call?.botId === bot.id) {
-                setCallMinimized(false);
-                return;
-              }
-              callBot(bot);
-            }}
           />
           {!active && !activeGroup && initialBotsLoaded ? (
             <div className="grid flex-1 place-items-center">
@@ -1220,6 +1209,14 @@ function SpaceShell() {
               onStop={stopRun}
               phoneCallsEnabled={bootstrapMe?.phoneCallsEnabled === true}
               dictationTranscribe={voiceStatus ? Boolean(voiceStatus.transcribe) : undefined}
+              voiceReady={Boolean(voiceStatus?.ready)}
+              onStartCall={
+                bootstrapMe?.phoneCallsEnabled && !inGroup && active
+                  ? () => callBot(active)
+                  : undefined
+              }
+              hostingCall={Boolean(active && call?.botId === active.id)}
+              onCallSettings={() => openSettings("voice")}
               artifactTarget={transcriptArtifactTarget}
               replyTarget={composer.replyTarget}
               replyQuote={composer.replyQuote}

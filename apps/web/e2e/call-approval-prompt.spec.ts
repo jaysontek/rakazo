@@ -68,7 +68,9 @@ async function startCall(page: Page) {
   const voiceStatus = page.waitForResponse((response) => response.url().includes("/voice/status"));
   await page.reload();
   await voiceStatus;
-  await page.getByTestId("call-button").click();
+  const callButton = page.getByTestId("call-button");
+  await expect(callButton).toHaveAttribute("data-voice-ready", "");
+  await callButton.click();
   const call = page.getByTestId("call-view");
   await expect(call.getByText("Listening", { exact: true })).toBeVisible();
   return call;

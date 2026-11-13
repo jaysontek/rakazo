@@ -25,9 +25,9 @@ function detectCoarsePointer(): boolean {
   }
 }
 
-/** Default: Enter sends on desktop and inserts a newline on touch devices. */
-export function defaultComposerEnterToSend(coarsePointer = detectCoarsePointer()): boolean {
-  return !coarsePointer;
+/** Default: Enter sends on desktop and mobile; Shift+Enter still inserts a newline. */
+export function defaultComposerEnterToSend(_coarsePointer = detectCoarsePointer()): boolean {
+  return true;
 }
 
 export function normalizeComposerEnterToSend(

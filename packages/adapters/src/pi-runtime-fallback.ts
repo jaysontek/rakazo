@@ -12,6 +12,7 @@ import { AssistantMessageEventStream } from "@earendil-works/pi-ai/utils/event-s
 import type { AgentRunRequest, ConnectorTool } from "@rakazo/adapter-kit";
 import {
   isModelCredentialRejected,
+  isPerMinuteTokenLimit,
   isRetryableProviderUnavailable,
   isTransientModelError,
 } from "@rakazo/adapter-kit";
@@ -25,6 +26,7 @@ import {
 } from "@rakazo/core";
 import { getLogger } from "@rakazo/logging";
 import { ModelImageLimitError, pruneForRebuild } from "./context-pruning.js";
+import { markDeploymentModelTpmLimited } from "./deployment-tpm-window.js";
 import { groqRequestContextWindow } from "./groq-request-budget.js";
 import { estimateModelContextTokens } from "./model-context.js";
 import { IMAGE_RETURNING_COMPUTER_TOOLS } from "./model-vision.js";
@@ -612,20 +614,35 @@ export function fallbackAwareModelStream(
               restart = true;
               break;
             }
+            const tpmOnly = state.request.fallbackTrigger === "tpm";
+            const mayAdvanceBackup = tpmOnly
+              ? isPerMinuteTokenLimit(event.error)
+              : requestLimitTooSmall ||
+                isRetryableProviderUnavailable(event.error) ||
+                isModelCredentialRejected(event.error);
             if (
               !sawVisibleOutput &&
               !hasTerminalVisibleOutput &&
               event.reason === "error" &&
               !signalAborted() &&
               state.isProviderFailure(event.error) &&
-              (requestLimitTooSmall ||
-                isRetryableProviderUnavailable(event.error) ||
-                isModelCredentialRejected(event.error))
+              mayAdvanceBackup
             ) {
               state.primaryFailure ??= sanitizeProviderError(
                 target.config.provider,
                 terminalEvent.error.errorMessage ?? "Model request failed.",
               );
+              if (
+                tpmOnly &&
+                isPerMinuteTokenLimit(event.error) &&
+                sameModelTarget(target.config, state.request.model)
+              ) {
+                markDeploymentModelTpmLimited(
+                  target.config.provider,
+                  target.config.id,
+                  event.error,
+                );
+              }
               const next = await resolveNext(target);
               if (failIfAborted(target)) return;
               if (next) {

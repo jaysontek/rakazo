@@ -41,7 +41,15 @@ vi.mock("expo-secure-store", () => ({
   setItemAsync: vi.fn(async () => undefined),
   deleteItemAsync: vi.fn(async () => undefined),
 }));
-vi.mock("expo-router", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("expo-router", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+  useLocalSearchParams: () => ({}),
+}));
+vi.mock("../components/call-voice-picker", () => ({ CallVoicePicker: () => null }));
+vi.mock("../components/bot-avatar", () => ({ BotAvatar: () => null }));
+vi.mock("../components/glass-surface", () => ({
+  GlassSurface: ({ children }: { children?: ReactNode }) => createElement("div", null, children),
+}));
 vi.mock("react-native-reanimated", () => ({ useReducedMotion: () => true }));
 vi.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),

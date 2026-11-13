@@ -144,21 +144,18 @@ tags:
 - tapOn: "Message Researcher"
 - inputText: "Keyboard visibility check"
 - assertVisible: "Keyboard visibility check"
+# Call occupies the empty slot; a draft brings Send back.
 - assertVisible: "Send"
 - takeScreenshot: "15d-thread-keyboard"
-- pressKey: Enter
-- inputText: "Second line"
-- assertVisible: 'Keyboard visibility check\nSecond line'
 - hideKeyboard
-- assertVisible: 'Keyboard visibility check\nSecond line'
 - tapOn: "Message Researcher"
-- assertVisible: 'Keyboard visibility check\nSecond line'
+- assertVisible: "Keyboard visibility check"
 - assertVisible: "Send"
 - takeScreenshot: "15g-thread-keyboard-reopened"
 - longPressOn: "Message Researcher"
 - tapOn: "Select all"
 - eraseText: 1
-- assertNotVisible: 'Keyboard visibility check\nSecond line'
+- assertNotVisible: "Keyboard visibility check"
 - hideKeyboard
 # Holding a message opens the reaction row and grouped actions next to it.
 - longPressOn: "The fixture workspace is ready."
@@ -217,6 +214,7 @@ tags:
 - tapOn: "Message Launch team"
 - inputText: "Group keyboard visibility check"
 - assertVisible: "Group keyboard visibility check"
+# Groups keep Send; voice calls are one-to-one.
 - assertVisible: "Send"
 - takeScreenshot: "19b-group-thread-keyboard"
 - eraseText

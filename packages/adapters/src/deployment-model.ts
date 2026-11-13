@@ -33,6 +33,12 @@ export function hostCredentialSource(provider: string): string {
  *
  * Vendor env names and model ids live here, in the adapter layer, not in core.
  */
+/** Built-in same-provider backups when `PI_DEFAULT_BACKUP_MODEL` is unset. */
+const DEFAULT_BACKUP_MODELS: Record<string, readonly string[]> = {
+  // Shared GEMINI_API_KEY: move mid-task work to 3.7 when 3.8's per-minute window is full.
+  google: ["gemini-3.7-flash"],
+};
+
 export function resolveDeploymentModel(env: NodeJS.ProcessEnv = process.env) {
   const provider = env.PI_DEFAULT_PROVIDER?.trim() || "openrouter";
   // An unknown provider gets no key rather than another vendor's.
@@ -66,6 +72,33 @@ export function resolveDeploymentModel(env: NodeJS.ProcessEnv = process.env) {
     configured: Boolean(key) || hostCredentials,
     hostCredentials,
   };
+}
+
+/**
+ * Same-provider models the deployment may continue on after the primary's per-minute
+ * token cap. `PI_DEFAULT_BACKUP_MODEL` is a comma list of model ids on `PI_DEFAULT_PROVIDER`;
+ * an explicit empty value disables backups. Unset keeps the provider's built-in list.
+ */
+export function resolveDeploymentBackupModels(
+  env: NodeJS.ProcessEnv = process.env,
+): Array<{ provider: string; modelId: string }> {
+  const deployment = resolveDeploymentModel(env);
+  const raw = env.PI_DEFAULT_BACKUP_MODEL;
+  const ids =
+    raw === undefined
+      ? [...(DEFAULT_BACKUP_MODELS[deployment.provider] ?? [])]
+      : raw
+          .split(",")
+          .map((part) => part.trim())
+          .filter(Boolean);
+  const seen = new Set<string>();
+  const backups: Array<{ provider: string; modelId: string }> = [];
+  for (const modelId of ids) {
+    if (modelId === deployment.model || seen.has(modelId)) continue;
+    seen.add(modelId);
+    backups.push({ provider: deployment.provider, modelId });
+  }
+  return backups;
 }
 
 export function deploymentModelUsageLookup(): ModelUsageLookup | undefined {

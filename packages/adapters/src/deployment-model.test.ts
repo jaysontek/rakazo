@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { resolveDeploymentModel } from "./deployment-model.js";
+import { resolveDeploymentBackupModels, resolveDeploymentModel } from "./deployment-model.js";
 
 // Host credentials come from the process, so blank the ones a developer machine or CI
 // host may carry; each case states its own.
@@ -191,5 +191,42 @@ describe("resolveDeploymentModel", () => {
         ...overrides,
       }),
     ).toMatchObject({ key: undefined, configured: false, hostCredentials: false });
+  });
+});
+
+describe("resolveDeploymentBackupModels", () => {
+  it("defaults Google deployments to gemini-3.7-flash on the shared key", () => {
+    expect(
+      resolveDeploymentBackupModels({
+        PI_DEFAULT_PROVIDER: "google",
+        GEMINI_API_KEY: "shared",
+      }),
+    ).toEqual([{ provider: "google", modelId: "gemini-3.7-flash" }]);
+  });
+
+  it("honours an explicit comma list and skips the primary", () => {
+    expect(
+      resolveDeploymentBackupModels({
+        PI_DEFAULT_PROVIDER: "google",
+        PI_DEFAULT_MODEL: "gemini-3.8-flash",
+        PI_DEFAULT_BACKUP_MODEL: " gemini-3.8-flash , gemini-3.7-flash, gemini-3.5-flash-lite ",
+      }),
+    ).toEqual([
+      { provider: "google", modelId: "gemini-3.7-flash" },
+      { provider: "google", modelId: "gemini-3.5-flash-lite" },
+    ]);
+  });
+
+  it("disables backups when the env is explicitly empty", () => {
+    expect(
+      resolveDeploymentBackupModels({
+        PI_DEFAULT_PROVIDER: "google",
+        PI_DEFAULT_BACKUP_MODEL: " ",
+      }),
+    ).toEqual([]);
+  });
+
+  it("has no built-in backup for other providers", () => {
+    expect(resolveDeploymentBackupModels({ PI_DEFAULT_PROVIDER: "openrouter" })).toEqual([]);
   });
 });

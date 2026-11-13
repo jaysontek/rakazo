@@ -96,6 +96,7 @@ import {
 } from "./connection-context.js";
 import { formatCurrentTimeInstruction } from "./current-time.js";
 import { resolveDeploymentModel } from "./deployment-model.js";
+import { isDeploymentModelTpmLimited } from "./deployment-tpm-window.js";
 import type { ExecutorDeps } from "./executor-deps.js";
 import type { FleetRun } from "./fleet-tools.js";
 import { loadBotGroupDirectory, loadGroupContext } from "./group-handoff.js";
@@ -116,6 +117,7 @@ import {
 import { createMediaGenerationProvider } from "./media-generation-factory.js";
 import { loadAgentMemoryContext } from "./memory-context.js";
 import { HostedModelCreditsRequiredError } from "./model-credit-observer.js";
+import type { EffectiveModelRole } from "./model-roles.js";
 import {
   effectiveModelRole,
   resolveMemberMainModel,
@@ -989,26 +991,38 @@ export function createRunExecutor(executorDeps: ExecutorDeps) {
           (await modelCreditBillingEnabled(deps)) &&
           !(await spaceHasModelAccess(deps.prisma, run.spaceId));
         const scripted = deps.runtime.describe().capabilities.scripted;
-        let backupChoices: Promise<ModelRoleChoice[]> | undefined;
-        const loadBackups = () =>
-          (backupChoices ??= scripted
-            ? Promise.resolve([])
+        let modelRole: Promise<EffectiveModelRole> | undefined;
+        const loadModelRole = () =>
+          (modelRole ??= scripted
+            ? Promise.resolve({
+                primary: null,
+                backups: [],
+                primarySource: null,
+                backupSource: null,
+              })
             : effectiveModelRole(deps.prisma, run, "main", {
                 settings,
                 deployment: runDeployment,
-              }).then(
-                (role) => role.backups,
-                (error: unknown) => {
-                  getLogger().warn("Backup models could not be loaded", { runId, error });
-                  return [];
-                },
-              ));
+              }).catch((error: unknown) => {
+                getLogger().warn("Backup models could not be loaded", { runId, error });
+                return {
+                  primary: null,
+                  backups: [],
+                  primarySource: null,
+                  backupSource: null,
+                } satisfies EffectiveModelRole;
+              }));
+        const loadBackups = async () => (await loadModelRole()).backups;
+        // Deployment shared-key backups may use GEMINI_API_KEY; member/space backups may not.
+        const backupRequiresStoredSecret = async () =>
+          (await loadModelRole()).backupSource !== "deployment";
         // Backups that could not start here are not offered again once the model runs.
         const backupsUnavailable = new Set<ModelRoleChoice>();
         // A main model with no connection, or whose provider refused its sign-in, runs on the
         // first backup that starts. A pinned run asked for its model and keeps it.
         const startOnBackup = async () => {
           if (run.modelPinned) return undefined;
+          const requireStoredSecret = await backupRequiresStoredSecret();
           for (const choice of await loadBackups()) {
             try {
               const backup = await resolveConnectedModelKey(
@@ -1017,7 +1031,7 @@ export function createRunExecutor(executorDeps: ExecutorDeps) {
                 choice.provider,
                 choice.modelId,
                 (values) => runSecrets.push(...values),
-                true,
+                requireStoredSecret,
                 choice.credentialId,
               );
               getLogger().warn("model.primary_unavailable.backup_used", {
@@ -1043,7 +1057,23 @@ export function createRunExecutor(executorDeps: ExecutorDeps) {
         let start: Awaited<ReturnType<typeof startOnBackup>>;
         let primaryFailure = { message: MISSING_MODEL_RUN_ERROR, accountFailure: true };
         let retryPrimary: unknown;
-        if (selectedProvider && selectedModelId) {
+        // While the deployment primary's per-minute window is full, start on its backup.
+        const preferDeploymentBackup =
+          !run.modelPinned &&
+          !selected.credential &&
+          Boolean(selectedProvider) &&
+          Boolean(selectedModelId) &&
+          selectedProvider === runDeployment?.provider &&
+          selectedModelId === runDeployment?.model &&
+          isDeploymentModelTpmLimited(selectedProvider!, selectedModelId!);
+        if (preferDeploymentBackup) {
+          if (await modelAccessDenied()) {
+            await failRunBeforeModel(MODEL_ACCESS_REQUIRED_RUN_ERROR, true);
+            return;
+          }
+          start = await startOnBackup();
+        }
+        if (!start && selectedProvider && selectedModelId) {
           if (await modelAccessDenied()) {
             await failRunBeforeModel(MODEL_ACCESS_REQUIRED_RUN_ERROR, true);
             return;
@@ -1088,7 +1118,7 @@ export function createRunExecutor(executorDeps: ExecutorDeps) {
             };
             if (!terminal) retryPrimary = error;
           }
-        } else if (await modelAccessDenied()) {
+        } else if (!start && (await modelAccessDenied())) {
           await failRunBeforeModel(MISSING_MODEL_RUN_ERROR, true);
           return;
         }
@@ -1790,6 +1820,9 @@ export function createRunExecutor(executorDeps: ExecutorDeps) {
           userId: run.userId,
         });
         // The running model is not its own backup, unless another account serves it.
+        const modelRoleForFallbacks = await loadModelRole();
+        const deploymentTpmFallbacks = modelRoleForFallbacks.backupSource === "deployment";
+        const requireStoredBackupSecret = modelRoleForFallbacks.backupSource !== "deployment";
         const fallbackModels = (await loadBackups()).filter(
           (candidate) =>
             !backupsUnavailable.has(candidate) &&
@@ -1908,6 +1941,9 @@ export function createRunExecutor(executorDeps: ExecutorDeps) {
                 id: modelId,
                 ...(credentialId ? { connectionId: credentialId } : {}),
               })),
+              ...(deploymentTpmFallbacks && fallbackModels.length
+                ? { fallbackTrigger: "tpm" as const }
+                : {}),
               resolveFallbackModel:
                 checkpointModelResolver || fallbackModelKeys.size
                   ? async (provider, modelId, connectionId) => {
@@ -1921,7 +1957,7 @@ export function createRunExecutor(executorDeps: ExecutorDeps) {
                         provider,
                         modelId,
                         (values) => runSecrets.push(...values),
-                        true,
+                        requireStoredBackupSecret,
                         fallbackModels.find(
                           (candidate) =>
                             fallbackKey(

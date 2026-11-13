@@ -18,7 +18,7 @@ import {
   updateComposerMentionBindings,
 } from "@rakazo/core";
 import { Button } from "@rakazo/ui-web";
-import { ArrowUp, Box, Paperclip, Plus, Settings, Square, X } from "lucide-react";
+import { ArrowUp, AudioLines, Box, Paperclip, Plus, Settings, Square, X } from "lucide-react";
 import type { ClipboardEvent, ComponentProps, DragEvent, RefObject } from "react";
 import {
   memo,
@@ -31,6 +31,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { createPortal } from "react-dom";
+import { CallStrip } from "../../components/call/CallStrip";
 import {
   HoldToTalkControls,
   HoldToTalkStrip,
@@ -91,6 +92,11 @@ const ComposerBody = memo(function Composer({
   onStop,
   phoneCallsEnabled,
   dictationTranscribe,
+  voiceReady,
+  onStartCall,
+  /** True when this thread's bot is the one on the call; hosts the strip and hides the dock. */
+  hostingCall,
+  onCallSettings,
   replyTarget,
   replyQuote,
   replyTargetName,
@@ -131,6 +137,12 @@ const ComposerBody = memo(function Composer({
   phoneCallsEnabled?: boolean;
   /** Hold-to-talk falls back to the voice provider's transcription; undefined while unknown. */
   dictationTranscribe?: boolean;
+  /** False while voice status loads or no voice is connected; Call then opens voice settings. */
+  voiceReady?: boolean;
+  /** When set, Call occupies the empty-draft slot; Send returns once there is a draft. */
+  onStartCall?: () => void;
+  hostingCall?: boolean;
+  onCallSettings?: () => void;
   artifactTarget: ArtifactTarget;
   replyTarget?: ThreadMessage | null;
   replyQuote?: string | null;
@@ -188,6 +200,7 @@ const ComposerBody = memo(function Composer({
     return slashMatch ? (slashMatch[1] ?? "") : null;
   });
   const onCall = useCallSession() !== null;
+  const stripHosted = Boolean(hostingCall);
   const talk = useHoldToTalk({
     transcribe: dictationTranscribe,
     disabled: disabled || onCall || !phoneCallsEnabled,
@@ -335,6 +348,10 @@ const ComposerBody = memo(function Composer({
   }, []);
   const canSend =
     draft.trim().length > 0 || selectedSkill !== null || pendingAttachments.length > 0;
+  // Call only in the empty slot; Send returns with a draft. When Enter-to-send is off,
+  // Send stays visible even while empty so the message can still leave.
+  const showCall = Boolean(onStartCall) && !stripHosted && !canSend;
+  const showSend = canSend || !enterToSend || !onStartCall || stripHosted;
 
   function markEdited() {
     onDraftEdited?.();
@@ -670,6 +687,9 @@ const ComposerBody = memo(function Composer({
           }}
         />
       ) : null}
+      {stripHosted && onCallSettings ? (
+        <CallStrip onSettings={onCallSettings} className="mb-2" />
+      ) : null}
       {attachmentNotice ? (
         <div className="mb-3 rounded-[14px] border border-warning/40 bg-warning/10 px-4 py-2 text-[13px] text-warning">
           {attachmentNotice}
@@ -983,45 +1003,47 @@ const ComposerBody = memo(function Composer({
         >
           {talk.recording?.locked ? (
             <HoldToTalkControls talk={talk} />
-          ) : running ? (
-            <>
-              {phoneCallsEnabled && draft.trim().length === 0 ? (
-                <HoldToTalkControls talk={talk} disabled={disabled || onCall} />
-              ) : null}
-              <Button
-                size="icon"
-                aria-label={t`Send`}
-                disabled={sending || !canSend || disabled}
-                onClick={() => void send()}
-                className="size-8 shrink-0 rounded-full transition-transform active:scale-95 disabled:bg-primary-disabled disabled:text-foreground/30 disabled:opacity-100"
-              >
-                <ArrowUp size={16} strokeWidth={2.2} />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                aria-label={t`Stop`}
-                disabled={sending}
-                onClick={() => void onStop()}
-                className="size-8 rounded-full border border-border bg-muted text-foreground/80 shadow-sm transition-colors hover:bg-accent hover:text-foreground"
-              >
-                <Square size={11} strokeWidth={0} fill="currentColor" />
-              </Button>
-            </>
           ) : (
             <>
               {phoneCallsEnabled && draft.trim().length === 0 ? (
                 <HoldToTalkControls talk={talk} disabled={disabled || onCall} />
               ) : null}
-              <Button
-                size="icon"
-                aria-label={t`Send`}
-                disabled={sending || !canSend || disabled}
-                onClick={() => void send()}
-                className="size-8 shrink-0 rounded-full transition-transform active:scale-95 disabled:bg-primary-disabled disabled:text-foreground/30 disabled:opacity-100"
-              >
-                <ArrowUp size={16} strokeWidth={2.2} />
-              </Button>
+              {showCall ? (
+                <Button
+                  size="icon"
+                  data-testid="call-button"
+                  aria-label={t`Call`}
+                  disabled={disabled}
+                  data-voice-ready={voiceReady ? "" : undefined}
+                  onClick={onStartCall}
+                  className="size-8 shrink-0 rounded-full transition-transform active:scale-95"
+                >
+                  <AudioLines size={16} strokeWidth={2.2} />
+                </Button>
+              ) : null}
+              {showSend ? (
+                <Button
+                  size="icon"
+                  aria-label={t`Send`}
+                  disabled={sending || !canSend || disabled}
+                  onClick={() => void send()}
+                  className="size-8 shrink-0 rounded-full transition-transform active:scale-95 disabled:bg-primary-disabled disabled:text-foreground/30 disabled:opacity-100"
+                >
+                  <ArrowUp size={16} strokeWidth={2.2} />
+                </Button>
+              ) : null}
+              {running ? (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label={t`Stop`}
+                  disabled={sending}
+                  onClick={() => void onStop()}
+                  className="size-8 rounded-full border border-border bg-muted text-foreground/80 shadow-sm transition-colors hover:bg-accent hover:text-foreground"
+                >
+                  <Square size={11} strokeWidth={0} fill="currentColor" />
+                </Button>
+              ) : null}
             </>
           )}
         </div>
