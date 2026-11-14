@@ -46,8 +46,10 @@ export function opsRoutes(ctx: RouterContext) {
     await requireOpsDashboardAccess(deps, context.actor.userId, context.clientIp);
   }
 
-  function sharedGoogleApiKey(): string | null {
-    return deps.env?.defaultProvider === "google" ? (deps.env.deploymentModelKey ?? null) : null;
+  function deploymentModelKey(): string | null {
+    // Any deployment provider's shared key — not Google-only. Used only to
+    // classify company vs personal via constant-time compare; never returned.
+    return deps.env?.deploymentModelKey ?? null;
   }
 
   function envBootstrapAdmins(): string[] {
@@ -58,8 +60,9 @@ export function opsRoutes(ctx: RouterContext) {
     ops: {
       overview: authed.ops.overview.handler(async ({ context }) => {
         await gate(context);
-        // Read-only: roster is maintained on the shared-key reserve path and by
-        // explicit SHARED_KEY_BUDGET_USER_IDS — never scan/decrypt keys here.
+        // Read-only overview: roster is maintained on the shared-key reserve path
+        // and by explicit SHARED_KEY_BUDGET_USER_IDS. Key labels decrypt stored
+        // credentials only to classify company vs personal — never return key values.
         const secretsDegraded = deps.secrets?.describe().capabilities.degraded === true;
         return loadOpsOverview(
           deps.prisma,
@@ -73,7 +76,7 @@ export function opsRoutes(ctx: RouterContext) {
           deps.env?.sharedKeyMonthlyBudgetUsd ?? null,
           {
             secrets: deps.secrets,
-            sharedGoogleApiKey: sharedGoogleApiKey(),
+            deploymentModelKey: deploymentModelKey(),
             envBootstrapAdmins: envBootstrapAdmins(),
           },
         );

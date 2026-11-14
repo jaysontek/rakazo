@@ -136,7 +136,15 @@ export {
   SharedKeyWeeklyBudgetExceededRunError,
   sharedKeyBudgetObserver,
 } from "./shared-key-budget-observer.js";
-export { isDeploymentSharedKeyUsage, sharedKeyMaterialMatches } from "./shared-key-usage.js";
+export {
+  isDeploymentSharedKeyUsage,
+  modelKeyTypeFromResolution,
+  ownCredentialFromKeyType,
+  resolveModelKeyType,
+  resolveModelKeyTypeSafe,
+  sharedKeyMaterialMatches,
+} from "./shared-key-usage.js";
+export type { ModelKeyType, ModelKeyTypeResult, ResolveModelKeyTypeDeps } from "./shared-key-usage.js";
 export * from "./model-roles.js";
 export * from "./model-selection.js";
 export * from "./model-vision.js";

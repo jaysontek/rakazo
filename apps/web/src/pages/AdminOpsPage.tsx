@@ -70,32 +70,51 @@ function accountLabel(account: Pick<OpsAccount, "name" | "email">): string {
 function KeyBadge({
   keyType,
   pendingSharedBudget,
+  needsReconnect,
 }: {
   keyType: OpsAccount["keyType"];
   pendingSharedBudget?: boolean;
+  needsReconnect?: boolean;
 }) {
+  let badge: ReactNode;
   if (pendingSharedBudget) {
-    return (
+    badge = (
       <Badge variant="secondary">
         <Trans>Company key — pending admin approval</Trans>
       </Badge>
     );
+  } else {
+    switch (keyType) {
+      case "company":
+        badge = (
+          <Badge variant="secondary">
+            <Trans>Company API</Trans>
+          </Badge>
+        );
+        break;
+      case "personal":
+        badge = (
+          <Badge variant="outline">
+            <Trans>Personal API</Trans>
+          </Badge>
+        );
+        break;
+      default: {
+        const _exhaustive: never = keyType;
+        return _exhaustive;
+      }
+    }
   }
-  if (keyType === "company") {
-    return (
-      <Badge variant="secondary">
-        <Trans>Company</Trans>
-      </Badge>
-    );
-  }
-  if (keyType === "personal") {
-    return (
-      <Badge variant="outline">
-        <Trans>Personal</Trans>
-      </Badge>
-    );
-  }
-  return <span className="text-muted-foreground">—</span>;
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1.5">
+      {badge}
+      {needsReconnect ? (
+        <span className="text-xs text-muted-foreground">
+          <Trans>Reconnect</Trans>
+        </span>
+      ) : null}
+    </span>
+  );
 }
 
 function pendingSharedBudgetApproval(account: OpsAccount): boolean {
@@ -601,7 +620,7 @@ function AccountsSection({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [keyFilter, setKeyFilter] = useState<"all" | "company" | "personal" | "none">("all");
+  const [keyFilter, setKeyFilter] = useState<"all" | "company" | "personal">("all");
   const [sortKey, setSortKey] = useState<AccountSortKey>("account");
   const [sortDir, setSortDir] = useState<AccountSortDir>("asc");
 
@@ -785,13 +804,12 @@ function AccountsSection({
             value={keyFilter}
             aria-label={t`Filter by key type`}
             onChange={(event) =>
-              setKeyFilter(event.target.value as "all" | "company" | "personal" | "none")
+              setKeyFilter(event.target.value as "all" | "company" | "personal")
             }
           >
             <NativeSelectOption value="all">{t`All keys`}</NativeSelectOption>
-            <NativeSelectOption value="company">{t`Company`}</NativeSelectOption>
-            <NativeSelectOption value="personal">{t`Personal`}</NativeSelectOption>
-            <NativeSelectOption value="none">{t`No key`}</NativeSelectOption>
+            <NativeSelectOption value="company">{t`Company API`}</NativeSelectOption>
+            <NativeSelectOption value="personal">{t`Personal API`}</NativeSelectOption>
           </NativeSelect>
         </label>
       </div>
@@ -853,6 +871,7 @@ function AccountsSection({
                     <KeyBadge
                       keyType={account.keyType}
                       pendingSharedBudget={pendingSharedBudgetApproval(account)}
+                      needsReconnect={account.needsReconnect}
                     />
                   </td>
                   <td className="py-3 pr-3">
@@ -936,6 +955,7 @@ function AccountsSection({
                   <KeyBadge
                     keyType={account.keyType}
                     pendingSharedBudget={pendingSharedBudgetApproval(account)}
+                    needsReconnect={account.needsReconnect}
                   />
                   {account.modelProvider && account.modelId ? (
                     <Badge variant="outline" className="font-normal">

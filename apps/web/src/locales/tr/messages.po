@@ -1697,7 +1697,7 @@ msgid "Compact"
 msgstr "Sıkı"
 
 #: src/pages/AdminOpsPage.tsx
-msgid "Company"
+msgid "Company API"
 msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
@@ -4651,10 +4651,6 @@ msgstr "Bot yok"
 msgid "No bots match"
 msgstr "Eşleşen bot yok"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "No key"
-msgstr "Anahtar yok"
-
 #: src/components/AskCard.tsx
 #: src/components/SecretAskCard.tsx
 msgid "No longer active"
@@ -5197,6 +5193,10 @@ msgstr "Kişisel"
 msgid "Personal {0}"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Personal API"
+msgstr ""
+
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/vault/VaultItemEditor.tsx
 msgid "Phone"
@@ -5409,6 +5409,7 @@ msgid "Recommended"
 msgstr "Önerilen"
 
 #: src/components/integrations/plugin-marketplace.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Reconnect"
 msgstr "Yeniden bağlan"

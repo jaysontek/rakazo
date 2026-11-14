@@ -99,6 +99,23 @@ function makeDeps(allowlist = ["192.168.140.0/24"]): RouterDeps {
     sharedKeyAllotmentTransfer: {
       findMany: async () => [],
     },
+    spaceMember: {
+      findMany: async () => [],
+    },
+    userModelPreference: {
+      findMany: async () => [],
+      findFirst: async () => null,
+    },
+    userModelCredential: {
+      findMany: async () => [],
+      findFirst: async () => null,
+    },
+    secret: {
+      findFirst: async () => null,
+    },
+    space: {
+      findFirst: async () => null,
+    },
     $queryRaw: async () => [{ "?column?": 1 }],
     $transaction: async (fn: (tx: unknown) => unknown) => fn(prisma),
   };

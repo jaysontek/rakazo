@@ -1,6 +1,6 @@
 import { ORPCError } from "@orpc/server";
 import type { UsageOperationKind } from "@rakazo/adapter-kit";
-import { resolveBotWorkspacePath } from "@rakazo/adapters";
+import { resolveBotWorkspacePath, resolveModelKeyTypeSafe } from "@rakazo/adapters";
 import type { ExportManifest } from "@rakazo/contracts";
 import { attachmentMaxBytes, resolveBotAvatarSet } from "@rakazo/contracts";
 import { AttachmentValidationError } from "@rakazo/core";
@@ -25,7 +25,6 @@ import {
 } from "../artifacts.js";
 import { requireIdentityConfirmation } from "../identity-confirmation.js";
 import { requireNotImpersonating } from "../impersonation.js";
-import { classifyGoogleModelKeyType } from "../model-key-type.js";
 import { listSpaceRuns } from "../runs.js";
 import { querySpaceSearch } from "../search.js";
 import { loadAllMessages } from "../thread-message-pages.js";
@@ -170,11 +169,13 @@ export function contentRoutes(ctx: RouterContext) {
           costUsd: true,
         } as const;
         const counts = { _all: true, ...sums } as const;
-        const keyType = classifyGoogleModelKeyType(
-          deps.prisma,
-          deps.secrets,
-          context.actor.userId,
-          deps.env.defaultProvider === "google" ? deps.env.deploymentModelKey : undefined,
+        const keyType = resolveModelKeyTypeSafe(
+          {
+            prisma: deps.prisma,
+            secretStore: deps.secrets,
+            deploymentModelKey: deps.env.deploymentModelKey ?? undefined,
+          },
+          { userId: context.actor.userId, spaceId: context.actor.spaceId },
         );
         const [result, modelGroups, runGroups, budget, usageLimit] = await Promise.all([
           deps.prisma.usageRecord.aggregate({ where, _sum: sums, _count: counts }),
@@ -186,9 +187,9 @@ export function contentRoutes(ctx: RouterContext) {
           }),
           deps.prisma.usageRecord.groupBy({ by: ["runId", "parentRunId"], where }),
           sharedKeyWeeklyBudgetStatus(deps.prisma, context.actor.userId, undefined, envBudget),
-          keyType.then((type) =>
+          keyType.then((resolution) =>
             resolveUsageLimitView(deps.prisma, context.actor.userId, undefined, envBudget, {
-              personalKey: type === "personal",
+              personalKey: resolution.keyType === "personal",
             }),
           ),
         ]);

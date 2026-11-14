@@ -1,4 +1,5 @@
 import type { SecretStore } from "@rakazo/adapter-kit";
+import { resolveModelKeyTypeSafe } from "@rakazo/adapters";
 import { sharedKeyWeekEnd, sharedKeyWeekStart } from "@rakazo/core";
 import type { AdminGrantRow, AllotmentTransferRow, PrismaClient } from "@rakazo/db";
 import {
@@ -11,7 +12,6 @@ import {
   sharedKeyMonthlyBudgetUsd,
   sharedKeyWeeklyBudgetStatus,
 } from "@rakazo/db";
-import { classifyGoogleModelKeyType } from "./model-key-type.js";
 
 const RECENT_RUN_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 const LATENCY_SAMPLE_LIMIT = 500;
@@ -27,7 +27,8 @@ export type OpsAccountRow = {
   deactivated: boolean;
   modelProvider: string | null;
   modelId: string | null;
-  keyType: "company" | "personal" | "none";
+  keyType: "company" | "personal";
+  needsReconnect: boolean;
   totalTokens: number | null;
   totalCostUsd: number | null;
   sharedKeyCostUsd: number;
@@ -198,7 +199,8 @@ export async function loadOpsOverview(
   envSharedKeyMonthlyBudgetUsd: number | null = null,
   options: {
     secrets?: SecretStore;
-    sharedGoogleApiKey?: string | null;
+    /** Deployment shared API key for whatever provider resolveDeploymentModel selects. */
+    deploymentModelKey?: string | null;
     envBootstrapAdmins?: string[];
   } = {},
 ): Promise<OpsOverview> {
@@ -310,6 +312,27 @@ export async function loadOpsOverview(
     const hiddenUserIds = new Set(
       users.filter((user) => isHiddenOpsEmail(user.email)).map((user) => user.id),
     );
+    const spaceMemberships = await prisma.spaceMember.findMany({
+      where: {
+        userId: { in: visibleUsers.map((user) => user.id) },
+        space: { deletingAt: null },
+      },
+      select: { userId: true, spaceId: true },
+      orderBy: { createdAt: "asc" },
+    });
+    const spaceByUser = new Map<string, string>();
+    for (const membership of spaceMemberships) {
+      if (!spaceByUser.has(membership.userId)) {
+        spaceByUser.set(membership.userId, membership.spaceId);
+      }
+    }
+    const secretStore =
+      options.secrets ??
+      ({
+        load: async () => {
+          throw new Error("secret store unavailable");
+        },
+      } satisfies Pick<SecretStore, "load">);
     const accounts: OpsAccountRow[] = [];
     for (const user of visibleUsers) {
       const usage = usageByUser.get(user.id);
@@ -345,14 +368,16 @@ export async function loadOpsOverview(
           timezone: status.timezone,
         };
       }
-      const keyType = options.secrets
-        ? await classifyGoogleModelKeyType(
-            prisma,
-            options.secrets,
-            user.id,
-            options.sharedGoogleApiKey ?? null,
-          )
-        : "none";
+      const spaceId = spaceByUser.get(user.id) ?? user.id;
+      const keyResolution = await resolveModelKeyTypeSafe(
+        {
+          prisma,
+          secretStore,
+          deploymentModelKey: options.deploymentModelKey ?? undefined,
+        },
+        { userId: user.id, spaceId },
+      );
+      const keyType = keyResolution.keyType;
       const deactivated = user.deactivatedAt != null;
       const budgetConfigured = Boolean(budget?.configured) || monthlyCap != null;
       const pendingSharedBudgetApproval =
@@ -369,6 +394,7 @@ export async function loadOpsOverview(
         modelProvider: model?.provider ?? null,
         modelId: model?.model ?? null,
         keyType,
+        needsReconnect: keyResolution.needsReconnect,
         totalTokens: usage?.totalTokens ?? null,
         totalCostUsd: usage?.totalCostUsd ?? null,
         sharedKeyCostUsd: sharedByUser.get(user.id) ?? 0,
