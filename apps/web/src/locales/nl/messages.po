@@ -1698,7 +1698,7 @@ msgstr "Compact"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Company API"
-msgstr ""
+msgstr "Bedrijfs-API"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Company key — pending admin approval"
@@ -5195,7 +5195,7 @@ msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Personal API"
-msgstr ""
+msgstr "Persoonlijke API"
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/vault/VaultItemEditor.tsx

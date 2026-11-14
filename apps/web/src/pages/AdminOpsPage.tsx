@@ -100,8 +100,13 @@ function KeyBadge({
         );
         break;
       default: {
-        const _exhaustive: never = keyType;
-        return _exhaustive;
+        keyType satisfies never;
+        // Unexpected legacy/unknown values must never render blank or "none".
+        badge = (
+          <Badge variant="secondary">
+            <Trans>Company API</Trans>
+          </Badge>
+        );
       }
     }
   }

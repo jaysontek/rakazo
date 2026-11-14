@@ -1698,7 +1698,7 @@ msgstr "紧凑"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Company API"
-msgstr ""
+msgstr "公司 API"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Company key — pending admin approval"
@@ -5195,7 +5195,7 @@ msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Personal API"
-msgstr ""
+msgstr "个人 API"
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/vault/VaultItemEditor.tsx

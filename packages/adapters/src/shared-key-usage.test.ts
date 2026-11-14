@@ -24,6 +24,10 @@ type Cred = {
   createdAt: Date;
 };
 
+type RunExpect =
+  | { outcome: "ok"; usingSharedKey: boolean }
+  | { outcome: "throws"; error: string | RegExp };
+
 type Fixture = {
   name: string;
   provider?: string;
@@ -44,6 +48,8 @@ type Fixture = {
   /** ciphertext → plaintext or Error */
   plaintexts?: Record<string, string | Error>;
   expect: { keyType: "company" | "personal"; needsReconnect: boolean };
+  /** What resolveModelKey does for this fixture (no bare catch). */
+  run: RunExpect;
   /** Extra context for the state table (not read by the resolver). */
   meta?: { deactivated?: boolean; envListMember?: boolean };
 };
@@ -159,6 +165,7 @@ const cases: Fixture[] = [
   {
     name: "no usage and no credential",
     expect: { keyType: "company", needsReconnect: false },
+    run: { outcome: "ok", usingSharedKey: true },
   },
   {
     name: "credential for another provider only",
@@ -174,6 +181,7 @@ const cases: Fixture[] = [
     secrets: { "secret-or": { ciphertext: "ct-or", spaceId: null } },
     plaintexts: { "ct-or": apiKeyPlaintext(PERSONAL_KEY) },
     expect: { keyType: "company", needsReconnect: false },
+    run: { outcome: "ok", usingSharedKey: true },
   },
   {
     name: "secret row missing",
@@ -188,6 +196,7 @@ const cases: Fixture[] = [
     ],
     secrets: {},
     expect: { keyType: "company", needsReconnect: false },
+    run: { outcome: "ok", usingSharedKey: true },
   },
   {
     name: "secret with non-null spaceId",
@@ -203,6 +212,7 @@ const cases: Fixture[] = [
     secrets: { "space-secret": { ciphertext: "ct-space", spaceId: "space-1" } },
     plaintexts: { "ct-space": apiKeyPlaintext(PERSONAL_KEY) },
     expect: { keyType: "company", needsReconnect: false },
+    run: { outcome: "ok", usingSharedKey: true },
   },
   {
     name: "undecryptable",
@@ -218,6 +228,7 @@ const cases: Fixture[] = [
     secrets: { "bad-secret": { ciphertext: "ct-bad", spaceId: null } },
     plaintexts: { "ct-bad": new Error("unavailable") },
     expect: { keyType: "personal", needsReconnect: true },
+    run: { outcome: "throws", error: "unavailable" },
   },
   {
     name: "empty key",
@@ -233,6 +244,7 @@ const cases: Fixture[] = [
     secrets: { "empty-secret": { ciphertext: "ct-empty", spaceId: null } },
     plaintexts: { "ct-empty": "" },
     expect: { keyType: "personal", needsReconnect: true },
+    run: { outcome: "throws", error: "Connect a model in Settings before running bots." },
   },
   {
     name: "stored key equal to the deployment key",
@@ -248,6 +260,7 @@ const cases: Fixture[] = [
     secrets: { "shared-copy": { ciphertext: "ct-shared", spaceId: null } },
     plaintexts: { "ct-shared": apiKeyPlaintext(DEPLOYMENT_KEY) },
     expect: { keyType: "company", needsReconnect: false },
+    run: { outcome: "ok", usingSharedKey: true },
   },
   {
     name: "OAuth credential carrying a key",
@@ -263,6 +276,9 @@ const cases: Fixture[] = [
     secrets: { "oauth-secret": { ciphertext: "ct-oauth", spaceId: null } },
     plaintexts: { "ct-oauth": oauthPlaintext(DEPLOYMENT_KEY) },
     expect: { keyType: "company", needsReconnect: false },
+    // Page reads the carried apiKey as company; the run cannot complete without a
+    // Google OAuth handler in this harness.
+    run: { outcome: "throws", error: /No OAuth handler for google/ },
   },
   {
     name: "distinct personal key",
@@ -278,6 +294,7 @@ const cases: Fixture[] = [
     secrets: { "personal-secret": { ciphertext: "ct-personal", spaceId: null } },
     plaintexts: { "ct-personal": apiKeyPlaintext(PERSONAL_KEY) },
     expect: { keyType: "personal", needsReconnect: false },
+    run: { outcome: "ok", usingSharedKey: false },
   },
   {
     name: "two credentials where the preference picks the older one",
@@ -314,6 +331,7 @@ const cases: Fixture[] = [
       "ct-new": apiKeyPlaintext(DEPLOYMENT_KEY),
     },
     expect: { keyType: "personal", needsReconnect: false },
+    run: { outcome: "ok", usingSharedKey: false },
   },
   {
     name: "hosted credits on",
@@ -331,11 +349,13 @@ const cases: Fixture[] = [
     secrets: { "personal-secret": { ciphertext: "ct-personal", spaceId: null } },
     plaintexts: { "ct-personal": apiKeyPlaintext(PERSONAL_KEY) },
     expect: { keyType: "company", needsReconnect: false },
+    run: { outcome: "ok", usingSharedKey: true },
   },
   {
     name: "deactivated user",
     meta: { deactivated: true },
     expect: { keyType: "company", needsReconnect: false },
+    run: { outcome: "ok", usingSharedKey: true },
   },
   {
     name: "env-list (SHARED_KEY_BUDGET_USER_IDS) member",
@@ -352,6 +372,7 @@ const cases: Fixture[] = [
     secrets: { "personal-secret": { ciphertext: "ct-personal", spaceId: null } },
     plaintexts: { "ct-personal": apiKeyPlaintext(PERSONAL_KEY) },
     expect: { keyType: "personal", needsReconnect: false },
+    run: { outcome: "ok", usingSharedKey: false },
   },
   {
     name: "non-Google deployment provider",
@@ -373,6 +394,7 @@ const cases: Fixture[] = [
     secrets: { "or-secret": { ciphertext: "ct-or", spaceId: null } },
     plaintexts: { "ct-or": apiKeyPlaintext(PERSONAL_KEY) },
     expect: { keyType: "personal", needsReconnect: false },
+    run: { outcome: "ok", usingSharedKey: false },
   },
 ];
 
@@ -483,6 +505,7 @@ describe("resolveModelKey and resolveModelKeyType agree", () => {
         { userId: USER_ID, spaceId: SPACE_ID },
         { provider },
       );
+      expect(label).toEqual(fixture.expect);
 
       const credential = await findModelCredential(prisma as never, { userId: USER_ID }, provider);
       const deps = {
@@ -493,25 +516,15 @@ describe("resolveModelKey and resolveModelKeyType agree", () => {
         runtime: { describe: () => ({ capabilities: {} }) },
       } as unknown as ExecutorDeps;
 
-      let usingSharedKey: boolean;
-      try {
-        const resolved = await resolveModelKey(
-          deps,
-          USER_ID,
-          SPACE_ID,
-          credential,
-          provider,
-          "model-1",
-        );
-        usingSharedKey = resolved.usingSharedKey;
-        expect(Boolean(resolved.ownCredential)).toBe(label.keyType === "personal");
-      } catch {
-        // Broken personal credentials fail after selecting a personal key. Company
-        // labels that throw in this harness (OAuth without a provider handler) still
-        // intend the deployment/shared key a successful run would use.
-        usingSharedKey = label.keyType === "company";
+      const run = resolveModelKey(deps, USER_ID, SPACE_ID, credential, provider, "model-1");
+      if (fixture.run.outcome === "throws") {
+        await expect(run).rejects.toThrow(fixture.run.error);
+        return;
       }
-      expect(usingSharedKey).toBe(label.keyType === "company");
+      const resolved = await run;
+      expect(resolved.usingSharedKey).toBe(fixture.run.usingSharedKey);
+      expect(resolved.usingSharedKey).toBe(label.keyType === "company");
+      expect(Boolean(resolved.ownCredential)).toBe(label.keyType === "personal");
     } finally {
       restore();
     }

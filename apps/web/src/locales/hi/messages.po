@@ -1698,7 +1698,7 @@ msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Company API"
-msgstr ""
+msgstr "कंपनी API"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Company key — pending admin approval"
@@ -5195,7 +5195,7 @@ msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Personal API"
-msgstr ""
+msgstr "व्यक्तिगत API"
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/vault/VaultItemEditor.tsx
@@ -5412,7 +5412,7 @@ msgstr ""
 #: src/pages/AdminOpsPage.tsx
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Reconnect"
-msgstr ""
+msgstr "फिर से कनेक्ट करें"
 
 #: src/pages/McpServersOverlay.tsx
 msgid "Reconnect OAuth"

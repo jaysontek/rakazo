@@ -1698,7 +1698,7 @@ msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Company API"
-msgstr ""
+msgstr "회사 API"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Company key — pending admin approval"
@@ -5195,7 +5195,7 @@ msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Personal API"
-msgstr ""
+msgstr "개인 API"
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/vault/VaultItemEditor.tsx
@@ -5412,7 +5412,7 @@ msgstr ""
 #: src/pages/AdminOpsPage.tsx
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Reconnect"
-msgstr ""
+msgstr "다시 연결"
 
 #: src/pages/McpServersOverlay.tsx
 msgid "Reconnect OAuth"

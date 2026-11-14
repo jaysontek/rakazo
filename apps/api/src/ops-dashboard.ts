@@ -384,8 +384,8 @@ export async function loadOpsOverview(
         budgetConfigured &&
         !memberIds.has(user.id) &&
         !deactivated &&
-        keyType !== "personal" &&
-        (notEnrolledHitIds.has(user.id) || keyType === "company");
+        notEnrolledHitIds.has(user.id) &&
+        keyType !== "personal";
       accounts.push({
         userId: user.id,
         email: user.email,

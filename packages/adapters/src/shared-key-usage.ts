@@ -242,7 +242,7 @@ export async function resolveModelKeyTypeSafe(
     getLogger().error("model key type resolution failed", {
       userId: scope.userId,
       provider: options.provider ?? resolveDeploymentModel().provider,
-      message: error instanceof Error ? error.message : "unknown",
+      name: error instanceof Error ? error.name : "unknown",
     });
     return { keyType: "company", needsReconnect: false };
   }
