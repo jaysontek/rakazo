@@ -50,6 +50,10 @@ const EXACT = new Set<string>([
   "routines.list",
   "boards.list",
   "boards.get",
+  "boards.subscribe",
+  "tickets.list",
+  "tickets.get",
+  "tickets.comments",
 ]);
 
 export function isImpersonationAllowedProcedure(path: readonly string[]): boolean {
