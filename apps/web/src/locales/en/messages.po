@@ -17,6 +17,11 @@ msgstr ""
 msgid " (unread)"
 msgstr " (unread)"
 
+#. placeholder {0}: group.agents.length
+#: src/pages/AdminOpsPage.tsx
+msgid "{0, plural, one {# agent} other {# agents}}"
+msgstr "{0, plural, one {# agent} other {# agents}}"
+
 #. placeholder {0}: pinned.length
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "{0, plural, one {# bot has its own model:} other {# bots have their own model:}}"
@@ -538,6 +543,7 @@ msgstr "Actions for {0}"
 msgid "Actions for space"
 msgstr "Actions for space"
 
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/BillingSettingsPanel.tsx
 #: src/pages/RoutineEditor.tsx
 msgid "Active"
@@ -738,6 +744,10 @@ msgstr "Agent from another app"
 msgid "Agents"
 msgstr "Agents"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Agents unavailable"
+msgstr "Agents unavailable"
+
 #: src/components/VaultSettings.tsx
 #: src/pages/PluginsOverlay.tsx
 msgid "All"
@@ -756,6 +766,10 @@ msgstr "All bots"
 #: src/pages/AdminOpsPage.tsx
 msgid "All keys"
 msgstr "All keys"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "All owners"
+msgstr "All owners"
 
 #: src/components/integrations/space-availability.tsx
 msgid "All spaces"
@@ -995,6 +1009,7 @@ msgstr "Archive"
 msgid "archived"
 msgstr "archived"
 
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/shell/archived-chats.tsx
 msgid "Archived"
 msgstr "Archived"
@@ -2651,6 +2666,7 @@ msgid "Create your Rakazo"
 msgstr "Create your Rakazo"
 
 #: src/components/AskCard.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Created"
 msgstr "Created"
 
@@ -2759,6 +2775,10 @@ msgstr "Day-to-day work"
 #: src/lib/cron.ts
 msgid "days"
 msgstr "days"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Deactivated owners"
+msgstr "Deactivated owners"
 
 #: src/components/call/IncomingCall.tsx
 #: src/pages/MessagingSettingsPanel.tsx
@@ -3382,6 +3402,10 @@ msgstr "Filter by date"
 msgid "Filter by key type"
 msgstr "Filter by key type"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Filter by owner"
+msgstr "Filter by owner"
+
 #: src/pages/Artifacts.tsx
 #: src/pages/shell/shell-sidebar.tsx
 msgid "Filters"
@@ -3941,6 +3965,10 @@ msgstr "Label"
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Language"
 msgstr "Language"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Last active"
+msgstr "Last active"
 
 #. placeholder {0}: new Date(state.checkedAt).toLocaleString()
 #: src/pages/RoutineEditor.tsx
@@ -4626,6 +4654,14 @@ msgstr "Next page"
 msgid "Next settings sections"
 msgstr "Next settings sections"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "No agents match this filter."
+msgstr "No agents match this filter."
+
+#: src/pages/AdminOpsPage.tsx
+msgid "No agents yet"
+msgstr "No agents yet"
+
 #: src/pages/PluginsOverlay.tsx
 msgid "No apps match your search."
 msgstr "No apps match your search."
@@ -4697,6 +4733,10 @@ msgstr "No models listed."
 #: src/pages/shell/agent-import.tsx
 msgid "No OpenClaw, Hermes or agent document found."
 msgstr "No OpenClaw, Hermes or agent document found."
+
+#: src/pages/AdminOpsPage.tsx
+msgid "No owner / deleted account"
+msgstr "No owner / deleted account"
 
 #: src/components/pages/PagesList.tsx
 msgid "No pages match “{query}”."

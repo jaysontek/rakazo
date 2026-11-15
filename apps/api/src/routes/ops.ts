@@ -83,7 +83,12 @@ export function opsRoutes(ctx: RouterContext) {
       }),
       agents: authed.ops.agents.handler(async ({ context }) => {
         await gate(context);
-        return listOpsAgents(deps.prisma);
+        // Key labels decrypt stored credentials only to classify company vs personal —
+        // never return key values. One bad credential must not fail the page.
+        return listOpsAgents(deps.prisma, {
+          secrets: deps.secrets,
+          deploymentModelKey: deploymentModelKey(),
+        });
       }),
       requestLog: authed.ops.requestLog.handler(async ({ context, input }) => {
         await gate(context);
@@ -302,12 +307,10 @@ export function opsRoutes(ctx: RouterContext) {
         async ({ context, input }) => {
           await gate(context);
           try {
-            const result = await addSharedKeyBudgetMember(
-              deps.prisma,
-              input.userId,
-              new Date(),
-              { admin: true, actorUserId: context.actor.userId },
-            );
+            const result = await addSharedKeyBudgetMember(deps.prisma, input.userId, new Date(), {
+              admin: true,
+              actorUserId: context.actor.userId,
+            });
             return {
               ok: true as const,
               enrolled: result.enrolled,

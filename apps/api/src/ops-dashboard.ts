@@ -17,8 +17,108 @@ const RECENT_RUN_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 const LATENCY_SAMPLE_LIMIT = 500;
 const REQUEST_LOG_DEFAULT_LIMIT = 50;
 const CHAT_LOG_DEFAULT_LIMIT = 100;
+/** Decrypt/classify a few owners at a time so a large roster cannot stampede the secret store. */
+const KEY_TYPE_CONCURRENCY = 4;
 
 export type OpsDashboardPrisma = PrismaClient;
+
+/**
+ * Oldest non-deleting space membership per user — same space Accounts and Agents use when
+ * classifying company vs personal (hosted credits are space-scoped).
+ */
+export async function loadOpsSpaceByUser(
+  prisma: OpsDashboardPrisma,
+  userIds: string[],
+): Promise<Map<string, string>> {
+  const spaceByUser = new Map<string, string>();
+  if (userIds.length === 0) return spaceByUser;
+  const spaceMemberships = await prisma.spaceMember.findMany({
+    where: {
+      userId: { in: userIds },
+      space: { deletingAt: null },
+    },
+    select: { userId: true, spaceId: true },
+    orderBy: { createdAt: "asc" },
+  });
+  for (const membership of spaceMemberships) {
+    if (!spaceByUser.has(membership.userId)) {
+      spaceByUser.set(membership.userId, membership.spaceId);
+    }
+  }
+  return spaceByUser;
+}
+
+async function mapWithConcurrency<T, R>(
+  items: readonly T[],
+  concurrency: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  if (items.length === 0) return [];
+  const results = new Array<R>(items.length);
+  let next = 0;
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+    while (true) {
+      const index = next;
+      next += 1;
+      if (index >= items.length) return;
+      results[index] = await fn(items[index]!);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
+/**
+ * Live company|personal labels for ops Accounts and Agents. One resolve per userId,
+ * bounded concurrency, and the same spaceByUser rule both tabs share.
+ */
+export async function resolveOpsModelKeyTypes(
+  prisma: OpsDashboardPrisma,
+  scopes: Array<{ userId: string; spaceId: string }>,
+  options: {
+    secrets?: SecretStore;
+    deploymentModelKey?: string | null;
+    concurrency?: number;
+  } = {},
+): Promise<Map<string, { keyType: "company" | "personal"; needsReconnect: boolean }>> {
+  const secretStore =
+    options.secrets ??
+    ({
+      load: async () => {
+        throw new Error("secret store unavailable");
+      },
+    } satisfies Pick<SecretStore, "load">);
+  const unique = new Map<string, { userId: string; spaceId: string }>();
+  for (const scope of scopes) {
+    if (!unique.has(scope.userId)) unique.set(scope.userId, scope);
+  }
+  const entries = [...unique.values()];
+  const resolved = await mapWithConcurrency(
+    entries,
+    options.concurrency ?? KEY_TYPE_CONCURRENCY,
+    async (scope) => {
+      const resolution = await resolveModelKeyTypeSafe(
+        {
+          prisma,
+          secretStore,
+          deploymentModelKey: options.deploymentModelKey ?? undefined,
+        },
+        scope,
+      );
+      return {
+        userId: scope.userId,
+        keyType: resolution.keyType,
+        needsReconnect: resolution.needsReconnect,
+      };
+    },
+  );
+  return new Map(
+    resolved.map((row) => [
+      row.userId,
+      { keyType: row.keyType, needsReconnect: row.needsReconnect },
+    ]),
+  );
+}
 
 export type OpsAccountRow = {
   userId: string;
@@ -49,14 +149,22 @@ export type OpsAccountRow = {
   pendingSharedBudgetApproval: boolean;
 };
 
+export type OpsAgentOwner = {
+  id: string;
+  name: string;
+  email: string;
+  deactivated: boolean;
+};
+
 export type OpsAgentRow = {
   id: string;
   name: string;
-  userId: string;
-  spaceId: string;
-  modelProvider: string | null;
-  modelId: string | null;
-  archived: boolean;
+  createdAt: string;
+  lastActiveAt: string | null;
+  status: "active" | "archived";
+  owner: OpsAgentOwner | null;
+  keyType: "company" | "personal";
+  needsReconnect: boolean;
 };
 
 export type OpsRequestLogRow = {
@@ -312,27 +420,21 @@ export async function loadOpsOverview(
     const hiddenUserIds = new Set(
       users.filter((user) => isHiddenOpsEmail(user.email)).map((user) => user.id),
     );
-    const spaceMemberships = await prisma.spaceMember.findMany({
-      where: {
-        userId: { in: visibleUsers.map((user) => user.id) },
-        space: { deletingAt: null },
+    const spaceByUser = await loadOpsSpaceByUser(
+      prisma,
+      visibleUsers.map((user) => user.id),
+    );
+    const keyByUser = await resolveOpsModelKeyTypes(
+      prisma,
+      visibleUsers.map((user) => ({
+        userId: user.id,
+        spaceId: spaceByUser.get(user.id) ?? user.id,
+      })),
+      {
+        secrets: options.secrets,
+        deploymentModelKey: options.deploymentModelKey,
       },
-      select: { userId: true, spaceId: true },
-      orderBy: { createdAt: "asc" },
-    });
-    const spaceByUser = new Map<string, string>();
-    for (const membership of spaceMemberships) {
-      if (!spaceByUser.has(membership.userId)) {
-        spaceByUser.set(membership.userId, membership.spaceId);
-      }
-    }
-    const secretStore =
-      options.secrets ??
-      ({
-        load: async () => {
-          throw new Error("secret store unavailable");
-        },
-      } satisfies Pick<SecretStore, "load">);
+    );
     const accounts: OpsAccountRow[] = [];
     for (const user of visibleUsers) {
       const usage = usageByUser.get(user.id);
@@ -368,15 +470,10 @@ export async function loadOpsOverview(
           timezone: status.timezone,
         };
       }
-      const spaceId = spaceByUser.get(user.id) ?? user.id;
-      const keyResolution = await resolveModelKeyTypeSafe(
-        {
-          prisma,
-          secretStore,
-          deploymentModelKey: options.deploymentModelKey ?? undefined,
-        },
-        { userId: user.id, spaceId },
-      );
+      const keyResolution = keyByUser.get(user.id) ?? {
+        keyType: "company" as const,
+        needsReconnect: false,
+      };
       const keyType = keyResolution.keyType;
       const deactivated = user.deactivatedAt != null;
       const budgetConfigured = Boolean(budget?.configured) || monthlyCap != null;
@@ -405,9 +502,9 @@ export async function loadOpsOverview(
     }
     const visibleBots = bots.filter((bot) => !hiddenUserIds.has(bot.userId));
     const activeBots = visibleBots.filter((bot) => bot.archivedAt == null);
-    const adminGrants = (
-      await listAdminGrants(prisma, options.envBootstrapAdmins ?? [])
-    ).filter((grant) => !isHiddenOpsEmail(grant.email));
+    const adminGrants = (await listAdminGrants(prisma, options.envBootstrapAdmins ?? [])).filter(
+      (grant) => !isHiddenOpsEmail(grant.email),
+    );
     // Also surface env bootstrap admins that have no DB grant row yet.
     for (const email of options.envBootstrapAdmins ?? []) {
       if (isHiddenOpsEmail(email)) continue;
@@ -509,7 +606,14 @@ export async function loadOpsOverview(
   });
 }
 
-export async function listOpsAgents(prisma: OpsDashboardPrisma): Promise<OpsAgentRow[]> {
+/** Cross-account agent roster with owner + last-active. Caller must enforce admin + LAN. */
+export async function listOpsAgents(
+  prisma: OpsDashboardPrisma,
+  options: {
+    secrets?: SecretStore;
+    deploymentModelKey?: string | null;
+  } = {},
+): Promise<OpsAgentRow[]> {
   return runAsSystem("operations dashboard agents", async () => {
     const bots = await prisma.bot.findMany({
       select: {
@@ -517,30 +621,87 @@ export async function listOpsAgents(prisma: OpsDashboardPrisma): Promise<OpsAgen
         name: true,
         userId: true,
         spaceId: true,
-        modelProvider: true,
-        modelId: true,
+        createdAt: true,
         archivedAt: true,
       },
       orderBy: [{ archivedAt: "asc" }, { name: "asc" }],
     });
-    const users = await prisma.user.findMany({
-      where: { id: { in: [...new Set(bots.map((bot) => bot.userId))] } },
-      select: { id: true, email: true },
-    });
+    const botIds = bots.map((bot) => bot.id);
+    const ownerIds = [...new Set(bots.map((bot) => bot.userId))];
+    const [users, lastActiveGroups] = await Promise.all([
+      ownerIds.length === 0
+        ? Promise.resolve(
+            [] as Array<{
+              id: string;
+              email: string;
+              name: string;
+              deactivatedAt: Date | null;
+            }>,
+          )
+        : prisma.user.findMany({
+            where: { id: { in: ownerIds } },
+            select: { id: true, email: true, name: true, deactivatedAt: true },
+          }),
+      botIds.length === 0
+        ? Promise.resolve([] as Array<{ botId: string; _max: { createdAt: Date | null } }>)
+        : prisma.run.groupBy({
+            by: ["botId"],
+            where: { botId: { in: botIds } },
+            _max: { createdAt: true },
+          }),
+    ]);
+    const userById = new Map(users.map((user) => [user.id, user]));
     const hiddenUsers = new Set(
       users.filter((user) => isHiddenOpsEmail(user.email)).map((user) => user.id),
     );
+    const lastActiveByBot = new Map(
+      lastActiveGroups.map((row) => [
+        row.botId,
+        row._max.createdAt ? row._max.createdAt.toISOString() : null,
+      ]),
+    );
+    const visibleOwners = users.filter((user) => !hiddenUsers.has(user.id));
+    const spaceByUser = await loadOpsSpaceByUser(
+      prisma,
+      visibleOwners.map((user) => user.id),
+    );
+    const keyByOwner = await resolveOpsModelKeyTypes(
+      prisma,
+      visibleOwners.map((user) => ({
+        userId: user.id,
+        spaceId: spaceByUser.get(user.id) ?? user.id,
+      })),
+      {
+        secrets: options.secrets,
+        deploymentModelKey: options.deploymentModelKey,
+      },
+    );
     return bots
       .filter((bot) => !hiddenUsers.has(bot.userId))
-      .map((bot) => ({
-        id: bot.id,
-        name: bot.name,
-        userId: bot.userId,
-        spaceId: bot.spaceId,
-        modelProvider: bot.modelProvider,
-        modelId: bot.modelId,
-        archived: bot.archivedAt != null,
-      }));
+      .map((bot) => {
+        const user = userById.get(bot.userId);
+        const owner: OpsAgentOwner | null = user
+          ? {
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              deactivated: user.deactivatedAt != null,
+            }
+          : null;
+        const key = owner
+          ? (keyByOwner.get(owner.id) ?? { keyType: "company" as const, needsReconnect: false })
+          : { keyType: "company" as const, needsReconnect: false };
+        return {
+          id: bot.id,
+          name: bot.name,
+          createdAt: bot.createdAt.toISOString(),
+          lastActiveAt: lastActiveByBot.get(bot.id) ?? null,
+          status: bot.archivedAt != null ? ("archived" as const) : ("active" as const),
+          owner,
+          keyType: key.keyType,
+          needsReconnect: key.needsReconnect,
+        };
+      });
   });
 }
 

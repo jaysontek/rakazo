@@ -17,6 +17,11 @@ msgstr ""
 msgid " (unread)"
 msgstr " (לא נקראה)"
 
+#. placeholder {0}: group.agents.length
+#: src/pages/AdminOpsPage.tsx
+msgid "{0, plural, one {# agent} other {# agents}}"
+msgstr "{0, plural, one {# סוכן} other {# סוכנים}}"
+
 #. placeholder {0}: pinned.length
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "{0, plural, one {# bot has its own model:} other {# bots have their own model:}}"
@@ -538,6 +543,7 @@ msgstr "פעולות עבור {0}"
 msgid "Actions for space"
 msgstr "פעולות למרחב"
 
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/BillingSettingsPanel.tsx
 #: src/pages/RoutineEditor.tsx
 msgid "Active"
@@ -738,6 +744,10 @@ msgstr ""
 msgid "Agents"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Agents unavailable"
+msgstr "הסוכנים אינם זמינים"
+
 #: src/components/VaultSettings.tsx
 #: src/pages/PluginsOverlay.tsx
 msgid "All"
@@ -756,6 +766,10 @@ msgstr "כל הבוטים"
 #: src/pages/AdminOpsPage.tsx
 msgid "All keys"
 msgstr "כל המפתחות"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "All owners"
+msgstr "כל הבעלים"
 
 #: src/components/integrations/space-availability.tsx
 msgid "All spaces"
@@ -995,6 +1009,7 @@ msgstr "העברה לארכיון"
 msgid "archived"
 msgstr "בארכיון"
 
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/shell/archived-chats.tsx
 msgid "Archived"
 msgstr "בארכיון"
@@ -2651,6 +2666,7 @@ msgid "Create your Rakazo"
 msgstr "יצירת Rakazo משלך"
 
 #: src/components/AskCard.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Created"
 msgstr "נוצר"
 
@@ -2759,6 +2775,10 @@ msgstr "עבודה יומיומית"
 #: src/lib/cron.ts
 msgid "days"
 msgstr "ימים"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Deactivated owners"
+msgstr "בעלים מושבתים"
 
 #: src/components/call/IncomingCall.tsx
 #: src/pages/MessagingSettingsPanel.tsx
@@ -3382,6 +3402,10 @@ msgstr "סינון לפי תאריך"
 msgid "Filter by key type"
 msgstr "סינון לפי סוג מפתח"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Filter by owner"
+msgstr "סינון לפי בעלים"
+
 #: src/pages/Artifacts.tsx
 #: src/pages/shell/shell-sidebar.tsx
 msgid "Filters"
@@ -3941,6 +3965,10 @@ msgstr "תווית"
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Language"
 msgstr "שפה"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Last active"
+msgstr "פעילות אחרונה"
 
 #. placeholder {0}: new Date(state.checkedAt).toLocaleString()
 #: src/pages/RoutineEditor.tsx
@@ -4626,6 +4654,14 @@ msgstr "העמוד הבא"
 msgid "Next settings sections"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "No agents match this filter."
+msgstr "אין סוכנים התואמים למסנן זה."
+
+#: src/pages/AdminOpsPage.tsx
+msgid "No agents yet"
+msgstr "אין עדיין סוכנים"
+
 #: src/pages/PluginsOverlay.tsx
 msgid "No apps match your search."
 msgstr "אין אפליקציות שתואמות לחיפוש."
@@ -4697,6 +4733,10 @@ msgstr "לא נמצאו מודלים ברשימה."
 #: src/pages/shell/agent-import.tsx
 msgid "No OpenClaw, Hermes or agent document found."
 msgstr "לא נמצאו קבצי OpenClaw, Hermes או מסמך סוכן."
+
+#: src/pages/AdminOpsPage.tsx
+msgid "No owner / deleted account"
+msgstr "ללא בעלים / חשבון שנמחק"
 
 #: src/components/pages/PagesList.tsx
 msgid "No pages match “{query}”."
