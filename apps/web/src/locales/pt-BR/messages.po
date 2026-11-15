@@ -713,6 +713,20 @@ msgstr ""
 msgid "Address line 2"
 msgstr ""
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Adjust by"
+msgstr "Ajustar em"
+
+#: src/pages/AdminOpsBudget.tsx
+#: src/pages/AdminOpsPage.tsx
+msgid "Adjust tracked spend"
+msgstr "Ajustar gasto rastreado"
+
+#. placeholder {0}: adjustments.length
+#: src/pages/AdminOpsBudget.tsx
+msgid "Adjustment history ({0})"
+msgstr "Histórico de ajustes ({0})"
+
 #: src/components/AccountMenu.tsx
 #: src/components/SidebarFooter.tsx
 msgid "Admin Dashboard"
@@ -848,6 +862,7 @@ msgid "Always open {site}"
 msgstr "Sempre abrir {site}"
 
 #: src/components/SpendingLimitSettings.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/AdminOpsPage.tsx
 msgid "Amount"
 msgstr "Valor"
@@ -957,9 +972,23 @@ msgstr "Aparência"
 msgid "Appearance: {label}"
 msgstr ""
 
+#. placeholder {0}: money(reverseTarget?.deltaUsd ?? 0)
+#: src/pages/AdminOpsBudget.tsx
+msgid "Appends an opposite delta for {0}."
+msgstr "Acrescenta um delta oposto para {0}."
+
 #: src/components/AskCard.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Apply"
 msgstr "Aplicar"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Apply schedule now"
+msgstr "Aplicar agenda agora"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Apply schedule now?"
+msgstr "Aplicar agenda agora?"
 
 #: src/components/teach/SkillDraftCard.tsx
 msgid "Approval boundaries"
@@ -1089,6 +1118,14 @@ msgstr "Autorize este servidor para que os agentes usem suas ferramentas. Uma ja
 #: src/components/ApprovalRulesSettings.tsx
 msgid "Auto"
 msgstr "Auto"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Auto-enroll"
+msgstr "Inscrição automática"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Auto-enroll mode"
+msgstr "Modo de inscrição automática"
 
 #: src/pages/ExternalConversationSettings.tsx
 msgid "Automated senders"
@@ -1268,6 +1305,14 @@ msgstr ""
 msgid "Browse MCP servers"
 msgstr ""
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Budget period"
+msgstr "Período do orçamento"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Budget settings"
+msgstr "Configurações de orçamento"
+
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/shell/agent-import.tsx
 msgid "Built-in"
@@ -1321,6 +1366,7 @@ msgstr "Não pode ler imagens"
 #: src/components/teach/TeachComputerOverlay.tsx
 #: src/components/vault/VaultItemDetail.tsx
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/AdminOpsPage.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/KnowledgeSection.tsx
@@ -1552,6 +1598,7 @@ msgid "Clean up"
 msgstr "Limpar"
 
 #: src/components/SecretAskCard.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/shell/dialogs.tsx
 msgid "Clear"
 msgstr "Limpar"
@@ -2022,6 +2069,10 @@ msgstr ""
 msgid "Could not add to shared budget"
 msgstr "Não foi possível adicionar ao orçamento compartilhado"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Could not adjust tracked spend"
+msgstr "Não foi possível ajustar o gasto rastreado"
+
 #: src/pages/PluginSubmissionsPanel.tsx
 msgid "Could not approve plugin"
 msgstr ""
@@ -2359,6 +2410,10 @@ msgstr ""
 msgid "Could not remove connector"
 msgstr "Não foi possível remover o conector"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Could not remove member"
+msgstr "Não foi possível remover o membro"
+
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Could not remove plugin"
 msgstr ""
@@ -2401,6 +2456,10 @@ msgstr "Não foi possível renderizar o gráfico"
 msgid "Could not reset password"
 msgstr "Não foi possível redefinir a senha"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Could not reverse adjustment"
+msgstr "Não foi possível reverter o ajuste"
+
 #: src/pages/AdminOpsPage.tsx
 msgid "Could not reverse transfer"
 msgstr ""
@@ -2426,9 +2485,17 @@ msgstr ""
 msgid "Could not save"
 msgstr "Não foi possível salvar"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Could not save allotment override"
+msgstr "Não foi possível salvar a substituição de cota"
+
 #: src/components/ApprovalRulesSettings.tsx
 msgid "Could not save Auto Review"
 msgstr ""
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Could not save budget settings"
+msgstr "Não foi possível salvar as configurações de orçamento"
 
 #: src/components/ComputerProviderSettings.tsx
 msgid "Could not save computer settings"
@@ -3110,10 +3177,14 @@ msgstr "Cada nome só pode ser usado uma vez."
 #: src/components/SpendingLimitSettings.tsx
 #: src/components/vault/VaultItemDetail.tsx
 #: src/pages/AccountSettingsOverlay.tsx
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/McpServersOverlay.tsx
 msgid "Edit"
 msgstr "Editar"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Edit allotment"
+msgstr "Editar cota"
 
 #: src/components/AskCard.tsx
 msgid "Edit first"
@@ -3167,9 +3238,25 @@ msgstr ""
 msgid "Enter a password"
 msgstr "Digite uma senha"
 
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
+msgid "Enter a positive allotment"
+msgstr "Informe uma cota positiva"
+
+#: src/pages/AdminOpsBudget.tsx
 msgid "Enter a positive amount up to $1,000,000"
 msgstr ""
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Enter a reason"
+msgstr "Informe um motivo"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Enter a stale-hold timeout between 1 and 1440 minutes"
+msgstr "Informe um tempo limite de retenção obsoleta entre 1 e 1440 minutos"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Enter a timezone"
+msgstr "Informe um fuso horário"
 
 #: src/lib/user-error.ts
 msgid "Enter a valid email"
@@ -3190,9 +3277,21 @@ msgstr "Digite um número inteiro de 1 a {MAX_MODEL_MAX_TOKENS} para o máximo d
 msgid "Enter a whole number from 1 to 1000 for the image limit."
 msgstr "Digite um número inteiro de 1 a 1000 para o limite de imagens."
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Enter an amount"
+msgstr "Informe um valor"
+
 #: src/lib/model-connection-preflight.ts
 msgid "Enter an API key before testing."
 msgstr "Informe uma chave de API antes de testar."
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Enter reset time as HH:MM"
+msgstr "Informe o horário de reinício como HH:MM"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Enter two warning thresholds between 0 and 100"
+msgstr "Informe dois limiares de aviso entre 0 e 100"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Env"
@@ -3455,6 +3554,10 @@ msgstr "Concluído."
 msgid "Finishing MCP connection…"
 msgstr "Finalizando conexão MCP…"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "First warning threshold"
+msgstr "Primeiro limiar de aviso"
+
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Focus message"
 msgstr "Ir para a mensagem"
@@ -3480,6 +3583,7 @@ msgid "Free plan ends {day}"
 msgstr "O plano gratuito termina em {day}"
 
 #: src/lib/cron.ts
+#: src/pages/AdminOpsBudget.tsx
 msgid "Friday"
 msgstr "sexta-feira"
 
@@ -3506,6 +3610,10 @@ msgstr ""
 #: src/pages/WindowChrome.tsx
 msgid "Fullscreen"
 msgstr "Tela Cheia"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Gated"
+msgstr "Restrito"
 
 #: src/pages/model-settings/connection-controls.tsx
 #: src/pages/Onboarding.tsx
@@ -3591,6 +3699,10 @@ msgstr "Desligue primeiro e depois digite o código na tela."
 #: src/lib/call-session.ts
 msgid "Hang up, then enter the code on screen."
 msgstr "Desligue e depois digite o código na tela."
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Hard stop"
+msgstr "Parada rígida"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Hard-stopped"
@@ -4361,6 +4473,7 @@ msgid "Missed call"
 msgstr ""
 
 #: src/components/ApprovalRulesSettings.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Mode"
 msgstr "Modo"
 
@@ -4412,6 +4525,7 @@ msgid "Models list OK. {modelCount, plural, one {# model} other {# models}} avai
 msgstr "Lista de modelos ok. {modelCount, plural, one {# modelo disponível} other {# modelos disponíveis}}. A conversa não foi testada."
 
 #: src/lib/cron.ts
+#: src/pages/AdminOpsBudget.tsx
 msgid "Monday"
 msgstr "segunda-feira"
 
@@ -4419,13 +4533,17 @@ msgstr "segunda-feira"
 msgid "month"
 msgstr ""
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Month"
+msgstr "Mês"
+
 #: src/components/ModelCredits.tsx
 #: src/components/SpendingLimitSettings.tsx
 #: src/lib/cron.ts
 msgid "Monthly"
 msgstr "Mensalmente"
 
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Monthly cap"
 msgstr ""
 
@@ -4437,7 +4555,7 @@ msgstr ""
 msgid "Monthly credits expire at renewal. Top-ups do not expire."
 msgstr ""
 
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Monthly shared Gemini key cap"
 msgstr ""
 
@@ -4806,6 +4924,10 @@ msgstr ""
 msgid "None this week."
 msgstr ""
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "None yet."
+msgstr "Nenhum ainda."
+
 #: src/lib/ticket-priority.ts
 msgid "Normal"
 msgstr ""
@@ -4823,7 +4945,7 @@ msgstr ""
 msgid "Not checked yet"
 msgstr "Ainda não verificado"
 
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Not configured"
 msgstr ""
 
@@ -4898,6 +5020,10 @@ msgstr "Falha na conexão OAuth"
 msgid "OAuth expired"
 msgstr "OAuth expirado"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Off"
+msgstr "Desligado"
+
 #: src/components/ComputerDeviceSettings.tsx
 msgid "Offline"
 msgstr ""
@@ -4947,6 +5073,7 @@ msgstr "Só você"
 
 #: src/components/markdown-link-prompt.tsx
 #: src/components/pages/PagesList.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/PaymentWalletSettingsPanel.tsx
 #: src/pages/shell/computer-panel.tsx
 #: src/pages/shell/import-setup-card.tsx
@@ -5215,6 +5342,10 @@ msgstr "Aguardando aprovação do admin"
 msgid "Performance"
 msgstr ""
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Period"
+msgstr "Período"
+
 #: src/pages/shell/bot-panel.tsx
 msgid "Permissions"
 msgstr "Permissões"
@@ -5224,7 +5355,7 @@ msgid "Persona"
 msgstr "Persona"
 
 #: src/components/SignupSurvey.tsx
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Personal"
 msgstr ""
 
@@ -5273,6 +5404,7 @@ msgid "Pin"
 msgstr "Fixar"
 
 #: src/components/pages/PagesList.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/Shell.tsx
 msgid "Pinned"
 msgstr "Fixados"
@@ -5382,6 +5514,10 @@ msgstr "Provedor"
 msgid "Providers"
 msgstr "Provedores"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Prune inactive"
+msgstr "Remover inativos"
+
 #: src/components/CloudAgentCard.tsx
 msgid "Pull request"
 msgstr "Solicitação de pull"
@@ -5419,6 +5555,7 @@ msgstr "Leia as respostas em voz alta"
 msgid "Ready"
 msgstr "Pronto"
 
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/PluginSubmissionsPanel.tsx
 msgid "Reason"
 msgstr ""
@@ -5585,6 +5722,7 @@ msgstr "Recarregar"
 #: src/components/TrustedLinkSitesSettings.tsx
 #: src/components/vault/LoginFieldsInput.tsx
 #: src/components/vault/VaultItemDetail.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/AdminOpsPage.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/ModelRoleSettings.tsx
@@ -5605,6 +5743,11 @@ msgstr "Remover {0}"
 msgid "Remove {0} from the group"
 msgstr ""
 
+#. placeholder {0}: accountLabel(account)
+#: src/pages/AdminOpsBudget.tsx
+msgid "Remove {0} from the roster."
+msgstr "Remover {0} da lista."
+
 #. placeholder {0}: accountLabel(removeTarget)
 #: src/pages/AdminOpsPage.tsx
 msgid "Remove {0}?"
@@ -5622,12 +5765,20 @@ msgstr "Remover {site}"
 msgid "Remove change trigger"
 msgstr "Remover gatilho de alteração"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Remove from budget"
+msgstr "Remover do orçamento"
+
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/PluginsOverlay.tsx
 msgid "Remove from every space?"
 msgstr ""
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Remove from shared budget?"
+msgstr "Remover do orçamento compartilhado?"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Remove Git event"
@@ -5739,6 +5890,7 @@ msgid "Research & writing"
 msgstr ""
 
 #: src/components/ComputerMaintenanceActions.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/ExternalConversationSettings.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
 msgid "Reset"
@@ -5756,9 +5908,25 @@ msgstr "Redefinir computador"
 msgid "Reset computer?"
 msgstr "Redefinir o computador?"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Reset day"
+msgstr "Dia de reinício"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Reset day of month"
+msgstr "Dia do mês de reinício"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Reset day of week"
+msgstr "Dia da semana de reinício"
+
 #: src/pages/Auth.tsx
 msgid "Reset password"
 msgstr "Redefinir senha"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Reset time"
+msgstr "Horário de reinício"
 
 #: src/pages/Auth.tsx
 msgid "Reset your password"
@@ -5773,7 +5941,7 @@ msgid "Resets {reset}"
 msgstr ""
 
 #. placeholder {0}: resetCountdown(budget.resetsAt)
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Resets in {0}"
 msgstr "Reinicia em {0}"
 
@@ -5852,14 +6020,28 @@ msgstr ""
 msgid "Return to Rakazo"
 msgstr "Retorno a Rakazo"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Reversal"
+msgstr "Reversão"
+
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/AdminOpsPage.tsx
 msgid "Reverse"
 msgstr ""
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Reverse reason"
+msgstr "Motivo da reversão"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Reverse this adjustment?"
+msgstr "Reverter este ajuste?"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Reverse transfer?"
 msgstr ""
 
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/AdminOpsPage.tsx
 msgid "Reversed"
 msgstr ""
@@ -5885,7 +6067,7 @@ msgstr ""
 msgid "Root filesystem"
 msgstr ""
 
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Roster"
 msgstr ""
 
@@ -5972,6 +6154,7 @@ msgid "Sandbox"
 msgstr ""
 
 #: src/lib/cron.ts
+#: src/pages/AdminOpsBudget.tsx
 msgid "Saturday"
 msgstr "sábado"
 
@@ -5983,7 +6166,7 @@ msgstr "sábado"
 #: src/components/teach/SkillDraftCard.tsx
 #: src/components/vault/VaultItemEditor.tsx
 #: src/pages/AccountSettingsOverlay.tsx
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/Board.tsx
 #: src/pages/ExternalConversationSettings.tsx
 #: src/pages/GroupPanel.tsx
@@ -5998,7 +6181,7 @@ msgstr "sábado"
 msgid "Save"
 msgstr "Salvar"
 
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Save monthly shared-key cap?"
 msgstr ""
 
@@ -6146,6 +6329,10 @@ msgstr ""
 msgid "Searching…"
 msgstr "Pesquisando…"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Second warning threshold"
+msgstr "Segundo limiar de aviso"
+
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Security"
 msgstr "Segurança"
@@ -6238,6 +6425,10 @@ msgstr "URL do servidor"
 msgid "Set"
 msgstr "Definir"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Set to"
+msgstr "Definir como"
+
 #: src/components/call/CallStrip.tsx
 #: src/components/SidebarFooter.tsx
 #: src/pages/MessagingSettingsPanel.tsx
@@ -6300,7 +6491,7 @@ msgid "Share, anyone with the link can view"
 msgstr "Compartilhar, qualquer pessoa com o link pode ver"
 
 #: src/components/pages/PagesList.tsx
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Shared"
@@ -6324,7 +6515,7 @@ msgstr ""
 msgid "Shared week usage for {0}"
 msgstr "Uso semanal compartilhado de {0}"
 
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Shared-key week"
 msgstr ""
 
@@ -6419,6 +6610,10 @@ msgstr "Cadastre-se"
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Sign-in cancelled. Try again."
 msgstr ""
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Signup"
+msgstr "Cadastro"
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/vault/VaultItemEditor.tsx
@@ -6542,9 +6737,22 @@ msgstr ""
 msgid "Speech model"
 msgstr "Modelo de fala"
 
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/AdminOpsPage.tsx
 msgid "Spend"
 msgstr ""
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Spend adjustment mode"
+msgstr "Modo de ajuste de gasto"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Spend adjustment reason"
+msgstr "Motivo do ajuste de gasto"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Spend amount"
+msgstr "Valor do gasto"
 
 #: src/components/SpendingLimitSettings.tsx
 msgid "Spending limit"
@@ -6557,6 +6765,14 @@ msgstr ""
 #: src/lib/user-error.ts
 msgid "SSO is temporarily unavailable. Try again."
 msgstr "SSO está temporariamente indisponível. Tente novamente."
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Stale hold (min)"
+msgstr "Retenção obsoleta (min)"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Stale-hold timeout minutes"
+msgstr "Minutos do tempo limite de retenção obsoleta"
 
 #: src/components/GitHubStarPrompt.tsx
 msgid "Star on GitHub"
@@ -6702,6 +6918,7 @@ msgid "Subscription required"
 msgstr ""
 
 #: src/lib/cron.ts
+#: src/pages/AdminOpsBudget.tsx
 msgid "Sunday"
 msgstr "domingo"
 
@@ -6761,6 +6978,7 @@ msgstr "Ensinar uma tarefa"
 msgid "Teaching in progress. Stop teaching before sending a new message."
 msgstr "Ensino em andamento. Pare de ensinar antes de enviar uma nova mensagem."
 
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Team"
 msgstr "Equipe"
@@ -7048,9 +7266,13 @@ msgid "This server's tool result does not fit the model. Turn off Keep tool resu
 msgstr ""
 
 #. placeholder {0}: money(Number(draft) || 0)
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "This sets the deployment monthly cap for the shared Gemini key to {0}."
 msgstr ""
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "This starts a new budget period immediately."
+msgstr "Isso inicia um novo período de orçamento imediatamente."
 
 #: src/pages/model-settings/connection-controls.tsx
 msgid "This subscription sign-in is not available in Rakazo yet. Use a deployment credential or choose another provider."
@@ -7066,6 +7288,7 @@ msgid "This week's shared API key budget is used up. It resets next week, or con
 msgstr "O orçamento semanal da chave de API compartilhada acabou. Ele reinicia na próxima semana, ou conecte sua própria chave em Modelos."
 
 #: src/lib/cron.ts
+#: src/pages/AdminOpsBudget.tsx
 msgid "Thursday"
 msgstr "quinta-feira"
 
@@ -7074,6 +7297,7 @@ msgid "Time of day"
 msgstr "Hora do dia"
 
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Timezone"
 msgstr ""
 
@@ -7138,6 +7362,10 @@ msgstr "Nome da ferramenta"
 #: src/pages/shell/bot-panel.tsx
 msgid "Tools"
 msgstr ""
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Tracked spend"
+msgstr "Gasto rastreado"
 
 #: src/components/composer/HoldToTalk.tsx
 msgid "Transcribing…"
@@ -7226,6 +7454,7 @@ msgid "Try the test again."
 msgstr "Tente o teste novamente."
 
 #: src/lib/cron.ts
+#: src/pages/AdminOpsBudget.tsx
 msgid "Tuesday"
 msgstr "terça-feira"
 
@@ -7528,6 +7757,10 @@ msgstr "Ativar"
 msgid "Wallet"
 msgstr ""
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Warnings"
+msgstr "Avisos"
+
 #: src/components/ModelCredits.tsx
 msgid "Web, desktop and mobile"
 msgstr ""
@@ -7541,12 +7774,17 @@ msgid "Webhook"
 msgstr ""
 
 #: src/lib/cron.ts
+#: src/pages/AdminOpsBudget.tsx
 msgid "Wednesday"
 msgstr "quarta-feira"
 
 #: src/lib/billing.ts
 msgid "week"
 msgstr ""
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Week"
+msgstr "Semana"
 
 #: src/lib/cron.ts
 #: src/pages/RoutineEditor.tsx
@@ -7562,7 +7800,11 @@ msgstr "Fins de semana"
 msgid "Weekly"
 msgstr "Semanal"
 
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
+msgid "Weekly allotment override"
+msgstr "Substituição da cota semanal"
+
+#: src/pages/AdminOpsBudget.tsx
 msgid "Weekly shared-key pool used"
 msgstr "Pool semanal de chave compartilhada usado"
 

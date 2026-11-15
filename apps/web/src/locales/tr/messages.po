@@ -713,6 +713,20 @@ msgstr "Adres"
 msgid "Address line 2"
 msgstr "Adres satırı 2"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Adjust by"
+msgstr "Şu kadar ayarla"
+
+#: src/pages/AdminOpsBudget.tsx
+#: src/pages/AdminOpsPage.tsx
+msgid "Adjust tracked spend"
+msgstr "İzlenen harcamayı ayarla"
+
+#. placeholder {0}: adjustments.length
+#: src/pages/AdminOpsBudget.tsx
+msgid "Adjustment history ({0})"
+msgstr "Düzeltme geçmişi ({0})"
+
 #: src/components/AccountMenu.tsx
 #: src/components/SidebarFooter.tsx
 msgid "Admin Dashboard"
@@ -848,6 +862,7 @@ msgid "Always open {site}"
 msgstr "{site} sitesini her zaman aç"
 
 #: src/components/SpendingLimitSettings.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/AdminOpsPage.tsx
 msgid "Amount"
 msgstr "Tutar"
@@ -957,9 +972,23 @@ msgstr "Görünüm"
 msgid "Appearance: {label}"
 msgstr "Görünüm: {label}"
 
+#. placeholder {0}: money(reverseTarget?.deltaUsd ?? 0)
+#: src/pages/AdminOpsBudget.tsx
+msgid "Appends an opposite delta for {0}."
+msgstr "{0} için ters bir fark ekler."
+
 #: src/components/AskCard.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Apply"
 msgstr "Uygula"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Apply schedule now"
+msgstr "Programı şimdi uygula"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Apply schedule now?"
+msgstr "Program şimdi uygulansın mı?"
 
 #: src/components/teach/SkillDraftCard.tsx
 msgid "Approval boundaries"
@@ -1089,6 +1118,14 @@ msgstr "Agent'ların araçlarını kullanabilmesi için bu sunucuyu yetkilendir.
 #: src/components/ApprovalRulesSettings.tsx
 msgid "Auto"
 msgstr "Otomatik"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Auto-enroll"
+msgstr "Otomatik kayıt"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Auto-enroll mode"
+msgstr "Otomatik kayıt modu"
 
 #: src/pages/ExternalConversationSettings.tsx
 msgid "Automated senders"
@@ -1268,6 +1305,14 @@ msgstr "Gözat"
 msgid "Browse MCP servers"
 msgstr "MCP sunucularına göz at"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Budget period"
+msgstr "Bütçe dönemi"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Budget settings"
+msgstr "Bütçe ayarları"
+
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/shell/agent-import.tsx
 msgid "Built-in"
@@ -1321,6 +1366,7 @@ msgstr "Görselleri okuyamaz"
 #: src/components/teach/TeachComputerOverlay.tsx
 #: src/components/vault/VaultItemDetail.tsx
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/AdminOpsPage.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/KnowledgeSection.tsx
@@ -1552,6 +1598,7 @@ msgid "Clean up"
 msgstr "Temizle"
 
 #: src/components/SecretAskCard.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/shell/dialogs.tsx
 msgid "Clear"
 msgstr "Temizle"
@@ -2022,6 +2069,10 @@ msgstr "Beceriler eklenemedi"
 msgid "Could not add to shared budget"
 msgstr "Paylaşılan bütçeye eklenemedi"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Could not adjust tracked spend"
+msgstr "İzlenen harcama ayarlanamadı"
+
 #: src/pages/PluginSubmissionsPanel.tsx
 msgid "Could not approve plugin"
 msgstr "Eklenti onaylanamadı"
@@ -2359,6 +2410,10 @@ msgstr ""
 msgid "Could not remove connector"
 msgstr "Bağlayıcı kaldırılamadı"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Could not remove member"
+msgstr "Üye kaldırılamadı"
+
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Could not remove plugin"
 msgstr "Eklenti kaldırılamadı"
@@ -2401,6 +2456,10 @@ msgstr "Grafik çizilemedi"
 msgid "Could not reset password"
 msgstr "Parola sıfırlanamadı"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Could not reverse adjustment"
+msgstr "Düzeltme geri alınamadı"
+
 #: src/pages/AdminOpsPage.tsx
 msgid "Could not reverse transfer"
 msgstr ""
@@ -2426,9 +2485,17 @@ msgstr "Rutin çalıştırılamadı"
 msgid "Could not save"
 msgstr "Kaydedilemedi"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Could not save allotment override"
+msgstr "Pay aşımı kaydedilemedi"
+
 #: src/components/ApprovalRulesSettings.tsx
 msgid "Could not save Auto Review"
 msgstr "Otomatik İnceleme kaydedilemedi"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Could not save budget settings"
+msgstr "Bütçe ayarları kaydedilemedi"
 
 #: src/components/ComputerProviderSettings.tsx
 msgid "Could not save computer settings"
@@ -3110,10 +3177,14 @@ msgstr "Her ad yalnızca bir kez kullanılabilir."
 #: src/components/SpendingLimitSettings.tsx
 #: src/components/vault/VaultItemDetail.tsx
 #: src/pages/AccountSettingsOverlay.tsx
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/McpServersOverlay.tsx
 msgid "Edit"
 msgstr "Düzenle"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Edit allotment"
+msgstr "Payı düzenle"
 
 #: src/components/AskCard.tsx
 msgid "Edit first"
@@ -3167,9 +3238,25 @@ msgstr "Rakazo'yu beğendin mi?"
 msgid "Enter a password"
 msgstr "Bir parola girin"
 
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
+msgid "Enter a positive allotment"
+msgstr "Pozitif bir pay girin"
+
+#: src/pages/AdminOpsBudget.tsx
 msgid "Enter a positive amount up to $1,000,000"
 msgstr ""
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Enter a reason"
+msgstr "Bir neden girin"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Enter a stale-hold timeout between 1 and 1440 minutes"
+msgstr "1 ile 1440 dakika arasında eski tutma zaman aşımı girin"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Enter a timezone"
+msgstr "Bir saat dilimi girin"
 
 #: src/lib/user-error.ts
 msgid "Enter a valid email"
@@ -3190,9 +3277,21 @@ msgstr "Maksimum çıktı token sayısı için 1 ile {MAX_MODEL_MAX_TOKENS} aras
 msgid "Enter a whole number from 1 to 1000 for the image limit."
 msgstr "Görüntü sınırı için 1 ile 1000 arasında bir tam sayı girin."
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Enter an amount"
+msgstr "Bir tutar girin"
+
 #: src/lib/model-connection-preflight.ts
 msgid "Enter an API key before testing."
 msgstr "Test etmeden önce bir API anahtarı gir."
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Enter reset time as HH:MM"
+msgstr "Sıfırlama saatini SS:DD olarak girin"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Enter two warning thresholds between 0 and 100"
+msgstr "0 ile 100 arasında iki uyarı eşiği girin"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Env"
@@ -3455,6 +3554,10 @@ msgstr "Tamamlandı."
 msgid "Finishing MCP connection…"
 msgstr "MCP bağlantısı tamamlanıyor…"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "First warning threshold"
+msgstr "İlk uyarı eşiği"
+
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Focus message"
 msgstr "Mesaja git"
@@ -3480,6 +3583,7 @@ msgid "Free plan ends {day}"
 msgstr "Ücretsiz plan {day} tarihinde bitiyor"
 
 #: src/lib/cron.ts
+#: src/pages/AdminOpsBudget.tsx
 msgid "Friday"
 msgstr "Cuma"
 
@@ -3506,6 +3610,10 @@ msgstr "Ad soyad"
 #: src/pages/WindowChrome.tsx
 msgid "Fullscreen"
 msgstr "Tam ekran"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Gated"
+msgstr "Kısıtlı"
 
 #: src/pages/model-settings/connection-controls.tsx
 #: src/pages/Onboarding.tsx
@@ -3591,6 +3699,10 @@ msgstr "Önce aramayı sonlandır, sonra kodu ekrana gir."
 #: src/lib/call-session.ts
 msgid "Hang up, then enter the code on screen."
 msgstr "Aramayı sonlandır, sonra kodu ekrana gir."
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Hard stop"
+msgstr "Sert durdurma"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Hard-stopped"
@@ -4361,6 +4473,7 @@ msgid "Missed call"
 msgstr "Cevapsız arama"
 
 #: src/components/ApprovalRulesSettings.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Mode"
 msgstr "Mod"
 
@@ -4412,6 +4525,7 @@ msgid "Models list OK. {modelCount, plural, one {# model} other {# models}} avai
 msgstr "Model listesi tamam. {modelCount, plural, one {# model} other {# model}} kullanılabilir. Sohbet test edilmedi."
 
 #: src/lib/cron.ts
+#: src/pages/AdminOpsBudget.tsx
 msgid "Monday"
 msgstr "Pazartesi"
 
@@ -4419,13 +4533,17 @@ msgstr "Pazartesi"
 msgid "month"
 msgstr "ay"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Month"
+msgstr "Ay"
+
 #: src/components/ModelCredits.tsx
 #: src/components/SpendingLimitSettings.tsx
 #: src/lib/cron.ts
 msgid "Monthly"
 msgstr "Aylık"
 
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Monthly cap"
 msgstr ""
 
@@ -4437,7 +4555,7 @@ msgstr "Aylık krediler"
 msgid "Monthly credits expire at renewal. Top-ups do not expire."
 msgstr "Aylık krediler yenilemede sona erer. Ek krediler sona ermez."
 
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Monthly shared Gemini key cap"
 msgstr ""
 
@@ -4806,6 +4924,10 @@ msgstr "Yok"
 msgid "None this week."
 msgstr ""
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "None yet."
+msgstr "Henüz yok."
+
 #: src/lib/ticket-priority.ts
 msgid "Normal"
 msgstr "Normal"
@@ -4823,7 +4945,7 @@ msgstr "Eklenmedi: {0}"
 msgid "Not checked yet"
 msgstr "Henüz kontrol edilmedi"
 
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Not configured"
 msgstr ""
 
@@ -4898,6 +5020,10 @@ msgstr "OAuth bağlantısı başarısız"
 msgid "OAuth expired"
 msgstr "OAuth süresi doldu"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Off"
+msgstr "Kapalı"
+
 #: src/components/ComputerDeviceSettings.tsx
 msgid "Offline"
 msgstr "Çevrimdışı"
@@ -4947,6 +5073,7 @@ msgstr "Yalnızca siz"
 
 #: src/components/markdown-link-prompt.tsx
 #: src/components/pages/PagesList.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/PaymentWalletSettingsPanel.tsx
 #: src/pages/shell/computer-panel.tsx
 #: src/pages/shell/import-setup-card.tsx
@@ -5215,6 +5342,10 @@ msgstr "Yönetici onayı bekleniyor"
 msgid "Performance"
 msgstr ""
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Period"
+msgstr "Dönem"
+
 #: src/pages/shell/bot-panel.tsx
 msgid "Permissions"
 msgstr "İzinler"
@@ -5224,7 +5355,7 @@ msgid "Persona"
 msgstr "Kişilik"
 
 #: src/components/SignupSurvey.tsx
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Personal"
 msgstr "Kişisel"
 
@@ -5273,6 +5404,7 @@ msgid "Pin"
 msgstr "Sabitle"
 
 #: src/components/pages/PagesList.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/Shell.tsx
 msgid "Pinned"
 msgstr "Sabitlenenler"
@@ -5382,6 +5514,10 @@ msgstr "Sağlayıcı"
 msgid "Providers"
 msgstr "Sağlayıcılar"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Prune inactive"
+msgstr "Pasifleri budama"
+
 #: src/components/CloudAgentCard.tsx
 msgid "Pull request"
 msgstr "Çekme isteği"
@@ -5419,6 +5555,7 @@ msgstr "Yanıtları sesli oku"
 msgid "Ready"
 msgstr "Hazır"
 
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/PluginSubmissionsPanel.tsx
 msgid "Reason"
 msgstr "Neden"
@@ -5585,6 +5722,7 @@ msgstr "Yeniden yükle"
 #: src/components/TrustedLinkSitesSettings.tsx
 #: src/components/vault/LoginFieldsInput.tsx
 #: src/components/vault/VaultItemDetail.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/AdminOpsPage.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/ModelRoleSettings.tsx
@@ -5605,6 +5743,11 @@ msgstr "{0} kaldır"
 msgid "Remove {0} from the group"
 msgstr "{0} kişisini gruptan çıkar"
 
+#. placeholder {0}: accountLabel(account)
+#: src/pages/AdminOpsBudget.tsx
+msgid "Remove {0} from the roster."
+msgstr "{0} kişisini listeden kaldır."
+
 #. placeholder {0}: accountLabel(removeTarget)
 #: src/pages/AdminOpsPage.tsx
 msgid "Remove {0}?"
@@ -5622,12 +5765,20 @@ msgstr "Kaldır: {site}"
 msgid "Remove change trigger"
 msgstr "Değişiklik tetikleyicisini kaldır"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Remove from budget"
+msgstr "Bütçeden kaldır"
+
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/PluginsOverlay.tsx
 msgid "Remove from every space?"
 msgstr "Her alandan kaldırılsın mı?"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Remove from shared budget?"
+msgstr "Paylaşılan bütçeden kaldırılsın mı?"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Remove Git event"
@@ -5739,6 +5890,7 @@ msgid "Research & writing"
 msgstr "Araştırma ve yazma"
 
 #: src/components/ComputerMaintenanceActions.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/ExternalConversationSettings.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
 msgid "Reset"
@@ -5756,9 +5908,25 @@ msgstr "Bilgisayarı sıfırla"
 msgid "Reset computer?"
 msgstr "Bilgisayar sıfırlansın mı?"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Reset day"
+msgstr "Sıfırlama günü"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Reset day of month"
+msgstr "Ayın sıfırlama günü"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Reset day of week"
+msgstr "Haftanın sıfırlama günü"
+
 #: src/pages/Auth.tsx
 msgid "Reset password"
 msgstr "Parolayı sıfırla"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Reset time"
+msgstr "Sıfırlama saati"
 
 #: src/pages/Auth.tsx
 msgid "Reset your password"
@@ -5773,7 +5941,7 @@ msgid "Resets {reset}"
 msgstr ""
 
 #. placeholder {0}: resetCountdown(budget.resetsAt)
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Resets in {0}"
 msgstr "{0} içinde sıfırlanır"
 
@@ -5852,14 +6020,28 @@ msgstr ""
 msgid "Return to Rakazo"
 msgstr "Rakazo'ya dön"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Reversal"
+msgstr "Geri alma"
+
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/AdminOpsPage.tsx
 msgid "Reverse"
 msgstr ""
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Reverse reason"
+msgstr "Geri alma nedeni"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Reverse this adjustment?"
+msgstr "Bu düzeltme geri alınsın mı?"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Reverse transfer?"
 msgstr ""
 
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/AdminOpsPage.tsx
 msgid "Reversed"
 msgstr ""
@@ -5885,7 +6067,7 @@ msgstr "İptal edildi"
 msgid "Root filesystem"
 msgstr "Kök dosya sistemi"
 
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Roster"
 msgstr ""
 
@@ -5972,6 +6154,7 @@ msgid "Sandbox"
 msgstr ""
 
 #: src/lib/cron.ts
+#: src/pages/AdminOpsBudget.tsx
 msgid "Saturday"
 msgstr "Cumartesi"
 
@@ -5983,7 +6166,7 @@ msgstr "Cumartesi"
 #: src/components/teach/SkillDraftCard.tsx
 #: src/components/vault/VaultItemEditor.tsx
 #: src/pages/AccountSettingsOverlay.tsx
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/Board.tsx
 #: src/pages/ExternalConversationSettings.tsx
 #: src/pages/GroupPanel.tsx
@@ -5998,7 +6181,7 @@ msgstr "Cumartesi"
 msgid "Save"
 msgstr "Kaydet"
 
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Save monthly shared-key cap?"
 msgstr ""
 
@@ -6146,6 +6329,10 @@ msgstr "Ara: {0}"
 msgid "Searching…"
 msgstr "Aranıyor…"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Second warning threshold"
+msgstr "İkinci uyarı eşiği"
+
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Security"
 msgstr "Güvenlik"
@@ -6238,6 +6425,10 @@ msgstr "Sunucu URL'si"
 msgid "Set"
 msgstr "Ayarla"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Set to"
+msgstr "Şuna ayarla"
+
 #: src/components/call/CallStrip.tsx
 #: src/components/SidebarFooter.tsx
 #: src/pages/MessagingSettingsPanel.tsx
@@ -6300,7 +6491,7 @@ msgid "Share, anyone with the link can view"
 msgstr "Paylaş, bağlantıya sahip herkes görüntüleyebilir"
 
 #: src/components/pages/PagesList.tsx
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Shared"
@@ -6324,7 +6515,7 @@ msgstr ""
 msgid "Shared week usage for {0}"
 msgstr "{0} için paylaşılan haftalık kullanım"
 
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Shared-key week"
 msgstr ""
 
@@ -6419,6 +6610,10 @@ msgstr "Kaydol"
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Sign-in cancelled. Try again."
 msgstr "Oturum açma iptal edildi. Tekrar dene."
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Signup"
+msgstr "Kayıt"
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/vault/VaultItemEditor.tsx
@@ -6542,9 +6737,22 @@ msgstr "Konuşuyor"
 msgid "Speech model"
 msgstr "Konuşma modeli"
 
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/AdminOpsPage.tsx
 msgid "Spend"
 msgstr ""
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Spend adjustment mode"
+msgstr "Harcama düzeltme modu"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Spend adjustment reason"
+msgstr "Harcama düzeltme nedeni"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Spend amount"
+msgstr "Harcama tutarı"
 
 #: src/components/SpendingLimitSettings.tsx
 msgid "Spending limit"
@@ -6557,6 +6765,14 @@ msgstr "SSO"
 #: src/lib/user-error.ts
 msgid "SSO is temporarily unavailable. Try again."
 msgstr "SSO geçici olarak kullanılamıyor. Yeniden deneyin."
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Stale hold (min)"
+msgstr "Eski tutma (dk)"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Stale-hold timeout minutes"
+msgstr "Eski tutma zaman aşımı dakikası"
 
 #: src/components/GitHubStarPrompt.tsx
 msgid "Star on GitHub"
@@ -6702,6 +6918,7 @@ msgid "Subscription required"
 msgstr "Abonelik gerekli"
 
 #: src/lib/cron.ts
+#: src/pages/AdminOpsBudget.tsx
 msgid "Sunday"
 msgstr "Pazar"
 
@@ -6761,6 +6978,7 @@ msgstr "Görev öğret"
 msgid "Teaching in progress. Stop teaching before sending a new message."
 msgstr "Öğretme sürüyor. Yeni mesaj göndermeden önce öğretmeyi durdur."
 
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Team"
 msgstr "Takım"
@@ -7048,9 +7266,13 @@ msgid "This server's tool result does not fit the model. Turn off Keep tool resu
 msgstr "Bu sunucunun araç sonucu modele sığmıyor. O sunucu için \"Araç sonuçlarını bütün tut\" ayarını kapat veya başka bir model seç."
 
 #. placeholder {0}: money(Number(draft) || 0)
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "This sets the deployment monthly cap for the shared Gemini key to {0}."
 msgstr ""
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "This starts a new budget period immediately."
+msgstr "Bu, hemen yeni bir bütçe dönemi başlatır."
 
 #: src/pages/model-settings/connection-controls.tsx
 msgid "This subscription sign-in is not available in Rakazo yet. Use a deployment credential or choose another provider."
@@ -7066,6 +7288,7 @@ msgid "This week's shared API key budget is used up. It resets next week, or con
 msgstr "Bu haftanın paylaşılan API anahtarı bütçesi tükendi. Gelecek hafta sıfırlanır veya Modeller'de kendi anahtarınızı bağlayın."
 
 #: src/lib/cron.ts
+#: src/pages/AdminOpsBudget.tsx
 msgid "Thursday"
 msgstr "Perşembe"
 
@@ -7074,6 +7297,7 @@ msgid "Time of day"
 msgstr "Günün saati"
 
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Timezone"
 msgstr "Saat dilimi"
 
@@ -7138,6 +7362,10 @@ msgstr "Araç adı"
 #: src/pages/shell/bot-panel.tsx
 msgid "Tools"
 msgstr "Araçlar"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Tracked spend"
+msgstr "İzlenen harcama"
 
 #: src/components/composer/HoldToTalk.tsx
 msgid "Transcribing…"
@@ -7226,6 +7454,7 @@ msgid "Try the test again."
 msgstr "Testi yeniden dene."
 
 #: src/lib/cron.ts
+#: src/pages/AdminOpsBudget.tsx
 msgid "Tuesday"
 msgstr "Salı"
 
@@ -7528,6 +7757,10 @@ msgstr "Uyandır"
 msgid "Wallet"
 msgstr "Cüzdan"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Warnings"
+msgstr "Uyarılar"
+
 #: src/components/ModelCredits.tsx
 msgid "Web, desktop and mobile"
 msgstr "Web, masaüstü ve mobil"
@@ -7541,12 +7774,17 @@ msgid "Webhook"
 msgstr "Webhook"
 
 #: src/lib/cron.ts
+#: src/pages/AdminOpsBudget.tsx
 msgid "Wednesday"
 msgstr "Çarşamba"
 
 #: src/lib/billing.ts
 msgid "week"
 msgstr "hafta"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Week"
+msgstr "Hafta"
 
 #: src/lib/cron.ts
 #: src/pages/RoutineEditor.tsx
@@ -7562,7 +7800,11 @@ msgstr "Hafta sonları"
 msgid "Weekly"
 msgstr "Haftalık"
 
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
+msgid "Weekly allotment override"
+msgstr "Haftalık pay aşımı"
+
+#: src/pages/AdminOpsBudget.tsx
 msgid "Weekly shared-key pool used"
 msgstr "Haftalık paylaşılan anahtar havuzu kullanımı"
 

@@ -714,6 +714,20 @@ msgstr ""
 msgid "Address line 2"
 msgstr ""
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Adjust by"
+msgstr "調整幅度"
+
+#: src/pages/AdminOpsBudget.tsx
+#: src/pages/AdminOpsPage.tsx
+msgid "Adjust tracked spend"
+msgstr "調整已追蹤支出"
+
+#. placeholder {0}: adjustments.length
+#: src/pages/AdminOpsBudget.tsx
+msgid "Adjustment history ({0})"
+msgstr "調整歷程（{0}）"
+
 #: src/components/AccountMenu.tsx
 #: src/components/SidebarFooter.tsx
 msgid "Admin Dashboard"
@@ -849,6 +863,7 @@ msgid "Always open {site}"
 msgstr "一律開啟 {site}"
 
 #: src/components/SpendingLimitSettings.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/AdminOpsPage.tsx
 msgid "Amount"
 msgstr "金額"
@@ -958,9 +973,23 @@ msgstr "外觀"
 msgid "Appearance: {label}"
 msgstr ""
 
+#. placeholder {0}: money(reverseTarget?.deltaUsd ?? 0)
+#: src/pages/AdminOpsBudget.tsx
+msgid "Appends an opposite delta for {0}."
+msgstr "為 {0} 追加一個相反的差額。"
+
 #: src/components/AskCard.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Apply"
 msgstr "套用"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Apply schedule now"
+msgstr "立即套用排程"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Apply schedule now?"
+msgstr "立即套用排程？"
 
 #: src/components/teach/SkillDraftCard.tsx
 msgid "Approval boundaries"
@@ -1090,6 +1119,14 @@ msgstr "授權此伺服器，讓代理程式使用它的工具。接著會開啟
 #: src/components/ApprovalRulesSettings.tsx
 msgid "Auto"
 msgstr "自動"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Auto-enroll"
+msgstr "自動加入"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Auto-enroll mode"
+msgstr "自動加入模式"
 
 #: src/pages/ExternalConversationSettings.tsx
 msgid "Automated senders"
@@ -1269,6 +1306,14 @@ msgstr ""
 msgid "Browse MCP servers"
 msgstr "瀏覽 MCP 伺服器"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Budget period"
+msgstr "預算週期"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Budget settings"
+msgstr "預算設定"
+
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/shell/agent-import.tsx
 msgid "Built-in"
@@ -1322,6 +1367,7 @@ msgstr "無法讀取影像"
 #: src/components/teach/TeachComputerOverlay.tsx
 #: src/components/vault/VaultItemDetail.tsx
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/AdminOpsPage.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/KnowledgeSection.tsx
@@ -1553,6 +1599,7 @@ msgid "Clean up"
 msgstr "清理"
 
 #: src/components/SecretAskCard.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/shell/dialogs.tsx
 msgid "Clear"
 msgstr "清空"
@@ -2023,6 +2070,10 @@ msgstr ""
 msgid "Could not add to shared budget"
 msgstr "無法加入共用預算"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Could not adjust tracked spend"
+msgstr "無法調整已追蹤支出"
+
 #: src/pages/PluginSubmissionsPanel.tsx
 msgid "Could not approve plugin"
 msgstr ""
@@ -2360,6 +2411,10 @@ msgstr ""
 msgid "Could not remove connector"
 msgstr "無法移除連接器"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Could not remove member"
+msgstr "無法移除成員"
+
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Could not remove plugin"
 msgstr ""
@@ -2402,6 +2457,10 @@ msgstr "無法渲染圖表"
 msgid "Could not reset password"
 msgstr "無法重設密碼"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Could not reverse adjustment"
+msgstr "無法撤銷調整"
+
 #: src/pages/AdminOpsPage.tsx
 msgid "Could not reverse transfer"
 msgstr ""
@@ -2427,9 +2486,17 @@ msgstr "無法執行例行任務"
 msgid "Could not save"
 msgstr "無法儲存"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Could not save allotment override"
+msgstr "無法儲存額度覆寫"
+
 #: src/components/ApprovalRulesSettings.tsx
 msgid "Could not save Auto Review"
 msgstr "無法儲存自動審查"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Could not save budget settings"
+msgstr "無法儲存預算設定"
 
 #: src/components/ComputerProviderSettings.tsx
 msgid "Could not save computer settings"
@@ -3111,10 +3178,14 @@ msgstr "每個名稱只能使用一次。"
 #: src/components/SpendingLimitSettings.tsx
 #: src/components/vault/VaultItemDetail.tsx
 #: src/pages/AccountSettingsOverlay.tsx
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/McpServersOverlay.tsx
 msgid "Edit"
 msgstr "編輯"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Edit allotment"
+msgstr "編輯額度"
 
 #: src/components/AskCard.tsx
 msgid "Edit first"
@@ -3168,9 +3239,25 @@ msgstr ""
 msgid "Enter a password"
 msgstr "請輸入密碼"
 
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
+msgid "Enter a positive allotment"
+msgstr "請輸入正數額度"
+
+#: src/pages/AdminOpsBudget.tsx
 msgid "Enter a positive amount up to $1,000,000"
 msgstr ""
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Enter a reason"
+msgstr "請輸入原因"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Enter a stale-hold timeout between 1 and 1440 minutes"
+msgstr "請輸入 1 到 1440 分鐘的過期預留逾時"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Enter a timezone"
+msgstr "請輸入時區"
 
 #: src/lib/user-error.ts
 msgid "Enter a valid email"
@@ -3191,9 +3278,21 @@ msgstr "請輸入 1 到 {MAX_MODEL_MAX_TOKENS} 之間的整數作為最大輸出
 msgid "Enter a whole number from 1 to 1000 for the image limit."
 msgstr "請輸入 1 到 1000 之間的整數作為影像限制。"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Enter an amount"
+msgstr "請輸入金額"
+
 #: src/lib/model-connection-preflight.ts
 msgid "Enter an API key before testing."
 msgstr "測試前請輸入 API 金鑰。"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Enter reset time as HH:MM"
+msgstr "請以 HH:MM 輸入重設時間"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Enter two warning thresholds between 0 and 100"
+msgstr "請輸入兩個介於 0 到 100 的警告閾值"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Env"
@@ -3456,6 +3555,10 @@ msgstr "已完成。"
 msgid "Finishing MCP connection…"
 msgstr "正在完成 MCP 連線…"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "First warning threshold"
+msgstr "第一個警告閾值"
+
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Focus message"
 msgstr "移至訊息欄"
@@ -3481,6 +3584,7 @@ msgid "Free plan ends {day}"
 msgstr "免費方案將於 {day} 結束"
 
 #: src/lib/cron.ts
+#: src/pages/AdminOpsBudget.tsx
 msgid "Friday"
 msgstr "週五"
 
@@ -3507,6 +3611,10 @@ msgstr ""
 #: src/pages/WindowChrome.tsx
 msgid "Fullscreen"
 msgstr "全螢幕"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Gated"
+msgstr "受限"
 
 #: src/pages/model-settings/connection-controls.tsx
 #: src/pages/Onboarding.tsx
@@ -3592,6 +3700,10 @@ msgstr "請先結束通話，再輸入螢幕上的驗證碼。"
 #: src/lib/call-session.ts
 msgid "Hang up, then enter the code on screen."
 msgstr "請結束通話，再輸入螢幕上的驗證碼。"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Hard stop"
+msgstr "硬性停止"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Hard-stopped"
@@ -4362,6 +4474,7 @@ msgid "Missed call"
 msgstr "未接來電"
 
 #: src/components/ApprovalRulesSettings.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Mode"
 msgstr "模式"
 
@@ -4413,11 +4526,16 @@ msgid "Models list OK. {modelCount, plural, one {# model} other {# models}} avai
 msgstr "模型清單正常。{modelCount, plural, one {# 個模型} other {# 個模型}}可用。未測試聊天。"
 
 #: src/lib/cron.ts
+#: src/pages/AdminOpsBudget.tsx
 msgid "Monday"
 msgstr "週一"
 
 #: src/lib/billing.ts
 msgid "month"
+msgstr "月"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Month"
 msgstr "月"
 
 #: src/components/ModelCredits.tsx
@@ -4426,7 +4544,7 @@ msgstr "月"
 msgid "Monthly"
 msgstr "每月"
 
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Monthly cap"
 msgstr ""
 
@@ -4438,7 +4556,7 @@ msgstr "每月額度"
 msgid "Monthly credits expire at renewal. Top-ups do not expire."
 msgstr "每月額度在續訂時到期。單次加值額度不會過期。"
 
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Monthly shared Gemini key cap"
 msgstr ""
 
@@ -4807,6 +4925,10 @@ msgstr ""
 msgid "None this week."
 msgstr ""
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "None yet."
+msgstr "尚無。"
+
 #: src/lib/ticket-priority.ts
 msgid "Normal"
 msgstr "一般"
@@ -4824,7 +4946,7 @@ msgstr ""
 msgid "Not checked yet"
 msgstr "尚未檢查"
 
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Not configured"
 msgstr ""
 
@@ -4899,6 +5021,10 @@ msgstr "OAuth 連線失敗"
 msgid "OAuth expired"
 msgstr "OAuth 已過期"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Off"
+msgstr "關閉"
+
 #: src/components/ComputerDeviceSettings.tsx
 msgid "Offline"
 msgstr ""
@@ -4948,6 +5074,7 @@ msgstr "僅限自己"
 
 #: src/components/markdown-link-prompt.tsx
 #: src/components/pages/PagesList.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/PaymentWalletSettingsPanel.tsx
 #: src/pages/shell/computer-panel.tsx
 #: src/pages/shell/import-setup-card.tsx
@@ -5216,6 +5343,10 @@ msgstr "等待管理員核准"
 msgid "Performance"
 msgstr ""
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Period"
+msgstr "週期"
+
 #: src/pages/shell/bot-panel.tsx
 msgid "Permissions"
 msgstr "權限"
@@ -5225,7 +5356,7 @@ msgid "Persona"
 msgstr "人設"
 
 #: src/components/SignupSurvey.tsx
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Personal"
 msgstr "個人"
 
@@ -5274,6 +5405,7 @@ msgid "Pin"
 msgstr "置頂"
 
 #: src/components/pages/PagesList.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/Shell.tsx
 msgid "Pinned"
 msgstr "置頂"
@@ -5383,6 +5515,10 @@ msgstr "供應商"
 msgid "Providers"
 msgstr "供應商"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Prune inactive"
+msgstr "清理不活躍成員"
+
 #: src/components/CloudAgentCard.tsx
 msgid "Pull request"
 msgstr "Pull request"
@@ -5420,6 +5556,7 @@ msgstr "朗讀回覆"
 msgid "Ready"
 msgstr "就緒"
 
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/PluginSubmissionsPanel.tsx
 msgid "Reason"
 msgstr ""
@@ -5586,6 +5723,7 @@ msgstr "重新載入"
 #: src/components/TrustedLinkSitesSettings.tsx
 #: src/components/vault/LoginFieldsInput.tsx
 #: src/components/vault/VaultItemDetail.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/AdminOpsPage.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/ModelRoleSettings.tsx
@@ -5606,6 +5744,11 @@ msgstr "移除 {0}"
 msgid "Remove {0} from the group"
 msgstr "將 {0} 移出群組"
 
+#. placeholder {0}: accountLabel(account)
+#: src/pages/AdminOpsBudget.tsx
+msgid "Remove {0} from the roster."
+msgstr "將 {0} 從名冊中移除。"
+
 #. placeholder {0}: accountLabel(removeTarget)
 #: src/pages/AdminOpsPage.tsx
 msgid "Remove {0}?"
@@ -5623,12 +5766,20 @@ msgstr "移除 {site}"
 msgid "Remove change trigger"
 msgstr "移除變化觸發器"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Remove from budget"
+msgstr "從預算中移除"
+
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/PluginsOverlay.tsx
 msgid "Remove from every space?"
 msgstr ""
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Remove from shared budget?"
+msgstr "從共用預算中移除？"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Remove Git event"
@@ -5740,6 +5891,7 @@ msgid "Research & writing"
 msgstr "調研和寫作"
 
 #: src/components/ComputerMaintenanceActions.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/ExternalConversationSettings.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
 msgid "Reset"
@@ -5757,9 +5909,25 @@ msgstr "重設電腦"
 msgid "Reset computer?"
 msgstr "重設電腦？"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Reset day"
+msgstr "重設日"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Reset day of month"
+msgstr "每月重設日"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Reset day of week"
+msgstr "每週重設日"
+
 #: src/pages/Auth.tsx
 msgid "Reset password"
 msgstr "重設密碼"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Reset time"
+msgstr "重設時間"
 
 #: src/pages/Auth.tsx
 msgid "Reset your password"
@@ -5774,7 +5942,7 @@ msgid "Resets {reset}"
 msgstr ""
 
 #. placeholder {0}: resetCountdown(budget.resetsAt)
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Resets in {0}"
 msgstr "{0}後重設"
 
@@ -5853,14 +6021,28 @@ msgstr ""
 msgid "Return to Rakazo"
 msgstr "返回 Rakazo"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Reversal"
+msgstr "撤銷"
+
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/AdminOpsPage.tsx
 msgid "Reverse"
 msgstr ""
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Reverse reason"
+msgstr "撤銷原因"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Reverse this adjustment?"
+msgstr "撤銷此調整？"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Reverse transfer?"
 msgstr ""
 
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/AdminOpsPage.tsx
 msgid "Reversed"
 msgstr ""
@@ -5886,7 +6068,7 @@ msgstr ""
 msgid "Root filesystem"
 msgstr ""
 
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Roster"
 msgstr ""
 
@@ -5973,6 +6155,7 @@ msgid "Sandbox"
 msgstr ""
 
 #: src/lib/cron.ts
+#: src/pages/AdminOpsBudget.tsx
 msgid "Saturday"
 msgstr "週六"
 
@@ -5984,7 +6167,7 @@ msgstr "週六"
 #: src/components/teach/SkillDraftCard.tsx
 #: src/components/vault/VaultItemEditor.tsx
 #: src/pages/AccountSettingsOverlay.tsx
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/Board.tsx
 #: src/pages/ExternalConversationSettings.tsx
 #: src/pages/GroupPanel.tsx
@@ -5999,7 +6182,7 @@ msgstr "週六"
 msgid "Save"
 msgstr "儲存"
 
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Save monthly shared-key cap?"
 msgstr ""
 
@@ -6147,6 +6330,10 @@ msgstr "搜尋：{0}"
 msgid "Searching…"
 msgstr "正在搜尋…"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Second warning threshold"
+msgstr "第二個警告閾值"
+
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Security"
 msgstr "安全"
@@ -6239,6 +6426,10 @@ msgstr "伺服器 URL"
 msgid "Set"
 msgstr "設定"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Set to"
+msgstr "設為"
+
 #: src/components/call/CallStrip.tsx
 #: src/components/SidebarFooter.tsx
 #: src/pages/MessagingSettingsPanel.tsx
@@ -6301,7 +6492,7 @@ msgid "Share, anyone with the link can view"
 msgstr "共用，任何擁有連結的人都能檢視"
 
 #: src/components/pages/PagesList.tsx
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Shared"
@@ -6325,7 +6516,7 @@ msgstr ""
 msgid "Shared week usage for {0}"
 msgstr "{0} 的共用週用量"
 
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Shared-key week"
 msgstr ""
 
@@ -6420,6 +6611,10 @@ msgstr "註冊"
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Sign-in cancelled. Try again."
 msgstr ""
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Signup"
+msgstr "註冊"
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/vault/VaultItemEditor.tsx
@@ -6543,9 +6738,22 @@ msgstr "說話中"
 msgid "Speech model"
 msgstr "語音模型"
 
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/AdminOpsPage.tsx
 msgid "Spend"
 msgstr ""
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Spend adjustment mode"
+msgstr "支出調整模式"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Spend adjustment reason"
+msgstr "支出調整原因"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Spend amount"
+msgstr "支出金額"
 
 #: src/components/SpendingLimitSettings.tsx
 msgid "Spending limit"
@@ -6558,6 +6766,14 @@ msgstr ""
 #: src/lib/user-error.ts
 msgid "SSO is temporarily unavailable. Try again."
 msgstr "SSO 暫時不可用，請重試。"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Stale hold (min)"
+msgstr "過期預留（分鐘）"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Stale-hold timeout minutes"
+msgstr "過期預留逾時（分鐘）"
 
 #: src/components/GitHubStarPrompt.tsx
 msgid "Star on GitHub"
@@ -6703,6 +6919,7 @@ msgid "Subscription required"
 msgstr "需要訂閱"
 
 #: src/lib/cron.ts
+#: src/pages/AdminOpsBudget.tsx
 msgid "Sunday"
 msgstr "週日"
 
@@ -6762,6 +6979,7 @@ msgstr "示範任務"
 msgid "Teaching in progress. Stop teaching before sending a new message."
 msgstr "正在示範，傳送新訊息前請先停止示範。"
 
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Team"
 msgstr "團隊"
@@ -7049,9 +7267,13 @@ msgid "This server's tool result does not fit the model. Turn off Keep tool resu
 msgstr ""
 
 #. placeholder {0}: money(Number(draft) || 0)
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "This sets the deployment monthly cap for the shared Gemini key to {0}."
 msgstr ""
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "This starts a new budget period immediately."
+msgstr "這會立即開始新的預算週期。"
 
 #: src/pages/model-settings/connection-controls.tsx
 msgid "This subscription sign-in is not available in Rakazo yet. Use a deployment credential or choose another provider."
@@ -7067,6 +7289,7 @@ msgid "This week's shared API key budget is used up. It resets next week, or con
 msgstr "本週共用 API 金鑰預算已用完。將於下週重設，或在「模型」中連接你自己的金鑰。"
 
 #: src/lib/cron.ts
+#: src/pages/AdminOpsBudget.tsx
 msgid "Thursday"
 msgstr "週四"
 
@@ -7075,6 +7298,7 @@ msgid "Time of day"
 msgstr "時間"
 
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Timezone"
 msgstr "時區"
 
@@ -7139,6 +7363,10 @@ msgstr "工具名稱"
 #: src/pages/shell/bot-panel.tsx
 msgid "Tools"
 msgstr "工具"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Tracked spend"
+msgstr "已追蹤支出"
 
 #: src/components/composer/HoldToTalk.tsx
 msgid "Transcribing…"
@@ -7227,6 +7455,7 @@ msgid "Try the test again."
 msgstr "請重試測試。"
 
 #: src/lib/cron.ts
+#: src/pages/AdminOpsBudget.tsx
 msgid "Tuesday"
 msgstr "週二"
 
@@ -7529,6 +7758,10 @@ msgstr "喚醒"
 msgid "Wallet"
 msgstr ""
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Warnings"
+msgstr "警告"
+
 #: src/components/ModelCredits.tsx
 msgid "Web, desktop and mobile"
 msgstr "網頁、桌面與手機"
@@ -7542,11 +7775,16 @@ msgid "Webhook"
 msgstr "Webhook"
 
 #: src/lib/cron.ts
+#: src/pages/AdminOpsBudget.tsx
 msgid "Wednesday"
 msgstr "週三"
 
 #: src/lib/billing.ts
 msgid "week"
+msgstr "週"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Week"
 msgstr "週"
 
 #: src/lib/cron.ts
@@ -7563,7 +7801,11 @@ msgstr "週末"
 msgid "Weekly"
 msgstr "每週"
 
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
+msgid "Weekly allotment override"
+msgstr "每週額度覆寫"
+
+#: src/pages/AdminOpsBudget.tsx
 msgid "Weekly shared-key pool used"
 msgstr "本週共用金鑰池用量"
 

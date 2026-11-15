@@ -1,19 +1,33 @@
 import {
+  DEFAULT_SHARED_KEY_PERIOD_SCHEDULE,
+  effectiveSharedKeyPeriodStart,
   effectiveSharedKeySpendUsd,
   fullWeekShareUsd,
   isGatedSharedKeyDeployment,
   parseSharedKeyMonthlyBudgetInput,
   redivideWeeklyAllotments,
-  SHARED_KEY_BUDGET_TIMEZONE,
+  resolveSharedKeyPeriodSchedule,
   sharedKeyBudgetPercentUsed,
-  sharedKeyWeekEnd,
-  sharedKeyWeekStart,
+  sharedKeyPeriodEnd,
+  sharedKeyPeriodPoolUsd,
+  sharedKeyPeriodStart,
+  type SharedKeyPeriodSchedule,
 } from "@rakazo/core";
+
+export { SHARED_KEY_BUDGET_TIMEZONE, sharedKeyPeriodPoolUsd } from "@rakazo/core";
 import { getLogger } from "@rakazo/logging";
-import { appendAuditEventTx } from "./audit-events.js";
+import {
+  appendAuditEventTx,
+  DEPLOYMENT_AUDIT_ORGANIZATION_ID,
+} from "./audit-events.js";
 import type { PrismaClient } from "./client.js";
 import { Prisma } from "./client.js";
 import { isHiddenOpsEmail } from "./ops-email-filter.js";
+import {
+  sumSharedKeyUsageByUser,
+  trackedSharedKeySpendByUser,
+  trackedSharedKeySpendUsd,
+} from "./shared-key-spend.js";
 import { reapplyActiveTransfersTx } from "./shared-key-transfer.js";
 
 type BudgetPrisma = Pick<
@@ -23,6 +37,8 @@ type BudgetPrisma = Pick<
   | "sharedKeyBudgetEnrollmentRequest"
   | "sharedKeyWeekAllotment"
   | "sharedKeyAllotmentTransfer"
+  | "sharedKeySpendAdjustment"
+  | "sharedKeyMemberOverride"
   | "usageRecord"
   | "user"
   | "member"
@@ -39,6 +55,8 @@ type BudgetTx = Pick<
   | "sharedKeyBudgetEnrollmentRequest"
   | "sharedKeyWeekAllotment"
   | "sharedKeyAllotmentTransfer"
+  | "sharedKeySpendAdjustment"
+  | "sharedKeyMemberOverride"
   | "usageRecord"
   | "deploymentSettings"
   | "user"
@@ -48,6 +66,115 @@ type BudgetTx = Pick<
   | "space"
   | "$queryRaw"
 >;
+
+export type SharedKeyBudgetSettingsRow = {
+  sharedKeyMonthlyBudgetUsd: number | null;
+  sharedKeyPeriod: string | null;
+  sharedKeyResetDow: number | null;
+  sharedKeyResetDom: number | null;
+  sharedKeyResetMinutes: number | null;
+  sharedKeyTimezone: string | null;
+  sharedKeyActivePeriodStart: Date | null;
+  sharedKeyAutoEnrollMode: string | null;
+  sharedKeyWarningThresholds: unknown;
+  sharedKeyHardStopEnabled: boolean | null;
+  sharedKeyHoldStaleMinutes: number | null;
+  sharedKeyPruneInactive: boolean | null;
+};
+
+export const DEFAULT_SHARED_KEY_WARNING_THRESHOLDS = [80, 95] as const;
+export const DEFAULT_SHARED_KEY_HOLD_STALE_MINUTES = 30;
+export const DEFAULT_SHARED_KEY_HARD_STOP_ENABLED = true;
+export const DEFAULT_SHARED_KEY_PRUNE_INACTIVE = true;
+
+const BUDGET_SETTINGS_SELECT = {
+  sharedKeyMonthlyBudgetUsd: true,
+  sharedKeyPeriod: true,
+  sharedKeyResetDow: true,
+  sharedKeyResetDom: true,
+  sharedKeyResetMinutes: true,
+  sharedKeyTimezone: true,
+  sharedKeyActivePeriodStart: true,
+  sharedKeyAutoEnrollMode: true,
+  sharedKeyWarningThresholds: true,
+  sharedKeyHardStopEnabled: true,
+  sharedKeyHoldStaleMinutes: true,
+  sharedKeyPruneInactive: true,
+} as const;
+
+export function scheduleFromSettings(
+  settings: Pick<
+    SharedKeyBudgetSettingsRow,
+    | "sharedKeyPeriod"
+    | "sharedKeyResetDow"
+    | "sharedKeyResetDom"
+    | "sharedKeyResetMinutes"
+    | "sharedKeyTimezone"
+  > | null,
+): SharedKeyPeriodSchedule {
+  if (!settings) return { ...DEFAULT_SHARED_KEY_PERIOD_SCHEDULE };
+  return resolveSharedKeyPeriodSchedule({
+    period:
+      settings.sharedKeyPeriod === "week" || settings.sharedKeyPeriod === "month"
+        ? settings.sharedKeyPeriod
+        : undefined,
+    resetDow: settings.sharedKeyResetDow ?? undefined,
+    resetDom: settings.sharedKeyResetDom ?? undefined,
+    resetMinutes: settings.sharedKeyResetMinutes ?? undefined,
+    timezone: settings.sharedKeyTimezone ?? undefined,
+  });
+}
+
+export function resolveSharedKeyPeriodBounds(
+  settings: Pick<
+    SharedKeyBudgetSettingsRow,
+    | "sharedKeyPeriod"
+    | "sharedKeyResetDow"
+    | "sharedKeyResetDom"
+    | "sharedKeyResetMinutes"
+    | "sharedKeyTimezone"
+    | "sharedKeyActivePeriodStart"
+  > | null,
+  now = new Date(),
+): { schedule: SharedKeyPeriodSchedule; periodStart: Date; periodEnd: Date } {
+  const schedule = scheduleFromSettings(settings);
+  const periodStart = effectiveSharedKeyPeriodStart({
+    schedule,
+    activePeriodStart: settings?.sharedKeyActivePeriodStart ?? null,
+    now,
+  });
+  return { schedule, periodStart, periodEnd: sharedKeyPeriodEnd(schedule, periodStart) };
+}
+
+/** Normalize warning thresholds: 0–100, sorted, deduped, at most 10 entries. */
+export function resolveWarningThresholds(raw: unknown): number[] {
+  if (!Array.isArray(raw)) return [...DEFAULT_SHARED_KEY_WARNING_THRESHOLDS];
+  const values = [
+    ...new Set(
+      raw
+        .filter((value): value is number => typeof value === "number" && Number.isFinite(value))
+        .map((value) => Math.min(100, Math.max(0, value))),
+    ),
+  ]
+    .sort((a, b) => a - b)
+    .slice(0, 10);
+  return values.length > 0 ? values : [...DEFAULT_SHARED_KEY_WARNING_THRESHOLDS];
+}
+
+export function resolveHoldStaleMs(minutes: number | null | undefined): number {
+  if (minutes == null || !Number.isFinite(minutes) || minutes <= 0) {
+    return DEFAULT_SHARED_KEY_HOLD_STALE_MINUTES * 60 * 1000;
+  }
+  return Math.trunc(minutes) * 60 * 1000;
+}
+
+export function resolveHardStopEnabled(value: boolean | null | undefined): boolean {
+  return value == null ? DEFAULT_SHARED_KEY_HARD_STOP_ENABLED : value;
+}
+
+export function resolvePruneInactive(value: boolean | null | undefined): boolean {
+  return value == null ? DEFAULT_SHARED_KEY_PRUNE_INACTIVE : value;
+}
 
 /**
  * Auto-enroll policy from the deployment's signup posture.
@@ -120,19 +247,24 @@ export type SharedKeyWeeklyBudgetStatus = {
   percentUsed: number;
   weekStartsAt: string;
   resetsAt: string;
-  timezone: typeof SHARED_KEY_BUDGET_TIMEZONE;
+  timezone: string;
+  hardStopEnabled: boolean;
+  warningThresholds: number[];
 };
 
 /** Soft holds older than this are treated as abandoned (worker crash / deploy kill). */
-export const SHARED_KEY_BUDGET_HOLD_STALE_MS = 30 * 60 * 1000;
+export const SHARED_KEY_BUDGET_HOLD_STALE_MS = DEFAULT_SHARED_KEY_HOLD_STALE_MINUTES * 60 * 1000;
 
 const MEMBERS_LOCK = "members";
 
-async function lockSharedKeyBudget(tx: Pick<BudgetTx, "$queryRaw">, key: string) {
+/** Exported for tests that assert every write path takes the advisory lock. */
+export async function lockSharedKeyBudget(tx: Pick<BudgetTx, "$queryRaw">, key: string) {
   await tx.$queryRaw(Prisma.sql`
     SELECT pg_advisory_xact_lock(hashtextextended(${`shared-key-budget:${key}`}, 0))::text AS "lock"
   `);
 }
+
+export { MEMBERS_LOCK as SHARED_KEY_BUDGET_MEMBERS_LOCK };
 
 /**
  * Effective monthly shared-key cap: a positive DB value wins; otherwise `envFallback`
@@ -186,7 +318,7 @@ export type UsageLimitView =
       kind: "shared_weekly";
       percentUsed: number;
       resetsAt: string;
-      timezone: typeof SHARED_KEY_BUDGET_TIMEZONE;
+      timezone: string;
     }
   | { kind: "personal_key" }
   | { kind: "none" };
@@ -224,48 +356,46 @@ export async function listSharedKeyBudgetMembers(
   });
 }
 
+/**
+ * Tracked shared-key spend for one user in [since, now). Personal-key usage never counts.
+ * Includes per-user spend adjustments for the period when periodStart is provided.
+ * When `adjustmentCreatedBefore` is set (join baseline), only adjustments created
+ * before that instant count — same window rule as usage.
+ */
 async function spentSharedKeyUsd(
-  prisma: Pick<BudgetTx, "usageRecord">,
+  prisma: Pick<BudgetTx, "usageRecord" | "sharedKeySpendAdjustment">,
   userId: string,
   since: Date,
   now: Date,
+  /** When set, include per-user adjustments for this period in tracked spend. */
+  periodStart?: Date,
+  adjustmentCreatedBefore?: Date,
 ): Promise<number> {
-  const { _sum } = await prisma.usageRecord.aggregate({
-    _sum: { costUsd: true },
-    where: {
-      userId,
-      sharedKey: true,
-      createdAt: { gte: since, lt: now },
-    },
+  return trackedSharedKeySpendUsd(prisma, {
+    userId,
+    since,
+    until: now,
+    periodStart,
+    adjustmentCreatedBefore,
   });
-  return _sum.costUsd ?? 0;
 }
 
 /**
- * Monday→now shared-key spend per user. Effective allotment spend subtracts each row's
- * preJoinSpendUsd separately — never window spend at joinedAt.
+ * Period→now tracked shared-key spend per user (usage + per-user adjustments).
+ * Effective allotment spend subtracts each row's preJoinSpendUsd separately.
  */
 async function spentByMembers(
-  prisma: Pick<BudgetTx, "usageRecord">,
+  prisma: Pick<BudgetTx, "usageRecord" | "sharedKeySpendAdjustment">,
   userIds: string[],
   weekStart: Date,
   now: Date,
 ): Promise<Map<string, number>> {
-  const spent = new Map<string, number>();
-  if (userIds.length === 0) return spent;
-  const groups = await prisma.usageRecord.groupBy({
-    by: ["userId"],
-    where: {
-      userId: { in: userIds },
-      sharedKey: true,
-      createdAt: { gte: weekStart, lt: now },
-    },
-    _sum: { costUsd: true },
+  return trackedSharedKeySpendByUser(prisma, {
+    userIds,
+    since: weekStart,
+    until: now,
+    periodStart: weekStart,
   });
-  for (const group of groups) {
-    spent.set(group.userId, group._sum.costUsd ?? 0);
-  }
-  return spent;
 }
 
 type AllotmentBaseline = {
@@ -330,18 +460,27 @@ export async function recomputeSharedKeyWeekAllotments(
   });
 }
 
-async function recomputeSharedKeyWeekAllotmentsTx(
+/** Caller must already hold {@link lockSharedKeyBudget} for the members key. */
+export async function recomputeSharedKeyWeekAllotmentsTx(
   tx: BudgetTx,
   now: Date,
   options?: { rebaseOnMonthlyCap?: boolean },
 ): Promise<Map<string, number>> {
   const settings = await tx.deploymentSettings.findUnique({
     where: { id: "default" },
-    select: { sharedKeyMonthlyBudgetUsd: true },
+    select: BUDGET_SETTINGS_SELECT,
   });
   const monthly = settings?.sharedKeyMonthlyBudgetUsd;
-  const weekStart = sharedKeyWeekStart(now);
-  await clearStaleSharedKeyBudgetHolds(tx, weekStart, now);
+  const { schedule, periodStart: weekStart, periodEnd } = resolveSharedKeyPeriodBounds(
+    settings,
+    now,
+  );
+  await clearStaleSharedKeyBudgetHolds(
+    tx,
+    weekStart,
+    now,
+    resolveHoldStaleMs(settings?.sharedKeyHoldStaleMinutes),
+  );
   const members = await listSharedKeyBudgetMembers(tx);
   if (!(monthly != null && monthly > 0)) {
     return new Map();
@@ -391,16 +530,38 @@ async function recomputeSharedKeyWeekAllotmentsTx(
   ];
   const spentByUser = await spentByMembers(tx, spendUserIds, weekStart, now);
 
-  // Fresh enrolls without a week row yet: baseline is Monday→joinedAt shared spend.
+  // Fresh enrolls without a week row yet: baseline is periodStart→joinedAt shared
+  // usage + adjustments created before join (same window rule as usage).
   for (const member of redivideMembers) {
     if (!preJoinSpendByUser.has(member.userId)) {
       const baseline =
         member.joinedAt.getTime() > weekStart.getTime()
-          ? await spentSharedKeyUsd(tx, member.userId, weekStart, member.joinedAt)
+          ? await spentSharedKeyUsd(
+              tx,
+              member.userId,
+              weekStart,
+              member.joinedAt,
+              weekStart,
+              member.joinedAt,
+            )
           : 0;
       preJoinSpendByUser.set(member.userId, baseline);
     }
   }
+
+  // Absolute allotment overrides: subtracted from the pool inside redivide.
+  const overrideRows =
+    "sharedKeyMemberOverride" in tx && tx.sharedKeyMemberOverride
+      ? await tx.sharedKeyMemberOverride.findMany({
+          where: { userId: { in: redivideMembers.map((member) => member.userId) } },
+          select: { userId: true, weeklyAllotmentUsd: true },
+        })
+      : [];
+  const overrides = new Map(
+    overrideRows
+      .filter((row) => row.weeklyAllotmentUsd >= 0)
+      .map((row) => [row.userId, row.weeklyAllotmentUsd]),
+  );
 
   const allotments = redivideWeeklyAllotments({
     monthlyCapUsd: monthly,
@@ -412,6 +573,9 @@ async function recomputeSharedKeyWeekAllotmentsTx(
     reservedByUser,
     preJoinSpendByUser,
     rebaseOnMonthlyCap: options?.rebaseOnMonthlyCap === true,
+    overrides,
+    period: schedule.period,
+    periodEnd,
   });
 
   const memberIds = new Set(allotments.keys());
@@ -470,9 +634,10 @@ async function recomputeSharedKeyWeekAllotmentsTx(
  * Auto-enroll bar. Always rejects deactivated / hidden accounts.
  * SHARED_KEY_BUDGET_USER_IDS and explicit admin adds bypass via `bypassEligibilityBar`
  * (or `policy.explicitUserIds` on the hot path).
- * Gated deployments: verified email + any organization membership.
- * Open signups: verified email + membership in a non-personal (multi-member) org
- * that also includes an ops admin (active verified AdminGrant or env admin email).
+ * Personal (solo-member) orgs never qualify in any mode.
+ * Gated deployments: verified email + membership in a non-personal (multi-member) org.
+ * Open signups: verified email + membership in a non-personal org that also includes
+ * an ops admin (active verified AdminGrant or env admin email).
  */
 export async function userEligibleForSharedKeyBudget(
   tx: Pick<BudgetTx, "user" | "member" | "adminGrant">,
@@ -496,17 +661,24 @@ export async function userEligibleForSharedKeyBudget(
     select: { organizationId: true },
   });
   if (memberships.length === 0) return false;
+  const orgMembership = await nonPersonalOrgMembership(tx, memberships);
+  // Personal-org-only memberships are never eligible, including gated deployments.
+  if (!orgMembership.hasNonPersonal) return false;
   if (options.policy.gatedDeployment) return true;
-  return sharesNonPersonalOrgWithOpsAdmin(tx, userId, memberships, options.policy.adminEmails);
+  return sharesNonPersonalOrgWithOpsAdmin(
+    tx,
+    userId,
+    memberships,
+    options.policy.adminEmails,
+    orgMembership,
+  );
 }
 
 /** Orgs with only one member are personal bootstraps; multi-member orgs are team orgs. */
-async function sharesNonPersonalOrgWithOpsAdmin(
-  tx: Pick<BudgetTx, "user" | "member" | "adminGrant">,
-  userId: string,
+async function nonPersonalOrgMembership(
+  tx: Pick<BudgetTx, "member">,
   memberships: Array<{ organizationId: string }>,
-  adminEmails: string[],
-): Promise<boolean> {
+): Promise<{ hasNonPersonal: boolean; byOrg: Map<string, string[]> }> {
   const orgIds = memberships.map((row) => row.organizationId);
   const peers = await tx.member.findMany({
     where: { organizationId: { in: orgIds } },
@@ -518,6 +690,25 @@ async function sharesNonPersonalOrgWithOpsAdmin(
     list.push(peer.userId);
     byOrg.set(peer.organizationId, list);
   }
+  let hasNonPersonal = false;
+  for (const userIds of byOrg.values()) {
+    if (userIds.length >= 2) {
+      hasNonPersonal = true;
+      break;
+    }
+  }
+  return { hasNonPersonal, byOrg };
+}
+
+async function sharesNonPersonalOrgWithOpsAdmin(
+  tx: Pick<BudgetTx, "user" | "member" | "adminGrant">,
+  userId: string,
+  memberships: Array<{ organizationId: string }>,
+  adminEmails: string[],
+  precomputed?: { hasNonPersonal: boolean; byOrg: Map<string, string[]> },
+): Promise<boolean> {
+  const { byOrg } =
+    precomputed ?? (await nonPersonalOrgMembership(tx, memberships));
   const candidateAdminIds = new Set<string>();
   for (const userIds of byOrg.values()) {
     if (userIds.length < 2) continue;
@@ -592,7 +783,11 @@ async function enrollSharedKeyBudgetMemberTx(
     return "ineligible";
   }
 
-  const weekStart = sharedKeyWeekStart(now);
+  const settings = await tx.deploymentSettings.findUnique({
+    where: { id: "default" },
+    select: BUDGET_SETTINGS_SELECT,
+  });
+  const { periodStart: weekStart } = resolveSharedKeyPeriodBounds(settings, now);
   const priorAllotment = await tx.sharedKeyWeekAllotment.findUnique({
     where: { weekStart_userId: { weekStart, userId } },
     select: { joinedAt: true },
@@ -624,6 +819,7 @@ async function enrollSharedKeyBudgetMemberTx(
         action: "shared_key_budget.member.added",
         actor: { type: "user", id: options.adminActorUserId },
         target: { type: "user", id: userId },
+        organizationId: DEPLOYMENT_AUDIT_ORGANIZATION_ID,
         metadata: {
           userId,
           weekStartsAt: weekStart.toISOString(),
@@ -634,6 +830,7 @@ async function enrollSharedKeyBudgetMemberTx(
         action: "shared_key_budget.member.auto_enrolled",
         actor: { type: "system", label: "shared-key-budget" },
         target: { type: "user", id: userId },
+        organizationId: DEPLOYMENT_AUDIT_ORGANIZATION_ID,
         metadata: {
           userId,
           weekStartsAt: weekStart.toISOString(),
@@ -690,10 +887,33 @@ export async function removeSharedKeyBudgetMember(
   prisma: Pick<BudgetPrisma, "$transaction">,
   userId: string,
   now = new Date(),
+  options?: {
+    /** SHARED_KEY_BUDGET_USER_IDS — these members cannot be removed. */
+    envPinnedUserIds?: readonly string[];
+    actorUserId?: string;
+  },
 ): Promise<void> {
+  const pinned = new Set(
+    (options?.envPinnedUserIds ?? []).map((id) => id.trim()).filter(Boolean),
+  );
+  if (pinned.has(userId)) {
+    throw new Error("Cannot remove a member pinned by SHARED_KEY_BUDGET_USER_IDS");
+  }
   await prisma.$transaction(async (tx) => {
     await lockSharedKeyBudget(tx, MEMBERS_LOCK);
-    await tx.sharedKeyBudgetMember.deleteMany({ where: { userId } });
+    if (pinned.has(userId)) {
+      throw new Error("Cannot remove a member pinned by SHARED_KEY_BUDGET_USER_IDS");
+    }
+    const deleted = await tx.sharedKeyBudgetMember.deleteMany({ where: { userId } });
+    if ((deleted?.count ?? 0) > 0 && options?.actorUserId) {
+      await appendAuditEventTx(tx, {
+        action: "shared_key_budget.member.removed",
+        actor: { type: "user", id: options.actorUserId },
+        target: { type: "user", id: userId },
+        organizationId: DEPLOYMENT_AUDIT_ORGANIZATION_ID,
+        metadata: { userId },
+      });
+    }
     await recomputeSharedKeyWeekAllotmentsTx(tx, now);
   });
 }
@@ -758,11 +978,15 @@ export const SHARED_KEY_BUDGET_NOT_ENROLLED_HIT_MIN_INTERVAL_MS = 60_000;
 
 /** Persist a not-enrolled hit outside the rolled-back reserve transaction. */
 export async function recordSharedKeyBudgetNotEnrolledHit(
-  prisma: Pick<BudgetPrisma, "sharedKeyBudgetEnrollmentRequest">,
+  prisma: Pick<BudgetPrisma, "sharedKeyBudgetEnrollmentRequest" | "deploymentSettings">,
   userId: string,
   now = new Date(),
 ): Promise<void> {
-  const weekStart = sharedKeyWeekStart(now);
+  const settings = await prisma.deploymentSettings.findUnique({
+    where: { id: "default" },
+    select: BUDGET_SETTINGS_SELECT,
+  });
+  const { periodStart: weekStart } = resolveSharedKeyPeriodBounds(settings, now);
   const existing = await prisma.sharedKeyBudgetEnrollmentRequest.findUnique({
     where: { weekStart_userId: { weekStart, userId } },
     select: { lastHitAt: true },
@@ -798,35 +1022,41 @@ export async function listSharedKeyBudgetNotEnrolledHits(
 }
 
 /**
- * Drop roster members with no shared-key usage in the prior America/New_York week
- * who are not on the explicit env include list. Call on Monday (or lazily when the
- * week rolls) so dormant auto-enrolls do not keep splitting the pool forever.
+ * Drop roster members with no shared-key *usage* in the prior period who are not
+ * on the explicit env include list. Prune on raw usage activity, never adjusted
+ * tracked spend — a negative adjustment that zeroes tracked must not prune an
+ * otherwise active member. Call when the period rolls so dormant auto-enrolls
+ * do not keep splitting the pool forever.
  */
 export async function pruneInactiveSharedKeyBudgetMembers(
   prisma: Pick<BudgetPrisma, "$transaction">,
   explicitUserIds: string[],
   now = new Date(),
 ): Promise<string[]> {
-  const weekStart = sharedKeyWeekStart(now);
-  const priorWeekEnd = weekStart;
-  const priorWeekStart = sharedKeyWeekStart(new Date(weekStart.getTime() - 24 * 60 * 60 * 1000));
-  const keep = new Set(explicitUserIds.map((id) => id.trim()).filter(Boolean));
   const removed: string[] = [];
   await prisma.$transaction(async (tx) => {
     await lockSharedKeyBudget(tx, MEMBERS_LOCK);
+    const settings = await tx.deploymentSettings.findUnique({
+      where: { id: "default" },
+      select: BUDGET_SETTINGS_SELECT,
+    });
+    if (!resolvePruneInactive(settings?.sharedKeyPruneInactive)) return;
+    const { schedule, periodStart: weekStart } = resolveSharedKeyPeriodBounds(settings, now);
+    const priorWeekEnd = weekStart;
+    const priorWeekStart = sharedKeyPeriodStart(
+      schedule,
+      new Date(weekStart.getTime() - 24 * 60 * 60 * 1000),
+    );
+    const keep = new Set(explicitUserIds.map((id) => id.trim()).filter(Boolean));
     const members = await listSharedKeyBudgetMembers(tx);
     if (members.length === 0) return;
-    const usage = await tx.usageRecord.groupBy({
-      by: ["userId"],
-      where: {
-        userId: { in: members.map((m) => m.userId) },
-        sharedKey: true,
-        createdAt: { gte: priorWeekStart, lt: priorWeekEnd },
-      },
-      _sum: { costUsd: true },
+    const usage = await sumSharedKeyUsageByUser(tx, {
+      userIds: members.map((m) => m.userId),
+      since: priorWeekStart,
+      until: priorWeekEnd,
     });
     const active = new Set(
-      usage.filter((row) => (row._sum.costUsd ?? 0) > 0).map((row) => row.userId),
+      [...usage.entries()].filter(([, cost]) => cost > 0).map(([userId]) => userId),
     );
     for (const member of members) {
       if (keep.has(member.userId) || active.has(member.userId)) continue;
@@ -881,8 +1111,30 @@ async function ensureMemberAllotment(
  * `policy` is required — callers must build it with
  * {@link sharedKeyBudgetEnrollmentPolicyFromEnv} (never a gated default).
  */
+/**
+ * Apply DB auto-enroll mode override on top of the signup-derived policy.
+ * null = keep policy as-is; "off" disables auto-enroll; "open" forces the open bar.
+ * "gated" never forces gatedDeployment:true — it is only valid when the deployment
+ * is already gated, and leaves the existing policy flag alone.
+ */
+export function applyAutoEnrollMode(
+  policy: SharedKeyBudgetEnrollmentPolicy,
+  mode: string | null | undefined,
+): SharedKeyBudgetEnrollmentPolicy {
+  if (mode == null || mode === "") return policy;
+  if (mode === "off") {
+    return { ...policy, gatedDeployment: false, adminEmails: [], explicitUserIds: policy.explicitUserIds };
+  }
+  if (mode === "gated") return policy;
+  if (mode === "open") return { ...policy, gatedDeployment: false };
+  return policy;
+}
+
 export async function reserveSharedKeyBudget(
-  prisma: Pick<BudgetPrisma, "$transaction" | "sharedKeyBudgetEnrollmentRequest">,
+  prisma: Pick<
+    BudgetPrisma,
+    "$transaction" | "sharedKeyBudgetEnrollmentRequest" | "deploymentSettings"
+  >,
   userId: string,
   maxCostUsd: number,
   now = new Date(),
@@ -896,33 +1148,47 @@ export async function reserveSharedKeyBudget(
       await lockSharedKeyBudget(tx, MEMBERS_LOCK);
       const settings = await tx.deploymentSettings.findUnique({
         where: { id: "default" },
-        select: { sharedKeyMonthlyBudgetUsd: true },
+        select: BUDGET_SETTINGS_SELECT,
       });
       const monthly = settings?.sharedKeyMonthlyBudgetUsd;
       if (!(monthly != null && monthly > 0)) return;
 
-      const weekStart = sharedKeyWeekStart(now);
-      await clearStaleSharedKeyBudgetHolds(tx, weekStart, now);
+      const { periodStart: weekStart } = resolveSharedKeyPeriodBounds(settings, now);
+      await clearStaleSharedKeyBudgetHolds(
+        tx,
+        weekStart,
+        now,
+        resolveHoldStaleMs(settings?.sharedKeyHoldStaleMinutes),
+      );
+      const effectivePolicy = applyAutoEnrollMode(policy, settings?.sharedKeyAutoEnrollMode);
+      const autoEnrollOff = settings?.sharedKeyAutoEnrollMode === "off";
       const alreadyMember = await tx.sharedKeyBudgetMember.findUnique({
         where: { userId },
         select: { userId: true },
       });
       if (!alreadyMember) {
-        if (!(await userEligibleForSharedKeyBudget(tx, userId, { policy }))) {
+        if (autoEnrollOff && !effectivePolicy.explicitUserIds.includes(userId)) {
           throw new SharedKeyBudgetNotEnrolledError();
         }
-        await enrollSharedKeyBudgetMemberTx(tx, userId, now, { policy });
+        if (!(await userEligibleForSharedKeyBudget(tx, userId, { policy: effectivePolicy }))) {
+          throw new SharedKeyBudgetNotEnrolledError();
+        }
+        await enrollSharedKeyBudgetMemberTx(tx, userId, now, { policy: effectivePolicy });
       }
       const allotment = await ensureMemberAllotment(tx, userId, weekStart, now);
       // Feature on but user not enrolled (e.g. $0 slice): no shared-key spend allowed.
-      const cap = allotment?.allotmentUsd ?? 0;
-      const reserved = allotment?.reservedUsd ?? 0;
-      const mondaySpend = await spentSharedKeyUsd(tx, userId, weekStart, now);
-      const spent = effectiveSharedKeySpendUsd(mondaySpend, allotment?.preJoinSpendUsd ?? 0);
-      // At or over the cap: refuse every further shared-key call (including zero-estimate probes).
+      if (!allotment) {
+        throw new SharedKeyWeeklyBudgetExceededError();
+      }
+      const cap = allotment.allotmentUsd;
+      const reserved = allotment.reservedUsd;
+      const mondaySpend = await spentSharedKeyUsd(tx, userId, weekStart, now, weekStart);
+      const spent = effectiveSharedKeySpendUsd(mondaySpend, allotment.preJoinSpendUsd);
+      const hardStop = resolveHardStopEnabled(settings?.sharedKeyHardStopEnabled);
+      // At or over the cap: refuse further shared-key calls when hard-stop is on.
       const over =
         spent + reserved >= cap || (maxCostUsd > 0 && spent + reserved + maxCostUsd > cap);
-      if (!allotment || over) {
+      if (hardStop && over) {
         throw new SharedKeyWeeklyBudgetExceededError();
       }
       await tx.sharedKeyWeekAllotment.update({
@@ -957,7 +1223,11 @@ export async function releaseSharedKeyBudgetHold(
   if (!Number.isFinite(maxCostUsd) || maxCostUsd <= 0) return;
   await prisma.$transaction(async (tx) => {
     await lockSharedKeyBudget(tx, MEMBERS_LOCK);
-    const weekStart = sharedKeyWeekStart(now);
+    const settings = await tx.deploymentSettings.findUnique({
+      where: { id: "default" },
+      select: BUDGET_SETTINGS_SELECT,
+    });
+    const { periodStart: weekStart } = resolveSharedKeyPeriodBounds(settings, now);
     const row = await tx.sharedKeyWeekAllotment.findUnique({
       where: { weekStart_userId: { weekStart, userId } },
     });
@@ -979,10 +1249,18 @@ export async function sharedKeyWeeklyBudgetStatus(
   now = new Date(),
   envFallback: number | null = null,
 ): Promise<SharedKeyWeeklyBudgetStatus> {
-  const weekStart = sharedKeyWeekStart(now);
-  const resetsAt = sharedKeyWeekEnd(weekStart);
+  const settings = await prisma.deploymentSettings.findUnique({
+    where: { id: "default" },
+    select: BUDGET_SETTINGS_SELECT,
+  });
+  const { schedule, periodStart: weekStart, periodEnd: resetsAt } = resolveSharedKeyPeriodBounds(
+    settings,
+    now,
+  );
   const monthly = await sharedKeyMonthlyBudgetUsd(prisma, envFallback);
   const member = await prisma.sharedKeyBudgetMember.findUnique({ where: { userId } });
+  const warningThresholds = resolveWarningThresholds(settings?.sharedKeyWarningThresholds);
+  const hardStopEnabled = resolveHardStopEnabled(settings?.sharedKeyHardStopEnabled);
   if (!monthly || !member) {
     return {
       enabled: Boolean(monthly),
@@ -993,7 +1271,9 @@ export async function sharedKeyWeeklyBudgetStatus(
       percentUsed: 0,
       weekStartsAt: weekStart.toISOString(),
       resetsAt: resetsAt.toISOString(),
-      timezone: SHARED_KEY_BUDGET_TIMEZONE,
+      timezone: schedule.timezone,
+      hardStopEnabled,
+      warningThresholds,
     };
   }
 
@@ -1002,7 +1282,7 @@ export async function sharedKeyWeeklyBudgetStatus(
     where: { weekStart_userId: { weekStart, userId } },
   });
   const mondaySpend = await prisma.$transaction((tx) =>
-    spentSharedKeyUsd(tx, userId, weekStart, now),
+    spentSharedKeyUsd(tx, userId, weekStart, now, weekStart),
   );
   const spentUsd = effectiveSharedKeySpendUsd(mondaySpend, row?.preJoinSpendUsd ?? 0);
   const weeklyCapUsd = row?.allotmentUsd ?? fullWeekShareUsd(monthly, 1);
@@ -1016,7 +1296,9 @@ export async function sharedKeyWeeklyBudgetStatus(
     percentUsed: sharedKeyBudgetPercentUsed(spentUsd, weeklyCapUsd),
     weekStartsAt: weekStart.toISOString(),
     resetsAt: resetsAt.toISOString(),
-    timezone: SHARED_KEY_BUDGET_TIMEZONE,
+    timezone: schedule.timezone,
+    hardStopEnabled,
+    warningThresholds,
   };
 }
 

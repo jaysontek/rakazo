@@ -30,7 +30,9 @@ const { addSharedKeyBudgetMember, agentsRpc } = vi.hoisted(() => ({
 }));
 
 vi.mock("@rakazo/ui-web", () => {
-  const Pass = ({ children }: { children?: ReactNode }) => <div>{children}</div>;
+  const Pass = ({ children, ...props }: { children?: ReactNode } & Record<string, unknown>) => (
+    <div {...props}>{children}</div>
+  );
   const Button = ({
     children,
     onClick,
@@ -57,9 +59,72 @@ vi.mock("@rakazo/ui-web", () => {
     CardDescription: Pass,
     CardHeader: Pass,
     CardTitle: Pass,
+    Checkbox: ({
+      checked,
+      onCheckedChange,
+      id,
+      ...props
+    }: {
+      checked?: boolean;
+      onCheckedChange?: (checked: boolean) => void;
+      id?: string;
+    } & ComponentProps<"input">) => (
+      <input
+        type="checkbox"
+        id={id}
+        checked={checked}
+        onChange={(event) => onCheckedChange?.(event.target.checked)}
+        {...props}
+      />
+    ),
+    Collapsible: ({
+      open,
+      onOpenChange,
+      children,
+      ...props
+    }: {
+      open?: boolean;
+      onOpenChange?: (open: boolean) => void;
+      children?: ReactNode;
+    } & Record<string, unknown>) => (
+      <div data-open={open ? "true" : "false"} {...props}>
+        {typeof children === "function" ? null : children}
+        <button
+          type="button"
+          data-testid="collapsible-force-open"
+          className="sr-only"
+          onClick={() => onOpenChange?.(true)}
+        />
+      </div>
+    ),
+    CollapsibleContent: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+    CollapsibleTrigger: ({
+      children,
+      onClick,
+      className,
+      ...props
+    }: ComponentProps<"button">) => (
+      <button
+        type="button"
+        className={className}
+        onClick={(event) => {
+          onClick?.(event);
+          const root = (event.currentTarget as HTMLElement).closest("[data-open]");
+          const force = root?.querySelector<HTMLButtonElement>("[data-testid='collapsible-force-open']");
+          force?.click();
+        }}
+        {...props}
+      >
+        {children}
+      </button>
+    ),
     DropdownMenu: Pass,
     DropdownMenuContent: Pass,
-    DropdownMenuItem: ({ children, onClick, disabled }: ComponentProps<"button">) => (
+    DropdownMenuItem: ({
+      children,
+      onClick,
+      disabled,
+    }: ComponentProps<"button"> & { variant?: string }) => (
       <button type="button" role="menuitem" disabled={disabled} onClick={onClick}>
         {children}
       </button>
@@ -91,6 +156,25 @@ vi.mock("@rakazo/ui-web", () => {
     NativeSelect: (props: ComponentProps<"select">) => <select {...props} />,
     NativeSelectOption: (props: ComponentProps<"option">) => <option {...props} />,
     Spinner: () => <span>loading</span>,
+    Switch: ({
+      checked,
+      onCheckedChange,
+      id,
+      ...props
+    }: {
+      checked?: boolean;
+      onCheckedChange?: (checked: boolean) => void;
+      id?: string;
+    } & ComponentProps<"button">) => (
+      <button
+        type="button"
+        role="switch"
+        id={id}
+        aria-checked={checked}
+        onClick={() => onCheckedChange?.(!checked)}
+        {...props}
+      />
+    ),
     Tabs: Pass,
     TabsContent: ({ children }: { children?: ReactNode; value?: string }) => <div>{children}</div>,
     TabsList: Pass,
@@ -113,6 +197,12 @@ vi.mock("../lib/rpc", () => ({
       requestLog: vi.fn(),
       chatLog: vi.fn(),
       setSharedKeyMonthlyBudget: vi.fn(),
+      updateSharedKeyBudgetSettings: vi.fn(),
+      setSharedKeyMemberOverride: vi.fn(),
+      removeSharedKeyBudgetMember: vi.fn(),
+      setSharedKeyTrackedSpend: vi.fn(),
+      adjustSharedKeyTrackedSpend: vi.fn(),
+      reverseSharedKeySpendAdjustment: vi.fn(),
       startImpersonation: vi.fn(),
       transferSharedKeyAllotment: vi.fn(),
       addAdminGrant: vi.fn(),
@@ -137,6 +227,34 @@ import { OpsDashboardView } from "./AdminOpsPage";
 
 const weekStart = "2026-11-09T05:00:00.000Z";
 const resetsAt = "2026-11-16T05:00:00.000Z";
+
+const budgetSettings = {
+  monthlyCapUsd: 400,
+  monthlyCapSource: "db" as const,
+  period: "week" as const,
+  periodSource: "default" as const,
+  resetDow: 1,
+  resetDowSource: "default" as const,
+  resetDom: 1,
+  resetDomSource: "default" as const,
+  resetMinutes: 0,
+  resetMinutesSource: "default" as const,
+  timezone: "America/New_York",
+  timezoneSource: "db" as const,
+  weekStartsAt: weekStart,
+  resetsAt,
+  autoEnrollMode: "signup" as const,
+  autoEnrollModeSource: "default" as const,
+  warningThresholds: [80, 95],
+  warningThresholdsSource: "default" as const,
+  hardStopEnabled: true,
+  hardStopEnabledSource: "default" as const,
+  holdStaleMinutes: 30,
+  holdStaleMinutesSource: "default" as const,
+  pruneInactive: true,
+  pruneInactiveSource: "default" as const,
+  memberOverrides: [] as Array<{ userId: string; weeklyAllotmentUsd: number }>,
+};
 
 const overview: OpsOverview = {
   accounts: [
@@ -165,8 +283,12 @@ const overview: OpsOverview = {
         weekStartsAt: weekStart,
         resetsAt,
         timezone: "America/New_York",
+        hardStopEnabled: true,
+        warningThresholds: [80, 95],
       },
       pendingSharedBudgetApproval: true,
+      envPinned: false,
+      allotmentOverrideUsd: null,
     },
   ],
   agents: { total: 0, active: 0, names: [] },
@@ -185,6 +307,7 @@ const overview: OpsOverview = {
     weekStartsAt: weekStart,
     resetsAt,
     timezone: "America/New_York",
+    settings: budgetSettings,
   },
   performance: {
     sampleWindowHours: 168,
@@ -205,6 +328,27 @@ const overview: OpsOverview = {
   adminGrants: [],
   envBootstrapAdmins: [],
   allotmentTransfers: [],
+  spendAdjustments: [
+    {
+      id: "adj_1",
+      periodStart: weekStart,
+      periodEnd: "2026-11-16T05:00:00.000Z",
+      scope: "team",
+      userId: null,
+      userIdSnapshot: null,
+      deltaUsd: 2.5,
+      reason: "Fixture correction",
+      createdById: "user_admin",
+      createdByIdSnapshot: "user_admin",
+      createdByEmailSnapshot: "admin@example.test",
+      createdByEmail: "admin@example.test",
+      createdByName: "Admin",
+      createdAt: "2026-11-12T12:00:00.000Z",
+      previousTrackedUsd: 0,
+      newTrackedUsd: 2.5,
+      reversesId: null,
+    },
+  ],
 };
 
 let container: HTMLDivElement;
@@ -224,8 +368,7 @@ afterEach(() => {
   container.remove();
 });
 
-it("shows Add failure reason in the accounts section when enrolled is false", async () => {
-  addSharedKeyBudgetMember.mockResolvedValue({ enrolled: false, reason: "ineligible" });
+async function renderDashboard(data: OpsOverview = overview, interactive = false) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -234,16 +377,21 @@ it("shows Add failure reason in the accounts section when enrolled is false", as
       <QueryClientProvider client={queryClient}>
         <MemoryRouter>
           <OpsDashboardView
-            data={overview}
+            data={data}
             onChanged={() => undefined}
             selected={null as OpsRequestLogRow | null}
             onSelect={() => undefined}
-            interactive
+            interactive={interactive}
           />
         </MemoryRouter>
       </QueryClientProvider>,
     );
   });
+}
+
+it("shows Add failure reason in the accounts section when enrolled is false", async () => {
+  addSharedKeyBudgetMember.mockResolvedValue({ enrolled: false, reason: "ineligible" });
+  await renderDashboard(overview, true);
 
   const addButton = Array.from(container.querySelectorAll('[role="menuitem"]')).find((node) =>
     node.textContent?.includes("Add to shared budget"),
@@ -276,6 +424,8 @@ function accountFixture(
     personalKeyCostUsd: 0,
     sharedKeyBudget: null,
     pendingSharedBudgetApproval: false,
+    envPinned: false,
+    allotmentOverrideUsd: null,
     ...overrides,
   };
 }
@@ -309,24 +459,7 @@ it("never renders an em dash for the Key column on desktop or mobile", async () 
       }),
     ],
   };
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  await act(async () => {
-    root.render(
-      <QueryClientProvider client={queryClient}>
-        <MemoryRouter>
-          <OpsDashboardView
-            data={data}
-            onChanged={() => undefined}
-            selected={null as OpsRequestLogRow | null}
-            onSelect={() => undefined}
-            interactive
-          />
-        </MemoryRouter>
-      </QueryClientProvider>,
-    );
-  });
+  await renderDashboard(data, true);
 
   const desktopRows = Array.from(container.querySelectorAll("table tbody tr"));
   expect(desktopRows).toHaveLength(3);
@@ -533,4 +666,112 @@ it("uses email alone in the owner filter when the name is blank", async () => {
   expect(option?.textContent).toBe("blank@example.test");
   expect(option?.textContent).not.toContain("(");
   expect(container.querySelector('[data-testid="ops-agents"]')?.textContent).toContain("1 agent");
+});
+
+it("renders budget settings and spend adjustment controls with interactive=false", async () => {
+  await renderDashboard(overview, false);
+
+  expect(container.querySelector('[data-testid="ops-budget-section"]')).toBeTruthy();
+  expect(container.querySelector('[data-testid="ops-budget-reset"]')?.textContent).toContain(
+    "America/New_York",
+  );
+  expect(container.querySelector('[data-testid="ops-spend-adjustments"]')).toBeTruthy();
+
+  const settingsTrigger = Array.from(container.querySelectorAll("button")).find((node) =>
+    node.textContent?.includes("Budget settings"),
+  ) as HTMLButtonElement | undefined;
+  expect(settingsTrigger).toBeTruthy();
+  await act(async () => {
+    settingsTrigger!.click();
+  });
+
+  expect(container.querySelector('[aria-label="Budget period"]')).toBeTruthy();
+  expect(container.querySelector('[aria-label="Auto-enroll mode"]')).toBeTruthy();
+  expect(container.querySelector('[aria-label="First warning threshold"]')).toBeTruthy();
+  expect(container.querySelector('[aria-label="Stale-hold timeout minutes"]')).toBeTruthy();
+  expect(container.textContent).toContain("DB");
+  expect(container.textContent).toContain("Default");
+  expect(container.querySelector('[role="switch"]')).toBeTruthy();
+
+  expect(container.querySelector('[aria-label="Spend adjustment mode"]')).toBeTruthy();
+  expect(container.querySelector('[aria-label="Spend amount"]')).toBeTruthy();
+  expect(container.querySelector('[aria-label="Spend adjustment reason"]')).toBeTruthy();
+
+  const historyTrigger = Array.from(container.querySelectorAll("button")).find((node) =>
+    node.textContent?.includes("Adjustment history"),
+  ) as HTMLButtonElement | undefined;
+  expect(historyTrigger).toBeTruthy();
+  await act(async () => {
+    historyTrigger!.click();
+  });
+  expect(container.textContent).toContain("Fixture correction");
+  expect(container.textContent).toContain("Reverse");
+});
+
+it("shows pinned roster lock and remove action for non-pinned members", async () => {
+  const data: OpsOverview = {
+    ...overview,
+    accounts: [
+      accountFixture({
+        userId: "user_pinned",
+        email: "pinned@example.test",
+        name: "Pinned User",
+        keyType: "company",
+        envPinned: true,
+        sharedKeyBudget: {
+          configured: true,
+          member: true,
+          weeklyCapUsd: 25,
+          spentUsd: 1,
+          reservedUsd: 0,
+          remainingUsd: 24,
+          percentUsed: 4,
+          hardStopped: false,
+          weekStartsAt: weekStart,
+          resetsAt,
+          timezone: "America/New_York",
+          hardStopEnabled: true,
+          warningThresholds: [80, 95],
+        },
+      }),
+      accountFixture({
+        userId: "user_member",
+        email: "member@example.test",
+        name: "Roster Member",
+        keyType: "company",
+        allotmentOverrideUsd: 40,
+        sharedKeyBudget: {
+          configured: true,
+          member: true,
+          weeklyCapUsd: 40,
+          spentUsd: 2,
+          reservedUsd: 0,
+          remainingUsd: 38,
+          percentUsed: 5,
+          hardStopped: false,
+          weekStartsAt: weekStart,
+          resetsAt,
+          timezone: "America/New_York",
+          hardStopEnabled: true,
+          warningThresholds: [80, 95],
+        },
+      }),
+    ],
+    sharedKeyBudget: {
+      ...overview.sharedKeyBudget,
+      memberCount: 2,
+    },
+  };
+  await renderDashboard(data, false);
+
+  expect(container.textContent).toContain("Pinned");
+  expect(container.textContent).toContain("$40.00");
+
+  const menuItems = Array.from(container.querySelectorAll('[role="menuitem"]')).map(
+    (node) => node.textContent ?? "",
+  );
+  expect(menuItems.some((text) => text.includes("Pinned"))).toBe(true);
+  expect(menuItems.some((text) => text.includes("Remove from budget"))).toBe(true);
+  expect(menuItems.some((text) => text.includes("Edit allotment"))).toBe(true);
+  expect(menuItems.some((text) => text.includes("Adjust tracked spend"))).toBe(true);
 });

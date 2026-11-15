@@ -2,7 +2,9 @@ import { fullWeekShareUsd, sharedKeyWeekEnd } from "@rakazo/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   addSharedKeyBudgetMember,
+  applyAutoEnrollMode,
   GATED_SHARED_KEY_ENROLLMENT_POLICY,
+  pruneInactiveSharedKeyBudgetMembers,
   reconcileSharedKeyBudgetMembers,
   recordSharedKeyBudgetNotEnrolledHit,
   releaseSharedKeyBudgetHold,
@@ -79,6 +81,11 @@ function fakePrisma(state: {
   adminGrantUserIds?: string[];
   /** Deactivated known users (still returned from findUnique). */
   deactivatedUserIds?: string[];
+  /**
+   * Users whose org stays sole-member (Personal). Everyone else gets a synthetic
+   * team peer so gated eligibility is not accidentally Personal-only.
+   */
+  personalOnlyUserIds?: string[];
   enrollmentRequests?: Array<{ weekStart: Date; userId: string; lastHitAt?: Date }>;
   auditEvents?: Array<Record<string, unknown>>;
   locks?: string[];
@@ -97,8 +104,14 @@ function fakePrisma(state: {
   const unverified = new Set(state.unverifiedUserIds ?? []);
   const noMembership = new Set(state.noMembershipUserIds ?? []);
   const deactivated = new Set(state.deactivatedUserIds ?? []);
+  const personalOnly = new Set(state.personalOnlyUserIds ?? []);
   const adminGrants = new Set(state.adminGrantUserIds ?? []);
   const orgPeers = state.orgPeers ?? {};
+  const peersFor = (ownerId: string): string[] => {
+    if (ownerId in orgPeers) return orgPeers[ownerId] ?? [];
+    if (personalOnly.has(ownerId)) return [];
+    return ["__team_peer__"];
+  };
   const knownIds = () =>
     state.knownUserIds ?? [
       ...state.members.map((m) => m.userId),
@@ -107,7 +120,35 @@ function fakePrisma(state: {
   const client = {
     deploymentSettings: {
       findUnique: vi.fn(async () =>
-        state.monthly == null ? null : { sharedKeyMonthlyBudgetUsd: state.monthly },
+        state.monthly == null
+          ? {
+              sharedKeyMonthlyBudgetUsd: null,
+              sharedKeyPeriod: null,
+              sharedKeyResetDow: null,
+              sharedKeyResetDom: null,
+              sharedKeyResetMinutes: null,
+              sharedKeyTimezone: null,
+              sharedKeyActivePeriodStart: null,
+              sharedKeyAutoEnrollMode: null,
+              sharedKeyWarningThresholds: null,
+              sharedKeyHardStopEnabled: null,
+              sharedKeyHoldStaleMinutes: null,
+              sharedKeyPruneInactive: null,
+            }
+          : {
+              sharedKeyMonthlyBudgetUsd: state.monthly,
+              sharedKeyPeriod: null,
+              sharedKeyResetDow: null,
+              sharedKeyResetDom: null,
+              sharedKeyResetMinutes: null,
+              sharedKeyTimezone: null,
+              sharedKeyActivePeriodStart: null,
+              sharedKeyAutoEnrollMode: null,
+              sharedKeyWarningThresholds: null,
+              sharedKeyHardStopEnabled: null,
+              sharedKeyHoldStaleMinutes: null,
+              sharedKeyPruneInactive: null,
+            },
       ),
       upsert: vi.fn(
         async ({
@@ -121,6 +162,20 @@ function fakePrisma(state: {
           return { sharedKeyMonthlyBudgetUsd: state.monthly };
         },
       ),
+    },
+    sharedKeyMemberOverride: {
+      findMany: vi.fn(async () => []),
+      findUnique: vi.fn(async () => null),
+      upsert: vi.fn(async () => null),
+      deleteMany: vi.fn(async () => ({ count: 0 })),
+    },
+    sharedKeySpendAdjustment: {
+      aggregate: vi.fn(async () => ({ _sum: { deltaUsd: 0 } })),
+      groupBy: vi.fn(async () => []),
+      findMany: vi.fn(async () => []),
+      findUnique: vi.fn(async () => null),
+      findFirst: vi.fn(async () => null),
+      create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => data),
     },
     userModelCredential: {
       findFirst: vi.fn(async (): Promise<{ id: string } | null> => null),
@@ -250,7 +305,7 @@ function fakePrisma(state: {
             const rows: Array<{ organizationId: string; userId: string }> = [];
             for (const orgId of where.organizationId.in) {
               const ownerId = orgId.replace(/^org-/, "");
-              const peers = orgPeers[ownerId] ?? [];
+              const peers = peersFor(ownerId);
               rows.push({ organizationId: orgId, userId: ownerId });
               for (const peer of peers) {
                 rows.push({ organizationId: orgId, userId: peer });
@@ -366,7 +421,9 @@ function fakePrisma(state: {
         state.members = state.members.filter((m) => m.userId !== where.userId);
       }),
       deleteMany: vi.fn(async ({ where }: { where: { userId: string } }) => {
+        const before = state.members.length;
         state.members = state.members.filter((m) => m.userId !== where.userId);
+        return { count: before - state.members.length };
       }),
     },
     sharedKeyAllotmentTransfer: {
@@ -508,19 +565,27 @@ function fakePrisma(state: {
           where,
         }: {
           where: {
-            userId: string;
+            userId?: string | { in: string[] };
             sharedKey: boolean;
-            createdAt: { gte: Date; lt: Date };
+            createdAt?: { gte?: Date; lt: Date };
           };
         }) => {
           const sum = state.usage
-            .filter(
-              (row) =>
-                row.userId === where.userId &&
-                row.sharedKey === where.sharedKey &&
-                row.createdAt >= where.createdAt.gte &&
-                row.createdAt < where.createdAt.lt,
-            )
+            .filter((row) => {
+              if (row.sharedKey !== where.sharedKey) return false;
+              if (typeof where.userId === "string" && row.userId !== where.userId) return false;
+              if (
+                where.userId &&
+                typeof where.userId === "object" &&
+                "in" in where.userId &&
+                !where.userId.in.includes(row.userId)
+              ) {
+                return false;
+              }
+              if (where.createdAt?.gte && row.createdAt < where.createdAt.gte) return false;
+              if (where.createdAt?.lt && !(row.createdAt < where.createdAt.lt)) return false;
+              return true;
+            })
             .reduce((acc, row) => acc + row.costUsd, 0);
           return { _sum: { costUsd: sum } };
         },
@@ -532,7 +597,7 @@ function fakePrisma(state: {
           where: {
             userId: { in: string[] };
             sharedKey: boolean;
-            createdAt: { gte: Date; lt: Date };
+            createdAt: { gte?: Date; lt: Date };
           };
         }) => {
           const map = new Map<string, number>();
@@ -540,7 +605,7 @@ function fakePrisma(state: {
             if (
               where.userId.in.includes(row.userId) &&
               row.sharedKey === where.sharedKey &&
-              row.createdAt >= where.createdAt.gte &&
+              (!where.createdAt.gte || row.createdAt >= where.createdAt.gte) &&
               row.createdAt < where.createdAt.lt
             ) {
               map.set(row.userId, (map.get(row.userId) ?? 0) + row.costUsd);
@@ -1326,7 +1391,7 @@ describe("shared-key weekly budget", () => {
       allotments: [] as Allotment[],
       usage: [] as Usage[],
       knownUserIds: ["solo"],
-      // Default org-solo is sole-member (personal).
+      personalOnlyUserIds: ["solo"],
       auditEvents: [] as Array<Record<string, unknown>>,
     };
     const { client, auditEvents } = fakePrisma(state);
@@ -1363,7 +1428,7 @@ describe("shared-key weekly budget", () => {
     );
   });
 
-  it("under a gated deployment, a verified member is enrolled", async () => {
+  it("under a gated deployment, a Personal-org-only user is rejected", async () => {
     const gatedPolicy: SharedKeyBudgetEnrollmentPolicy = {
       gatedDeployment: true,
       adminEmails: [],
@@ -1375,13 +1440,60 @@ describe("shared-key weekly budget", () => {
       allotments: [] as Allotment[],
       usage: [] as Usage[],
       knownUserIds: ["solo"],
+      personalOnlyUserIds: ["solo"],
       auditEvents: [] as Array<Record<string, unknown>>,
     };
     const { client } = fakePrisma(state);
     await expect(
       reserveSharedKeyBudget(client as never, "solo", 1, midweek, gatedPolicy),
+    ).rejects.toBeInstanceOf(SharedKeyBudgetNotEnrolledError);
+    expect(state.members).toHaveLength(0);
+  });
+
+  it("under a gated deployment, a verified multi-member org user is enrolled", async () => {
+    const gatedPolicy: SharedKeyBudgetEnrollmentPolicy = {
+      gatedDeployment: true,
+      adminEmails: [],
+      explicitUserIds: [],
+    };
+    const state = {
+      monthly: 400,
+      members: [] as Member[],
+      allotments: [] as Allotment[],
+      usage: [] as Usage[],
+      knownUserIds: ["teammate", "peer"],
+      orgPeers: { teammate: ["peer"] },
+      auditEvents: [] as Array<Record<string, unknown>>,
+    };
+    const { client } = fakePrisma(state);
+    await expect(
+      reserveSharedKeyBudget(client as never, "teammate", 1, midweek, gatedPolicy),
     ).resolves.toBeUndefined();
-    expect(state.members.map((m) => m.userId)).toEqual(["solo"]);
+    expect(state.members.map((m) => m.userId)).toEqual(["teammate"]);
+  });
+
+  it("rejects Personal-org membership in every auto-enroll mode", async () => {
+    for (const gatedDeployment of [true, false]) {
+      const policy: SharedKeyBudgetEnrollmentPolicy = {
+        gatedDeployment,
+        adminEmails: ["admin@example.com"],
+        explicitUserIds: [],
+      };
+      const state = {
+        monthly: 400,
+        members: [] as Member[],
+        allotments: [] as Allotment[],
+        usage: [] as Usage[],
+        knownUserIds: ["solo"],
+        personalOnlyUserIds: ["solo"],
+        auditEvents: [] as Array<Record<string, unknown>>,
+      };
+      const { client } = fakePrisma(state);
+      await expect(
+        reserveSharedKeyBudget(client as never, "solo", 1, midweek, policy),
+      ).rejects.toBeInstanceOf(SharedKeyBudgetNotEnrolledError);
+      expect(state.members).toHaveLength(0);
+    }
   });
 
   it("admin add enrolls and audits; rebase never raises an overspent member", async () => {
@@ -1503,6 +1615,7 @@ describe("shared-key weekly budget", () => {
       allotments: [] as Allotment[],
       usage: [] as Usage[],
       knownUserIds: ["solo"],
+      personalOnlyUserIds: ["solo"],
       auditEvents: [] as Array<Record<string, unknown>>,
     };
     const { client, enrollmentRequests } = fakePrisma(state);
@@ -1576,6 +1689,7 @@ describe("shared-key weekly budget", () => {
       allotments: [] as Allotment[],
       usage: [] as Usage[],
       knownUserIds: ["solo"],
+      personalOnlyUserIds: ["solo"],
       enrollmentRequests: [
         { weekStart, userId: "solo", lastHitAt: midweek },
       ] as Array<{ weekStart: Date; userId: string; lastHitAt?: Date }>,
@@ -1601,6 +1715,7 @@ describe("shared-key weekly budget", () => {
       allotments: [] as Allotment[],
       usage: [] as Usage[],
       knownUserIds: ["solo"],
+      personalOnlyUserIds: ["solo"],
       auditEvents: [] as Array<Record<string, unknown>>,
     };
     const { client } = fakePrisma(state);
@@ -1610,5 +1725,151 @@ describe("shared-key weekly budget", () => {
     await expect(
       reserveSharedKeyBudget(client as never, "solo", 1, midweek, open),
     ).rejects.toBeInstanceOf(SharedKeyBudgetNotEnrolledError);
+  });
+
+  it("never forces gatedDeployment true from autoEnrollMode=gated", () => {
+    const open = {
+      gatedDeployment: false,
+      adminEmails: ["a@example.com"],
+      explicitUserIds: [] as string[],
+    };
+    expect(applyAutoEnrollMode(open, "gated").gatedDeployment).toBe(false);
+    const alreadyGated = { ...open, gatedDeployment: true };
+    expect(applyAutoEnrollMode(alreadyGated, "gated").gatedDeployment).toBe(true);
+    expect(applyAutoEnrollMode(alreadyGated, "open").gatedDeployment).toBe(false);
+  });
+
+  it("excludes pre-join adjustments after joining, including a negative pre-join credit", async () => {
+    const joinAt = midweek;
+    const state = {
+      monthly: 400,
+      members: [{ userId: "a", joinedAt: weekStart }],
+      allotments: [
+        allotment({ weekStart, userId: "a", allotmentUsd: 50, reservedUsd: 0 }),
+      ],
+      usage: [
+        {
+          userId: "c",
+          costUsd: 20,
+          sharedKey: true,
+          createdAt: new Date(joinAt.getTime() + 1_000),
+        },
+      ] as Usage[],
+      knownUserIds: ["a", "c"],
+    };
+    const { client } = fakePrisma(state);
+    const adjustments = [
+      {
+        periodStart: weekStart,
+        scope: "user",
+        userId: "c",
+        userIdSnapshot: "c",
+        deltaUsd: -10,
+        createdAt: new Date(weekStart.getTime() + 500),
+      },
+      {
+        periodStart: weekStart,
+        scope: "user",
+        userId: "c",
+        userIdSnapshot: "c",
+        deltaUsd: 5,
+        createdAt: new Date(joinAt.getTime() + 2_000),
+      },
+    ];
+    vi.mocked(client.sharedKeySpendAdjustment.aggregate).mockImplementation((async (args: {
+      where: {
+        periodStart: Date;
+        createdAt?: { lt?: Date };
+        OR?: Array<Record<string, unknown>>;
+        userIdSnapshot?: string | { in: string[] };
+        userId?: string;
+        scope?: string;
+      };
+    }) => {
+      const where = args.where;
+      const sum = adjustments
+        .filter((row) => {
+          if (row.periodStart.getTime() !== where.periodStart.getTime()) return false;
+          if (where.createdAt?.lt && !(row.createdAt < where.createdAt.lt)) return false;
+          if (where.scope === "team") return false;
+          if (typeof where.userIdSnapshot === "string") {
+            return row.userIdSnapshot === where.userIdSnapshot;
+          }
+          if (where.OR) {
+            return where.OR.some((clause) => {
+              if (typeof clause.userIdSnapshot === "string") {
+                return row.userIdSnapshot === clause.userIdSnapshot;
+              }
+              if (typeof clause.userId === "string") return row.userId === clause.userId;
+              return false;
+            });
+          }
+          if (typeof where.userId === "string") {
+            return row.userId === where.userId || row.userIdSnapshot === where.userId;
+          }
+          return true;
+        })
+        .reduce((acc, row) => acc + row.deltaUsd, 0);
+      return { _sum: { deltaUsd: sum } };
+    }) as never);
+    vi.mocked(client.sharedKeySpendAdjustment.groupBy).mockImplementation(async () => {
+      const map = new Map<string, number>();
+      for (const row of adjustments) {
+        map.set(row.userIdSnapshot, (map.get(row.userIdSnapshot) ?? 0) + row.deltaUsd);
+      }
+      return [...map.entries()].map(([userIdSnapshot, deltaUsd]) => ({
+        userIdSnapshot,
+        _sum: { deltaUsd },
+      }));
+    });
+
+    await addSharedKeyBudgetMember(client as never, "c", joinAt, { policy: gated });
+    const baseline = state.allotments.find((row) => row.userId === "c")?.preJoinSpendUsd;
+    // Pre-join credit (−10) must be stored as-is, not clamped to 0.
+    expect(baseline).toBe(-10);
+    const status = await sharedKeyWeeklyBudgetStatus(client as never, "c", new Date(joinAt.getTime() + 60_000));
+    // monday = 20 − 10 + 5 = 15; effective = 15 − (−10) = 25 (post-join only).
+    expect(status.spentUsd).toBe(25);
+  });
+
+  it("prunes on usage activity, not adjusted tracked spend", async () => {
+    const nextWeek = sharedKeyWeekEnd(weekStart);
+    const state = {
+      monthly: 400,
+      members: [
+        { userId: "active", joinedAt: weekStart },
+        { userId: "idle", joinedAt: weekStart },
+      ],
+      allotments: [
+        allotment({ weekStart: nextWeek, userId: "active", allotmentUsd: 50, reservedUsd: 0 }),
+        allotment({ weekStart: nextWeek, userId: "idle", allotmentUsd: 50, reservedUsd: 0 }),
+      ],
+      usage: [
+        {
+          userId: "active",
+          costUsd: 10,
+          sharedKey: true,
+          createdAt: new Date(weekStart.getTime() + 1_000),
+        },
+      ] as Usage[],
+      // Negative adjustment zeroes tracked for "active" but usage was real.
+      knownUserIds: ["active", "idle"],
+    };
+    const { client } = fakePrisma(state);
+    // Inject a negative adjustment that would zero tracked spend if prune used tracked.
+    vi.mocked(client.sharedKeySpendAdjustment.aggregate).mockResolvedValue({
+      _sum: { deltaUsd: -10 },
+    } as never);
+    vi.mocked(client.sharedKeySpendAdjustment.groupBy).mockResolvedValue([
+      { userId: "active", userIdSnapshot: "active", _sum: { deltaUsd: -10 } },
+    ] as never);
+
+    const removed = await pruneInactiveSharedKeyBudgetMembers(
+      client as never,
+      [],
+      new Date(nextWeek.getTime() + 60_000),
+    );
+    expect(removed).toEqual(["idle"]);
+    expect(state.members.map((m) => m.userId)).toEqual(["active"]);
   });
 });

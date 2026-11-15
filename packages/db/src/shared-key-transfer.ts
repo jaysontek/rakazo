@@ -2,12 +2,14 @@ import { effectiveSharedKeySpendUsd, sharedKeyWeekStart } from "@rakazo/core";
 import type { PrismaClient } from "./client.js";
 import { Prisma } from "./client.js";
 import { isHiddenOpsEmail } from "./ops-email-filter.js";
+import { trackedSharedKeySpendUsd } from "./shared-key-spend.js";
 
 type TransferPrisma = Pick<
   PrismaClient,
   | "sharedKeyAllotmentTransfer"
   | "sharedKeyWeekAllotment"
   | "sharedKeyBudgetMember"
+  | "sharedKeySpendAdjustment"
   | "usageRecord"
   | "user"
   | "$transaction"
@@ -19,6 +21,7 @@ type TransferTx = Pick<
   | "sharedKeyAllotmentTransfer"
   | "sharedKeyWeekAllotment"
   | "sharedKeyBudgetMember"
+  | "sharedKeySpendAdjustment"
   | "usageRecord"
   | "$queryRaw"
 >;
@@ -84,30 +87,18 @@ async function assertTransferPartiesVisible(
   }
 }
 
-async function spentSharedKeyUsd(
-  prisma: Pick<TransferTx, "usageRecord">,
-  userId: string,
-  since: Date,
-  now: Date,
-): Promise<number> {
-  const { _sum } = await prisma.usageRecord.aggregate({
-    _sum: { costUsd: true },
-    where: {
-      userId,
-      sharedKey: true,
-      createdAt: { gte: since, lt: now },
-    },
-  });
-  return _sum.costUsd ?? 0;
-}
-
 async function memberSpendSince(
-  tx: Pick<TransferTx, "usageRecord" | "sharedKeyWeekAllotment">,
+  tx: Pick<TransferTx, "usageRecord" | "sharedKeySpendAdjustment" | "sharedKeyWeekAllotment">,
   userId: string,
   weekStart: Date,
   now: Date,
 ): Promise<number> {
-  const mondaySpend = await spentSharedKeyUsd(tx, userId, weekStart, now);
+  const mondaySpend = await trackedSharedKeySpendUsd(tx, {
+    userId,
+    since: weekStart,
+    until: now,
+    periodStart: weekStart,
+  });
   const allotment = await tx.sharedKeyWeekAllotment.findUnique({
     where: { weekStart_userId: { weekStart, userId } },
     select: { preJoinSpendUsd: true },

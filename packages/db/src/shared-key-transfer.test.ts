@@ -45,11 +45,31 @@ function fakePrisma(state: {
     );
   const client = {
     deploymentSettings: {
-      findUnique: vi.fn(async () => ({ sharedKeyMonthlyBudgetUsd: state.monthly })),
+      findUnique: vi.fn(async () => ({
+        sharedKeyMonthlyBudgetUsd: state.monthly,
+        sharedKeyPeriod: null,
+        sharedKeyResetDow: null,
+        sharedKeyResetDom: null,
+        sharedKeyResetMinutes: null,
+        sharedKeyTimezone: null,
+        sharedKeyActivePeriodStart: null,
+        sharedKeyAutoEnrollMode: null,
+        sharedKeyWarningThresholds: null,
+        sharedKeyHardStopEnabled: null,
+        sharedKeyHoldStaleMinutes: null,
+        sharedKeyPruneInactive: null,
+      })),
       upsert: vi.fn(async ({ update }: { update: { sharedKeyMonthlyBudgetUsd: number } }) => {
         state.monthly = update.sharedKeyMonthlyBudgetUsd;
         return { sharedKeyMonthlyBudgetUsd: state.monthly };
       }),
+    },
+    sharedKeyMemberOverride: {
+      findMany: vi.fn(async () => []),
+    },
+    sharedKeySpendAdjustment: {
+      aggregate: vi.fn(async () => ({ _sum: { deltaUsd: 0 } })),
+      groupBy: vi.fn(async () => []),
     },
     user: {
       findMany: vi.fn(

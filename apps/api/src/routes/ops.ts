@@ -3,14 +3,22 @@ import { parseSharedKeyMonthlyBudgetInput } from "@rakazo/core";
 import {
   addAdminGrant,
   addSharedKeyBudgetMember,
+  adjustSharedKeyTrackedSpend,
   listAdminGrants,
+  listSharedKeySpendAdjustments,
+  loadSharedKeyBudgetSettingsView,
   recordSecurityEvent,
   removeAdminGrant,
+  removeSharedKeyBudgetMember,
   requireMembership,
   reverseSharedKeyAllotmentTransfer,
+  reverseSharedKeySpendAdjustment,
   runAsSystemInTransaction,
+  setSharedKeyMemberOverride,
   setSharedKeyMonthlyBudgetUsd,
+  setSharedKeyTrackedSpend,
   transferSharedKeyAllotment,
+  updateSharedKeyBudgetSettings,
 } from "@rakazo/db";
 import {
   requireNotImpersonating,
@@ -56,6 +64,10 @@ export function opsRoutes(ctx: RouterContext) {
     return deps.env?.adminEmails ?? [];
   }
 
+  function envPinnedSharedKeyUserIds(): string[] {
+    return deps.env?.sharedKeyBudgetUserIds ?? [];
+  }
+
   return {
     ops: {
       overview: authed.ops.overview.handler(async ({ context }) => {
@@ -78,6 +90,7 @@ export function opsRoutes(ctx: RouterContext) {
             secrets: deps.secrets,
             deploymentModelKey: deploymentModelKey(),
             envBootstrapAdmins: envBootstrapAdmins(),
+            sharedKeyBudgetUserIds: envPinnedSharedKeyUserIds(),
           },
         );
       }),
@@ -319,6 +332,201 @@ export function opsRoutes(ctx: RouterContext) {
           } catch (error) {
             badRequest(error);
           }
+        },
+      ),
+      updateSharedKeyBudgetSettings: authed.ops.updateSharedKeyBudgetSettings.handler(
+        async ({ context, input }) => {
+          await gate(context);
+          try {
+            const result = await updateSharedKeyBudgetSettings(deps.prisma, input, {
+              actorUserId: context.actor.userId,
+              gatedDeployment: deps.env?.sharedKeyGatedDeployment === true,
+              spaceId: context.actor.spaceId,
+            });
+            const previous = result.previous;
+            const changedMeta: Record<string, string | number | boolean | null> = {
+              procedure: "ops.updateSharedKeyBudgetSettings",
+              applyScheduleNow: result.applyScheduleNow,
+            };
+            const track = (
+              field: string,
+              prev: string | number | boolean | null | undefined,
+              next: string | number | boolean | null | undefined,
+            ) => {
+              if (next === undefined) return;
+              changedMeta[`prev.${field}`] = prev ?? null;
+              changedMeta[`next.${field}`] = next;
+            };
+            track("monthlyCapUsd", previous?.sharedKeyMonthlyBudgetUsd, input.monthlyCapUsd);
+            track("period", previous?.sharedKeyPeriod, input.period);
+            track("resetDow", previous?.sharedKeyResetDow, input.resetDow);
+            track("resetDom", previous?.sharedKeyResetDom, input.resetDom);
+            track("resetMinutes", previous?.sharedKeyResetMinutes, input.resetMinutes);
+            track("timezone", previous?.sharedKeyTimezone, input.timezone);
+            track("autoEnrollMode", previous?.sharedKeyAutoEnrollMode, input.autoEnrollMode);
+            if (input.warningThresholds !== undefined) {
+              track(
+                "warningThresholds",
+                previous?.sharedKeyWarningThresholds == null
+                  ? null
+                  : JSON.stringify(previous.sharedKeyWarningThresholds),
+                input.warningThresholds == null ? null : JSON.stringify(input.warningThresholds),
+              );
+            }
+            track("hardStopEnabled", previous?.sharedKeyHardStopEnabled, input.hardStopEnabled);
+            track("holdStaleMinutes", previous?.sharedKeyHoldStaleMinutes, input.holdStaleMinutes);
+            track("pruneInactive", previous?.sharedKeyPruneInactive, input.pruneInactive);
+            await recordSecurityEvent({
+              type: "ops.shared_key_budget.settings.changed",
+              userId: context.actor.userId,
+              spaceId: context.actor.spaceId,
+              metadata: changedMeta,
+            });
+            return loadSharedKeyBudgetSettingsView(
+              deps.prisma,
+              deps.env?.sharedKeyMonthlyBudgetUsd ?? null,
+            );
+          } catch (error) {
+            badRequest(error);
+          }
+        },
+      ),
+      setSharedKeyMemberOverride: authed.ops.setSharedKeyMemberOverride.handler(
+        async ({ context, input }) => {
+          await gate(context);
+          try {
+            await setSharedKeyMemberOverride(deps.prisma, {
+              userId: input.userId,
+              weeklyAllotmentUsd: input.weeklyAllotmentUsd,
+              actorUserId: context.actor.userId,
+              spaceId: context.actor.spaceId,
+            });
+            await recordSecurityEvent({
+              type: "ops.shared_key_budget.member.override",
+              userId: context.actor.userId,
+              spaceId: context.actor.spaceId,
+              metadata: {
+                procedure: "ops.setSharedKeyMemberOverride",
+                targetUserId: input.userId,
+                "next.weeklyAllotmentUsd": input.weeklyAllotmentUsd,
+              },
+            });
+            return { ok: true as const };
+          } catch (error) {
+            badRequest(error);
+          }
+        },
+      ),
+      removeSharedKeyBudgetMember: authed.ops.removeSharedKeyBudgetMember.handler(
+        async ({ context, input }) => {
+          await gate(context);
+          try {
+            await removeSharedKeyBudgetMember(deps.prisma, input.userId, new Date(), {
+              envPinnedUserIds: envPinnedSharedKeyUserIds(),
+              actorUserId: context.actor.userId,
+            });
+            await recordSecurityEvent({
+              type: "ops.shared_key_budget.member.removed",
+              userId: context.actor.userId,
+              spaceId: context.actor.spaceId,
+              metadata: {
+                procedure: "ops.removeSharedKeyBudgetMember",
+                targetUserId: input.userId,
+              },
+            });
+            return { ok: true as const };
+          } catch (error) {
+            badRequest(error);
+          }
+        },
+      ),
+      setSharedKeyTrackedSpend: authed.ops.setSharedKeyTrackedSpend.handler(
+        async ({ context, input }) => {
+          await gate(context);
+          try {
+            const row = await setSharedKeyTrackedSpend(deps.prisma, {
+              targetUsd: input.targetUsd,
+              reason: input.reason,
+              userId: input.userId,
+              createdById: context.actor.userId,
+            });
+            await recordSecurityEvent({
+              type: "ops.shared_key_spend.set",
+              userId: context.actor.userId,
+              spaceId: context.actor.spaceId,
+              metadata: {
+                procedure: "ops.setSharedKeyTrackedSpend",
+                adjustmentId: row.id,
+                targetUsd: input.targetUsd,
+                deltaUsd: row.deltaUsd,
+                targetUserId: input.userId ?? null,
+              },
+            });
+            return row;
+          } catch (error) {
+            badRequest(error);
+          }
+        },
+      ),
+      adjustSharedKeyTrackedSpend: authed.ops.adjustSharedKeyTrackedSpend.handler(
+        async ({ context, input }) => {
+          await gate(context);
+          try {
+            const row = await adjustSharedKeyTrackedSpend(deps.prisma, {
+              deltaUsd: input.deltaUsd,
+              reason: input.reason,
+              userId: input.userId,
+              createdById: context.actor.userId,
+            });
+            await recordSecurityEvent({
+              type: "ops.shared_key_spend.adjusted",
+              userId: context.actor.userId,
+              spaceId: context.actor.spaceId,
+              metadata: {
+                procedure: "ops.adjustSharedKeyTrackedSpend",
+                adjustmentId: row.id,
+                deltaUsd: row.deltaUsd,
+                targetUserId: input.userId ?? null,
+              },
+            });
+            return row;
+          } catch (error) {
+            badRequest(error);
+          }
+        },
+      ),
+      reverseSharedKeySpendAdjustment: authed.ops.reverseSharedKeySpendAdjustment.handler(
+        async ({ context, input }) => {
+          await gate(context);
+          try {
+            const row = await reverseSharedKeySpendAdjustment(deps.prisma, {
+              adjustmentId: input.adjustmentId,
+              reason: input.reason,
+              createdById: context.actor.userId,
+            });
+            await recordSecurityEvent({
+              type: "ops.shared_key_spend.reversed",
+              userId: context.actor.userId,
+              spaceId: context.actor.spaceId,
+              metadata: {
+                procedure: "ops.reverseSharedKeySpendAdjustment",
+                adjustmentId: row.id,
+                reversesId: input.adjustmentId,
+                deltaUsd: row.deltaUsd,
+              },
+            });
+            return row;
+          } catch (error) {
+            badRequest(error);
+          }
+        },
+      ),
+      listSharedKeySpendAdjustments: authed.ops.listSharedKeySpendAdjustments.handler(
+        async ({ context, input }) => {
+          await gate(context);
+          return listSharedKeySpendAdjustments(deps.prisma, {
+            limit: input?.limit,
+          });
         },
       ),
     },

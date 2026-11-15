@@ -121,6 +121,8 @@ import {
   OpsChatLogSchema,
   OpsOverviewSchema,
   OpsRequestLogRowSchema,
+  OpsSharedKeyBudgetSettingsSchema,
+  OpsSharedKeySpendAdjustmentSchema,
   PluginMarketplaceCatalogSchema,
   PluginPartSchema,
   PluginPreviewSchema,
@@ -1445,6 +1447,78 @@ export const appContract = {
           reason: z.enum(["already_member", "ineligible", "zero_slice"]).optional(),
         }),
       ),
+    /** Patch shared-key budget settings (schedule, enroll mode, hard-stop, warnings). */
+    updateSharedKeyBudgetSettings: oc
+      .input(
+        z.strictObject({
+          monthlyCapUsd: z.number().positive().max(1_000_000).nullable().optional(),
+          period: z.enum(["week", "month"]).nullable().optional(),
+          resetDow: z.number().int().min(0).max(6).nullable().optional(),
+          resetDom: z.number().int().min(1).max(31).nullable().optional(),
+          resetMinutes: z.number().int().min(0).max(1439).nullable().optional(),
+          timezone: z.string().min(1).nullable().optional(),
+          autoEnrollMode: z.enum(["off", "gated", "open", "signup"]).nullable().optional(),
+          warningThresholds: z
+            .array(z.number().min(0).max(100))
+            .max(10)
+            .nullable()
+            .optional(),
+          hardStopEnabled: z.boolean().nullable().optional(),
+          holdStaleMinutes: z.number().int().positive().max(1440).nullable().optional(),
+          pruneInactive: z.boolean().nullable().optional(),
+          applyScheduleNow: z.boolean().optional(),
+        }),
+      )
+      .output(OpsSharedKeyBudgetSettingsSchema),
+    /** Set or clear a per-member absolute weekly allotment override. */
+    setSharedKeyMemberOverride: oc
+      .input(
+        z.strictObject({
+          userId: Id,
+          weeklyAllotmentUsd: z.number().nonnegative().max(1_000_000).nullable(),
+        }),
+      )
+      .output(z.object({ ok: z.literal(true) })),
+    /** Remove a roster member (env-pinned ids are rejected). */
+    removeSharedKeyBudgetMember: oc
+      .input(z.strictObject({ userId: Id }))
+      .output(z.object({ ok: z.literal(true) })),
+    /** Set tracked shared-key spend to an absolute USD value (stored as a delta). */
+    setSharedKeyTrackedSpend: oc
+      .input(
+        z.strictObject({
+          targetUsd: z.number().nonnegative().max(1_000_000),
+          reason: z.string().min(1).max(500),
+          userId: Id.optional().nullable(),
+        }),
+      )
+      .output(OpsSharedKeySpendAdjustmentSchema),
+    /** Append a signed delta to tracked shared-key spend. */
+    adjustSharedKeyTrackedSpend: oc
+      .input(
+        z.strictObject({
+          deltaUsd: z
+            .number()
+            .min(-1_000_000)
+            .max(1_000_000)
+            .refine((value) => value !== 0, { message: "deltaUsd must be non-zero" }),
+          reason: z.string().min(1).max(500),
+          userId: Id.optional().nullable(),
+        }),
+      )
+      .output(OpsSharedKeySpendAdjustmentSchema),
+    /** Reverse a prior spend adjustment by appending an opposite delta. */
+    reverseSharedKeySpendAdjustment: oc
+      .input(
+        z.strictObject({
+          adjustmentId: Id,
+          reason: z.string().min(1).max(500),
+        }),
+      )
+      .output(OpsSharedKeySpendAdjustmentSchema),
+    listSharedKeySpendAdjustments: oc
+      .input(z.strictObject({ limit: z.number().int().min(1).max(500).optional() }).optional())
+      .output(z.array(OpsSharedKeySpendAdjustmentSchema)),
   },
   export: {
     bot: oc.input(botId).output(ExportManifestSchema),

@@ -100,6 +100,14 @@ function makeDeps(allowlist = ["192.168.140.0/24"]): RouterDeps {
     sharedKeyAllotmentTransfer: {
       findMany: async () => [],
     },
+    sharedKeyMemberOverride: {
+      findMany: async () => [],
+    },
+    sharedKeySpendAdjustment: {
+      findMany: async () => [],
+      aggregate: async () => ({ _sum: { deltaUsd: 0 } }),
+      groupBy: async () => [],
+    },
     spaceMember: {
       findMany: async () => [],
     },
@@ -292,5 +300,66 @@ describe("ops dashboard routes", () => {
       reason: "zero_slice",
     });
     add.mockRestore();
+  });
+
+  it("denies every new shared-key budget ops procedure for non-admins and impersonating admins", async () => {
+    const deps = makeDeps();
+    const user = createRouterClient(createRouter(deps), {
+      context: { actor: userActor, clientIp: "192.168.140.10", sessionId: "session-user" },
+    });
+    const impersonating = createRouterClient(createRouter(deps), {
+      context: {
+        actor: userActor,
+        clientIp: "192.168.140.10",
+        sessionId: "session-1",
+        impersonatedBy: "admin",
+      },
+    });
+    const adminOnly = { code: "FORBIDDEN", message: "Admins only" };
+    const whileImpersonating = {
+      code: "FORBIDDEN",
+      message: "Not allowed while impersonating",
+    };
+
+    const cases: Array<{ name: string; call: (client: typeof user) => Promise<unknown> }> = [
+      {
+        name: "updateSharedKeyBudgetSettings",
+        call: (c) => c.ops.updateSharedKeyBudgetSettings({ hardStopEnabled: false }),
+      },
+      {
+        name: "setSharedKeyMemberOverride",
+        call: (c) => c.ops.setSharedKeyMemberOverride({ userId: "user", weeklyAllotmentUsd: 10 }),
+      },
+      {
+        name: "removeSharedKeyBudgetMember",
+        call: (c) => c.ops.removeSharedKeyBudgetMember({ userId: "user" }),
+      },
+      {
+        name: "setSharedKeyTrackedSpend",
+        call: (c) =>
+          c.ops.setSharedKeyTrackedSpend({ targetUsd: 1, reason: "test", userId: "user" }),
+      },
+      {
+        name: "adjustSharedKeyTrackedSpend",
+        call: (c) =>
+          c.ops.adjustSharedKeyTrackedSpend({ deltaUsd: 1, reason: "test", userId: "user" }),
+      },
+      {
+        name: "reverseSharedKeySpendAdjustment",
+        call: (c) =>
+          c.ops.reverseSharedKeySpendAdjustment({ adjustmentId: "adj_1", reason: "undo" }),
+      },
+      {
+        name: "listSharedKeySpendAdjustments",
+        call: (c) => c.ops.listSharedKeySpendAdjustments({}),
+      },
+    ];
+
+    for (const row of cases) {
+      await expect(row.call(user), row.name).rejects.toMatchObject(adminOnly);
+      await expect(row.call(impersonating), `${row.name} impersonating`).rejects.toMatchObject(
+        whileImpersonating,
+      );
+    }
   });
 });
