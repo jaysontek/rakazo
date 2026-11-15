@@ -141,6 +141,11 @@ msgstr "{0} Ko"
 msgid "{0} MB"
 msgstr "{0} Mo"
 
+#. placeholder {0}: org.memberCount
+#: src/pages/AdminOpsPage.tsx
+msgid "{0} members"
+msgstr "{0} membres"
+
 #. placeholder {0}: sender.name
 #: src/pages/ExternalConversationSettings.tsx
 msgid "{0} rollup hours"
@@ -525,6 +530,7 @@ msgid "Accounts"
 msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Actions"
 msgstr ""
 
@@ -754,7 +760,12 @@ msgstr "Avancé..."
 msgid "Agent from another app"
 msgstr ""
 
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "agents"
+msgstr "agents"
+
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Agents"
 msgstr ""
 
@@ -1156,6 +1167,7 @@ msgstr "Studio d'avatars"
 #: src/components/vault/VaultPageHeader.tsx
 #: src/pages/AdminAccessPage.tsx
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 #: src/pages/AdminPluginsPage.tsx
 #: src/pages/Auth.tsx
 #: src/pages/Board.tsx
@@ -1759,6 +1771,7 @@ msgid "Compact"
 msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Company API"
 msgstr "API d'entreprise"
 
@@ -2261,6 +2274,7 @@ msgid "Could not grant access"
 msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Could not impersonate"
 msgstr ""
 
@@ -2591,6 +2605,10 @@ msgstr "Impossible de soumettre cette réponse"
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "Could not switch {failedNames}. Try again."
 msgstr ""
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Could not switch impersonation"
+msgstr "Impossible de changer d’emprunt d’identité"
 
 #: src/pages/shell/use-computer.tsx
 msgid "Could not take control"
@@ -4049,6 +4067,7 @@ msgid "key"
 msgstr "clé"
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Key"
 msgstr ""
 
@@ -4350,8 +4369,13 @@ msgid "Medium"
 msgstr "Moyen"
 
 #: src/lib/identity-display.ts
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Member"
 msgstr "Membre"
+
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "members"
+msgstr "membres"
 
 #. placeholder {0}: selected.length
 #: src/pages/GroupPanel.tsx
@@ -4903,6 +4927,10 @@ msgstr "Aucune compétence pour le moment"
 msgid "No submissions"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "No teams"
+msgstr "Aucune équipe"
+
 #: src/pages/Board.tsx
 msgid "No tickets yet"
 msgstr ""
@@ -5360,11 +5388,14 @@ msgid "Personal"
 msgstr ""
 
 #. placeholder {0}: money(account.personalKeyCostUsd)
+#. placeholder {0}: money(member.personalKeyCostUsd)
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Personal {0}"
 msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Personal API"
 msgstr "API personnelle"
 
@@ -5550,6 +5581,14 @@ msgstr "Réactions"
 #: src/pages/shell/bot-panel.tsx
 msgid "Read replies aloud"
 msgstr "Lire les réponses à voix haute"
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Read-only · Viewing as {targetEmail} · Ends {endsAt}"
+msgstr "Lecture seule · Affichage en tant que {targetEmail} · Fin {endsAt}"
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Read-only · Viewing as {targetName} ({targetEmail}) · Ends {endsAt}"
+msgstr "Lecture seule · Affichage en tant que {targetName} ({targetEmail}) · Fin {endsAt}"
 
 #: src/pages/shell/import-status.ts
 msgid "Ready"
@@ -6498,7 +6537,9 @@ msgid "Shared"
 msgstr "Partagé"
 
 #. placeholder {0}: money(account.sharedKeyCostUsd)
+#. placeholder {0}: money(member.sharedKeyCostUsd)
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Shared {0}"
 msgstr ""
 
@@ -6507,6 +6548,7 @@ msgid "Shared memory"
 msgstr "Mémoire partagée"
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Shared week"
 msgstr ""
 
@@ -6739,6 +6781,7 @@ msgstr "Modèle de parole"
 
 #: src/pages/AdminOpsBudget.tsx
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Spend"
 msgstr ""
 
@@ -6937,6 +6980,10 @@ msgstr "Prend en charge la réflexion"
 msgid "Switch"
 msgstr "Changer"
 
+#: src/components/ImpersonationBanner.tsx
+msgid "Switch member"
+msgstr "Changer de membre"
+
 #: src/components/ModelCredits.tsx
 msgid "Switch to {tierTargetName}?"
 msgstr "Passer à {tierTargetName} ?"
@@ -6979,6 +7026,7 @@ msgid "Teaching in progress. Stop teaching before sending a new message."
 msgstr "Enseignement en cours. Arrêtez l'enseignement avant d'envoyer un nouveau message."
 
 #: src/pages/AdminOpsBudget.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Team"
 msgstr "Équipe"
@@ -6986,6 +7034,10 @@ msgstr "Équipe"
 #: src/pages/shell/computer-view.tsx
 msgid "Team Computer"
 msgstr "Ordinateur d'équipe"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Teams"
+msgstr "Équipes"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Teams message"
@@ -7335,6 +7387,10 @@ msgstr "Aujourd'hui"
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Toggle sidebar"
 msgstr "Afficher ou masquer la barre latérale"
+
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "tokens"
+msgstr "jetons"
 
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/AdminOpsPage.tsx
@@ -7713,16 +7769,12 @@ msgstr "Version"
 msgid "View all"
 msgstr ""
 
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "View as"
+msgstr "Voir en tant que"
+
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "View source"
-msgstr ""
-
-#: src/components/ImpersonationBanner.tsx
-msgid "Viewing as {targetEmail}"
-msgstr ""
-
-#: src/components/ImpersonationBanner.tsx
-msgid "Viewing as {targetName} ({targetEmail})"
 msgstr ""
 
 #: src/components/call/CallStrip.tsx

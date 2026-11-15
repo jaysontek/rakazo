@@ -1433,6 +1433,11 @@ export const JA_MESSAGES: Record<string, string> = {
   "{amount} spent this week": "今週の支出: {amount}",
   "{amount} spent this month": "今月の支出: {amount}",
   "{amount} spent": "支出: {amount}",
+  "Read-only · Viewing as {name} ({email}) · Ends {time}": "読み取り専用 · {name}（{email}）として表示中 · {time} に終了",
+  "Read-only · Viewing as {email} · Ends {time}": "読み取り専用 · {email} として表示中 · {time} に終了",
+  "Could not stop impersonation": "なりすましを停止できませんでした",
+  "Stop": "停止",
+
 };
 
 export const PEER_MESSAGE_FORMS = { other: "{peer}とのメッセージ{count}件" };

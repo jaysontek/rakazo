@@ -30,6 +30,7 @@ import { chatRouteHeader } from "../components/chat-route-header";
 import { CodeCopyButton } from "../components/code-copy-button";
 import { ComputerUpdateProgress } from "../components/computer-update-progress";
 import { floatingHeaderOptions, glassHeaderOptions } from "../components/glass-title";
+import { ImpersonationBanner } from "../components/impersonation-banner";
 import { IncomingCall } from "../components/IncomingCall";
 import { MermaidDiagram } from "../components/mermaid-diagram";
 import { MessageMenuHost } from "../components/message-action-menu";
@@ -381,6 +382,7 @@ function LayoutContent() {
             <ThemeProvider value={navigationTheme}>
               <StatusBar style={resolved === "light" ? "dark" : "light"} />
               <View style={{ flex: 1 }}>
+                <ImpersonationBanner />
                 <SplitFrame>
                   <Stack
                     screenLayout={({ navigation, options, children }) => (

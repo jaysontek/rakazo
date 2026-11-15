@@ -70,6 +70,9 @@ const AdminAccessPage = lazyComponent(() =>
 const AdminOpsPage = lazyComponent(() =>
   import("./pages/AdminOpsPage").then((module) => module.AdminOpsPage),
 );
+const AdminOpsTeamPage = lazyComponent(() =>
+  import("./pages/AdminOpsTeamPage").then((module) => module.AdminOpsTeamPage),
+);
 const NavLinkPage = lazyComponent(() =>
   import("./pages/NavLinkPage").then((module) => module.NavLinkPage),
 );
@@ -121,6 +124,7 @@ function SessionApp() {
     next === "/admin/plugins" ||
     next === "/admin/access" ||
     next === "/admin/ops" ||
+    next.startsWith("/admin/ops/teams/") ||
     next.startsWith(`${MCP_OAUTH_CALLBACK_PATH}?`) ||
     next.startsWith(`${SLACK_INSTALL_CALLBACK_PATH}?`)
       ? next
@@ -282,6 +286,16 @@ function SessionApp() {
                 path="/admin/ops"
                 element={
                   user ? <AdminOpsPage /> : <Navigate to="/sign-in?next=/admin/ops" replace />
+                }
+              />
+              <Route
+                path="/admin/ops/teams/:organizationId"
+                element={
+                  user ? (
+                    <AdminOpsTeamPage />
+                  ) : (
+                    <Navigate to="/sign-in?next=/admin/ops" replace />
+                  )
                 }
               />
               <Route

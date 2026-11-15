@@ -125,7 +125,6 @@ export function Thread({ sessionEpoch, userId }: { sessionEpoch: number; userId:
     threadId?: string;
     readOnly?: string;
   }>();
-  const readOnly = readOnlyParam === "1";
   const requestedThreadId = typeof threadId === "string" && threadId ? threadId : undefined;
   const inGroup = Boolean(groupId);
   const call = useCallSession();
@@ -148,11 +147,36 @@ export function Thread({ sessionEpoch, userId }: { sessionEpoch: number; userId:
   // The composer floats over the list, which scrolls underneath; this keeps the newest message
   // clear of it. A read-only chat has no composer.
   const [dockHeight, setDockHeight] = useState(0);
-  const bottomInset = Math.max(dockHeight, readOnly ? insets.bottom : 0);
   const activeBotId = useRef(botId);
   activeBotId.current = botId;
   const activeGroupId = useRef(groupId);
   activeGroupId.current = groupId;
+  const [agentSkills, setAgentSkills] = useState<AgentSkillCatalogEntry[]>([]);
+  const [uploadConfig, setUploadConfig] = useState<{
+    maxUploadSizeBytes?: number;
+    maxAttachmentsPerMessage?: number;
+  }>();
+  const [needsModel, setNeedsModel] = useState<boolean>();
+  const [impersonating, setImpersonating] = useState(false);
+  // Re-read on focus so returning from Models settings updates unsent missing-model messages.
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      void rpc("me")
+        .then((me) => {
+          if (cancelled) return;
+          setUploadConfig(me);
+          setNeedsModel(me.needsModel);
+          setImpersonating(me.impersonating != null);
+        })
+        .catch(() => undefined);
+      return () => {
+        cancelled = true;
+      };
+    }, []),
+  );
+  const readOnly = readOnlyParam === "1" || impersonating;
+  const bottomInset = Math.max(dockHeight, readOnly ? insets.bottom : 0);
   const {
     threadKey,
     activeThreadId,
@@ -172,28 +196,6 @@ export function Thread({ sessionEpoch, userId }: { sessionEpoch: number; userId:
       : undefined;
   const history = useThreadSnapshot();
   const { snap, composingBots, showingSaved } = history;
-  const [agentSkills, setAgentSkills] = useState<AgentSkillCatalogEntry[]>([]);
-  const [uploadConfig, setUploadConfig] = useState<{
-    maxUploadSizeBytes?: number;
-    maxAttachmentsPerMessage?: number;
-  }>();
-  const [needsModel, setNeedsModel] = useState<boolean>();
-  // Re-read on focus so returning from Models settings updates unsent missing-model messages.
-  useFocusEffect(
-    useCallback(() => {
-      let cancelled = false;
-      void rpc("me")
-        .then((me) => {
-          if (cancelled) return;
-          setUploadConfig(me);
-          setNeedsModel(me.needsModel);
-        })
-        .catch(() => undefined);
-      return () => {
-        cancelled = true;
-      };
-    }, []),
-  );
 
   const { mentionBots, mentionBotsRef, mentionGroups, refreshMentionBots } = useThreadBots({
     botId,

@@ -141,6 +141,11 @@ msgstr "{0} KB"
 msgid "{0} MB"
 msgstr "{0} MB"
 
+#. placeholder {0}: org.memberCount
+#: src/pages/AdminOpsPage.tsx
+msgid "{0} members"
+msgstr "{0} członków"
+
 #. placeholder {0}: sender.name
 #: src/pages/ExternalConversationSettings.tsx
 msgid "{0} rollup hours"
@@ -525,6 +530,7 @@ msgid "Accounts"
 msgstr "Konta"
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Actions"
 msgstr "Akcje"
 
@@ -754,7 +760,12 @@ msgstr "Zaawansowane..."
 msgid "Agent from another app"
 msgstr "Agent z innej aplikacji"
 
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "agents"
+msgstr "agenci"
+
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Agents"
 msgstr "Agenci"
 
@@ -1156,6 +1167,7 @@ msgstr "Studio awatara"
 #: src/components/vault/VaultPageHeader.tsx
 #: src/pages/AdminAccessPage.tsx
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 #: src/pages/AdminPluginsPage.tsx
 #: src/pages/Auth.tsx
 #: src/pages/Board.tsx
@@ -1759,6 +1771,7 @@ msgid "Compact"
 msgstr "Kompaktowy"
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Company API"
 msgstr "Firmowe API"
 
@@ -2261,6 +2274,7 @@ msgid "Could not grant access"
 msgstr "Nie udało się przyznać dostępu"
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Could not impersonate"
 msgstr "Nie udało się podszyć"
 
@@ -2591,6 +2605,10 @@ msgstr "Nie udało się wysłać tej odpowiedzi"
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "Could not switch {failedNames}. Try again."
 msgstr "Nie udało się przełączyć {failedNames}. Spróbuj ponownie."
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Could not switch impersonation"
+msgstr "Nie udało się przełączyć podszywania"
 
 #: src/pages/shell/use-computer.tsx
 msgid "Could not take control"
@@ -4049,6 +4067,7 @@ msgid "key"
 msgstr "klucz"
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Key"
 msgstr "Klucz"
 
@@ -4350,8 +4369,13 @@ msgid "Medium"
 msgstr "Średni"
 
 #: src/lib/identity-display.ts
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Member"
 msgstr "Członek"
+
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "members"
+msgstr "członkowie"
 
 #. placeholder {0}: selected.length
 #: src/pages/GroupPanel.tsx
@@ -4903,6 +4927,10 @@ msgstr "Brak umiejętności"
 msgid "No submissions"
 msgstr "Brak zgłoszeń"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "No teams"
+msgstr "Brak zespołów"
+
 #: src/pages/Board.tsx
 msgid "No tickets yet"
 msgstr "Brak zgłoszeń"
@@ -5360,11 +5388,14 @@ msgid "Personal"
 msgstr "Osobiste"
 
 #. placeholder {0}: money(account.personalKeyCostUsd)
+#. placeholder {0}: money(member.personalKeyCostUsd)
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Personal {0}"
 msgstr "Osobisty {0}"
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Personal API"
 msgstr "Osobiste API"
 
@@ -5550,6 +5581,14 @@ msgstr "Reakcje"
 #: src/pages/shell/bot-panel.tsx
 msgid "Read replies aloud"
 msgstr "Czytaj odpowiedzi na głos"
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Read-only · Viewing as {targetEmail} · Ends {endsAt}"
+msgstr "Tylko odczyt · Widok jako {targetEmail} · Kończy się {endsAt}"
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Read-only · Viewing as {targetName} ({targetEmail}) · Ends {endsAt}"
+msgstr "Tylko odczyt · Widok jako {targetName} ({targetEmail}) · Kończy się {endsAt}"
 
 #: src/pages/shell/import-status.ts
 msgid "Ready"
@@ -6498,7 +6537,9 @@ msgid "Shared"
 msgstr "Udostępnione"
 
 #. placeholder {0}: money(account.sharedKeyCostUsd)
+#. placeholder {0}: money(member.sharedKeyCostUsd)
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Shared {0}"
 msgstr "Wspólny {0}"
 
@@ -6507,6 +6548,7 @@ msgid "Shared memory"
 msgstr "Wspólna pamięć"
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Shared week"
 msgstr "Wspólny tydzień"
 
@@ -6739,6 +6781,7 @@ msgstr "Model mowy"
 
 #: src/pages/AdminOpsBudget.tsx
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Spend"
 msgstr "Wydatki"
 
@@ -6937,6 +6980,10 @@ msgstr "Obsługuje rozumowanie"
 msgid "Switch"
 msgstr "Przełącz"
 
+#: src/components/ImpersonationBanner.tsx
+msgid "Switch member"
+msgstr "Przełącz członka"
+
 #: src/components/ModelCredits.tsx
 msgid "Switch to {tierTargetName}?"
 msgstr "Przejść na {tierTargetName}?"
@@ -6979,6 +7026,7 @@ msgid "Teaching in progress. Stop teaching before sending a new message."
 msgstr "Trwa nauka. Zatrzymaj ją przed wysłaniem nowej wiadomości."
 
 #: src/pages/AdminOpsBudget.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Team"
 msgstr "Zespół"
@@ -6986,6 +7034,10 @@ msgstr "Zespół"
 #: src/pages/shell/computer-view.tsx
 msgid "Team Computer"
 msgstr "Komputer zespołu"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Teams"
+msgstr "Zespoły"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Teams message"
@@ -7335,6 +7387,10 @@ msgstr "Dzisiaj"
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Toggle sidebar"
 msgstr "Pokaż lub ukryj pasek boczny"
+
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "tokens"
+msgstr "tokeny"
 
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/AdminOpsPage.tsx
@@ -7713,17 +7769,13 @@ msgstr "Wersja"
 msgid "View all"
 msgstr "Zobacz wszystkie"
 
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "View as"
+msgstr "Zobacz jako"
+
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "View source"
 msgstr "Zobacz źródło"
-
-#: src/components/ImpersonationBanner.tsx
-msgid "Viewing as {targetEmail}"
-msgstr "Widok jako {targetEmail}"
-
-#: src/components/ImpersonationBanner.tsx
-msgid "Viewing as {targetName} ({targetEmail})"
-msgstr "Widok jako {targetName} ({targetEmail})"
 
 #: src/components/call/CallStrip.tsx
 #: src/pages/settings-nav.ts

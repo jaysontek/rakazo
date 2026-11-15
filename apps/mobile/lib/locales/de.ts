@@ -1408,6 +1408,11 @@ export const DE_MESSAGES: Record<string, string> = {
   "{amount} spent this week": "Diese Woche {amount} ausgegeben",
   "{amount} spent this month": "Diesen Monat {amount} ausgegeben",
   "{amount} spent": "{amount} ausgegeben",
+  "Read-only · Viewing as {name} ({email}) · Ends {time}": "Nur Lesen · Ansicht als {name} ({email}) · Endet {time}",
+  "Read-only · Viewing as {email} · Ends {time}": "Nur Lesen · Ansicht als {email} · Endet {time}",
+  "Could not stop impersonation": "Impersonation konnte nicht beendet werden",
+  "Stop": "Stoppen",
+
 };
 
 export const PEER_MESSAGE_FORMS: Partial<Record<Intl.LDMLPluralRule, string>> = {

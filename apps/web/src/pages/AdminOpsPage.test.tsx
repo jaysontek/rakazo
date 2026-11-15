@@ -204,12 +204,19 @@ vi.mock("../lib/rpc", () => ({
       adjustSharedKeyTrackedSpend: vi.fn(),
       reverseSharedKeySpendAdjustment: vi.fn(),
       startImpersonation: vi.fn(),
+      organizations: vi.fn(async () => []),
+      team: vi.fn(),
+      switchImpersonation: vi.fn(),
       transferSharedKeyAllotment: vi.fn(),
       addAdminGrant: vi.fn(),
       removeAdminGrant: vi.fn(),
       reverseSharedKeyAllotmentTransfer: vi.fn(),
     },
   },
+}));
+
+vi.mock("../lib/impersonation-switch", () => ({
+  hardSwitchImpersonation: vi.fn(),
 }));
 
 vi.mock("../lib/query", () => ({

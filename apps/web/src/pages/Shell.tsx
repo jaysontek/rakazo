@@ -855,25 +855,30 @@ function SpaceShell() {
     billing: bootstrapMe?.billingEnabled === true,
     updates: Boolean(desktopBridge()?.update),
   });
+  const impersonating = Boolean(bootstrapMe?.impersonating);
   const paletteActions: CommandPaletteAction[] = [
-    {
-      id: "new-bot",
-      label: t`New bot`,
-      icon: Plus,
-      onSelect: () => dialogs.setCreateBotOpen(true),
-    },
-    {
-      id: "new-group",
-      label: t`New group chat`,
-      icon: Users,
-      onSelect: () => setPanel("create-group"),
-    },
-    {
-      id: "new-space",
-      label: t`New private space`,
-      icon: Lock,
-      onSelect: () => dialogs.setNewSpaceOpen(true),
-    },
+    ...(impersonating
+      ? []
+      : ([
+          {
+            id: "new-bot",
+            label: t`New bot`,
+            icon: Plus,
+            onSelect: () => dialogs.setCreateBotOpen(true),
+          },
+          {
+            id: "new-group",
+            label: t`New group chat`,
+            icon: Users,
+            onSelect: () => setPanel("create-group"),
+          },
+          {
+            id: "new-space",
+            label: t`New private space`,
+            icon: Lock,
+            onSelect: () => dialogs.setNewSpaceOpen(true),
+          },
+        ] satisfies CommandPaletteAction[])),
     {
       id: "integrations",
       label: t`Connect apps`,
@@ -949,6 +954,7 @@ function SpaceShell() {
   }
 
   async function createBot(input: CreateBotDialogInput) {
+    if (bootstrapMe?.impersonating) return;
     const isFirstBot = botsRef.current.length === 0;
     const bot = await rpc.bots.create({ ...input, notifyOnFinish: true });
     openCreatedBot(bot);
@@ -1016,6 +1022,7 @@ function SpaceShell() {
         navigate={navigate}
         setNewSpaceOpen={dialogs.setNewSpaceOpen}
         setCreateBotOpen={dialogs.setCreateBotOpen}
+        readOnly={impersonating}
         roster={
           <SidebarRoster
             mini={miniSidebar}
@@ -1115,10 +1122,12 @@ function SpaceShell() {
           ) : null}
           {!active && !activeGroup && initialBotsLoaded ? (
             <div className="grid flex-1 place-items-center">
-              <Button onClick={() => dialogs.setCreateBotOpen(true)}>
-                <Plus size={16} aria-hidden="true" />
-                <Trans>New bot</Trans>
-              </Button>
+              {bootstrapMe?.impersonating ? null : (
+                <Button onClick={() => dialogs.setCreateBotOpen(true)}>
+                  <Plus size={16} aria-hidden="true" />
+                  <Trans>New bot</Trans>
+                </Button>
+              )}
             </div>
           ) : (
             <Transcript
@@ -1182,7 +1191,7 @@ function SpaceShell() {
               enterToSend={enterToSend}
               activeName={inGroup ? (activeGroup?.name ?? activeSnapshot?.groupName) : active?.name}
               running={composerRunning}
-              disabled={Boolean(recordingSkill)}
+              disabled={Boolean(recordingSkill) || Boolean(bootstrapMe?.impersonating)}
               pendingAttachments={composer.activePendingAttachments}
               attachmentNotice={composer.attachmentNotice}
               sendError={sendError}
@@ -1399,6 +1408,7 @@ function SpaceShell() {
           setPeerConversation={setPeerConversation}
           active={active}
           peerBot={resolveTranscriptBot}
+          readOnly={impersonating}
         />
       </Suspense>
 

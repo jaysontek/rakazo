@@ -141,6 +141,11 @@ msgstr "{0} KB"
 msgid "{0} MB"
 msgstr "{0} MB"
 
+#. placeholder {0}: org.memberCount
+#: src/pages/AdminOpsPage.tsx
+msgid "{0} members"
+msgstr "{0} सदस्य"
+
 #. placeholder {0}: sender.name
 #: src/pages/ExternalConversationSettings.tsx
 msgid "{0} rollup hours"
@@ -525,6 +530,7 @@ msgid "Accounts"
 msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Actions"
 msgstr ""
 
@@ -754,7 +760,12 @@ msgstr ""
 msgid "Agent from another app"
 msgstr ""
 
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "agents"
+msgstr "एजेंट"
+
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Agents"
 msgstr ""
 
@@ -1156,6 +1167,7 @@ msgstr "अवतार स्टूडियो"
 #: src/components/vault/VaultPageHeader.tsx
 #: src/pages/AdminAccessPage.tsx
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 #: src/pages/AdminPluginsPage.tsx
 #: src/pages/Auth.tsx
 #: src/pages/Board.tsx
@@ -1759,6 +1771,7 @@ msgid "Compact"
 msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Company API"
 msgstr "कंपनी API"
 
@@ -2261,6 +2274,7 @@ msgid "Could not grant access"
 msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Could not impersonate"
 msgstr ""
 
@@ -2591,6 +2605,10 @@ msgstr "यह उत्तर सबमिट नहीं किया जा 
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "Could not switch {failedNames}. Try again."
 msgstr ""
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Could not switch impersonation"
+msgstr "प्रतिरूपण बदल नहीं सका"
 
 #: src/pages/shell/use-computer.tsx
 msgid "Could not take control"
@@ -4049,6 +4067,7 @@ msgid "key"
 msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Key"
 msgstr ""
 
@@ -4350,7 +4369,12 @@ msgid "Medium"
 msgstr "मध्यम"
 
 #: src/lib/identity-display.ts
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Member"
+msgstr "सदस्य"
+
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "members"
 msgstr "सदस्य"
 
 #. placeholder {0}: selected.length
@@ -4903,6 +4927,10 @@ msgstr "अभी तक कोई स्किल नहीं"
 msgid "No submissions"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "No teams"
+msgstr "कोई टीम नहीं"
+
 #: src/pages/Board.tsx
 msgid "No tickets yet"
 msgstr ""
@@ -5360,11 +5388,14 @@ msgid "Personal"
 msgstr ""
 
 #. placeholder {0}: money(account.personalKeyCostUsd)
+#. placeholder {0}: money(member.personalKeyCostUsd)
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Personal {0}"
 msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Personal API"
 msgstr "व्यक्तिगत API"
 
@@ -5550,6 +5581,14 @@ msgstr "प्रतिक्रियाएँ"
 #: src/pages/shell/bot-panel.tsx
 msgid "Read replies aloud"
 msgstr "उत्तर पढ़कर सुनाएं"
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Read-only · Viewing as {targetEmail} · Ends {endsAt}"
+msgstr "केवल पढ़ने योग्य · {targetEmail} के रूप में देख रहे हैं · समाप्त {endsAt}"
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Read-only · Viewing as {targetName} ({targetEmail}) · Ends {endsAt}"
+msgstr "केवल पढ़ने योग्य · {targetName} ({targetEmail}) के रूप में देख रहे हैं · समाप्त {endsAt}"
 
 #: src/pages/shell/import-status.ts
 msgid "Ready"
@@ -6498,7 +6537,9 @@ msgid "Shared"
 msgstr "साझा"
 
 #. placeholder {0}: money(account.sharedKeyCostUsd)
+#. placeholder {0}: money(member.sharedKeyCostUsd)
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Shared {0}"
 msgstr ""
 
@@ -6507,6 +6548,7 @@ msgid "Shared memory"
 msgstr "साझा मेमोरी"
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Shared week"
 msgstr ""
 
@@ -6739,6 +6781,7 @@ msgstr "वाक् मॉडल"
 
 #: src/pages/AdminOpsBudget.tsx
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Spend"
 msgstr ""
 
@@ -6937,6 +6980,10 @@ msgstr "सोचने की क्षमता का समर्थन क�
 msgid "Switch"
 msgstr "बदलें"
 
+#: src/components/ImpersonationBanner.tsx
+msgid "Switch member"
+msgstr "सदस्य बदलें"
+
 #: src/components/ModelCredits.tsx
 msgid "Switch to {tierTargetName}?"
 msgstr "{tierTargetName} पर स्विच करें?"
@@ -6979,6 +7026,7 @@ msgid "Teaching in progress. Stop teaching before sending a new message."
 msgstr "सिखाना जारी है। नया संदेश भेजने से पहले सिखाना रोकें।"
 
 #: src/pages/AdminOpsBudget.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Team"
 msgstr "टीम"
@@ -6986,6 +7034,10 @@ msgstr "टीम"
 #: src/pages/shell/computer-view.tsx
 msgid "Team Computer"
 msgstr "टीम कंप्यूटर"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Teams"
+msgstr "टीमें"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Teams message"
@@ -7335,6 +7387,10 @@ msgstr "आज"
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Toggle sidebar"
 msgstr "साइडबार दिखाएं या छिपाएं"
+
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "tokens"
+msgstr "टोकन"
 
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/AdminOpsPage.tsx
@@ -7713,16 +7769,12 @@ msgstr ""
 msgid "View all"
 msgstr ""
 
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "View as"
+msgstr "इस रूप में देखें"
+
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "View source"
-msgstr ""
-
-#: src/components/ImpersonationBanner.tsx
-msgid "Viewing as {targetEmail}"
-msgstr ""
-
-#: src/components/ImpersonationBanner.tsx
-msgid "Viewing as {targetName} ({targetEmail})"
 msgstr ""
 
 #: src/components/call/CallStrip.tsx

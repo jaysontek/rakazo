@@ -90,6 +90,8 @@ export type SettingsGeneralProps = {
   onBotAvatarSetChange?: (set: BotAvatarSet) => Promise<void>;
   onAccountImported?: () => Promise<void>;
   onImportAgent?: () => void;
+  /** Disable account mutation controls while impersonating. */
+  readOnly?: boolean;
 };
 
 export function GeneralSettingsPanels({
@@ -102,6 +104,7 @@ export function GeneralSettingsPanels({
   onBotAvatarSetChange,
   onAccountImported,
   onImportAgent,
+  readOnly = false,
 }: SettingsGeneralProps) {
   const { t } = useLingui();
   const account = accountDisplay({ name, email }, t`You`);
@@ -112,6 +115,7 @@ export function GeneralSettingsPanels({
   const nameId = useId();
 
   async function saveName() {
+    if (readOnly) return;
     const nextName = nameDraft.trim();
     if (namePending || !nextName || nextName.length > 80) return;
     if (!displayName(nextName, "")) {
@@ -196,7 +200,7 @@ export function GeneralSettingsPanels({
   }
 
   async function chooseTimezone(next: string) {
-    if (!onTimezoneChange || timezonePending || next === timezone) return;
+    if (readOnly || !onTimezoneChange || timezonePending || next === timezone) return;
     setTimezonePending(true);
     setTimezoneError(null);
     try {
@@ -273,17 +277,19 @@ export function GeneralSettingsPanels({
               </>
             }
             control={
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setNameDraft(account.label === email ? "" : displayName(name, ""));
-                  setNameError(null);
-                  setEditingName(true);
-                }}
-              >
-                <Trans>Edit</Trans>
-              </Button>
+              readOnly ? null : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setNameDraft(account.label === email ? "" : displayName(name, ""));
+                    setNameError(null);
+                    setEditingName(true);
+                  }}
+                >
+                  <Trans>Edit</Trans>
+                </Button>
+              )
             }
           />
         )}
@@ -401,7 +407,7 @@ export function GeneralSettingsPanels({
                   aria-labelledby={timezoneId}
                   data-testid="timezone-select"
                   value={timezone ?? deviceTimezone}
-                  disabled={timezonePending}
+                  disabled={readOnly || timezonePending}
                   onChange={(event) => void chooseTimezone(event.target.value)}
                   className="w-56 max-w-full"
                 >
@@ -419,7 +425,7 @@ export function GeneralSettingsPanels({
                     variant="outline"
                     size="sm"
                     className="h-auto max-w-full py-1.5 text-left whitespace-normal"
-                    disabled={timezonePending}
+                    disabled={readOnly || timezonePending}
                     data-testid="timezone-use-device"
                     onClick={() => void chooseTimezone(deviceTimezone)}
                   >
