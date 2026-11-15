@@ -967,6 +967,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
       adminEmails: env.adminEmails,
       opsDashboardAllowlist: env.opsDashboardAllowlist,
       sharedKeyMonthlyBudgetUsd: env.sharedKeyMonthlyBudgetUsd,
+      sharedKeyGatedDeployment: sharedKeyEnrollmentPolicy.gatedDeployment,
       deploymentModelKey: env.deploymentModelKey ?? null,
       maxUploadSizeBytes: env.maxUploadSizeBytes,
       maxAttachmentsPerMessage: env.maxAttachmentsPerMessage,

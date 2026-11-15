@@ -9,17 +9,19 @@ import {
   resolveSharedKeyPeriodSchedule,
   sharedKeyBudgetPercentUsed,
   sharedKeyPeriodEnd,
+  sharedKeyPeriodPoolUsd,
   sharedKeyPeriodStart,
   type SharedKeyPeriodSchedule,
 } from "@rakazo/core";
 
-export { SHARED_KEY_BUDGET_TIMEZONE } from "@rakazo/core";
+export { SHARED_KEY_BUDGET_TIMEZONE, sharedKeyPeriodPoolUsd } from "@rakazo/core";
 import { getLogger } from "@rakazo/logging";
 import { appendAuditEventTx } from "./audit-events.js";
 import type { PrismaClient } from "./client.js";
 import { Prisma } from "./client.js";
 import { isHiddenOpsEmail } from "./ops-email-filter.js";
 import {
+  sumSharedKeyUsageByUser,
   trackedSharedKeySpendByUser,
   trackedSharedKeySpendUsd,
 } from "./shared-key-spend.js";
@@ -141,12 +143,18 @@ export function resolveSharedKeyPeriodBounds(
   return { schedule, periodStart, periodEnd: sharedKeyPeriodEnd(schedule, periodStart) };
 }
 
+/** Normalize warning thresholds: 0–100, sorted, deduped, at most 10 entries. */
 export function resolveWarningThresholds(raw: unknown): number[] {
   if (!Array.isArray(raw)) return [...DEFAULT_SHARED_KEY_WARNING_THRESHOLDS];
-  const values = raw
-    .filter((value): value is number => typeof value === "number" && Number.isFinite(value))
-    .map((value) => Math.min(100, Math.max(0, value)))
-    .sort((a, b) => a - b);
+  const values = [
+    ...new Set(
+      raw
+        .filter((value): value is number => typeof value === "number" && Number.isFinite(value))
+        .map((value) => Math.min(100, Math.max(0, value))),
+    ),
+  ]
+    .sort((a, b) => a - b)
+    .slice(0, 10);
   return values.length > 0 ? values : [...DEFAULT_SHARED_KEY_WARNING_THRESHOLDS];
 }
 
@@ -348,6 +356,8 @@ export async function listSharedKeyBudgetMembers(
 /**
  * Tracked shared-key spend for one user in [since, now). Personal-key usage never counts.
  * Includes per-user spend adjustments for the period when periodStart is provided.
+ * When `adjustmentCreatedBefore` is set (join baseline), only adjustments created
+ * before that instant count — same window rule as usage.
  */
 async function spentSharedKeyUsd(
   prisma: Pick<BudgetTx, "usageRecord" | "sharedKeySpendAdjustment">,
@@ -356,12 +366,14 @@ async function spentSharedKeyUsd(
   now: Date,
   /** When set, include per-user adjustments for this period in tracked spend. */
   periodStart?: Date,
+  adjustmentCreatedBefore?: Date,
 ): Promise<number> {
   return trackedSharedKeySpendUsd(prisma, {
     userId,
     since,
     until: now,
     periodStart,
+    adjustmentCreatedBefore,
   });
 }
 
@@ -456,7 +468,10 @@ export async function recomputeSharedKeyWeekAllotmentsTx(
     select: BUDGET_SETTINGS_SELECT,
   });
   const monthly = settings?.sharedKeyMonthlyBudgetUsd;
-  const { periodStart: weekStart } = resolveSharedKeyPeriodBounds(settings, now);
+  const { schedule, periodStart: weekStart, periodEnd } = resolveSharedKeyPeriodBounds(
+    settings,
+    now,
+  );
   await clearStaleSharedKeyBudgetHolds(
     tx,
     weekStart,
@@ -512,18 +527,26 @@ export async function recomputeSharedKeyWeekAllotmentsTx(
   ];
   const spentByUser = await spentByMembers(tx, spendUserIds, weekStart, now);
 
-  // Fresh enrolls without a week row yet: baseline is periodStart→joinedAt shared usage only.
+  // Fresh enrolls without a week row yet: baseline is periodStart→joinedAt shared
+  // usage + adjustments created before join (same window rule as usage).
   for (const member of redivideMembers) {
     if (!preJoinSpendByUser.has(member.userId)) {
       const baseline =
         member.joinedAt.getTime() > weekStart.getTime()
-          ? await spentSharedKeyUsd(tx, member.userId, weekStart, member.joinedAt)
+          ? await spentSharedKeyUsd(
+              tx,
+              member.userId,
+              weekStart,
+              member.joinedAt,
+              weekStart,
+              member.joinedAt,
+            )
           : 0;
       preJoinSpendByUser.set(member.userId, baseline);
     }
   }
 
-  // Absolute weekly allotment overrides replace the even-split ceiling for those users.
+  // Absolute allotment overrides: subtracted from the pool inside redivide.
   const overrideRows =
     "sharedKeyMemberOverride" in tx && tx.sharedKeyMemberOverride
       ? await tx.sharedKeyMemberOverride.findMany({
@@ -533,7 +556,7 @@ export async function recomputeSharedKeyWeekAllotmentsTx(
       : [];
   const overrides = new Map(
     overrideRows
-      .filter((row) => row.weeklyAllotmentUsd > 0)
+      .filter((row) => row.weeklyAllotmentUsd >= 0)
       .map((row) => [row.userId, row.weeklyAllotmentUsd]),
   );
 
@@ -547,10 +570,10 @@ export async function recomputeSharedKeyWeekAllotmentsTx(
     reservedByUser,
     preJoinSpendByUser,
     rebaseOnMonthlyCap: options?.rebaseOnMonthlyCap === true,
+    overrides,
+    period: schedule.period,
+    periodEnd,
   });
-  for (const [userId, overrideUsd] of overrides) {
-    allotments.set(userId, overrideUsd);
-  }
 
   const memberIds = new Set(allotments.keys());
 
@@ -608,9 +631,10 @@ export async function recomputeSharedKeyWeekAllotmentsTx(
  * Auto-enroll bar. Always rejects deactivated / hidden accounts.
  * SHARED_KEY_BUDGET_USER_IDS and explicit admin adds bypass via `bypassEligibilityBar`
  * (or `policy.explicitUserIds` on the hot path).
- * Gated deployments: verified email + any organization membership.
- * Open signups: verified email + membership in a non-personal (multi-member) org
- * that also includes an ops admin (active verified AdminGrant or env admin email).
+ * Personal (solo-member) orgs never qualify in any mode.
+ * Gated deployments: verified email + membership in a non-personal (multi-member) org.
+ * Open signups: verified email + membership in a non-personal org that also includes
+ * an ops admin (active verified AdminGrant or env admin email).
  */
 export async function userEligibleForSharedKeyBudget(
   tx: Pick<BudgetTx, "user" | "member" | "adminGrant">,
@@ -634,17 +658,24 @@ export async function userEligibleForSharedKeyBudget(
     select: { organizationId: true },
   });
   if (memberships.length === 0) return false;
+  const orgMembership = await nonPersonalOrgMembership(tx, memberships);
+  // Personal-org-only memberships are never eligible, including gated deployments.
+  if (!orgMembership.hasNonPersonal) return false;
   if (options.policy.gatedDeployment) return true;
-  return sharesNonPersonalOrgWithOpsAdmin(tx, userId, memberships, options.policy.adminEmails);
+  return sharesNonPersonalOrgWithOpsAdmin(
+    tx,
+    userId,
+    memberships,
+    options.policy.adminEmails,
+    orgMembership,
+  );
 }
 
 /** Orgs with only one member are personal bootstraps; multi-member orgs are team orgs. */
-async function sharesNonPersonalOrgWithOpsAdmin(
-  tx: Pick<BudgetTx, "user" | "member" | "adminGrant">,
-  userId: string,
+async function nonPersonalOrgMembership(
+  tx: Pick<BudgetTx, "member">,
   memberships: Array<{ organizationId: string }>,
-  adminEmails: string[],
-): Promise<boolean> {
+): Promise<{ hasNonPersonal: boolean; byOrg: Map<string, string[]> }> {
   const orgIds = memberships.map((row) => row.organizationId);
   const peers = await tx.member.findMany({
     where: { organizationId: { in: orgIds } },
@@ -656,6 +687,25 @@ async function sharesNonPersonalOrgWithOpsAdmin(
     list.push(peer.userId);
     byOrg.set(peer.organizationId, list);
   }
+  let hasNonPersonal = false;
+  for (const userIds of byOrg.values()) {
+    if (userIds.length >= 2) {
+      hasNonPersonal = true;
+      break;
+    }
+  }
+  return { hasNonPersonal, byOrg };
+}
+
+async function sharesNonPersonalOrgWithOpsAdmin(
+  tx: Pick<BudgetTx, "user" | "member" | "adminGrant">,
+  userId: string,
+  memberships: Array<{ organizationId: string }>,
+  adminEmails: string[],
+  precomputed?: { hasNonPersonal: boolean; byOrg: Map<string, string[]> },
+): Promise<boolean> {
+  const { byOrg } =
+    precomputed ?? (await nonPersonalOrgMembership(tx, memberships));
   const candidateAdminIds = new Set<string>();
   for (const userIds of byOrg.values()) {
     if (userIds.length < 2) continue;
@@ -966,9 +1016,11 @@ export async function listSharedKeyBudgetNotEnrolledHits(
 }
 
 /**
- * Drop roster members with no shared-key usage in the prior America/New_York week
- * who are not on the explicit env include list. Call on Monday (or lazily when the
- * week rolls) so dormant auto-enrolls do not keep splitting the pool forever.
+ * Drop roster members with no shared-key *usage* in the prior period who are not
+ * on the explicit env include list. Prune on raw usage activity, never adjusted
+ * tracked spend — a negative adjustment that zeroes tracked must not prune an
+ * otherwise active member. Call when the period rolls so dormant auto-enrolls
+ * do not keep splitting the pool forever.
  */
 export async function pruneInactiveSharedKeyBudgetMembers(
   prisma: Pick<BudgetPrisma, "$transaction">,
@@ -992,11 +1044,10 @@ export async function pruneInactiveSharedKeyBudgetMembers(
     const keep = new Set(explicitUserIds.map((id) => id.trim()).filter(Boolean));
     const members = await listSharedKeyBudgetMembers(tx);
     if (members.length === 0) return;
-    const usage = await trackedSharedKeySpendByUser(tx, {
+    const usage = await sumSharedKeyUsageByUser(tx, {
       userIds: members.map((m) => m.userId),
       since: priorWeekStart,
       until: priorWeekEnd,
-      periodStart: priorWeekStart,
     });
     const active = new Set(
       [...usage.entries()].filter(([, cost]) => cost > 0).map(([userId]) => userId),
@@ -1056,7 +1107,9 @@ async function ensureMemberAllotment(
  */
 /**
  * Apply DB auto-enroll mode override on top of the signup-derived policy.
- * null = keep policy as-is; "off" disables auto-enroll; "gated"/"open" force the bar.
+ * null = keep policy as-is; "off" disables auto-enroll; "open" forces the open bar.
+ * "gated" never forces gatedDeployment:true — it is only valid when the deployment
+ * is already gated, and leaves the existing policy flag alone.
  */
 export function applyAutoEnrollMode(
   policy: SharedKeyBudgetEnrollmentPolicy,
@@ -1066,7 +1119,7 @@ export function applyAutoEnrollMode(
   if (mode === "off") {
     return { ...policy, gatedDeployment: false, adminEmails: [], explicitUserIds: policy.explicitUserIds };
   }
-  if (mode === "gated") return { ...policy, gatedDeployment: true };
+  if (mode === "gated") return policy;
   if (mode === "open") return { ...policy, gatedDeployment: false };
   return policy;
 }

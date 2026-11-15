@@ -135,6 +135,11 @@ export interface RouterDeps {
     sharedKeyMonthlyBudgetUsd?: number | null;
     /** Explicit SHARED_KEY_BUDGET_USER_IDS includes (additive; hot-path auto-enroll is separate). */
     sharedKeyBudgetUserIds?: string[];
+    /**
+     * Derived from existing signup posture (not a new env var). Used to reject
+     * autoEnrollMode=gated unless the deployment is already gated.
+     */
+    sharedKeyGatedDeployment?: boolean;
     /** Deployment default model API key (for the configured default provider). */
     deploymentModelKey?: string | null;
     phoneCallsEnabled?: boolean;
