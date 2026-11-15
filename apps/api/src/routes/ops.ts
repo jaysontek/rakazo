@@ -223,12 +223,8 @@ export function opsRoutes(ctx: RouterContext) {
           spaceId: context.actor.spaceId,
           ip: context.clientIp,
         });
-        const targetActor = await requireMembership(
-          deps.prisma,
-          input.userId,
-          null,
-          context.sessionId,
-        );
+        // View-only: omit sessionId so requireMembership does not re-pin activeOrganizationId.
+        const targetActor = await requireMembership(deps.prisma, input.userId, null, undefined);
         return meDto(deps, targetActor, context.sessionId);
       }),
       stopImpersonation: authed.ops.stopImpersonation.handler(async ({ context }) => {
@@ -281,12 +277,8 @@ export function opsRoutes(ctx: RouterContext) {
           spaceId: context.actor.spaceId,
           ip: context.clientIp,
         });
-        const targetActor = await requireMembership(
-          deps.prisma,
-          input.userId,
-          null,
-          context.sessionId,
-        );
+        // View-only: omit sessionId so requireMembership does not re-pin activeOrganizationId.
+        const targetActor = await requireMembership(deps.prisma, input.userId, null, undefined);
         return meDto(deps, targetActor, context.sessionId);
       }),
       team: authed.ops.team.handler(async ({ context, input }) => {

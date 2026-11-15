@@ -1144,12 +1144,13 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
       },
     );
     if (!enforcement.ok) return null;
+    // View-only impersonation: never auto-pin activeOrganizationId.
     const actor = await actorFromMembership(
       requireMembership(
         prisma,
         session.user.id,
         request.headers.get("x-rakazo-space-id"),
-        session.session.id,
+        enforcement.impersonatedBy ? undefined : session.session.id,
       ),
     );
     return (

@@ -635,6 +635,29 @@ describe("impersonation", () => {
     });
   });
 
+  it("refuses switch for unscoped start even when activeOrganizationId is later pinned", async () => {
+    // Unscoped start leaves impersonationOrganizationId null; a later auto-pin of
+    // activeOrganizationId must not unstick switch (scope uses only the former).
+    await startImpersonation(deps as never, {
+      sessionId: session.id,
+      adminUserId: "admin",
+      targetUserId: "user",
+    });
+    expect(session.impersonationOrganizationId).toBeNull();
+    session.activeOrganizationId = "org-1";
+    await expect(
+      switchImpersonation(deps as never, {
+        sessionId: session.id,
+        adminUserId: "admin",
+        targetUserId: "user-2",
+        organizationId: "org-1",
+      }),
+    ).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      message: "Impersonation was not started with an organization scope",
+    });
+  });
+
   it("clears impersonationOrganizationId on stop and expiry", async () => {
     session.userId = "user";
     session.impersonatedBy = "admin";

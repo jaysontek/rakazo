@@ -721,7 +721,11 @@ export async function loadOpsTeam(
   );
   if (!org) throw new Error("Organization not found");
 
-  const memberIds = new Set(org.members.map((member) => member.userId));
+  // Personal orgs are sole-member bootstrap spaces — same rule as assertNonPersonalOrganization.
+  const uniqueMemberIds = new Set(org.members.map((member) => member.userId));
+  if (uniqueMemberIds.size <= 1) throw new Error("Organization not found");
+
+  const memberIds = uniqueMemberIds;
   const [overview, bots] = await Promise.all([
     loadOpsOverview(prisma, health, undefined, envSharedKeyMonthlyBudgetUsd, options),
     listOpsAgents(prisma, {
