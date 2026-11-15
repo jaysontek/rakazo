@@ -13,11 +13,8 @@
  *   plugin fetch / provider catalog shared state.
  */
 import { createRouterClient } from "@orpc/server";
-import {
-  appContract,
-  IMPERSONATION_PROCEDURE_KIND,
-  type Actor,
-} from "@rakazo/contracts";
+import type { Actor } from "@rakazo/contracts";
+import { appContract, IMPERSONATION_PROCEDURE_KIND } from "@rakazo/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { RouterDeps } from "./router.js";
 import { createRouter } from "./router.js";
@@ -91,7 +88,7 @@ const ALLOWED_ERRORS: Record<string, { code?: string; reason: string; match?: Re
     reason: "Artifact store returns undefined bytes under the recording stub.",
     match: /first argument|Buffer|undefined/i,
   },
-  "bootstrap": {
+  bootstrap: {
     reason: "Bootstrap opens encrypted content rows the stub SecretStore does not implement.",
     match: /contentEncryptionOf|openRows/i,
   },
@@ -149,7 +146,8 @@ const ALLOWED_ERRORS: Record<string, { code?: string; reason: string; match?: Re
   },
   // Former /./i catch-alls — narrowed to the exact fixture failures below.
   "messaging.channels.list": {
-    reason: "Messaging channel list needs installed messaging adapters; stub returns null provider.",
+    reason:
+      "Messaging channel list needs installed messaging adapters; stub returns null provider.",
     match: /reading 'provider'/,
   },
   "notifications.subscribe": {
@@ -241,12 +239,9 @@ type SideEffect =
   | { kind: "providerCatalog"; method: string }
   | { kind: "computer-helper"; name: string };
 
-function contractProcedurePaths(
-  node: unknown,
-  prefix: readonly string[] = [],
-): readonly string[] {
+function contractProcedurePaths(node: unknown, prefix: readonly string[] = []): readonly string[] {
   if (!node || typeof node !== "object") return [];
-  if (Object.prototype.hasOwnProperty.call(node, "~orpc")) return [prefix.join(".")];
+  if (Object.hasOwn(node, "~orpc")) return [prefix.join(".")];
   return Object.entries(node as Record<string, unknown>).flatMap(([key, child]) =>
     contractProcedurePaths(child, [...prefix, key]),
   );
@@ -414,10 +409,7 @@ function stubRow(model: string): Record<string, unknown> {
     organization: {
       id: "org-1",
       name: "Team",
-      members: [
-        { userId: ACTOR.userId },
-        { userId: "user-2" },
-      ],
+      members: [{ userId: ACTOR.userId }, { userId: "user-2" }],
     },
     space: { id: ACTOR.spaceId, name: "Personal", organizationId: "org-1" },
     user: { id: ACTOR.userId, email: ACTOR.email, name: "Test", image: null },
@@ -813,7 +805,10 @@ function filterBadEffects(dotted: string, produced: SideEffect[]): SideEffect[] 
       (effect.method === "list" || effect.method === "exportMarkdown" || effect.method === "read")
     )
       return false;
-    if (effect.kind === "memoryProviders" && (effect.method === "list" || effect.method === "resolve"))
+    if (
+      effect.kind === "memoryProviders" &&
+      (effect.method === "list" || effect.method === "resolve")
+    )
       return false;
     if (
       effect.kind === "artifacts" &&
@@ -826,7 +821,9 @@ function filterBadEffects(dotted: string, produced: SideEffect[]): SideEffect[] 
     // describe/status/displayName are metadata reads used by me/bootstrap.
     if (
       effect.kind === "paymentWallet" &&
-      (effect.method === "status" || effect.method === "describe" || effect.method === "displayName")
+      (effect.method === "status" ||
+        effect.method === "describe" ||
+        effect.method === "displayName")
     )
       return false;
     return true;
@@ -865,7 +862,6 @@ function buildDeps(effects: SideEffect[], fetchMock: ReturnType<typeof vi.fn>): 
     "create",
     "remove",
   ]);
-  const connectors = recordable(effects, "connectors", ["list", "get", "reconcile", "managed"]);
   const billing = recordable(effects, "billing", [
     "status",
     "claimReferral",
@@ -1125,7 +1121,13 @@ function deepenPrismaFixtures(deps: RouterDeps, effects: SideEffect[]) {
   });
 
   // Explicit write recorders so Proxy assignment overrides stay teeth-visible.
-  for (const name of ["computer", "paymentWallet", "capabilityInstall", "mcpServer", "taughtSkill"]) {
+  for (const name of [
+    "computer",
+    "paymentWallet",
+    "capabilityInstall",
+    "mcpServer",
+    "taughtSkill",
+  ]) {
     model(name).update = async () => {
       effects.push({ kind: "prisma", model: name, method: "update" });
       return stubRow(name);

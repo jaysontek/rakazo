@@ -55,7 +55,7 @@ export const IMPERSONATION_PROCEDURE_KIND = {
   "boards.list": "read",
   "boards.rename": "write",
   "boards.subscribe": "read",
-  "bootstrap": "read",
+  bootstrap: "read",
   "botSecrets.list": "read",
   "botSecrets.put": "write",
   "botSecrets.remove": "write",
@@ -140,7 +140,7 @@ export const IMPERSONATION_PROCEDURE_KIND = {
   "groups.remove": "write",
   "groups.restore": "write",
   "groups.update": "write",
-  "health": "read",
+  health: "read",
   "integrationSetup.get": "read",
   "integrationSetup.save": "write",
   // Outbound fetch for site icons — blocked while impersonating.
@@ -165,7 +165,7 @@ export const IMPERSONATION_PROCEDURE_KIND = {
   "mcp.servers.remove": "write",
   "mcp.servers.test": "write",
   "mcp.servers.update": "write",
-  "me": "read",
+  me: "read",
   "memory.budget": "read",
   "memory.connectProvider": "write",
   "memory.disconnectProvider": "write",
@@ -353,9 +353,7 @@ export const IMPERSONATION_ALLOWED_OPS = [
   "ops.switchImpersonation",
 ] as const;
 
-export function impersonationProcedureKind(
-  path: string,
-): ImpersonationProcedureKind | undefined {
+export function impersonationProcedureKind(path: string): ImpersonationProcedureKind | undefined {
   return (IMPERSONATION_PROCEDURE_KIND as Record<string, ImpersonationProcedureKind>)[path];
 }
 

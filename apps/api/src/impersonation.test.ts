@@ -68,13 +68,7 @@ describe("impersonation", () => {
         where.id === session.id ? { ...session } : null,
       ),
       update: vi.fn(
-        async ({
-          where,
-          data,
-        }: {
-          where: { id: string };
-          data: Partial<SessionRow>;
-        }) => {
+        async ({ where, data }: { where: { id: string }; data: Partial<SessionRow> }) => {
           if (where.id !== session.id) throw new Error("missing session");
           Object.assign(session, data);
           return session;
@@ -109,24 +103,13 @@ describe("impersonation", () => {
     },
     member: {
       findFirst: vi.fn(
-        async ({
-          where,
-        }: {
-          where: { organizationId: string; userId: string };
-        }) =>
+        async ({ where }: { where: { organizationId: string; userId: string } }) =>
           members.find(
-            (row) =>
-              row.organizationId === where.organizationId && row.userId === where.userId,
+            (row) => row.organizationId === where.organizationId && row.userId === where.userId,
           ) ?? null,
       ),
       findMany: vi.fn(
-        async ({
-          where,
-          take,
-        }: {
-          where: { organizationId: string };
-          take?: number;
-        }) => {
+        async ({ where, take }: { where: { organizationId: string }; take?: number }) => {
           const rows = members
             .filter((row) => row.organizationId === where.organizationId)
             .map((row) => ({ userId: row.userId }));
@@ -166,7 +149,11 @@ describe("impersonation", () => {
           where: { userId: string; sessionId: string; revokedAt: null };
           data: { revokedAt: Date; revokedBy: string };
         }) => {
-          deletedPush.push({ table: "userDevice", userId: where.userId, sessionId: where.sessionId });
+          deletedPush.push({
+            table: "userDevice",
+            userId: where.userId,
+            sessionId: where.sessionId,
+          });
           return { count: 1 };
         },
       ),

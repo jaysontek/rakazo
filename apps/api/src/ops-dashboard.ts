@@ -438,28 +438,23 @@ export async function loadOpsOverview(
       probeDatabase(prisma),
     ]);
     const { schedule, periodStart, periodEnd } = resolveSharedKeyPeriodBounds(settingsRow, now);
-    const [
-      notEnrolledHits,
-      allotmentTransfers,
-      spendAdjustments,
-      sharedByUserMap,
-      weekSpentUsd,
-    ] = await Promise.all([
-      listSharedKeyBudgetNotEnrolledHits(prisma, periodStart),
-      listSharedKeyAllotmentTransfers(prisma, periodStart),
-      listSharedKeySpendAdjustments(prisma, { periodStart, now }),
-      trackedSharedKeySpendByUser(prisma, {
-        userIds: users.map((user) => user.id),
-        until: now,
-      }),
-      // Tracked company shared-key spend for the current period (usage + adjustments).
-      // Personal-key rows are never included. Visible-account filter applied below.
-      trackedSharedKeyTeamSpendUsd(prisma, {
-        since: periodStart,
-        until: now,
-        periodStart,
-      }),
-    ]);
+    const [notEnrolledHits, allotmentTransfers, spendAdjustments, sharedByUserMap, weekSpentUsd] =
+      await Promise.all([
+        listSharedKeyBudgetNotEnrolledHits(prisma, periodStart),
+        listSharedKeyAllotmentTransfers(prisma, periodStart),
+        listSharedKeySpendAdjustments(prisma, { periodStart, now }),
+        trackedSharedKeySpendByUser(prisma, {
+          userIds: users.map((user) => user.id),
+          until: now,
+        }),
+        // Tracked company shared-key spend for the current period (usage + adjustments).
+        // Personal-key rows are never included. Visible-account filter applied below.
+        trackedSharedKeyTeamSpendUsd(prisma, {
+          since: periodStart,
+          until: now,
+          periodStart,
+        }),
+      ]);
     const notEnrolledHitIds = new Set(notEnrolledHits);
     const envPinnedIds = new Set(
       (options.sharedKeyBudgetUserIds ?? []).map((id) => id.trim()).filter(Boolean),

@@ -1135,14 +1135,10 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
     // The bearer plugin turns a signed `Authorization: Bearer` into the session cookie.
     const session = await auth.api.getSession({ headers: request.headers });
     if (!session?.user) return null;
-    const enforcement = await enforceImpersonationSession(
-      { prisma, env },
-      session.session.id,
-      {
-        ip: request.headers.get("x-rakazo-client-ip"),
-        userAgent: request.headers.get("user-agent"),
-      },
-    );
+    const enforcement = await enforceImpersonationSession({ prisma, env }, session.session.id, {
+      ip: request.headers.get("x-rakazo-client-ip"),
+      userAgent: request.headers.get("user-agent"),
+    });
     if (!enforcement.ok) return null;
     // View-only impersonation: never auto-pin activeOrganizationId.
     const actor = await actorFromMembership(
@@ -1162,10 +1158,8 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
     );
   };
   // Outside /rpc, impersonated sessions are unauthenticated unless a route opts in.
-  const sessionActor = async (
-    request: Request,
-    options?: { allowImpersonation?: boolean },
-  ) => httpActorFromSession(await requestSession(request), options);
+  const sessionActor = async (request: Request, options?: { allowImpersonation?: boolean }) =>
+    httpActorFromSession(await requestSession(request), options);
   if (userDeviceHub && userDevices) {
     mountUserDeviceRoutes(app, {
       prisma,
