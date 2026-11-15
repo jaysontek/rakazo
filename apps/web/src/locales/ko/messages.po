@@ -17,6 +17,11 @@ msgstr ""
 msgid " (unread)"
 msgstr " (읽지 않음)"
 
+#. placeholder {0}: group.agents.length
+#: src/pages/AdminOpsPage.tsx
+msgid "{0, plural, one {# agent} other {# agents}}"
+msgstr "{0, plural, other {에이전트 #개}}"
+
 #. placeholder {0}: pinned.length
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "{0, plural, one {# bot has its own model:} other {# bots have their own model:}}"
@@ -95,11 +100,6 @@ msgstr "{0} ({1} 초과)"
 #: src/lib/cron.ts
 msgid "{0} {unitLabel}"
 msgstr "{0} {unitLabel}"
-
-#. placeholder {0}: group.agents.length
-#: src/pages/AdminOpsPage.tsx
-msgid "{0} agents"
-msgstr "에이전트 {0}개"
 
 #. placeholder {0}: block.name
 #: src/pages/shell/message-cards.tsx
@@ -743,6 +743,10 @@ msgstr ""
 #: src/pages/AdminOpsPage.tsx
 msgid "Agents"
 msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Agents unavailable"
+msgstr "에이전트를 사용할 수 없음"
 
 #: src/components/VaultSettings.tsx
 #: src/pages/PluginsOverlay.tsx
@@ -4653,6 +4657,10 @@ msgstr ""
 #: src/pages/AdminOpsPage.tsx
 msgid "No agents match this filter."
 msgstr "이 필터와 일치하는 에이전트가 없습니다."
+
+#: src/pages/AdminOpsPage.tsx
+msgid "No agents yet"
+msgstr "에이전트가 아직 없습니다"
 
 #: src/pages/PluginsOverlay.tsx
 msgid "No apps match your search."

@@ -1,3 +1,4 @@
+import { plural } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react/macro";
 import type {
   OpsAccount,
@@ -1542,9 +1543,10 @@ function groupAgentsByOwner(agents: OpsAgent[]): {
       existing.agents.push(agent);
       continue;
     }
+    const name = agent.owner.name.trim();
     map.set(agent.owner.id, {
       key: agent.owner.id,
-      title: agent.owner.name || agent.owner.email,
+      title: name || agent.owner.email,
       email: agent.owner.email,
       agents: [agent],
     });
@@ -1591,9 +1593,10 @@ function AgentsSection({
       }
       if (agent.owner.deactivated) hasDeactivated = true;
       if (!seen.has(agent.owner.id)) {
+        const name = agent.owner.name.trim();
         seen.set(agent.owner.id, {
           value: agent.owner.id,
-          label: `${agent.owner.name || agent.owner.email} (${agent.owner.email})`,
+          label: name ? `${name} (${agent.owner.email})` : agent.owner.email,
         });
       }
     }
@@ -1658,11 +1661,15 @@ function AgentsSection({
         <Spinner />
       ) : interactive && (agentsQuery.isError || !agentsQuery.data) ? (
         <p className="text-sm text-muted-foreground">
-          {errorText(agentsQuery.error, "Agents unavailable")}
+          {errorText(agentsQuery.error, t`Agents unavailable`)}
         </p>
       ) : filteredAgents.length === 0 ? (
         <p className="text-sm text-muted-foreground" data-testid="ops-agents-empty">
-          <Trans>No agents match this filter.</Trans>
+          {(agents ?? []).length === 0 && ownerFilter === "all" ? (
+            <Trans>No agents yet</Trans>
+          ) : (
+            <Trans>No agents match this filter.</Trans>
+          )}
         </p>
       ) : (
         <div className="space-y-6">
@@ -1729,7 +1736,7 @@ function AgentOwnerGroupBlock({
           <span className="min-w-0 break-all text-sm text-muted-foreground">{group.email}</span>
         ) : null}
         <span className="text-sm text-muted-foreground tabular-nums">
-          {t`${group.agents.length} agents`}
+          {t`${plural(group.agents.length, { one: "# agent", other: "# agents" })}`}
         </span>
       </div>
       <ul className="divide-y divide-border/60 rounded-xl border border-border/60">

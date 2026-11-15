@@ -18,6 +18,11 @@ msgstr ""
 msgid " (unread)"
 msgstr "（未讀）"
 
+#. placeholder {0}: group.agents.length
+#: src/pages/AdminOpsPage.tsx
+msgid "{0, plural, one {# agent} other {# agents}}"
+msgstr "{0, plural, other {# 個代理}}"
+
 #. placeholder {0}: pinned.length
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "{0, plural, one {# bot has its own model:} other {# bots have their own model:}}"
@@ -96,11 +101,6 @@ msgstr "{0}（超過 {1}）"
 #: src/lib/cron.ts
 msgid "{0} {unitLabel}"
 msgstr "{0} {unitLabel}"
-
-#. placeholder {0}: group.agents.length
-#: src/pages/AdminOpsPage.tsx
-msgid "{0} agents"
-msgstr "{0} 個代理"
 
 #. placeholder {0}: block.name
 #: src/pages/shell/message-cards.tsx
@@ -744,6 +744,10 @@ msgstr ""
 #: src/pages/AdminOpsPage.tsx
 msgid "Agents"
 msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Agents unavailable"
+msgstr "代理無法使用"
 
 #: src/components/VaultSettings.tsx
 #: src/pages/PluginsOverlay.tsx
@@ -4654,6 +4658,10 @@ msgstr "下一組設定區段"
 #: src/pages/AdminOpsPage.tsx
 msgid "No agents match this filter."
 msgstr "沒有符合此篩選條件的代理。"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "No agents yet"
+msgstr "尚無代理"
 
 #: src/pages/PluginsOverlay.tsx
 msgid "No apps match your search."

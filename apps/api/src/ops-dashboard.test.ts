@@ -646,4 +646,74 @@ describe("listOpsAgents", () => {
 
     expect(agents.map((row) => row.id)).toEqual(["bot-visible", "bot-orphan"]);
   });
+
+  it("matches Accounts key labels when the oldest membership is credits and the bot space is not", async () => {
+    const prisma = agentsPrisma({
+      users: [{ id: "owner", email: "owner@example.test", name: "Owner", deactivatedAt: null }],
+      bots: [
+        {
+          id: "bot-archived-other-space",
+          name: "Archived elsewhere",
+          userId: "owner",
+          spaceId: "space-no-credits",
+          createdAt: new Date("2026-01-01T00:00:00Z"),
+          archivedAt: new Date("2026-02-01T00:00:00Z"),
+        },
+      ],
+      credentials: [
+        {
+          userId: "owner",
+          id: "cred-personal",
+          provider: "google",
+          secretId: "sec-personal",
+          plaintext: apiKeyPlaintext("personal-key"),
+        },
+      ],
+    });
+    prisma.deploymentSettings.findUnique = vi.fn(async () => ({
+      sharedKeyMonthlyBudgetUsd: null,
+      modelCreditsEnabled: true,
+    }));
+    // Oldest membership is the credits space; a newer membership holds the archived bot.
+    prisma.spaceMember.findMany = vi.fn(async () => [
+      {
+        userId: "owner",
+        spaceId: "space-credits",
+        createdAt: new Date("2026-01-01T00:00:00Z"),
+      },
+      {
+        userId: "owner",
+        spaceId: "space-no-credits",
+        createdAt: new Date("2026-03-01T00:00:00Z"),
+      },
+    ]);
+    prisma.space.findFirst = vi.fn(async ({ where }: { where: { id: string } }) => {
+      if (where.id !== "space-credits") return null;
+      return {
+        organization: {
+          modelCredits: { mode: "credits", balanceMicros: 1_000_000n },
+          members: { some: true },
+        },
+      };
+    });
+
+    const keyOptions = {
+      deploymentModelKey: "deployment-key",
+      secrets: { load: prisma.secretsLoad } as never,
+    };
+    const overview = await loadOpsOverview(
+      prisma as never,
+      {},
+      new Date("2026-11-05T17:00:00.000Z"),
+      null,
+      keyOptions,
+    );
+    const agents = await listOpsAgents(prisma as never, keyOptions);
+
+    expect(overview.accounts).toHaveLength(1);
+    expect(overview.accounts[0]?.keyType).toBe("company");
+    expect(agents).toHaveLength(1);
+    expect(agents[0]?.keyType).toBe("company");
+    expect(agents[0]?.keyType).toBe(overview.accounts[0]?.keyType);
+  });
 });

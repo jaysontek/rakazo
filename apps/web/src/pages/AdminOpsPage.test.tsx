@@ -8,6 +8,13 @@ import { createRoot } from "react-dom/client";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
+vi.mock("@lingui/core/macro", () => ({
+  t: (strings: TemplateStringsArray, ...values: unknown[]) =>
+    strings.flatMap((part, index) => [part, values[index] ?? ""]).join(""),
+  plural: (count: number, forms: { one: string; other: string }) =>
+    (count === 1 ? forms.one : forms.other).replace("#", String(count)),
+}));
+
 vi.mock("@lingui/react/macro", () => {
   const t = (strings: TemplateStringsArray, ...values: unknown[]) =>
     strings.flatMap((part, index) => [part, values[index] ?? ""]).join("");
@@ -460,7 +467,7 @@ it("groups agents by owner, shows the orphan group, and filters by owner", async
   );
 });
 
-it("shows an empty state when no agents match", async () => {
+it("shows No agents yet when the roster is empty", async () => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -481,6 +488,49 @@ it("shows an empty state when no agents match", async () => {
     );
   });
   expect(container.querySelector('[data-testid="ops-agents-empty"]')?.textContent).toContain(
-    "No agents match this filter.",
+    "No agents yet",
   );
+});
+
+it("uses email alone in the owner filter when the name is blank", async () => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const nameless: OpsAgent[] = [
+    agentFixture({
+      id: "bot_nameless",
+      name: "Solo",
+      owner: {
+        id: "user_blank",
+        name: "  ",
+        email: "blank@example.test",
+        deactivated: false,
+      },
+    }),
+  ];
+  await act(async () => {
+    root.render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <OpsDashboardView
+            data={overview}
+            onChanged={() => undefined}
+            selected={null as OpsRequestLogRow | null}
+            onSelect={() => undefined}
+            interactive={false}
+            fixtureAgents={nameless}
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+  });
+  const filter = container.querySelector(
+    '[data-testid="ops-agents"] select[aria-label="Filter by owner"]',
+  ) as HTMLSelectElement;
+  const option = Array.from(filter.querySelectorAll("option")).find(
+    (node) => node.value === "user_blank",
+  );
+  expect(option?.textContent).toBe("blank@example.test");
+  expect(option?.textContent).not.toContain("(");
+  expect(container.querySelector('[data-testid="ops-agents"]')?.textContent).toContain("1 agent");
 });

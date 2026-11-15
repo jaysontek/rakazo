@@ -17,6 +17,11 @@ msgstr ""
 msgid " (unread)"
 msgstr "（未読）"
 
+#. placeholder {0}: group.agents.length
+#: src/pages/AdminOpsPage.tsx
+msgid "{0, plural, one {# agent} other {# agents}}"
+msgstr "{0, plural, other {# 件のエージェント}}"
+
 #. placeholder {0}: pinned.length
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "{0, plural, one {# bot has its own model:} other {# bots have their own model:}}"
@@ -95,11 +100,6 @@ msgstr "{0}（{1}を超えています）"
 #: src/lib/cron.ts
 msgid "{0} {unitLabel}"
 msgstr "{0}{unitLabel}"
-
-#. placeholder {0}: group.agents.length
-#: src/pages/AdminOpsPage.tsx
-msgid "{0} agents"
-msgstr "{0} 件のエージェント"
 
 #. placeholder {0}: block.name
 #: src/pages/shell/message-cards.tsx
@@ -743,6 +743,10 @@ msgstr ""
 #: src/pages/AdminOpsPage.tsx
 msgid "Agents"
 msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Agents unavailable"
+msgstr "エージェントを利用できません"
 
 #: src/components/VaultSettings.tsx
 #: src/pages/PluginsOverlay.tsx
@@ -4653,6 +4657,10 @@ msgstr "次の設定セクション"
 #: src/pages/AdminOpsPage.tsx
 msgid "No agents match this filter."
 msgstr "このフィルターに一致するエージェントはありません。"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "No agents yet"
+msgstr "エージェントはまだありません"
 
 #: src/pages/PluginsOverlay.tsx
 msgid "No apps match your search."

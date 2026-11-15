@@ -17,6 +17,11 @@ msgstr ""
 msgid " (unread)"
 msgstr " (непрочитано)"
 
+#. placeholder {0}: group.agents.length
+#: src/pages/AdminOpsPage.tsx
+msgid "{0, plural, one {# agent} other {# agents}}"
+msgstr "{0, plural, one {# агент} few {# агента} many {# агентов} other {# агента}}"
+
 #. placeholder {0}: pinned.length
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "{0, plural, one {# bot has its own model:} other {# bots have their own model:}}"
@@ -95,11 +100,6 @@ msgstr "{0} (более {1})"
 #: src/lib/cron.ts
 msgid "{0} {unitLabel}"
 msgstr "{0} {unitLabel}"
-
-#. placeholder {0}: group.agents.length
-#: src/pages/AdminOpsPage.tsx
-msgid "{0} agents"
-msgstr "{0} агентов"
 
 #. placeholder {0}: block.name
 #: src/pages/shell/message-cards.tsx
@@ -743,6 +743,10 @@ msgstr ""
 #: src/pages/AdminOpsPage.tsx
 msgid "Agents"
 msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Agents unavailable"
+msgstr "Агенты недоступны"
 
 #: src/components/VaultSettings.tsx
 #: src/pages/PluginsOverlay.tsx
@@ -4653,6 +4657,10 @@ msgstr ""
 #: src/pages/AdminOpsPage.tsx
 msgid "No agents match this filter."
 msgstr "Нет агентов, подходящих под этот фильтр."
+
+#: src/pages/AdminOpsPage.tsx
+msgid "No agents yet"
+msgstr "Агентов пока нет"
 
 #: src/pages/PluginsOverlay.tsx
 msgid "No apps match your search."
