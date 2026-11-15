@@ -4,12 +4,15 @@
  * written inside the same locked transaction via appendAuditEventTx.
  */
 import {
+  effectiveSharedKeySpendUsd,
+  maxSharedKeyOverrideAllotmentUsd,
   parseSharedKeyMonthlyBudgetInput,
   parseSharedKeyTimezone,
   resolveSharedKeyPeriodSchedule,
   roundUsdToCents,
   sharedKeyPeriodPoolUsd,
   sharedKeyPeriodStart,
+  type SharedKeyOverrideHeadroomRow,
   type SharedKeyPeriodKind,
 } from "@rakazo/core";
 import {
@@ -29,6 +32,7 @@ import {
   SHARED_KEY_BUDGET_MEMBERS_LOCK,
   type SharedKeyBudgetSettingsRow,
 } from "./shared-key-budget.js";
+import { trackedSharedKeySpendByUser } from "./shared-key-spend.js";
 
 type SettingsPrisma = Pick<
   PrismaClient,
@@ -559,28 +563,46 @@ export async function setSharedKeyMemberOverride(
           `Sum of member overrides (${othersSum + nextOverride}) exceeds the period pool (${pool})`,
         );
       }
-      // Mid-period raises may only consume free headroom (pool − Σ current
-      // allotments). Peers keep their allotments; stacking a raise on top would
-      // over-allot. Decreases always pass and free headroom without raising anyone.
-      // Core redivide also clamps raises as a safety net; this reject is the API contract.
+      // Mid-period raises may only consume free headroom shared with core's last-step
+      // clamp: every period row counts (max(allotment, spent+reserved) on roster,
+      // spent+reserved for removed). Decreases always pass.
       const roster = await tx.sharedKeyBudgetMember.findMany({ select: { userId: true } });
       const rosterIds = new Set(roster.map((row) => row.userId));
       const allotmentRows = await tx.sharedKeyWeekAllotment.findMany({
         where: { weekStart: periodStart },
-        select: { userId: true, allotmentUsd: true },
+        select: {
+          userId: true,
+          allotmentUsd: true,
+          reservedUsd: true,
+          preJoinSpendUsd: true,
+        },
       });
-      let sumAllotments = 0;
-      let currentAllotment = 0;
-      for (const row of allotmentRows) {
-        if (!rosterIds.has(row.userId)) continue;
-        sumAllotments += row.allotmentUsd;
-        if (row.userId === input.userId) currentAllotment = row.allotmentUsd;
-      }
-      const freeHeadroom = Math.max(0, pool - sumAllotments);
-      const maxRaise = currentAllotment + freeHeadroom;
+      const spentByUser = await trackedSharedKeySpendByUser(tx, {
+        userIds: allotmentRows.map((row) => row.userId),
+        since: periodStart,
+        until: now,
+        periodStart,
+      });
+      const headroomRows: SharedKeyOverrideHeadroomRow[] = allotmentRows.map((row) => {
+        const effective = effectiveSharedKeySpendUsd(
+          spentByUser.get(row.userId) ?? 0,
+          row.preJoinSpendUsd,
+        );
+        return {
+          userId: row.userId,
+          allotmentUsd: row.allotmentUsd,
+          floorUsd: effective + row.reservedUsd,
+          onRoster: rosterIds.has(row.userId),
+        };
+      });
+      const maxRaise = maxSharedKeyOverrideAllotmentUsd({
+        periodPoolUsd: pool,
+        userId: input.userId,
+        rows: headroomRows,
+      });
       if (nextOverride > maxRaise + 1e-9) {
         throw new Error(
-          `Override raise exceeds free headroom (requested ${nextOverride}, max ${roundUsdToCents(maxRaise)} with pool ${pool} and current allotments ${roundUsdToCents(sumAllotments)})`,
+          `Override raise exceeds free headroom (requested ${nextOverride}, max ${roundUsdToCents(maxRaise)} with pool ${pool})`,
         );
       }
       await tx.sharedKeyMemberOverride.upsert({

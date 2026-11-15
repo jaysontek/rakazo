@@ -285,6 +285,142 @@ export function effectiveSharedKeySpendUsd(mondaySpendUsd: number, preJoinSpendU
 export type SharedKeyBudgetMember = { userId: string; joinedAt: Date };
 
 /**
+ * One period allotment row for override headroom accounting.
+ * Current roster members contribute max(allotment, floor); removed rows contribute floor only.
+ */
+export type SharedKeyOverrideHeadroomRow = {
+  userId: string;
+  allotmentUsd: number;
+  /** spent+reserved (effective) already committed against the pool. */
+  floorUsd: number;
+  onRoster: boolean;
+};
+
+/**
+ * Period pool usage for override raise checks: every period row counts.
+ * Roster members use max(allotment, floor); removed members use floor only.
+ */
+export function sharedKeyPeriodPoolUsageUsd(
+  rows: ReadonlyArray<SharedKeyOverrideHeadroomRow>,
+): number {
+  let usage = 0;
+  for (const row of rows) {
+    const floor = Math.max(0, row.floorUsd);
+    const allotment = Math.max(0, row.allotmentUsd);
+    usage += row.onRoster ? Math.max(allotment, floor) : floor;
+  }
+  return usage;
+}
+
+/**
+ * Max absolute override allotment `userId` may hold without overspending the pool.
+ * Free headroom = pool − usage; the raise may consume free on top of that user's
+ * current contribution (max(allotment, floor) while on roster).
+ *
+ * Used by both the ops write check and mid-period redivide's last-step clamp.
+ */
+export function maxSharedKeyOverrideAllotmentUsd(args: {
+  periodPoolUsd: number;
+  userId: string;
+  rows: ReadonlyArray<SharedKeyOverrideHeadroomRow>;
+}): number {
+  const pool = args.periodPoolUsd;
+  if (!(pool > 0) || !Number.isFinite(pool)) return 0;
+  const usage = sharedKeyPeriodPoolUsageUsd(args.rows);
+  const free = Math.max(0, pool - usage);
+  const self = args.rows.find((row) => row.userId === args.userId && row.onRoster);
+  const contribution = self ? Math.max(Math.max(0, self.allotmentUsd), Math.max(0, self.floorUsd)) : 0;
+  return contribution + free;
+}
+
+/**
+ * Clamp requested override allotments using {@link maxSharedKeyOverrideAllotmentUsd}.
+ * Decreases apply in full (and free headroom for later raises in the same batch);
+ * raises only consume remaining free headroom. Call as the LAST step of mid-period
+ * redivision after non-override members (including joiners) are assigned.
+ */
+export function clampSharedKeyOverrideRaises(args: {
+  periodPoolUsd: number;
+  /** Non-override current members' newly assigned allotments (joiners included). */
+  nonOverrideAllotments: ReadonlyMap<string, number>;
+  /** Floors for current non-override members. */
+  nonOverrideFloors: ReadonlyMap<string, number>;
+  /** Removed period holders: spent+reserved still charging the pool. */
+  removedFloors: ReadonlyMap<string, number>;
+  /** Override targets still on the roster: previous allotment, floor, requested amount. */
+  overrides: ReadonlyArray<{
+    userId: string;
+    previousAllotmentUsd: number;
+    floorUsd: number;
+    requestedUsd: number;
+  }>;
+}): Map<string, number> {
+  const result = new Map<string, number>();
+  const rows: SharedKeyOverrideHeadroomRow[] = [];
+  for (const [userId, allotmentUsd] of args.nonOverrideAllotments) {
+    rows.push({
+      userId,
+      allotmentUsd,
+      floorUsd: args.nonOverrideFloors.get(userId) ?? 0,
+      onRoster: true,
+    });
+  }
+  for (const [userId, floorUsd] of args.removedFloors) {
+    rows.push({ userId, allotmentUsd: floorUsd, floorUsd, onRoster: false });
+  }
+
+  const pending: Array<{
+    userId: string;
+    previousAllotmentUsd: number;
+    floorUsd: number;
+    requestedUsd: number;
+    rowIndex: number;
+  }> = [];
+
+  for (const target of args.overrides) {
+    const previous = Math.max(0, target.previousAllotmentUsd);
+    const requested = Math.max(0, target.requestedUsd);
+    const floorUsd = Math.max(0, target.floorUsd);
+    if (requested <= previous + 1e-12) {
+      result.set(target.userId, requested);
+      rows.push({
+        userId: target.userId,
+        allotmentUsd: requested,
+        floorUsd,
+        onRoster: true,
+      });
+      continue;
+    }
+    const rowIndex = rows.length;
+    rows.push({
+      userId: target.userId,
+      allotmentUsd: previous,
+      floorUsd,
+      onRoster: true,
+    });
+    pending.push({ ...target, previousAllotmentUsd: previous, floorUsd, requestedUsd: requested, rowIndex });
+  }
+
+  for (const target of pending) {
+    const maxAllowed = maxSharedKeyOverrideAllotmentUsd({
+      periodPoolUsd: args.periodPoolUsd,
+      userId: target.userId,
+      rows,
+    });
+    const clamped = Math.min(target.requestedUsd, maxAllowed);
+    result.set(target.userId, clamped);
+    rows[target.rowIndex] = {
+      userId: target.userId,
+      allotmentUsd: clamped,
+      floorUsd: target.floorUsd,
+      onRoster: true,
+    };
+  }
+
+  return result;
+}
+
+/**
  * Recompute each member's weekly allotment after a membership change or at week open.
  *
  * - Fresh week (no prior rows): each member gets monthlyCap/4/n, join-time pro-rated.
@@ -401,34 +537,80 @@ export function redivideWeeklyAllotments(args: {
       : fullShare;
   };
 
-  /**
-   * Apply override ceilings. Mid-period (no rebase): an increase may only consume
-   * free pool headroom (pool − Σ current allotments of active members). Raises
-   * beyond that are clamped so sum(allotments) never exceeds the pool; decreases
-   * apply in full. Callers that write overrides also reject raises past this
-   * bound (BAD_REQUEST) — clamp here is the safety net for redivide itself.
-   */
-  const applyOverrides = (opts?: { clampRaisesToHeadroom?: boolean }) => {
-    if (!opts?.clampRaisesToHeadroom) {
-      for (const [userId, amount] of overrides) {
-        result.set(userId, amount);
-      }
-      return;
-    }
-    let free = Math.max(
-      0,
-      periodPool -
-        members.reduce((sum, member) => sum + (previousAllotments.get(member.userId) ?? 0), 0),
-    );
+  /** Absolute overrides for fresh/rebase paths; never cut a member below their floor. */
+  const applyOverridesAbsolute = () => {
     for (const [userId, amount] of overrides) {
-      const prev = previousAllotments.get(userId) ?? 0;
-      if (amount > prev) {
-        const allowed = Math.min(amount - prev, free);
-        free -= allowed;
-        result.set(userId, prev + allowed);
-      } else {
-        result.set(userId, amount);
-      }
+      result.set(userId, Math.max(amount, floorOf(userId)));
+    }
+  };
+
+  /**
+   * When floors fit in the pool but allotments above floors would make
+   * spendable (active max(allotment,floor) + removed floors) exceed it, trim
+   * the headroom proportionally. If floors alone exceed the pool, leave as-is
+   * (cap-cut-below-committed exception).
+   */
+  const tightenSpendableToPool = () => {
+    let removedFloorSum = 0;
+    for (const [userId] of previousAllotments) {
+      if (memberIds.has(userId)) continue;
+      removedFloorSum += floorOf(userId);
+    }
+    let activeSpendable = 0;
+    let activeFloorSum = 0;
+    for (const [userId, allotment] of result) {
+      const floor = floorOf(userId);
+      activeFloorSum += floor;
+      activeSpendable += Math.max(allotment, floor);
+    }
+    const totalSpendable = activeSpendable + removedFloorSum;
+    if (totalSpendable <= periodPool + 1e-9) return;
+    if (activeFloorSum + removedFloorSum > periodPool + 1e-9) return;
+    const excess = totalSpendable - periodPool;
+    const above = [...result.entries()]
+      .map(([userId, allotment]) => {
+        const floor = floorOf(userId);
+        return { userId, allotment, floor, head: Math.max(0, allotment - floor) };
+      })
+      .filter((row) => row.head > 0);
+    const headSum = above.reduce((sum, row) => sum + row.head, 0);
+    if (!(headSum > 0)) return;
+    for (const row of above) {
+      result.set(row.userId, row.allotment - (excess * row.head) / headSum);
+    }
+  };
+
+  /**
+   * Mid-period last step: clamp override raises with {@link clampSharedKeyOverrideRaises}
+   * so free headroom accounts for joiners already funded and removed members' floors.
+   * Write-time checks use {@link maxSharedKeyOverrideAllotmentUsd} on the same basis.
+   */
+  const applyOverridesClampedToHeadroom = () => {
+    const nonOverrideAllotments = new Map<string, number>();
+    const nonOverrideFloors = new Map<string, number>();
+    for (const member of remainderMembers) {
+      nonOverrideAllotments.set(member.userId, result.get(member.userId) ?? 0);
+      nonOverrideFloors.set(member.userId, floorOf(member.userId));
+    }
+    const removedFloors = new Map<string, number>();
+    for (const [userId] of previousAllotments) {
+      if (memberIds.has(userId)) continue;
+      removedFloors.set(userId, floorOf(userId));
+    }
+    const clamped = clampSharedKeyOverrideRaises({
+      periodPoolUsd: periodPool,
+      nonOverrideAllotments,
+      nonOverrideFloors,
+      removedFloors,
+      overrides: [...overrides.entries()].map(([userId, requestedUsd]) => ({
+        userId,
+        previousAllotmentUsd: previousAllotments.get(userId) ?? 0,
+        floorUsd: floorOf(userId),
+        requestedUsd,
+      })),
+    });
+    for (const [userId, amount] of clamped) {
+      result.set(userId, Math.max(amount, floorOf(userId)));
     }
   };
 
@@ -437,7 +619,8 @@ export function redivideWeeklyAllotments(args: {
     for (const member of remainderMembers) {
       result.set(member.userId, shareOf(member));
     }
-    applyOverrides();
+    applyOverridesAbsolute();
+    tightenSpendableToPool();
     return result;
   }
 
@@ -477,13 +660,15 @@ export function redivideWeeklyAllotments(args: {
         result.set(row.member.userId, row.floor);
       }
     }
-    applyOverrides();
+    // Cap edit: apply overrides in full (cutting others is OK) but never below floor.
+    applyOverridesAbsolute();
+    tightenSpendableToPool();
     return result;
   }
 
   // Never raise a continuing non-override member; joiners are funded only from headroom.
-  // Override holders get their absolute amount; lowering one frees only the unused gap
-  // (previous allotment − max(override, floor)) into joiner funding — never raises peers.
+  // Override holders are applied last via headroom clamp; lowering one frees only the
+  // unused gap into joiner funding — never raises peers.
   const headroom = new Map<string, number>();
   let freed = 0;
   for (const [userId, allotment] of previousAllotments) {
@@ -522,7 +707,8 @@ export function redivideWeeklyAllotments(args: {
     result.set(userId, Math.min(prev, spent + reserved + head - take));
   }
 
-  applyOverrides({ clampRaisesToHeadroom: true });
+  applyOverridesClampedToHeadroom();
+  tightenSpendableToPool();
   return result;
 }
 

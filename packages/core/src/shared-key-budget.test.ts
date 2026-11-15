@@ -1,11 +1,13 @@
 import * as fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
+  clampSharedKeyOverrideRaises,
   DEFAULT_SHARED_KEY_PERIOD_SCHEDULE,
   effectiveSharedKeyPeriodStart,
   effectiveSharedKeySpendUsd,
   formatSharedKeyBudgetResetAt,
   fullWeekShareUsd,
+  maxSharedKeyOverrideAllotmentUsd,
   midWeekJoinFraction,
   parseSharedKeyMonthlyBudgetInput,
   parseSharedKeyTimezone,
@@ -19,6 +21,7 @@ import {
   sharedKeyWeekEnd,
   sharedKeyWeekStart,
   weekFractionRemaining,
+  type SharedKeyPeriodKind,
   type SharedKeyPeriodSchedule,
 } from "./shared-key-budget.js";
 
@@ -704,7 +707,8 @@ describe("shared-key period schedule math", () => {
       overrides: new Map([["x", 10]]),
       rebaseOnMonthlyCap: true,
     });
-    expect(allotments.get("x")).toBe(10);
+    // Override request $10 but spent $50 → allotment stays at the floor.
+    expect(allotments.get("x")).toBe(50);
     // Remainder pool is 100 − max(10, 50) = 50 → $25 each, not $45.
     expect(allotments.get("a")).toBeCloseTo(25, 5);
     expect(allotments.get("b")).toBeCloseTo(25, 5);
@@ -859,9 +863,161 @@ describe("shared-key period schedule math", () => {
     }
   });
 
+  it("clamps raise after remove when removed spent still charges the pool (repro a)", () => {
+    const weekStart = new Date("2026-11-02T05:00:00.000Z");
+    const mid = new Date("2026-11-05T12:00:00.000Z");
+    const previous = new Map([
+      ["x", 33.33],
+      ["a", 33.33],
+      ["r", 33.34],
+    ]);
+    const spent = new Map([["r", 30]]);
+    const allotments = redivideWeeklyAllotments({
+      monthlyCapUsd: 400,
+      members: [
+        { userId: "x", joinedAt: weekStart },
+        { userId: "a", joinedAt: weekStart },
+      ],
+      weekStart,
+      now: mid,
+      previousAllotments: previous,
+      spentByUser: spent,
+      overrides: new Map([["x", 66]]),
+      rebaseOnMonthlyCap: false,
+    });
+    expect(allotments.get("x")!).toBeLessThan(66);
+    const spendable =
+      Math.max(allotments.get("x") ?? 0, 0) + Math.max(allotments.get("a") ?? 0, 0) + 30;
+    expect(spendable).toBeLessThanOrEqual(100 + 1e-9);
+    const max = maxSharedKeyOverrideAllotmentUsd({
+      periodPoolUsd: 100,
+      userId: "x",
+      rows: [
+        { userId: "x", allotmentUsd: 33.33, floorUsd: 0, onRoster: true },
+        { userId: "a", allotmentUsd: 33.33, floorUsd: 0, onRoster: true },
+        { userId: "r", allotmentUsd: 30, floorUsd: 30, onRoster: false },
+      ],
+    });
+    expect(66).toBeGreaterThan(max + 1e-9);
+  });
+
+  it("clamps raise after remove+join so joiner-funded headroom is not double-counted (repro b)", () => {
+    const weekStart = new Date("2026-11-02T05:00:00.000Z");
+    const mid = new Date("2026-11-05T12:00:00.000Z");
+    const previous = new Map([
+      ["x", 33.33],
+      ["a", 33.33],
+      ["r", 33.34],
+    ]);
+    const allotments = redivideWeeklyAllotments({
+      monthlyCapUsd: 400,
+      members: [
+        { userId: "x", joinedAt: weekStart },
+        { userId: "a", joinedAt: weekStart },
+        { userId: "j", joinedAt: mid },
+      ],
+      weekStart,
+      now: mid,
+      previousAllotments: previous,
+      spentByUser: new Map(),
+      overrides: new Map([["x", 66]]),
+      rebaseOnMonthlyCap: false,
+    });
+    const sum = [...allotments.values()].reduce((acc, v) => acc + v, 0);
+    expect(sum).toBeLessThanOrEqual(100 + 1e-9);
+    expect(allotments.get("x")!).toBeLessThan(66);
+  });
+
+  it("clamps raise after join when the joiner already consumed free headroom", () => {
+    const weekStart = new Date("2026-11-02T05:00:00.000Z");
+    const mid = new Date("2026-11-05T12:00:00.000Z");
+    const previous = new Map([
+      ["x", 40],
+      ["a", 40],
+      ["b", 20],
+    ]);
+    const allotments = redivideWeeklyAllotments({
+      monthlyCapUsd: 400,
+      members: [
+        { userId: "x", joinedAt: weekStart },
+        { userId: "a", joinedAt: weekStart },
+        { userId: "b", joinedAt: weekStart },
+        { userId: "j", joinedAt: mid },
+      ],
+      weekStart,
+      now: mid,
+      previousAllotments: previous,
+      spentByUser: new Map(),
+      overrides: new Map([["x", 70]]),
+      rebaseOnMonthlyCap: false,
+    });
+    const sum = [...allotments.values()].reduce((acc, v) => acc + v, 0);
+    expect(sum).toBeLessThanOrEqual(100 + 1e-9);
+  });
+
+  it("clamps raise after remove when removed reserved still charges the pool", () => {
+    const weekStart = new Date("2026-11-02T05:00:00.000Z");
+    const mid = new Date("2026-11-05T12:00:00.000Z");
+    const previous = new Map([
+      ["x", 33.33],
+      ["a", 33.33],
+      ["r", 33.34],
+    ]);
+    const allotments = redivideWeeklyAllotments({
+      monthlyCapUsd: 400,
+      members: [
+        { userId: "x", joinedAt: weekStart },
+        { userId: "a", joinedAt: weekStart },
+      ],
+      weekStart,
+      now: mid,
+      previousAllotments: previous,
+      spentByUser: new Map(),
+      reservedByUser: new Map([["r", 20]]),
+      overrides: new Map([["x", 66]]),
+      rebaseOnMonthlyCap: false,
+    });
+    const spendable =
+      Math.max(allotments.get("x") ?? 0, 0) + Math.max(allotments.get("a") ?? 0, 0) + 20;
+    expect(spendable).toBeLessThanOrEqual(100 + 1e-9);
+  });
+
+  it("rebase applies overrides in full but never cuts a member below spent+reserved", () => {
+    const weekStart = new Date("2026-11-02T05:00:00.000Z");
+    const mid = new Date("2026-11-05T12:00:00.000Z");
+    const allotments = redivideWeeklyAllotments({
+      monthlyCapUsd: 200, // week pool 50
+      members: [
+        { userId: "x", joinedAt: weekStart },
+        { userId: "a", joinedAt: weekStart },
+        { userId: "b", joinedAt: weekStart },
+      ],
+      weekStart,
+      now: mid,
+      previousAllotments: new Map([
+        ["x", 40],
+        ["a", 40],
+        ["b", 20],
+      ]),
+      spentByUser: new Map([
+        ["x", 25],
+        ["a", 10],
+        ["b", 5],
+      ]),
+      overrides: new Map([["x", 30]]),
+      rebaseOnMonthlyCap: true,
+    });
+    expect(allotments.get("x")!).toBeGreaterThanOrEqual(25 - 1e-9);
+    expect(allotments.get("a")!).toBeGreaterThanOrEqual(10 - 1e-9);
+    expect(allotments.get("b")!).toBeGreaterThanOrEqual(5 - 1e-9);
+    const spendable = [...allotments.entries()].reduce((sum, [userId, allotment]) => {
+      const spent = userId === "x" ? 25 : userId === "a" ? 10 : 5;
+      return sum + Math.max(allotment, spent);
+    }, 0);
+    expect(spendable).toBeLessThanOrEqual(50 + 1e-9);
+  });
+
   it("scales overcommitted overrides against pool minus others' committed (N6)", () => {
-    // Pool $50. Non-override b has spent+reserved $20. Overrides a+c want $60 total.
-    // Available for overrides = 50 − 20 = 30 → scale 30/60.
     const weekStart = new Date("2026-11-02T05:00:00.000Z");
     const allotments = redivideWeeklyAllotments({
       monthlyCapUsd: 200, // week pool 50
@@ -881,7 +1037,7 @@ describe("shared-key period schedule math", () => {
     });
     expect(allotments.get("a")).toBeCloseTo(20, 5);
     expect(allotments.get("c")).toBeCloseTo(10, 5);
-    expect(allotments.get("b")).toBeCloseTo(20, 5); // floor of spent
+    expect(allotments.get("b")).toBeCloseTo(20, 5);
     const sum = [...allotments.values()].reduce((acc, v) => acc + v, 0);
     expect(sum).toBeLessThanOrEqual(50 + 1e-9);
     const spendable = [...allotments.entries()].reduce((acc, [userId, allotment]) => {
@@ -891,38 +1047,98 @@ describe("shared-key period schedule math", () => {
     expect(spendable).toBeLessThanOrEqual(50 + 1e-9);
   });
 
-  it("property: random ops keep allotment sum ≤ pool and the spendable bound", () => {
+  it("proves the old roster-only headroom formula allows repro (a) while the fix rejects it", () => {
+    const pool = 100;
+    const rosterAllot = 33.33 + 33.33;
+    const oldMax = 33.33 + Math.max(0, pool - rosterAllot);
+    expect(oldMax).toBeGreaterThan(66);
+    const newMax = maxSharedKeyOverrideAllotmentUsd({
+      periodPoolUsd: pool,
+      userId: "x",
+      rows: [
+        { userId: "x", allotmentUsd: 33.33, floorUsd: 0, onRoster: true },
+        { userId: "a", allotmentUsd: 33.33, floorUsd: 0, onRoster: true },
+        { userId: "r", allotmentUsd: 30, floorUsd: 30, onRoster: false },
+      ],
+    });
+    expect(newMax).toBeLessThan(66);
+    const clamped = clampSharedKeyOverrideRaises({
+      periodPoolUsd: pool,
+      nonOverrideAllotments: new Map([
+        ["a", 33.33],
+        ["j", 33.34],
+      ]),
+      nonOverrideFloors: new Map([
+        ["a", 0],
+        ["j", 0],
+      ]),
+      removedFloors: new Map([["r", 0]]),
+      overrides: [{ userId: "x", previousAllotmentUsd: 33.33, floorUsd: 0, requestedUsd: 66 }],
+    });
+    expect(clamped.get("x")!).toBeLessThanOrEqual(33.33 + 1e-9);
+  });
+
+  describe("property: shared-key allotment invariants", () => {
+    const PROPERTY_SEED = 0x5a7eb003;
     const weekStart = new Date("2026-11-02T05:00:00.000Z");
-    const periodEnd = sharedKeyWeekEnd(weekStart);
     const mid = new Date("2026-11-05T12:00:00.000Z");
     const ids = ["a", "b", "c", "d"] as const;
 
     type Sim = {
       monthlyCapUsd: number;
+      period: SharedKeyPeriodKind;
       members: Map<string, Date>;
       allotments: Map<string, number>;
       spent: Map<string, number>;
       reserved: Map<string, number>;
       overrides: Map<string, number>;
+      capCutBelowCommitted: boolean;
     };
 
-    const poolOf = (monthly: number) => sharedKeyPeriodPoolUsd(monthly, "week");
+    const poolOf = (monthly: number, period: SharedKeyPeriodKind) =>
+      sharedKeyPeriodPoolUsd(monthly, period);
+
+    const periodEndOf = (period: SharedKeyPeriodKind) =>
+      period === "month"
+        ? sharedKeyPeriodEnd(
+            {
+              period: "month",
+              resetDow: 1,
+              resetDom: 1,
+              resetMinutes: 0,
+              timezone: SHARED_KEY_BUDGET_TIMEZONE,
+            },
+            weekStart,
+          )
+        : sharedKeyWeekEnd(weekStart);
+
+    const spendableOf = (sim: Sim) => {
+      let sum = 0;
+      for (const [userId, allotment] of sim.allotments) {
+        const floor = (sim.spent.get(userId) ?? 0) + (sim.reserved.get(userId) ?? 0);
+        if (sim.members.has(userId)) sum += Math.max(allotment, floor);
+        else sum += floor;
+      }
+      return sum;
+    };
 
     const assertBounds = (sim: Sim) => {
-      const pool = poolOf(sim.monthlyCapUsd);
-      const memberIds = [...sim.members.keys()];
-      const sumAllot = memberIds.reduce((sum, id) => sum + (sim.allotments.get(id) ?? 0), 0);
-      expect(sumAllot).toBeLessThanOrEqual(pool + 1e-6);
-
-      let sumSpendable = 0;
-      let sumCommitted = 0;
-      for (const id of memberIds) {
-        const allotment = sim.allotments.get(id) ?? 0;
-        const committed = (sim.spent.get(id) ?? 0) + (sim.reserved.get(id) ?? 0);
-        sumSpendable += Math.max(allotment, committed);
-        sumCommitted += committed;
+      const pool = poolOf(sim.monthlyCapUsd, sim.period);
+      const spendable = spendableOf(sim);
+      if (sim.capCutBelowCommitted) {
+        for (const [userId, allotment] of sim.allotments) {
+          if (!sim.members.has(userId)) continue;
+          const floor = (sim.spent.get(userId) ?? 0) + (sim.reserved.get(userId) ?? 0);
+          expect(allotment).toBeLessThanOrEqual(floor + 1e-6);
+        }
+        return;
       }
-      expect(sumSpendable).toBeLessThanOrEqual(Math.max(pool, sumCommitted) + 1e-6);
+      expect(spendable).toBeLessThanOrEqual(pool + 1e-6);
+      const sumAllot = [...sim.members.keys()].reduce(
+        (sum, id) => sum + (sim.allotments.get(id) ?? 0),
+        0,
+      );
+      expect(sumAllot).toBeLessThanOrEqual(pool + 1e-6);
     };
 
     const redivide = (sim: Sim, rebaseOnMonthlyCap: boolean) => {
@@ -930,20 +1146,39 @@ describe("shared-key period schedule math", () => {
         userId,
         joinedAt,
       }));
+      const previousAllotments = new Map(sim.allotments);
       const next = redivideWeeklyAllotments({
         monthlyCapUsd: sim.monthlyCapUsd,
         members,
         weekStart,
         now: mid,
-        previousAllotments: new Map(sim.allotments),
+        previousAllotments,
         spentByUser: new Map(sim.spent),
         reservedByUser: new Map(sim.reserved),
         overrides: new Map(sim.overrides),
         rebaseOnMonthlyCap,
-        period: "week",
-        periodEnd,
+        period: sim.period,
+        periodEnd: periodEndOf(sim.period),
       });
-      sim.allotments = next;
+      const merged = new Map<string, number>();
+      for (const [userId, allotment] of next) merged.set(userId, allotment);
+      for (const [userId] of previousAllotments) {
+        if (sim.members.has(userId)) continue;
+        const floor = (sim.spent.get(userId) ?? 0) + (sim.reserved.get(userId) ?? 0);
+        merged.set(userId, floor);
+      }
+      sim.allotments = merged;
+    };
+
+    const maxRaiseFor = (sim: Sim, userId: string) => {
+      const pool = poolOf(sim.monthlyCapUsd, sim.period);
+      const rows = [...sim.allotments.entries()].map(([id, allotmentUsd]) => ({
+        userId: id,
+        allotmentUsd,
+        floorUsd: (sim.spent.get(id) ?? 0) + (sim.reserved.get(id) ?? 0),
+        onRoster: sim.members.has(id),
+      }));
+      return maxSharedKeyOverrideAllotmentUsd({ periodPoolUsd: pool, userId, rows });
     };
 
     const commandArb = fc.oneof(
@@ -959,6 +1194,10 @@ describe("shared-key period schedule math", () => {
       fc.record({
         kind: fc.constant("cap" as const),
         monthly: fc.constantFrom(100, 200, 400, 800),
+      }),
+      fc.record({
+        kind: fc.constant("period" as const),
+        period: fc.constantFrom("week" as const, "month" as const),
       }),
       fc.record({
         kind: fc.constant("join" as const),
@@ -980,109 +1219,160 @@ describe("shared-key period schedule math", () => {
       }),
     );
 
-    fc.assert(
-      fc.property(fc.array(commandArb, { minLength: 8, maxLength: 40 }), (commands) => {
-        const sim: Sim = {
-          monthlyCapUsd: 400,
-          members: new Map(ids.slice(0, 3).map((id) => [id, weekStart])),
-          allotments: new Map(),
-          spent: new Map(),
-          reserved: new Map(),
-          overrides: new Map(),
-        };
-        redivide(sim, true);
-        assertBounds(sim);
+    function runCommands(
+      commands: Array<{
+        kind: string;
+        user?: string;
+        amount?: number;
+        monthly?: number;
+        period?: SharedKeyPeriodKind;
+      }>,
+      mode: "api-filtered" | "raw-core",
+    ) {
+      const sim: Sim = {
+        monthlyCapUsd: 400,
+        period: "week",
+        members: new Map(ids.slice(0, 3).map((id) => [id, weekStart])),
+        allotments: new Map(),
+        spent: new Map(),
+        reserved: new Map(),
+        overrides: new Map(),
+        capCutBelowCommitted: false,
+      };
+      redivide(sim, true);
+      assertBounds(sim);
 
-        for (const cmd of commands) {
-          switch (cmd.kind) {
-            case "override": {
-              if (!sim.members.has(cmd.user)) break;
-              const pool = poolOf(sim.monthlyCapUsd);
-              const othersSum = [...sim.overrides.entries()]
-                .filter(([id]) => id !== cmd.user)
-                .reduce((sum, [, v]) => sum + v, 0);
-              if (othersSum + cmd.amount > pool) break;
-              const sumAllot = [...sim.members.keys()].reduce(
-                (sum, id) => sum + (sim.allotments.get(id) ?? 0),
-                0,
-              );
-              const current = sim.allotments.get(cmd.user) ?? 0;
-              const free = Math.max(0, pool - sumAllot);
-              if (cmd.amount > current + free + 1e-9) break; // API reject
-              sim.overrides.set(cmd.user, cmd.amount);
-              redivide(sim, false);
-              break;
+      for (const cmd of commands) {
+        switch (cmd.kind) {
+          case "override": {
+            if (!cmd.user || !sim.members.has(cmd.user)) break;
+            const pool = poolOf(sim.monthlyCapUsd, sim.period);
+            const othersSum = [...sim.overrides.entries()]
+              .filter(([id]) => id !== cmd.user)
+              .reduce((sum, [, v]) => sum + v, 0);
+            const amount = cmd.amount ?? 0;
+            if (othersSum + amount > pool) break;
+            if (mode === "api-filtered") {
+              const maxRaise = maxRaiseFor(sim, cmd.user);
+              if (amount > maxRaise + 1e-9) break;
             }
-            case "clearOverride": {
-              sim.overrides.delete(cmd.user);
-              if (sim.members.has(cmd.user)) redivide(sim, false);
-              break;
-            }
-            case "cap": {
-              const pool = poolOf(cmd.monthly);
-              const overrideSum = [...sim.overrides.values()].reduce((sum, v) => sum + v, 0);
-              if (overrideSum > pool) break;
-              // Cutting the pool below already-committed spend would force allotment
-              // floors above the pool; skip those ops so the invariants stay meaningful.
-              const committed = [...sim.members.keys()].reduce((sum, id) => {
-                return sum + (sim.spent.get(id) ?? 0) + (sim.reserved.get(id) ?? 0);
-              }, 0);
-              if (committed > pool + 1e-9) break;
-              sim.monthlyCapUsd = cmd.monthly;
-              redivide(sim, true);
-              break;
-            }
-            case "join": {
-              if (sim.members.has(cmd.user)) break;
-              sim.members.set(cmd.user, mid);
-              redivide(sim, false);
-              break;
-            }
-            case "prune": {
-              if (!sim.members.has(cmd.user) || sim.members.size <= 1) break;
-              // Keep prior allotment/spent in the maps through redivide so freed
-              // headroom returns to the pool, then drop the ledger so a later
-              // re-join is a true new member (same-week re-add is not modeled).
-              const priorAllotments = new Map(sim.allotments);
-              const priorSpent = new Map(sim.spent);
-              const priorReserved = new Map(sim.reserved);
-              sim.members.delete(cmd.user);
-              sim.overrides.delete(cmd.user);
-              sim.allotments = priorAllotments;
-              sim.spent = priorSpent;
-              sim.reserved = priorReserved;
-              redivide(sim, false);
-              sim.spent.delete(cmd.user);
-              sim.reserved.delete(cmd.user);
-              break;
-            }
-            case "spend": {
-              if (!sim.members.has(cmd.user)) break;
-              const allotment = sim.allotments.get(cmd.user) ?? 0;
-              const spent = sim.spent.get(cmd.user) ?? 0;
-              const reserved = sim.reserved.get(cmd.user) ?? 0;
-              const room = Math.max(0, allotment - spent - reserved);
-              const delta = Math.min(cmd.amount, room);
-              if (delta <= 0) break;
-              sim.spent.set(cmd.user, spent + delta);
-              break;
-            }
-            case "reserve": {
-              if (!sim.members.has(cmd.user)) break;
-              const allotment = sim.allotments.get(cmd.user) ?? 0;
-              const spent = sim.spent.get(cmd.user) ?? 0;
-              const reserved = sim.reserved.get(cmd.user) ?? 0;
-              const room = Math.max(0, allotment - spent - reserved);
-              const delta = Math.min(cmd.amount, room);
-              if (delta <= 0) break;
-              sim.reserved.set(cmd.user, reserved + delta);
-              break;
-            }
+            sim.overrides.set(cmd.user, amount);
+            redivide(sim, false);
+            break;
           }
-          assertBounds(sim);
+          case "clearOverride": {
+            if (!cmd.user) break;
+            sim.overrides.delete(cmd.user);
+            redivide(sim, false);
+            break;
+          }
+          case "cap": {
+            if (cmd.monthly == null) break;
+            const pool = poolOf(cmd.monthly, sim.period);
+            const overrideSum = [...sim.overrides.values()].reduce((sum, v) => sum + v, 0);
+            if (overrideSum > pool) break;
+            const committed = [...sim.allotments.keys()].reduce((sum, id) => {
+              return sum + (sim.spent.get(id) ?? 0) + (sim.reserved.get(id) ?? 0);
+            }, 0);
+            sim.capCutBelowCommitted = committed > pool + 1e-9;
+            sim.monthlyCapUsd = cmd.monthly;
+            redivide(sim, true);
+            break;
+          }
+          case "period": {
+            if (!cmd.period) break;
+            const pool = poolOf(sim.monthlyCapUsd, cmd.period);
+            const overrideSum = [...sim.overrides.values()].reduce((sum, v) => sum + v, 0);
+            if (overrideSum > pool) break;
+            const committed = [...sim.allotments.keys()].reduce((sum, id) => {
+              return sum + (sim.spent.get(id) ?? 0) + (sim.reserved.get(id) ?? 0);
+            }, 0);
+            sim.capCutBelowCommitted = committed > pool + 1e-9;
+            sim.period = cmd.period;
+            redivide(sim, true);
+            break;
+          }
+          case "join": {
+            if (!cmd.user || sim.members.has(cmd.user)) break;
+            sim.members.set(cmd.user, mid);
+            redivide(sim, false);
+            break;
+          }
+          case "prune": {
+            if (!cmd.user || !sim.members.has(cmd.user) || sim.members.size <= 1) break;
+            sim.members.delete(cmd.user);
+            sim.overrides.delete(cmd.user);
+            redivide(sim, false);
+            break;
+          }
+          case "spend": {
+            if (!cmd.user || !sim.members.has(cmd.user)) break;
+            const allotment = sim.allotments.get(cmd.user) ?? 0;
+            const spent = sim.spent.get(cmd.user) ?? 0;
+            const reserved = sim.reserved.get(cmd.user) ?? 0;
+            const room = Math.max(0, allotment - spent - reserved);
+            const delta = Math.min(cmd.amount ?? 0, room);
+            if (delta <= 0) break;
+            sim.spent.set(cmd.user, spent + delta);
+            break;
+          }
+          case "reserve": {
+            if (!cmd.user || !sim.members.has(cmd.user)) break;
+            const allotment = sim.allotments.get(cmd.user) ?? 0;
+            const spent = sim.spent.get(cmd.user) ?? 0;
+            const reserved = sim.reserved.get(cmd.user) ?? 0;
+            const room = Math.max(0, allotment - spent - reserved);
+            const delta = Math.min(cmd.amount ?? 0, room);
+            if (delta <= 0) break;
+            sim.reserved.set(cmd.user, reserved + delta);
+            break;
+          }
         }
-      }),
-      { numRuns: 100 },
-    );
+        const pool = poolOf(sim.monthlyCapUsd, sim.period);
+        const floorsSum = [...sim.allotments.keys()].reduce((sum, id) => {
+          return sum + (sim.spent.get(id) ?? 0) + (sim.reserved.get(id) ?? 0);
+        }, 0);
+        if (floorsSum > pool + 1e-9) {
+          sim.capCutBelowCommitted = true;
+          // Cap-cut exception: no allotment may exceed that member's spent+reserved.
+          for (const [userId, allotment] of [...sim.allotments.entries()]) {
+            if (!sim.members.has(userId)) continue;
+            const floor = (sim.spent.get(userId) ?? 0) + (sim.reserved.get(userId) ?? 0);
+            if (allotment > floor) sim.allotments.set(userId, floor);
+          }
+        } else if (spendableOf(sim) <= pool + 1e-9) {
+          sim.capCutBelowCommitted = false;
+        }
+        assertBounds(sim);
+      }
+    }
+
+    it("API-filtered raises keep spendable ≤ pool (fixed seed, ≥2000 steps)", () => {
+      try {
+        fc.assert(
+          fc.property(fc.array(commandArb, { minLength: 40, maxLength: 80 }), (commands) => {
+            runCommands(commands, "api-filtered");
+          }),
+          { seed: PROPERTY_SEED, numRuns: 50, endOnFailure: true },
+        );
+      } catch (error) {
+        console.error(`shared-key property (api-filtered) failed with seed ${PROPERTY_SEED}`);
+        throw error;
+      }
+    });
+
+    it("raw-core raises are clamped so spendable ≤ pool (fixed seed, ≥2000 steps)", () => {
+      try {
+        fc.assert(
+          fc.property(fc.array(commandArb, { minLength: 40, maxLength: 80 }), (commands) => {
+            runCommands(commands, "raw-core");
+          }),
+          { seed: PROPERTY_SEED + 1, numRuns: 50, endOnFailure: true },
+        );
+      } catch (error) {
+        console.error(`shared-key property (raw-core) failed with seed ${PROPERTY_SEED + 1}`);
+        throw error;
+      }
+    });
   });
 });

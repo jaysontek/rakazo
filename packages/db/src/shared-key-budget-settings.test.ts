@@ -10,7 +10,15 @@ function settingsClient(overrides?: {
   settings?: Record<string, unknown>;
   memberOverrides?: Array<{ userId: string; weeklyAllotmentUsd: number }>;
   members?: Array<{ userId: string }>;
-  allotments?: Array<{ userId: string; allotmentUsd: number; weekStart?: Date }>;
+  allotments?: Array<{
+    userId: string;
+    allotmentUsd: number;
+    reservedUsd?: number;
+    preJoinSpendUsd?: number;
+    weekStart?: Date;
+  }>;
+  /** Shared-key usage totals by userId for headroom checks. */
+  usageByUser?: Record<string, number>;
   auditFail?: boolean;
   noOrg?: boolean;
 }) {
@@ -95,8 +103,8 @@ function settingsClient(overrides?: {
         allotments.map((row) => ({
           userId: row.userId,
           allotmentUsd: row.allotmentUsd,
-          reservedUsd: 0,
-          preJoinSpendUsd: 0,
+          reservedUsd: row.reservedUsd ?? 0,
+          preJoinSpendUsd: row.preJoinSpendUsd ?? 0,
           joinedAt: new Date("2026-11-02T05:00:00.000Z"),
           weekStart: row.weekStart ?? new Date("2026-11-02T05:00:00.000Z"),
         })),
@@ -114,7 +122,13 @@ function settingsClient(overrides?: {
     },
     usageRecord: {
       aggregate: vi.fn(async () => ({ _sum: { costUsd: 0 } })),
-      groupBy: vi.fn(async () => []),
+      groupBy: vi.fn(async () => {
+        const usageByUser = overrides?.usageByUser ?? {};
+        return Object.entries(usageByUser).map(([userId, costUsd]) => ({
+          userId,
+          _sum: { costUsd },
+        }));
+      }),
     },
     user: {
       findMany: vi.fn(async () => []),
@@ -451,6 +465,74 @@ describe("shared-key budget settings", () => {
       }),
     ).rejects.toThrow(/free headroom/);
     expect(memberOverrides).toHaveLength(0);
+  });
+
+  it("rejects raise after remove when removed spent still charges the pool (repro a)", async () => {
+    // Pool $100. r had 33.34 and spent 30, then left; a and x keep ~33.33.
+    // Old check ignored r and allowed x→66; spendable would be 33.33+66+30.
+    const { client, memberOverrides } = settingsClient({
+      settings: { sharedKeyMonthlyBudgetUsd: 400 },
+      members: [{ userId: "x" }, { userId: "a" }],
+      allotments: [
+        { userId: "x", allotmentUsd: 33.33 },
+        { userId: "a", allotmentUsd: 33.33 },
+        { userId: "r", allotmentUsd: 30 }, // shrunk to spent+reserved
+      ],
+      usageByUser: { r: 30 },
+    });
+    await expect(
+      setSharedKeyMemberOverride(client as never, {
+        userId: "x",
+        weeklyAllotmentUsd: 66,
+        actorUserId: "admin",
+        spaceId: "space-ops",
+      }),
+    ).rejects.toThrow(/free headroom/);
+    expect(memberOverrides).toHaveLength(0);
+  });
+
+  it("rejects raise after remove+join when joiner already took freed headroom (repro b)", async () => {
+    // Pool $100. r removed with $0 spent; j took the freed slice. Raising x to 66
+    // would push allotments above the pool.
+    const { client, memberOverrides } = settingsClient({
+      settings: { sharedKeyMonthlyBudgetUsd: 400 },
+      members: [{ userId: "x" }, { userId: "a" }, { userId: "j" }],
+      allotments: [
+        { userId: "x", allotmentUsd: 33.33 },
+        { userId: "a", allotmentUsd: 33.33 },
+        { userId: "j", allotmentUsd: 33.34 },
+        { userId: "r", allotmentUsd: 0 },
+      ],
+    });
+    await expect(
+      setSharedKeyMemberOverride(client as never, {
+        userId: "x",
+        weeklyAllotmentUsd: 66,
+        actorUserId: "admin",
+        spaceId: "space-ops",
+      }),
+    ).rejects.toThrow(/free headroom/);
+    expect(memberOverrides).toHaveLength(0);
+  });
+
+  it("rejects raise after remove when removed reserved still charges the pool", async () => {
+    const { client } = settingsClient({
+      settings: { sharedKeyMonthlyBudgetUsd: 400 },
+      members: [{ userId: "x" }, { userId: "a" }],
+      allotments: [
+        { userId: "x", allotmentUsd: 33.33 },
+        { userId: "a", allotmentUsd: 33.33 },
+        { userId: "r", allotmentUsd: 20, reservedUsd: 20 },
+      ],
+    });
+    await expect(
+      setSharedKeyMemberOverride(client as never, {
+        userId: "x",
+        weeklyAllotmentUsd: 66,
+        actorUserId: "admin",
+        spaceId: "space-ops",
+      }),
+    ).rejects.toThrow(/free headroom/);
   });
 
   it("allows an override decrease mid-period without raising peers", async () => {
