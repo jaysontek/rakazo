@@ -713,6 +713,20 @@ msgstr ""
 msgid "Address line 2"
 msgstr ""
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Adjust by"
+msgstr "조정액"
+
+#: src/pages/AdminOpsBudget.tsx
+#: src/pages/AdminOpsPage.tsx
+msgid "Adjust tracked spend"
+msgstr "추적 지출 조정"
+
+#. placeholder {0}: adjustments.length
+#: src/pages/AdminOpsBudget.tsx
+msgid "Adjustment history ({0})"
+msgstr "조정 기록 ({0})"
+
 #: src/components/AccountMenu.tsx
 #: src/components/SidebarFooter.tsx
 msgid "Admin Dashboard"
@@ -848,6 +862,7 @@ msgid "Always open {site}"
 msgstr "{site} 항상 열기"
 
 #: src/components/SpendingLimitSettings.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/AdminOpsPage.tsx
 msgid "Amount"
 msgstr "금액"
@@ -957,9 +972,23 @@ msgstr "모양"
 msgid "Appearance: {label}"
 msgstr ""
 
+#. placeholder {0}: money(reverseTarget?.deltaUsd ?? 0)
+#: src/pages/AdminOpsBudget.tsx
+msgid "Appends an opposite delta for {0}."
+msgstr "{0}에 반대 델타를 추가합니다."
+
 #: src/components/AskCard.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Apply"
 msgstr "적용"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Apply schedule now"
+msgstr "지금 일정 적용"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Apply schedule now?"
+msgstr "지금 일정을 적용할까요?"
 
 #: src/components/teach/SkillDraftCard.tsx
 msgid "Approval boundaries"
@@ -1089,6 +1118,14 @@ msgstr "에이전트가 도구를 사용할 수 있도록 이 서버에 권한�
 #: src/components/ApprovalRulesSettings.tsx
 msgid "Auto"
 msgstr "자동"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Auto-enroll"
+msgstr "자동 등록"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Auto-enroll mode"
+msgstr "자동 등록 모드"
 
 #: src/pages/ExternalConversationSettings.tsx
 msgid "Automated senders"
@@ -1268,6 +1305,14 @@ msgstr ""
 msgid "Browse MCP servers"
 msgstr ""
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Budget period"
+msgstr "예산 기간"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Budget settings"
+msgstr "예산 설정"
+
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/shell/agent-import.tsx
 msgid "Built-in"
@@ -1321,6 +1366,7 @@ msgstr "이미지를 읽을 수 없음"
 #: src/components/teach/TeachComputerOverlay.tsx
 #: src/components/vault/VaultItemDetail.tsx
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/AdminOpsPage.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/KnowledgeSection.tsx
@@ -1552,6 +1598,7 @@ msgid "Clean up"
 msgstr "정리하기"
 
 #: src/components/SecretAskCard.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/shell/dialogs.tsx
 msgid "Clear"
 msgstr "비우기"
@@ -2022,6 +2069,10 @@ msgstr ""
 msgid "Could not add to shared budget"
 msgstr "공유 예산에 추가할 수 없음"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Could not adjust tracked spend"
+msgstr "추적 지출을 조정하지 못했습니다"
+
 #: src/pages/PluginSubmissionsPanel.tsx
 msgid "Could not approve plugin"
 msgstr ""
@@ -2359,6 +2410,10 @@ msgstr ""
 msgid "Could not remove connector"
 msgstr "도구 연결을 삭제하지 못했습니다."
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Could not remove member"
+msgstr "구성원을 제거하지 못했습니다"
+
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Could not remove plugin"
 msgstr ""
@@ -2401,6 +2456,10 @@ msgstr "차트를 만들지 못했습니다."
 msgid "Could not reset password"
 msgstr "비밀번호를 재설정할 수 없습니다"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Could not reverse adjustment"
+msgstr "조정을 되돌리지 못했습니다"
+
 #: src/pages/AdminOpsPage.tsx
 msgid "Could not reverse transfer"
 msgstr ""
@@ -2426,9 +2485,17 @@ msgstr "루틴을 실행할 수 없습니다"
 msgid "Could not save"
 msgstr "저장하지 못했습니다."
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Could not save allotment override"
+msgstr "배정 재정의를 저장하지 못했습니다"
+
 #: src/components/ApprovalRulesSettings.tsx
 msgid "Could not save Auto Review"
 msgstr "자동 검토를 저장할 수 없습니다"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Could not save budget settings"
+msgstr "예산 설정을 저장하지 못했습니다"
 
 #: src/components/ComputerProviderSettings.tsx
 msgid "Could not save computer settings"
@@ -3110,10 +3177,14 @@ msgstr "각 이름은 한 번만 사용할 수 있습니다."
 #: src/components/SpendingLimitSettings.tsx
 #: src/components/vault/VaultItemDetail.tsx
 #: src/pages/AccountSettingsOverlay.tsx
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/McpServersOverlay.tsx
 msgid "Edit"
 msgstr "편집"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Edit allotment"
+msgstr "배정 편집"
 
 #: src/components/AskCard.tsx
 msgid "Edit first"
@@ -3167,9 +3238,25 @@ msgstr ""
 msgid "Enter a password"
 msgstr "비밀번호를 입력하세요"
 
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
+msgid "Enter a positive allotment"
+msgstr "양수 배정을 입력하세요"
+
+#: src/pages/AdminOpsBudget.tsx
 msgid "Enter a positive amount up to $1,000,000"
 msgstr ""
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Enter a reason"
+msgstr "사유를 입력하세요"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Enter a stale-hold timeout between 1 and 1440 minutes"
+msgstr "1–1440분 사이의 만료 보류 제한 시간을 입력하세요"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Enter a timezone"
+msgstr "시간대를 입력하세요"
 
 #: src/lib/user-error.ts
 msgid "Enter a valid email"
@@ -3190,9 +3277,21 @@ msgstr "최대 출력 토큰 수는 1에서 {MAX_MODEL_MAX_TOKENS} 사이의 정
 msgid "Enter a whole number from 1 to 1000 for the image limit."
 msgstr "이미지 한도는 1에서 1000 사이의 정수로 입력하세요."
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Enter an amount"
+msgstr "금액을 입력하세요"
+
 #: src/lib/model-connection-preflight.ts
 msgid "Enter an API key before testing."
 msgstr "테스트하기 전에 API 키를 입력하세요."
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Enter reset time as HH:MM"
+msgstr "재설정 시간을 HH:MM으로 입력하세요"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Enter two warning thresholds between 0 and 100"
+msgstr "0–100 사이의 경고 임계값 두 개를 입력하세요"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Env"
@@ -3455,6 +3554,10 @@ msgstr "완료되었습니다."
 msgid "Finishing MCP connection…"
 msgstr "MCP 연결을 마무리하는 중…"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "First warning threshold"
+msgstr "첫 번째 경고 임계값"
+
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Focus message"
 msgstr "메시지 입력란으로 이동"
@@ -3480,6 +3583,7 @@ msgid "Free plan ends {day}"
 msgstr "무료 플랜이 {day}에 종료됩니다"
 
 #: src/lib/cron.ts
+#: src/pages/AdminOpsBudget.tsx
 msgid "Friday"
 msgstr "금요일"
 
@@ -3506,6 +3610,10 @@ msgstr ""
 #: src/pages/WindowChrome.tsx
 msgid "Fullscreen"
 msgstr "전체 화면"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Gated"
+msgstr "제한됨"
 
 #: src/pages/model-settings/connection-controls.tsx
 #: src/pages/Onboarding.tsx
@@ -3591,6 +3699,10 @@ msgstr "먼저 전화를 끊은 다음 화면에 표시된 코드를 입력하�
 #: src/lib/call-session.ts
 msgid "Hang up, then enter the code on screen."
 msgstr "전화를 끊은 다음 화면에 표시된 코드를 입력하세요."
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Hard stop"
+msgstr "강제 중지"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Hard-stopped"
@@ -4361,6 +4473,7 @@ msgid "Missed call"
 msgstr ""
 
 #: src/components/ApprovalRulesSettings.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Mode"
 msgstr "모드"
 
@@ -4412,6 +4525,7 @@ msgid "Models list OK. {modelCount, plural, one {# model} other {# models}} avai
 msgstr "모델 목록이 정상입니다. {modelCount, plural, one {모델 #개} other {모델 #개}}를 사용할 수 있습니다. 채팅은 테스트하지 않았습니다."
 
 #: src/lib/cron.ts
+#: src/pages/AdminOpsBudget.tsx
 msgid "Monday"
 msgstr "월요일"
 
@@ -4419,13 +4533,17 @@ msgstr "월요일"
 msgid "month"
 msgstr ""
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Month"
+msgstr "월"
+
 #: src/components/ModelCredits.tsx
 #: src/components/SpendingLimitSettings.tsx
 #: src/lib/cron.ts
 msgid "Monthly"
 msgstr "매월"
 
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Monthly cap"
 msgstr ""
 
@@ -4437,7 +4555,7 @@ msgstr ""
 msgid "Monthly credits expire at renewal. Top-ups do not expire."
 msgstr ""
 
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Monthly shared Gemini key cap"
 msgstr ""
 
@@ -4806,6 +4924,10 @@ msgstr ""
 msgid "None this week."
 msgstr ""
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "None yet."
+msgstr "아직 없습니다."
+
 #: src/lib/ticket-priority.ts
 msgid "Normal"
 msgstr ""
@@ -4823,7 +4945,7 @@ msgstr ""
 msgid "Not checked yet"
 msgstr "아직 확인되지 않음"
 
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Not configured"
 msgstr ""
 
@@ -4898,6 +5020,10 @@ msgstr "OAuth 연결 실패"
 msgid "OAuth expired"
 msgstr "OAuth 만료됨"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Off"
+msgstr "끔"
+
 #: src/components/ComputerDeviceSettings.tsx
 msgid "Offline"
 msgstr ""
@@ -4947,6 +5073,7 @@ msgstr "나만"
 
 #: src/components/markdown-link-prompt.tsx
 #: src/components/pages/PagesList.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/PaymentWalletSettingsPanel.tsx
 #: src/pages/shell/computer-panel.tsx
 #: src/pages/shell/import-setup-card.tsx
@@ -5215,6 +5342,10 @@ msgstr "관리자 승인 대기"
 msgid "Performance"
 msgstr ""
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Period"
+msgstr "기간"
+
 #: src/pages/shell/bot-panel.tsx
 msgid "Permissions"
 msgstr "권한"
@@ -5224,7 +5355,7 @@ msgid "Persona"
 msgstr "페르소나"
 
 #: src/components/SignupSurvey.tsx
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Personal"
 msgstr ""
 
@@ -5273,6 +5404,7 @@ msgid "Pin"
 msgstr "고정"
 
 #: src/components/pages/PagesList.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/Shell.tsx
 msgid "Pinned"
 msgstr "고정됨"
@@ -5382,6 +5514,10 @@ msgstr "서비스"
 msgid "Providers"
 msgstr "서비스"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Prune inactive"
+msgstr "비활성 정리"
+
 #: src/components/CloudAgentCard.tsx
 msgid "Pull request"
 msgstr "풀 리퀘스트"
@@ -5419,6 +5555,7 @@ msgstr "답변을 자동으로 읽기"
 msgid "Ready"
 msgstr "준비됨"
 
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/PluginSubmissionsPanel.tsx
 msgid "Reason"
 msgstr ""
@@ -5585,6 +5722,7 @@ msgstr "새로고침"
 #: src/components/TrustedLinkSitesSettings.tsx
 #: src/components/vault/LoginFieldsInput.tsx
 #: src/components/vault/VaultItemDetail.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/AdminOpsPage.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/ModelRoleSettings.tsx
@@ -5605,6 +5743,11 @@ msgstr "{0} 삭제"
 msgid "Remove {0} from the group"
 msgstr ""
 
+#. placeholder {0}: accountLabel(account)
+#: src/pages/AdminOpsBudget.tsx
+msgid "Remove {0} from the roster."
+msgstr "명단에서 {0}을(를) 제거합니다."
+
 #. placeholder {0}: accountLabel(removeTarget)
 #: src/pages/AdminOpsPage.tsx
 msgid "Remove {0}?"
@@ -5622,12 +5765,20 @@ msgstr "{site} 삭제"
 msgid "Remove change trigger"
 msgstr "변경 트리거 제거"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Remove from budget"
+msgstr "예산에서 제거"
+
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/PluginsOverlay.tsx
 msgid "Remove from every space?"
 msgstr ""
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Remove from shared budget?"
+msgstr "공유 예산에서 제거할까요?"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Remove Git event"
@@ -5739,6 +5890,7 @@ msgid "Research & writing"
 msgstr ""
 
 #: src/components/ComputerMaintenanceActions.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/ExternalConversationSettings.tsx
 #: src/pages/shell/avatar-studio-popover.tsx
 msgid "Reset"
@@ -5756,9 +5908,25 @@ msgstr "컴퓨터 재설정"
 msgid "Reset computer?"
 msgstr "컴퓨터를 재설정할까요?"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Reset day"
+msgstr "재설정 일"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Reset day of month"
+msgstr "월 중 재설정 일"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Reset day of week"
+msgstr "주중 재설정 요일"
+
 #: src/pages/Auth.tsx
 msgid "Reset password"
 msgstr "비밀번호 재설정"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Reset time"
+msgstr "재설정 시간"
 
 #: src/pages/Auth.tsx
 msgid "Reset your password"
@@ -5773,7 +5941,7 @@ msgid "Resets {reset}"
 msgstr ""
 
 #. placeholder {0}: resetCountdown(budget.resetsAt)
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Resets in {0}"
 msgstr "{0} 후 초기화"
 
@@ -5852,14 +6020,28 @@ msgstr ""
 msgid "Return to Rakazo"
 msgstr "Rakazo로 돌아가기"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Reversal"
+msgstr "되돌리기"
+
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/AdminOpsPage.tsx
 msgid "Reverse"
 msgstr ""
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Reverse reason"
+msgstr "되돌리기 사유"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Reverse this adjustment?"
+msgstr "이 조정을 되돌릴까요?"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Reverse transfer?"
 msgstr ""
 
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/AdminOpsPage.tsx
 msgid "Reversed"
 msgstr ""
@@ -5885,7 +6067,7 @@ msgstr ""
 msgid "Root filesystem"
 msgstr ""
 
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Roster"
 msgstr ""
 
@@ -5972,6 +6154,7 @@ msgid "Sandbox"
 msgstr ""
 
 #: src/lib/cron.ts
+#: src/pages/AdminOpsBudget.tsx
 msgid "Saturday"
 msgstr "토요일"
 
@@ -5983,7 +6166,7 @@ msgstr "토요일"
 #: src/components/teach/SkillDraftCard.tsx
 #: src/components/vault/VaultItemEditor.tsx
 #: src/pages/AccountSettingsOverlay.tsx
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/Board.tsx
 #: src/pages/ExternalConversationSettings.tsx
 #: src/pages/GroupPanel.tsx
@@ -5998,7 +6181,7 @@ msgstr "토요일"
 msgid "Save"
 msgstr "저장"
 
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Save monthly shared-key cap?"
 msgstr ""
 
@@ -6146,6 +6329,10 @@ msgstr ""
 msgid "Searching…"
 msgstr "검색 중…"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Second warning threshold"
+msgstr "두 번째 경고 임계값"
+
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Security"
 msgstr "보안"
@@ -6238,6 +6425,10 @@ msgstr "서버 URL"
 msgid "Set"
 msgstr "설정"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Set to"
+msgstr "다음으로 설정"
+
 #: src/components/call/CallStrip.tsx
 #: src/components/SidebarFooter.tsx
 #: src/pages/MessagingSettingsPanel.tsx
@@ -6300,7 +6491,7 @@ msgid "Share, anyone with the link can view"
 msgstr "공유, 링크가 있는 누구나 볼 수 있음"
 
 #: src/components/pages/PagesList.tsx
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/MemorySettingsOverlay.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Shared"
@@ -6324,7 +6515,7 @@ msgstr ""
 msgid "Shared week usage for {0}"
 msgstr "{0}의 공유 주간 사용량"
 
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Shared-key week"
 msgstr ""
 
@@ -6419,6 +6610,10 @@ msgstr "가입하기"
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Sign-in cancelled. Try again."
 msgstr ""
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Signup"
+msgstr "가입"
 
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/vault/VaultItemEditor.tsx
@@ -6542,9 +6737,22 @@ msgstr ""
 msgid "Speech model"
 msgstr "음성 모델"
 
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/AdminOpsPage.tsx
 msgid "Spend"
 msgstr ""
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Spend adjustment mode"
+msgstr "지출 조정 모드"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Spend adjustment reason"
+msgstr "지출 조정 사유"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Spend amount"
+msgstr "지출 금액"
 
 #: src/components/SpendingLimitSettings.tsx
 msgid "Spending limit"
@@ -6557,6 +6765,14 @@ msgstr ""
 #: src/lib/user-error.ts
 msgid "SSO is temporarily unavailable. Try again."
 msgstr "SSO를 일시적으로 사용할 수 없습니다. 다시 시도하세요."
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Stale hold (min)"
+msgstr "만료 보류(분)"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Stale-hold timeout minutes"
+msgstr "만료 보류 제한 시간(분)"
 
 #: src/components/GitHubStarPrompt.tsx
 msgid "Star on GitHub"
@@ -6702,6 +6918,7 @@ msgid "Subscription required"
 msgstr ""
 
 #: src/lib/cron.ts
+#: src/pages/AdminOpsBudget.tsx
 msgid "Sunday"
 msgstr "일요일"
 
@@ -6761,6 +6978,7 @@ msgstr "작업 가르치기"
 msgid "Teaching in progress. Stop teaching before sending a new message."
 msgstr "작업을 가르치는 중입니다. 새 메시지를 보내려면 먼저 가르치기를 종료하세요."
 
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Team"
 msgstr "팀 공용"
@@ -7048,9 +7266,13 @@ msgid "This server's tool result does not fit the model. Turn off Keep tool resu
 msgstr ""
 
 #. placeholder {0}: money(Number(draft) || 0)
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "This sets the deployment monthly cap for the shared Gemini key to {0}."
 msgstr ""
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "This starts a new budget period immediately."
+msgstr "새 예산 기간이 즉시 시작됩니다."
 
 #: src/pages/model-settings/connection-controls.tsx
 msgid "This subscription sign-in is not available in Rakazo yet. Use a deployment credential or choose another provider."
@@ -7066,6 +7288,7 @@ msgid "This week's shared API key budget is used up. It resets next week, or con
 msgstr "이번 주 공유 API 키 예산이 소진되었습니다. 다음 주에 초기화되거나 모델에서 내 키를 연결하세요."
 
 #: src/lib/cron.ts
+#: src/pages/AdminOpsBudget.tsx
 msgid "Thursday"
 msgstr "목요일"
 
@@ -7074,6 +7297,7 @@ msgid "Time of day"
 msgstr "실행 시각"
 
 #: src/pages/AccountSettingsOverlay.tsx
+#: src/pages/AdminOpsBudget.tsx
 msgid "Timezone"
 msgstr ""
 
@@ -7138,6 +7362,10 @@ msgstr "도구 이름"
 #: src/pages/shell/bot-panel.tsx
 msgid "Tools"
 msgstr ""
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Tracked spend"
+msgstr "추적 지출"
 
 #: src/components/composer/HoldToTalk.tsx
 msgid "Transcribing…"
@@ -7226,6 +7454,7 @@ msgid "Try the test again."
 msgstr "테스트를 다시 시도하세요."
 
 #: src/lib/cron.ts
+#: src/pages/AdminOpsBudget.tsx
 msgid "Tuesday"
 msgstr "화요일"
 
@@ -7528,6 +7757,10 @@ msgstr "깨우기"
 msgid "Wallet"
 msgstr ""
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Warnings"
+msgstr "경고"
+
 #: src/components/ModelCredits.tsx
 msgid "Web, desktop and mobile"
 msgstr ""
@@ -7541,12 +7774,17 @@ msgid "Webhook"
 msgstr "웹훅"
 
 #: src/lib/cron.ts
+#: src/pages/AdminOpsBudget.tsx
 msgid "Wednesday"
 msgstr "수요일"
 
 #: src/lib/billing.ts
 msgid "week"
 msgstr ""
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Week"
+msgstr "주"
 
 #: src/lib/cron.ts
 #: src/pages/RoutineEditor.tsx
@@ -7562,7 +7800,11 @@ msgstr "주말"
 msgid "Weekly"
 msgstr "매주"
 
-#: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsBudget.tsx
+msgid "Weekly allotment override"
+msgstr "주간 배정 재정의"
+
+#: src/pages/AdminOpsBudget.tsx
 msgid "Weekly shared-key pool used"
 msgstr "주간 공유 키 풀 사용량"
 

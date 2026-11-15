@@ -28,7 +28,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  Input,
   ListSearchInput,
   NativeSelect,
   NativeSelectOption,
@@ -48,6 +47,12 @@ import { useSpaceQueries } from "../lib/query";
 import { formatRelativeTime } from "../lib/relative-time";
 import { rpc } from "../lib/rpc";
 import { errorText } from "../lib/user-error";
+import {
+  BudgetSection,
+  MemberOverrideDialog,
+  RemoveMemberDialog,
+  UserSpendAdjustDialog,
+} from "./AdminOpsBudget";
 import { WindowChrome } from "./WindowChrome";
 
 function money(value: number | null | undefined): string {
@@ -175,18 +180,6 @@ function UsageBar({
   );
 }
 
-function resetCountdown(resetsAt: string, nowMs = Date.now()): string {
-  const msLeft = new Date(resetsAt).getTime() - nowMs;
-  if (!(msLeft > 0)) return "0h";
-  const totalHours = Math.floor(msLeft / 3_600_000);
-  const days = Math.floor(totalHours / 24);
-  const hours = totalHours % 24;
-  if (days > 0) return `${days}d ${hours}h`;
-  const minutes = Math.floor((msLeft % 3_600_000) / 60_000);
-  if (totalHours > 0) return `${totalHours}h ${minutes}m`;
-  return `${Math.max(1, minutes)}m`;
-}
-
 export function AdminOpsPage() {
   const { t } = useLingui();
   const me = useQuery(useSpaceQueries().me.queryOptions());
@@ -270,7 +263,7 @@ export function OpsDashboardView({
 }) {
   return (
     <div data-testid="ops-dashboard" className="space-y-6">
-      <KpiRow data={data} onCapSaved={onChanged} interactive={interactive} />
+      <BudgetSection data={data} onChanged={onChanged} interactive={interactive} />
       <Tabs defaultValue="accounts" className="gap-4">
         <TabsList variant="line" className="w-full max-w-full flex-wrap justify-start">
           <TabsTrigger value="accounts">
@@ -325,217 +318,6 @@ export function OpsDashboardView({
   );
 }
 
-function KpiRow({
-  data,
-  onCapSaved,
-  interactive,
-}: {
-  data: OpsOverview;
-  onCapSaved: () => void;
-  interactive: boolean;
-}) {
-  const { t } = useLingui();
-  const budget = data.sharedKeyBudget;
-  const [draft, setDraft] = useState(
-    budget.monthlyCapUsd != null ? String(budget.monthlyCapUsd) : "",
-  );
-  const [saving, setSaving] = useState(false);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [editing, setEditing] = useState(false);
-  const pool = budget.weekPoolUsd;
-  const spent = budget.weekSpentUsd;
-  const poolPct = pool != null && pool > 0 ? Math.min(100, Math.max(0, (spent / pool) * 100)) : 0;
-
-  useEffect(() => {
-    setDraft(budget.monthlyCapUsd != null ? String(budget.monthlyCapUsd) : "");
-  }, [budget.monthlyCapUsd]);
-
-  function requestSaveCap() {
-    const value = Number(draft);
-    if (!Number.isFinite(value) || value <= 0 || value > 1_000_000) {
-      setError(t`Enter a positive amount up to $1,000,000`);
-      return;
-    }
-    setError(null);
-    setConfirmOpen(true);
-  }
-
-  async function confirmSaveCap() {
-    const value = Number(draft);
-    if (!interactive) {
-      setConfirmOpen(false);
-      setEditing(false);
-      return;
-    }
-    setSaving(true);
-    setError(null);
-    try {
-      const result = await rpc.ops.setSharedKeyMonthlyBudget({ monthlyCapUsd: value });
-      setDraft(String(result.monthlyCapUsd));
-      setConfirmOpen(false);
-      setEditing(false);
-      onCapSaved();
-    } catch (err) {
-      setError(errorText(err, "Could not save monthly cap"));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label={t`Shared-key week`}>
-      <Card size="sm" data-testid="shared-key-monthly-cap">
-        <CardHeader className="gap-1">
-          <CardDescription>
-            <Trans>Monthly cap</Trans>
-          </CardDescription>
-          <CardTitle className="tabular-nums">
-            {budget.monthlyCapUsd == null ? (
-              <span className="text-muted-foreground font-normal">
-                <Trans>Not configured</Trans>
-              </span>
-            ) : (
-              money(budget.monthlyCapUsd)
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {editing ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <label className="flex min-w-0 flex-1 items-center gap-1 text-sm">
-                <span className="text-muted-foreground" aria-hidden="true">
-                  $
-                </span>
-                <Input
-                  type="number"
-                  min={0.01}
-                  max={1_000_000}
-                  step="any"
-                  inputMode="decimal"
-                  aria-label={t`Monthly shared Gemini key cap`}
-                  className="tabular-nums"
-                  value={draft}
-                  disabled={saving}
-                  onChange={(event) => setDraft(event.target.value)}
-                />
-              </label>
-              <button
-                type="button"
-                className={buttonVariants({ variant: "outline", size: "sm" })}
-                disabled={saving}
-                onClick={() => requestSaveCap()}
-              >
-                {saving ? <Spinner className="size-4" /> : <Trans>Save</Trans>}
-              </button>
-              <button
-                type="button"
-                className={buttonVariants({ variant: "ghost", size: "sm" })}
-                disabled={saving}
-                onClick={() => {
-                  setEditing(false);
-                  setDraft(budget.monthlyCapUsd != null ? String(budget.monthlyCapUsd) : "");
-                  setError(null);
-                }}
-              >
-                <Trans>Cancel</Trans>
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              className={buttonVariants({ variant: "ghost", size: "sm" })}
-              onClick={() => setEditing(true)}
-            >
-              <Trans>Edit</Trans>
-            </button>
-          )}
-          {error ? (
-            <p role="alert" className="text-sm text-destructive">
-              {error}
-            </p>
-          ) : null}
-        </CardContent>
-      </Card>
-
-      <Card size="sm">
-        <CardHeader className="gap-1">
-          <CardDescription>
-            <Trans>Shared-key week</Trans>
-          </CardDescription>
-          <CardTitle className="tabular-nums">
-            {pool == null ? "—" : `${money(spent)} / ${money(pool)}`}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <UsageBar percent={poolPct} label={t`Weekly shared-key pool used`} />
-          <p className="text-xs text-muted-foreground">
-            <Trans>Resets in {resetCountdown(budget.resetsAt)}</Trans>
-            {" · "}
-            {budget.timezone}
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card size="sm">
-        <CardHeader className="gap-1">
-          <CardDescription>
-            <Trans>Roster</Trans>
-          </CardDescription>
-          <CardTitle className="tabular-nums">{budget.memberCount}</CardTitle>
-        </CardHeader>
-      </Card>
-
-      <Card size="sm">
-        <CardHeader className="gap-1">
-          <CardDescription>
-            <Trans>Spend</Trans>
-          </CardDescription>
-          <CardTitle className="tabular-nums">{money(data.spend.totalCostUsd)}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-1 text-xs text-muted-foreground">
-          <div className="flex justify-between gap-2">
-            <Trans>Shared</Trans>
-            <span className="tabular-nums text-foreground">
-              {money(data.spend.sharedKeyCostUsd)}
-            </span>
-          </div>
-          <div className="flex justify-between gap-2">
-            <Trans>Personal</Trans>
-            <span className="tabular-nums text-foreground">
-              {money(data.spend.personalKeyCostUsd)}
-            </span>
-          </div>
-        </CardContent>
-      </Card>
-
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              <Trans>Save monthly shared-key cap?</Trans>
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              <Trans>
-                This sets the deployment monthly cap for the shared Gemini key to{" "}
-                {money(Number(draft) || 0)}.
-              </Trans>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={saving}>
-              <Trans>Cancel</Trans>
-            </AlertDialogCancel>
-            <AlertDialogAction disabled={saving} onClick={() => void confirmSaveCap()}>
-              <Trans>Save</Trans>
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </section>
-  );
-}
-
 type AccountSortKey = "account" | "key" | "tokens" | "spend" | "sharedWeek";
 type AccountSortDir = "asc" | "desc";
 
@@ -571,19 +353,33 @@ function AccountActions({
   canTransfer,
   transferDisabled,
   canAddToSharedBudget,
+  canRemoveFromSharedBudget,
+  canEditAllotment,
+  canAdjustSpend,
+  envPinned,
   addBusy,
   onImpersonate,
   onTransfer,
   onAddToSharedBudget,
+  onRemoveFromSharedBudget,
+  onEditAllotment,
+  onAdjustSpend,
 }: {
   account: OpsAccount;
   canTransfer: boolean;
   transferDisabled: boolean;
   canAddToSharedBudget: boolean;
+  canRemoveFromSharedBudget: boolean;
+  canEditAllotment: boolean;
+  canAdjustSpend: boolean;
+  envPinned: boolean;
   addBusy: boolean;
   onImpersonate: (account: OpsAccount) => void;
   onTransfer: (account: OpsAccount) => void;
   onAddToSharedBudget: (account: OpsAccount) => void;
+  onRemoveFromSharedBudget: (account: OpsAccount) => void;
+  onEditAllotment: (account: OpsAccount) => void;
+  onAdjustSpend: (account: OpsAccount) => void;
 }) {
   const { t } = useLingui();
   return (
@@ -603,9 +399,29 @@ function AccountActions({
             <Trans>Add to shared budget</Trans>
           </DropdownMenuItem>
         ) : null}
+        {canEditAllotment ? (
+          <DropdownMenuItem onClick={() => onEditAllotment(account)}>
+            <Trans>Edit allotment</Trans>
+          </DropdownMenuItem>
+        ) : null}
+        {canAdjustSpend ? (
+          <DropdownMenuItem onClick={() => onAdjustSpend(account)}>
+            <Trans>Adjust tracked spend</Trans>
+          </DropdownMenuItem>
+        ) : null}
         {canTransfer ? (
           <DropdownMenuItem disabled={transferDisabled} onClick={() => onTransfer(account)}>
             <Trans>Transfer</Trans>
+          </DropdownMenuItem>
+        ) : null}
+        {envPinned ? (
+          <DropdownMenuItem disabled>
+            <Trans>Pinned</Trans>
+          </DropdownMenuItem>
+        ) : null}
+        {canRemoveFromSharedBudget ? (
+          <DropdownMenuItem variant="destructive" onClick={() => onRemoveFromSharedBudget(account)}>
+            <Trans>Remove from budget</Trans>
           </DropdownMenuItem>
         ) : null}
       </DropdownMenuContent>
@@ -639,6 +455,9 @@ function AccountsSection({
   const [impersonate, setImpersonate] = useState<OpsAccount | null>(null);
   const [transferFrom, setTransferFrom] = useState<OpsAccount | null>(null);
   const [transferToId, setTransferToId] = useState("");
+  const [removeMember, setRemoveMember] = useState<OpsAccount | null>(null);
+  const [overrideMember, setOverrideMember] = useState<OpsAccount | null>(null);
+  const [spendMember, setSpendMember] = useState<OpsAccount | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -800,8 +619,59 @@ function AccountsSection({
         <div className="text-xs text-muted-foreground tabular-nums">
           {money(budget.remainingUsd)} left
         </div>
+        <div className="flex flex-wrap gap-1">
+          {account.envPinned ? (
+            <Badge variant="outline" className="font-normal">
+              <Trans>Pinned</Trans>
+            </Badge>
+          ) : null}
+          {account.allotmentOverrideUsd != null ? (
+            <Badge variant="secondary" className="font-normal tabular-nums">
+              {money(account.allotmentOverrideUsd)}
+            </Badge>
+          ) : null}
+        </div>
       </div>
     );
+  }
+
+  function accountActionProps(account: OpsAccount) {
+    const member = Boolean(account.sharedKeyBudget?.member);
+    const envPinned = account.envPinned === true;
+    return {
+      account,
+      canTransfer: member,
+      transferDisabled: roster.length < 2,
+      canAddToSharedBudget: pendingSharedBudgetApproval(account),
+      canRemoveFromSharedBudget: member && !envPinned,
+      canEditAllotment: member,
+      canAdjustSpend: member,
+      envPinned,
+      addBusy: busy,
+      onImpersonate: (next: OpsAccount) => {
+        setError(null);
+        setImpersonate(next);
+      },
+      onTransfer: (next: OpsAccount) => {
+        setError(null);
+        setTransferFrom(next);
+      },
+      onAddToSharedBudget: (next: OpsAccount) => {
+        void addToSharedBudget(next);
+      },
+      onRemoveFromSharedBudget: (next: OpsAccount) => {
+        setError(null);
+        setRemoveMember(next);
+      },
+      onEditAllotment: (next: OpsAccount) => {
+        setError(null);
+        setOverrideMember(next);
+      },
+      onAdjustSpend: (next: OpsAccount) => {
+        setError(null);
+        setSpendMember(next);
+      },
+    };
   }
 
   const dialogOpen = Boolean(impersonate || transferFrom);
@@ -956,24 +826,7 @@ function AccountsSection({
                     <AccountBudgetCell account={account} />
                   </td>
                   <td className="py-3">
-                    <AccountActions
-                      account={account}
-                      canTransfer={Boolean(account.sharedKeyBudget?.member)}
-                      transferDisabled={roster.length < 2}
-                      canAddToSharedBudget={pendingSharedBudgetApproval(account)}
-                      addBusy={busy}
-                      onImpersonate={(next) => {
-                        setError(null);
-                        setImpersonate(next);
-                      }}
-                      onTransfer={(next) => {
-                        setError(null);
-                        setTransferFrom(next);
-                      }}
-                      onAddToSharedBudget={(next) => {
-                        void addToSharedBudget(next);
-                      }}
-                    />
+                    <AccountActions {...accountActionProps(account)} />
                   </td>
                 </tr>
               ))}
@@ -991,24 +844,7 @@ function AccountsSection({
                   <CardTitle className="truncate">{account.name || account.email}</CardTitle>
                   <CardDescription className="break-all">{account.email}</CardDescription>
                 </div>
-                <AccountActions
-                  account={account}
-                  canTransfer={Boolean(account.sharedKeyBudget?.member)}
-                  transferDisabled={roster.length < 2}
-                  canAddToSharedBudget={pendingSharedBudgetApproval(account)}
-                  addBusy={busy}
-                  onImpersonate={(next) => {
-                    setError(null);
-                    setImpersonate(next);
-                  }}
-                  onTransfer={(next) => {
-                    setError(null);
-                    setTransferFrom(next);
-                  }}
-                  onAddToSharedBudget={(next) => {
-                    void addToSharedBudget(next);
-                  }}
-                />
+                <AccountActions {...accountActionProps(account)} />
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex flex-wrap items-center gap-2">
@@ -1140,6 +976,34 @@ function AccountsSection({
           </AlertDialogContent>
         </AlertDialog>
       ) : null}
+
+      <RemoveMemberDialog
+        account={removeMember}
+        open={Boolean(removeMember)}
+        onOpenChange={(next) => {
+          if (!next) setRemoveMember(null);
+        }}
+        interactive={interactive}
+        onChanged={onChanged}
+      />
+      <MemberOverrideDialog
+        account={overrideMember}
+        open={Boolean(overrideMember)}
+        onOpenChange={(next) => {
+          if (!next) setOverrideMember(null);
+        }}
+        interactive={interactive}
+        onChanged={onChanged}
+      />
+      <UserSpendAdjustDialog
+        account={spendMember}
+        open={Boolean(spendMember)}
+        onOpenChange={(next) => {
+          if (!next) setSpendMember(null);
+        }}
+        interactive={interactive}
+        onChanged={onChanged}
+      />
     </section>
   );
 }

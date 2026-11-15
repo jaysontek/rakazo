@@ -1432,7 +1432,6 @@ export const OpsAllotmentTransferSchema = z.object({
 });
 export type OpsAllotmentTransfer = z.infer<typeof OpsAllotmentTransferSchema>;
 
-<<<<<<< HEAD
 export const OpsAgentOwnerSchema = z.object({
   id: Id,
   name: z.string(),
@@ -1440,7 +1439,7 @@ export const OpsAgentOwnerSchema = z.object({
   deactivated: z.boolean(),
 });
 export type OpsAgentOwner = z.infer<typeof OpsAgentOwnerSchema>;
-=======
+
 /** Append-only tracked shared-key spend adjustment (team-wide or per user). */
 export const OpsSharedKeySpendAdjustmentSchema = z.object({
   id: Id,
@@ -1457,7 +1456,6 @@ export const OpsSharedKeySpendAdjustmentSchema = z.object({
   reversesId: Id.nullable(),
 });
 export type OpsSharedKeySpendAdjustment = z.infer<typeof OpsSharedKeySpendAdjustmentSchema>;
->>>>>>> ea458ab40 (part 2/5: tracked-spend adjustments with full audit trail)
 
 export const OpsAgentSchema = z.object({
   id: Id,
