@@ -9,7 +9,7 @@ export type SharedKeyPeriodSchedule = {
   period: SharedKeyPeriodKind;
   /** 0=Sunday .. 6=Saturday; default Monday=1 */
   resetDow: number;
-  /** 1-28; default 1 */
+  /** 1-31; clamped to the month's length when resolving boundaries (29–31 → last day). */
   resetDom: number;
   /** minutes after local midnight 0..1439; default 0 */
   resetMinutes: number;
@@ -58,7 +58,7 @@ export function resolveSharedKeyPeriodSchedule(
     typeof input.resetDom === "number" &&
     Number.isInteger(input.resetDom) &&
     input.resetDom >= 1 &&
-    input.resetDom <= 28
+    input.resetDom <= 31
       ? input.resetDom
       : defaults.resetDom;
   const resetMinutes =
@@ -105,16 +105,28 @@ function instantAtLocal(
   return zonedDateTime(iso, timezone) ?? new Date(Date.UTC(year, month - 1, day, hour, minute));
 }
 
+/** Days in a calendar month (1–12). */
+export function daysInCalendarMonth(year: number, month: number): number {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+/** Clamp resetDom (1–31) to the last day of the given calendar month. */
+export function clampResetDom(year: number, month: number, resetDom: number): number {
+  const wanted = Math.min(31, Math.max(1, Math.trunc(resetDom) || 1));
+  return Math.min(wanted, daysInCalendarMonth(year, month));
+}
+
 /** Period start containing `now` for the given schedule (DST-safe via wallClock/zonedDateTime). */
 export function sharedKeyPeriodStart(schedule: SharedKeyPeriodSchedule, now = new Date()): Date {
   const { year, month, day, localMinutes } = localWallParts(now, schedule.timezone);
 
   if (schedule.period === "month") {
-    const resetDom = Math.min(28, Math.max(1, Math.trunc(schedule.resetDom) || 1));
+    const resetDomWanted = Math.min(31, Math.max(1, Math.trunc(schedule.resetDom) || 1));
+    const thisMonthDom = clampResetDom(year, month, resetDomWanted);
+    const beforeReset =
+      day < thisMonthDom || (day === thisMonthDom && localMinutes < schedule.resetMinutes);
     let y = year;
     let m = month;
-    const beforeReset =
-      day < resetDom || (day === resetDom && localMinutes < schedule.resetMinutes);
     if (beforeReset) {
       m -= 1;
       if (m < 1) {
@@ -122,6 +134,7 @@ export function sharedKeyPeriodStart(schedule: SharedKeyPeriodSchedule, now = ne
         y -= 1;
       }
     }
+    const resetDom = clampResetDom(y, m, resetDomWanted);
     return instantAtLocal(y, m, resetDom, schedule.resetMinutes, schedule.timezone);
   }
 
@@ -143,13 +156,14 @@ export function sharedKeyPeriodStart(schedule: SharedKeyPeriodSchedule, now = ne
 export function sharedKeyPeriodEnd(schedule: SharedKeyPeriodSchedule, periodStart: Date): Date {
   if (schedule.period === "month") {
     const { year, month } = localWallParts(periodStart, schedule.timezone);
-    const resetDom = Math.min(28, Math.max(1, Math.trunc(schedule.resetDom) || 1));
+    const resetDomWanted = Math.min(31, Math.max(1, Math.trunc(schedule.resetDom) || 1));
     let nextYear = year;
     let nextMonth = month + 1;
     if (nextMonth > 12) {
       nextMonth = 1;
       nextYear += 1;
     }
+    const resetDom = clampResetDom(nextYear, nextMonth, resetDomWanted);
     return instantAtLocal(
       nextYear,
       nextMonth,
@@ -191,21 +205,59 @@ export function sharedKeyWeekEnd(weekStart: Date): Date {
 }
 
 /**
- * One user's full-week share of a monthly shared-key spend cap: monthly / users / 4 weeks.
+ * Period pool from a monthly cap: full month for month periods, monthly/4 for weeks.
+ */
+export function sharedKeyPeriodPoolUsd(
+  monthlyCapUsd: number,
+  period: SharedKeyPeriodKind = "week",
+): number {
+  if (!(monthlyCapUsd > 0)) return 0;
+  return period === "month" ? monthlyCapUsd : monthlyCapUsd / 4;
+}
+
+/**
+ * One user's full-period share of a monthly shared-key spend cap.
+ * Week periods: monthly / users / 4. Month periods: monthly / users.
  * Zero when there are no members or the cap is not positive.
  */
-export function fullWeekShareUsd(monthlyCapUsd: number, memberCount: number): number {
+export function fullWeekShareUsd(
+  monthlyCapUsd: number,
+  memberCount: number,
+  period: SharedKeyPeriodKind = "week",
+): number {
   if (!(monthlyCapUsd > 0) || memberCount <= 0) return 0;
-  return monthlyCapUsd / memberCount / 4;
+  return sharedKeyPeriodPoolUsd(monthlyCapUsd, period) / memberCount;
+}
+
+/** Round USD to cents (half-up via Math.round). */
+export function roundUsdToCents(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+/** Fraction of the period still left at `now` (1 at the start, 0 at or after the end). */
+export function periodFractionRemaining(now: Date, periodStart: Date, periodEnd: Date): number {
+  const total = periodEnd.getTime() - periodStart.getTime();
+  if (total <= 0) return 0;
+  return Math.min(1, Math.max(0, (periodEnd.getTime() - now.getTime()) / total));
 }
 
 /** Fraction of the week still left at `now` (1 at the start, 0 at or after the end). */
 export function weekFractionRemaining(now: Date, weekStart: Date): number {
-  const end = sharedKeyWeekEnd(weekStart).getTime();
-  const start = weekStart.getTime();
-  const total = end - start;
-  if (total <= 0) return 0;
-  return Math.min(1, Math.max(0, (end - now.getTime()) / total));
+  return periodFractionRemaining(now, weekStart, sharedKeyWeekEnd(weekStart));
+}
+
+/**
+ * Pro-rate fraction for a mid-period joiner, frozen at their join instant.
+ * Cap re-bases must reuse this — never `periodFractionRemaining(now)` — or each later save
+ * would shrink the same joiner's slice toward zero.
+ */
+export function midPeriodJoinFraction(
+  joinedAt: Date,
+  periodStart: Date,
+  periodEnd: Date,
+): number {
+  if (joinedAt.getTime() <= periodStart.getTime()) return 1;
+  return periodFractionRemaining(joinedAt, periodStart, periodEnd);
 }
 
 /**
@@ -214,8 +266,7 @@ export function weekFractionRemaining(now: Date, weekStart: Date): number {
  * would shrink the same joiner's slice toward zero.
  */
 export function midWeekJoinFraction(joinedAt: Date, weekStart: Date): number {
-  if (joinedAt.getTime() <= weekStart.getTime()) return 1;
-  return weekFractionRemaining(joinedAt, weekStart);
+  return midPeriodJoinFraction(joinedAt, weekStart, sharedKeyWeekEnd(weekStart));
 }
 
 /**
@@ -255,6 +306,17 @@ export function redivideWeeklyAllotments(args: {
   preJoinSpendByUser?: ReadonlyMap<string, number>;
   /** Admin cap edit: re-base this week on the new pool minus already-committed spend. */
   rebaseOnMonthlyCap?: boolean;
+  /**
+   * Absolute allotment overrides. Subtracted from the period pool before the
+   * remainder is split among non-overridden members. Override holders get their
+   * absolute amount (ops intentional); continuing non-override members keep the
+   * headroom-only rule.
+   */
+  overrides?: ReadonlyMap<string, number>;
+  /** week (default) uses monthly/4; month uses the full monthly cap. */
+  period?: SharedKeyPeriodKind;
+  /** End of the current period for mid-period join fractions. Defaults to week end. */
+  periodEnd?: Date;
 }): Map<string, number> {
   const {
     monthlyCapUsd,
@@ -265,45 +327,81 @@ export function redivideWeeklyAllotments(args: {
     reservedByUser = new Map(),
     preJoinSpendByUser = new Map(),
     rebaseOnMonthlyCap = false,
+    overrides: overridesInput = new Map(),
+    period = "week",
   } = args;
   const result = new Map<string, number>();
   const n = members.length;
   if (n <= 0 || !(monthlyCapUsd > 0)) return result;
 
-  const weekPool = monthlyCapUsd / 4;
-  const fullShare = weekPool / n;
+  const periodEnd = args.periodEnd ?? sharedKeyWeekEnd(weekStart);
+  const periodPool = sharedKeyPeriodPoolUsd(monthlyCapUsd, period);
+
+  const memberIds = new Set(members.map((member) => member.userId));
+  const overrides = new Map<string, number>();
+  for (const [userId, amount] of overridesInput) {
+    if (!memberIds.has(userId)) continue;
+    if (!(amount >= 0) || !Number.isFinite(amount)) continue;
+    overrides.set(userId, amount);
+  }
+  let overrideSum = 0;
+  for (const amount of overrides.values()) overrideSum += amount;
+  // Callers reject writes that exceed the pool; clamp here so allotments never overshoot.
+  if (overrideSum > periodPool) {
+    const scale = periodPool / overrideSum;
+    for (const [userId, amount] of overrides) {
+      overrides.set(userId, amount * scale);
+    }
+    overrideSum = periodPool;
+  }
+
+  const remainderMembers = members.filter((member) => !overrides.has(member.userId));
+  const remainderPool = Math.max(0, periodPool - overrideSum);
+  const remainderN = remainderMembers.length;
+  const fullShare = remainderN > 0 ? remainderPool / remainderN : 0;
 
   const effective = (userId: string) =>
     effectiveSharedKeySpendUsd(spentByUser.get(userId) ?? 0, preJoinSpendByUser.get(userId) ?? 0);
 
-  const shareOf = (member: SharedKeyBudgetMember) =>
-    member.joinedAt.getTime() > weekStart.getTime()
-      ? fullShare * midWeekJoinFraction(member.joinedAt, weekStart)
+  const shareOf = (member: SharedKeyBudgetMember) => {
+    if (overrides.has(member.userId)) return overrides.get(member.userId)!;
+    return member.joinedAt.getTime() > weekStart.getTime()
+      ? fullShare * midPeriodJoinFraction(member.joinedAt, weekStart, periodEnd)
       : fullShare;
+  };
 
-  // Fresh week: even full-week shares (join-time pro-rated). Spend is counted separately.
+  const applyOverrides = () => {
+    for (const [userId, amount] of overrides) {
+      result.set(userId, amount);
+    }
+  };
+
+  // Fresh period: even full-period shares (join-time pro-rated) + absolute overrides.
   if (previousAllotments.size === 0) {
-    for (const member of members) {
+    for (const member of remainderMembers) {
       result.set(member.userId, shareOf(member));
     }
+    applyOverrides();
     return result;
   }
 
   if (rebaseOnMonthlyCap) {
     // New pool minus everything already committed (all prior rows, including removed).
-    let committed = 0;
+    // Override holders take their absolute slice out of the pool first.
+    let committed = overrideSum;
     for (const [userId] of previousAllotments) {
+      if (overrides.has(userId)) continue;
       committed += effective(userId) + (reservedByUser.get(userId) ?? 0);
     }
-    for (const member of members) {
+    for (const member of remainderMembers) {
       if (!previousAllotments.has(member.userId)) {
         committed += effective(member.userId) + (reservedByUser.get(member.userId) ?? 0);
       }
     }
-    const free = Math.max(0, weekPool - committed);
+    const free = Math.max(0, periodPool - committed);
     // Members already at/over their new share stay at spent+reserved; remaining free
     // is split among the others by share weight so overspent rows are never raised.
-    const floors = members.map((member) => {
+    const floors = remainderMembers.map((member) => {
       const spent = effective(member.userId);
       const reserved = reservedByUser.get(member.userId) ?? 0;
       return { member, spent, reserved, floor: spent + reserved, want: shareOf(member) };
@@ -323,23 +421,27 @@ export function redivideWeeklyAllotments(args: {
         result.set(row.member.userId, row.floor);
       }
     }
+    applyOverrides();
     return result;
   }
 
-  // Never raise a continuing member; joiners are funded only from existing headroom.
+  // Never raise a continuing non-override member; joiners are funded only from headroom.
+  // Override holders get their absolute amount (ops intentional raise/lower).
   const headroom = new Map<string, number>();
   let freed = 0;
   for (const [userId, allotment] of previousAllotments) {
+    if (overrides.has(userId)) continue;
     const head = Math.max(0, allotment - effective(userId) - (reservedByUser.get(userId) ?? 0));
-    if (members.some((member) => member.userId === userId)) headroom.set(userId, head);
+    if (remainderMembers.some((member) => member.userId === userId)) headroom.set(userId, head);
     else freed += head;
   }
 
-  const joiners = members.filter((member) => !previousAllotments.has(member.userId));
+  const joiners = remainderMembers.filter((member) => !previousAllotments.has(member.userId));
   const totalHeadroom = [...headroom.values()].reduce((sum, value) => sum + value, 0) + freed;
+  const splitN = Math.max(1, remainderN);
   let taken = 0;
   for (const joiner of joiners) {
-    const slice = Math.min(shareOf(joiner), totalHeadroom / n);
+    const slice = Math.min(shareOf(joiner), totalHeadroom / splitN);
     result.set(joiner.userId, slice);
     taken += slice;
   }
@@ -355,6 +457,7 @@ export function redivideWeeklyAllotments(args: {
     result.set(userId, Math.min(prev, spent + reserved + head - take));
   }
 
+  applyOverrides();
   return result;
 }
 

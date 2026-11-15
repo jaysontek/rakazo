@@ -571,4 +571,101 @@ describe("shared-key period schedule math", () => {
     expect(parseSharedKeyTimezone("UTC")).toBe("UTC");
     expect(parseSharedKeyTimezone("  UTC  ")).toBe("UTC");
   });
+
+  it("null settings equal today's Monday 00:00 America/New_York weekly behaviour exactly", () => {
+    const midweek = new Date("2026-11-04T18:00:00.000Z");
+    const fromNull = resolveSharedKeyPeriodSchedule(null);
+    expect(fromNull).toEqual(DEFAULT_SHARED_KEY_PERIOD_SCHEDULE);
+    expect(sharedKeyPeriodStart(fromNull, midweek).toISOString()).toBe(
+      sharedKeyWeekStart(midweek).toISOString(),
+    );
+    expect(sharedKeyPeriodEnd(fromNull, sharedKeyPeriodStart(fromNull, midweek)).toISOString()).toBe(
+      sharedKeyWeekEnd(sharedKeyWeekStart(midweek)).toISOString(),
+    );
+  });
+
+  it("month periods use the full monthly pool and clamp resetDom 31 to month length", () => {
+    const schedule: SharedKeyPeriodSchedule = {
+      period: "month",
+      resetDow: 1,
+      resetDom: 31,
+      resetMinutes: 0,
+      timezone: "America/New_York",
+    };
+    // February 2026 has 28 days → Dom 31 clamps to 28.
+    const feb15 = new Date("2026-02-15T12:00:00.000Z");
+    const febStart = sharedKeyPeriodStart(schedule, feb15);
+    expect(febStart.toISOString()).toBe("2026-01-31T05:00:00.000Z");
+    const febEnd = sharedKeyPeriodEnd(schedule, febStart);
+    expect(febEnd.toISOString()).toBe("2026-02-28T05:00:00.000Z");
+
+    // March has 31 days.
+    const mar15 = new Date("2026-03-15T12:00:00.000Z");
+    expect(sharedKeyPeriodStart(schedule, mar15).toISOString()).toBe("2026-02-28T05:00:00.000Z");
+    expect(sharedKeyPeriodEnd(schedule, sharedKeyPeriodStart(schedule, mar15)).toISOString()).toBe(
+      "2026-03-31T04:00:00.000Z",
+    );
+
+    const periodStart = new Date("2026-03-01T05:00:00.000Z");
+    const periodEnd = new Date("2026-04-01T04:00:00.000Z");
+    const allotments = redivideWeeklyAllotments({
+      monthlyCapUsd: 400,
+      members: [
+        { userId: "a", joinedAt: periodStart },
+        { userId: "b", joinedAt: periodStart },
+      ],
+      weekStart: periodStart,
+      now: periodStart,
+      previousAllotments: new Map(),
+      spentByUser: new Map(),
+      period: "month",
+      periodEnd,
+    });
+    expect(allotments.get("a")).toBe(200);
+    expect(allotments.get("b")).toBe(200);
+    expect([...allotments.values()].reduce((sum, v) => sum + v, 0)).toBe(400);
+  });
+
+  it("subtracts overrides from the pool before splitting; sum never exceeds the cap", () => {
+    const weekStart = new Date("2026-11-02T05:00:00.000Z");
+    const allotments = redivideWeeklyAllotments({
+      monthlyCapUsd: 400, // week pool 100
+      members: [
+        { userId: "a", joinedAt: weekStart },
+        { userId: "b", joinedAt: weekStart },
+        { userId: "c", joinedAt: weekStart },
+      ],
+      weekStart,
+      now: weekStart,
+      previousAllotments: new Map(),
+      spentByUser: new Map(),
+      overrides: new Map([
+        ["a", 40],
+        ["b", 30],
+      ]),
+    });
+    expect(allotments.get("a")).toBe(40);
+    expect(allotments.get("b")).toBe(30);
+    expect(allotments.get("c")).toBe(30); // remainder 30
+    const sum = [...allotments.values()].reduce((acc, v) => acc + v, 0);
+    expect(sum).toBeLessThanOrEqual(100);
+
+    const over = redivideWeeklyAllotments({
+      monthlyCapUsd: 400,
+      members: [
+        { userId: "a", joinedAt: weekStart },
+        { userId: "b", joinedAt: weekStart },
+      ],
+      weekStart,
+      now: weekStart,
+      previousAllotments: new Map(),
+      spentByUser: new Map(),
+      overrides: new Map([
+        ["a", 80],
+        ["b", 80],
+      ]),
+    });
+    const overSum = [...over.values()].reduce((acc, v) => acc + v, 0);
+    expect(overSum).toBeLessThanOrEqual(100);
+  });
 });

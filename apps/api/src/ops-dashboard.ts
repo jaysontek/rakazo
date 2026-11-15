@@ -625,7 +625,12 @@ export async function loadOpsOverview(
         monthlyCapUsd: monthlyCap,
         rosterConfigured: members.length > 0 || monthlyCap != null,
         memberCount: members.length,
-        weekPoolUsd: monthlyCap != null && monthlyCap > 0 ? monthlyCap / 4 : null,
+        weekPoolUsd:
+          monthlyCap != null && monthlyCap > 0
+            ? schedule.period === "month"
+              ? monthlyCap
+              : monthlyCap / 4
+            : null,
         weekSpentUsd: visibleWeekSpentUsd,
         weekStartsAt: periodStart.toISOString(),
         resetsAt: periodEnd.toISOString(),
