@@ -370,10 +370,39 @@ export function createRouterContext(deps: RouterDeps) {
       return asTenant(actor, () => next({ context: { ...context, actor } }));
     })
     .use(async ({ context, next, path }) => {
-      // Deny-by-default while impersonating: only an explicit read allowlist + stop.
+      // Deny-by-default while impersonating: only reads + stop/switch.
       if (context.impersonatedBy) {
         const { isImpersonationAllowedProcedure } = await import("../impersonation-allowlist.js");
         if (!isImpersonationAllowedProcedure(path)) {
+          const procedure = path.join(".");
+          if (context.sessionId) {
+            try {
+              const {
+                buildImpersonationSessionId,
+                recordImpersonationDenied,
+              } = await import("../impersonation.js");
+              const session = await deps.prisma.session.findUnique({
+                where: { id: context.sessionId },
+                select: { impersonationExpiresAt: true, expiresAt: true },
+              });
+              const expiresAt = session?.impersonationExpiresAt ?? session?.expiresAt;
+              if (expiresAt) {
+                await recordImpersonationDenied(deps, {
+                  adminUserId: context.impersonatedBy,
+                  targetUserId: context.actor.userId,
+                  impersonationSessionId: buildImpersonationSessionId(
+                    context.sessionId,
+                    expiresAt,
+                  ),
+                  procedure,
+                  spaceId: context.actor.spaceId,
+                  ip: context.clientIp,
+                });
+              }
+            } catch {
+              // Audit must never change the deny response or leak details.
+            }
+          }
           throw new ORPCError("FORBIDDEN", { message: "Not allowed while impersonating" });
         }
       }

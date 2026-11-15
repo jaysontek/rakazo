@@ -1,10 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  buildImpersonationSessionId,
   enforceImpersonationSession,
   IMPERSONATION_TTL_MS,
+  recordImpersonationDenied,
   requireNotImpersonating,
+  resetImpersonationDeniedAggregatorForTests,
   startImpersonation,
   stopImpersonation,
+  switchImpersonation,
 } from "./impersonation.js";
 
 type UserRow = {
@@ -30,8 +34,11 @@ type SecurityEvent = {
   metadata: Record<string, unknown>;
 };
 
+type MemberRow = { id: string; organizationId: string; userId: string };
+
 describe("impersonation", () => {
   const users = new Map<string, UserRow>();
+  const members: MemberRow[] = [];
   let session: SessionRow;
   const securityEvents: SecurityEvent[] = [];
   const deletedPush: Array<{ table: string; userId: string; sessionId: string }> = [];
@@ -78,6 +85,19 @@ describe("impersonation", () => {
         session.impersonationExpiresAt = null;
         return session;
       }),
+    },
+    member: {
+      findFirst: vi.fn(
+        async ({
+          where,
+        }: {
+          where: { organizationId: string; userId: string };
+        }) =>
+          members.find(
+            (row) =>
+              row.organizationId === where.organizationId && row.userId === where.userId,
+          ) ?? null,
+      ),
     },
     securityEvent: {
       create: vi.fn(async ({ data }: { data: SecurityEvent }) => {
@@ -127,8 +147,10 @@ describe("impersonation", () => {
 
   beforeEach(() => {
     users.clear();
+    members.length = 0;
     securityEvents.length = 0;
     deletedPush.length = 0;
+    resetImpersonationDeniedAggregatorForTests();
     deps.env.adminEmails = ["admin@example.test"];
     users.set("admin", {
       id: "admin",
@@ -140,6 +162,20 @@ describe("impersonation", () => {
     users.set("user", {
       id: "user",
       email: "user@example.test",
+      emailVerified: true,
+      deactivatedAt: null,
+      adminGrant: null,
+    });
+    users.set("user-2", {
+      id: "user-2",
+      email: "user-2@example.test",
+      emailVerified: true,
+      deactivatedAt: null,
+      adminGrant: null,
+    });
+    users.set("outsider", {
+      id: "outsider",
+      email: "outsider@example.test",
       emailVerified: true,
       deactivatedAt: null,
       adminGrant: null,
@@ -165,6 +201,10 @@ describe("impersonation", () => {
       deactivatedAt: null,
       adminGrant: null,
     });
+    members.push(
+      { id: "m1", organizationId: "org-1", userId: "user" },
+      { id: "m2", organizationId: "org-1", userId: "user-2" },
+    );
     session = {
       id: "session-1",
       userId: "admin",
@@ -232,9 +272,9 @@ describe("impersonation", () => {
     });
   });
 
-  it("starts impersonation with a hard TTL and audits in the same transaction", async () => {
+  it("starts impersonation with a hard TTL, session id, and audits in the same transaction", async () => {
     const before = Date.now();
-    await startImpersonation(deps as never, {
+    const result = await startImpersonation(deps as never, {
       sessionId: session.id,
       adminUserId: "admin",
       targetUserId: "user",
@@ -245,8 +285,15 @@ describe("impersonation", () => {
       impersonatedBy: "admin",
       activeOrganizationId: null,
     });
-    expect(session.impersonationExpiresAt?.getTime()).toBeGreaterThanOrEqual(before + IMPERSONATION_TTL_MS - 1000);
-    expect(session.impersonationExpiresAt?.getTime()).toBeLessThanOrEqual(Date.now() + IMPERSONATION_TTL_MS);
+    expect(session.impersonationExpiresAt?.getTime()).toBeGreaterThanOrEqual(
+      before + IMPERSONATION_TTL_MS - 1000,
+    );
+    expect(session.impersonationExpiresAt?.getTime()).toBeLessThanOrEqual(
+      Date.now() + IMPERSONATION_TTL_MS,
+    );
+    expect(result.impersonationSessionId).toBe(
+      buildImpersonationSessionId(session.id, session.impersonationExpiresAt!),
+    );
     expect(securityEvents).toEqual([
       expect.objectContaining({
         type: "ops.impersonation.started",
@@ -255,6 +302,7 @@ describe("impersonation", () => {
           impersonatedBy: "admin",
           targetUserId: "user",
           procedure: "ops.startImpersonation",
+          impersonationSessionId: result.impersonationSessionId,
         }),
       }),
     ]);
@@ -264,19 +312,13 @@ describe("impersonation", () => {
     session.userId = "user";
     session.impersonatedBy = "admin";
     session.impersonationExpiresAt = new Date(Date.now() + 60_000);
-    // Revoke the admin mid-impersonation — stop must still exit.
-    users.set("admin", {
-      id: "admin",
-      email: "admin@example.test",
-      emailVerified: true,
-      deactivatedAt: null,
-      adminGrant: null,
-    });
+    const sessionId = buildImpersonationSessionId(session.id, session.impersonationExpiresAt);
     deps.env.adminEmails = [];
 
     const stopped = await stopImpersonation(deps as never, {
       sessionId: session.id,
       expectedAdminUserId: "admin",
+      reason: "manual",
     });
     expect(stopped).toEqual({ adminUserId: "admin", targetUserId: "user", endedSession: false });
     expect(session).toMatchObject({
@@ -296,7 +338,12 @@ describe("impersonation", () => {
     expect(securityEvents).toEqual([
       expect.objectContaining({
         type: "ops.impersonation.stopped",
-        metadata: expect.objectContaining({ impersonatedBy: "admin", targetUserId: "user" }),
+        metadata: expect.objectContaining({
+          impersonatedBy: "admin",
+          targetUserId: "user",
+          reason: "manual",
+          impersonationSessionId: sessionId,
+        }),
       }),
     ]);
   });
@@ -317,7 +364,12 @@ describe("impersonation", () => {
     const result = await enforceImpersonationSession(deps as never, session.id);
     expect(result).toEqual({ ok: false, reason: "expired" });
     expect(securityEvents).toEqual([
-      expect.objectContaining({ type: "ops.impersonation.expired" }),
+      expect.objectContaining({
+        type: "ops.impersonation.expired",
+        metadata: expect.objectContaining({
+          impersonationSessionId: expect.stringMatching(/^imp_session-1_/),
+        }),
+      }),
     ]);
     expect(session.impersonatedBy).toBeNull();
   });
@@ -338,5 +390,113 @@ describe("impersonation", () => {
     session.impersonationExpiresAt = new Date(Date.now() + 60_000);
     const result = await enforceImpersonationSession(deps as never, session.id);
     expect(result).toEqual({ ok: false, reason: "admin_deleted" });
+  });
+
+  it("switches to another org member and emits stopped + switched + started", async () => {
+    session.userId = "user";
+    session.impersonatedBy = "admin";
+    session.impersonationExpiresAt = new Date(Date.now() + 60_000);
+    const previousSessionId = buildImpersonationSessionId(
+      session.id,
+      session.impersonationExpiresAt,
+    );
+
+    const result = await switchImpersonation(deps as never, {
+      sessionId: session.id,
+      adminUserId: "admin",
+      targetUserId: "user-2",
+      organizationId: "org-1",
+    });
+
+    expect(session).toMatchObject({
+      userId: "user-2",
+      impersonatedBy: "admin",
+    });
+    expect(result.impersonationSessionId).toBe(
+      buildImpersonationSessionId(session.id, session.impersonationExpiresAt!),
+    );
+    expect(result.impersonationSessionId).not.toBe(previousSessionId);
+    expect(securityEvents.map((event) => event.type)).toEqual([
+      "ops.impersonation.stopped",
+      "ops.impersonation.switched",
+      "ops.impersonation.started",
+    ]);
+    expect(securityEvents[0]?.metadata).toMatchObject({
+      reason: "switched",
+      targetUserId: "user",
+      impersonationSessionId: previousSessionId,
+    });
+    expect(securityEvents[1]?.metadata).toMatchObject({
+      previousTargetUserId: "user",
+      targetUserId: "user-2",
+      procedure: "ops.switchImpersonation",
+    });
+  });
+
+  it("refuses switch when the target is outside the organization", async () => {
+    session.userId = "user";
+    session.impersonatedBy = "admin";
+    session.impersonationExpiresAt = new Date(Date.now() + 60_000);
+    await expect(
+      switchImpersonation(deps as never, {
+        sessionId: session.id,
+        adminUserId: "admin",
+        targetUserId: "outsider",
+        organizationId: "org-1",
+      }),
+    ).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      message: "Target is not a member of that organization",
+    });
+    expect(session.userId).toBe("user");
+  });
+
+  it("refuses switch for a non-admin", async () => {
+    session.userId = "user";
+    session.impersonatedBy = "admin";
+    session.impersonationExpiresAt = new Date(Date.now() + 60_000);
+    deps.env.adminEmails = [];
+    await expect(
+      switchImpersonation(deps as never, {
+        sessionId: session.id,
+        adminUserId: "admin",
+        targetUserId: "user-2",
+        organizationId: "org-1",
+      }),
+    ).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      message: "Admins only",
+    });
+  });
+
+  it("aggregates denied-write audits to one event per session per minute", async () => {
+    const impersonationSessionId = "imp_session-1_1";
+    await recordImpersonationDenied(deps as never, {
+      adminUserId: "admin",
+      targetUserId: "user",
+      impersonationSessionId,
+      procedure: "bots.create",
+    });
+    await recordImpersonationDenied(deps as never, {
+      adminUserId: "admin",
+      targetUserId: "user",
+      impersonationSessionId,
+      procedure: "bots.update",
+    });
+    await recordImpersonationDenied(deps as never, {
+      adminUserId: "admin",
+      targetUserId: "user",
+      impersonationSessionId,
+      procedure: "vault.put",
+    });
+    expect(securityEvents).toHaveLength(1);
+    expect(securityEvents[0]).toMatchObject({
+      type: "ops.impersonation.denied",
+      metadata: expect.objectContaining({
+        procedure: "bots.create",
+        count: 1,
+        impersonationSessionId,
+      }),
+    });
   });
 });

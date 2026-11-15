@@ -24,13 +24,16 @@ import {
   requireNotImpersonating,
   startImpersonation,
   stopImpersonation,
+  switchImpersonation,
 } from "../impersonation.js";
 import { requireOpsDashboardAccess } from "../ops-access.js";
 import {
   listOpsAgents,
+  listOpsOrganizations,
   listOpsRequestLog,
   loadOpsChatLog,
   loadOpsOverview,
+  loadOpsTeam,
 } from "../ops-dashboard.js";
 import type { RouterContext } from "./context.js";
 import { meDto } from "./shared.js";
@@ -243,6 +246,7 @@ export function opsRoutes(ctx: RouterContext) {
           expectedAdminUserId: session.impersonatedBy,
           spaceId: context.actor.spaceId,
           ip: context.clientIp,
+          reason: "manual",
         });
         if (endedSession) {
           throw new ORPCError("UNAUTHORIZED", { message: "Session ended" });
@@ -254,6 +258,67 @@ export function opsRoutes(ctx: RouterContext) {
           context.sessionId,
         );
         return meDto(deps, adminActor, context.sessionId);
+      }),
+      switchImpersonation: authed.ops.switchImpersonation.handler(async ({ context, input }) => {
+        // While impersonating, actor is the target — do not use the normal ops gate
+        // (requireNotImpersonating). Verify the impersonator is still an admin.
+        if (!context.sessionId) throw new ORPCError("UNAUTHORIZED");
+        const session = await deps.prisma.session.findUnique({
+          where: { id: context.sessionId },
+          select: { impersonatedBy: true, userId: true },
+        });
+        if (!session?.impersonatedBy) {
+          throw new ORPCError("BAD_REQUEST", { message: "Not impersonating" });
+        }
+        // Impersonator must still be admin + on an allowed network (actor is the target).
+        await requireOpsDashboardAccess(deps, session.impersonatedBy, context.clientIp);
+        await switchImpersonation(deps, {
+          sessionId: context.sessionId,
+          adminUserId: session.impersonatedBy,
+          targetUserId: input.userId,
+          organizationId: input.organizationId,
+          spaceId: context.actor.spaceId,
+          ip: context.clientIp,
+        });
+        const targetActor = await requireMembership(
+          deps.prisma,
+          input.userId,
+          null,
+          context.sessionId,
+        );
+        return meDto(deps, targetActor, context.sessionId);
+      }),
+      team: authed.ops.team.handler(async ({ context, input }) => {
+        await gate(context);
+        const secretsDegraded = deps.secrets?.describe().capabilities.degraded === true;
+        try {
+          return await loadOpsTeam(
+            deps.prisma,
+            input.organizationId,
+            {
+              degraded: secretsDegraded,
+              revision: deps.env?.gitSha ?? null,
+              runtime: deps.env?.agentRuntime,
+              sandbox: deps.env?.sandboxProvider,
+            },
+            deps.env?.sharedKeyMonthlyBudgetUsd ?? null,
+            {
+              secrets: deps.secrets,
+              deploymentModelKey: deploymentModelKey(),
+              envBootstrapAdmins: envBootstrapAdmins(),
+            },
+          );
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Team unavailable";
+          if (message === "Organization not found") {
+            throw new ORPCError("NOT_FOUND", { message });
+          }
+          throw error;
+        }
+      }),
+      organizations: authed.ops.organizations.handler(async ({ context }) => {
+        await gate(context);
+        return listOpsOrganizations(deps.prisma);
       }),
       transferSharedKeyAllotment: authed.ops.transferSharedKeyAllotment.handler(
         async ({ context, input }) => {

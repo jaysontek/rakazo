@@ -119,10 +119,12 @@ import {
   OpsAgentSchema,
   OpsAllotmentTransferSchema,
   OpsChatLogSchema,
+  OpsOrganizationNavSchema,
   OpsOverviewSchema,
   OpsRequestLogRowSchema,
   OpsSharedKeyBudgetSettingsSchema,
   OpsSharedKeySpendAdjustmentSchema,
+  OpsTeamSchema,
   PluginMarketplaceCatalogSchema,
   PluginPartSchema,
   PluginPreviewSchema,
@@ -1423,6 +1425,17 @@ export const appContract = {
       .input(z.strictObject({ userId: Id }))
       .output(MeSchema),
     stopImpersonation: oc.output(MeSchema),
+    /**
+     * Switch the current impersonation target to another member of the given org.
+     * Allowlisted while impersonating; verifies the impersonator is still admin.
+     */
+    switchImpersonation: oc
+      .input(z.strictObject({ userId: Id, organizationId: Id }))
+      .output(MeSchema),
+    /** Org members + spend/agents for the ops team drill-down. Denied while impersonating. */
+    team: oc.input(z.strictObject({ organizationId: Id })).output(OpsTeamSchema),
+    /** Orgs for the ops nav switcher. Denied while impersonating. */
+    organizations: oc.output(z.array(OpsOrganizationNavSchema)),
     transferSharedKeyAllotment: oc
       .input(z.strictObject({ fromUserId: Id, toUserId: Id }))
       .output(OpsAllotmentTransferSchema),

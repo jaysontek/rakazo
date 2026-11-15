@@ -1575,6 +1575,40 @@ export const OpsOverviewSchema = z.object({
 });
 export type OpsOverview = z.infer<typeof OpsOverviewSchema>;
 
+/** One org member on the ops team view: account fields plus their bot count. */
+export const OpsTeamMemberSchema = OpsAccountSchema.extend({
+  agentCount: z.number().int().nonnegative(),
+});
+export type OpsTeamMember = z.infer<typeof OpsTeamMemberSchema>;
+
+/** Ops team drill-down for one organization (members, agents, spend). */
+export const OpsTeamSchema = z.object({
+  organizationId: Id,
+  organizationName: z.string(),
+  memberCount: z.number().int().nonnegative(),
+  members: z.array(OpsTeamMemberSchema),
+  agents: z.object({
+    total: z.number().int().nonnegative(),
+    active: z.number().int().nonnegative(),
+    names: z.array(z.object({ id: Id, name: z.string(), userId: Id })),
+  }),
+  spend: z.object({
+    totalCostUsd: z.number().nullable(),
+    sharedKeyCostUsd: z.number().nonnegative(),
+    personalKeyCostUsd: z.number().nonnegative(),
+    totalTokens: z.number().nullable(),
+  }),
+});
+export type OpsTeam = z.infer<typeof OpsTeamSchema>;
+
+/** Org row for the ops nav switcher. */
+export const OpsOrganizationNavSchema = z.object({
+  id: Id,
+  name: z.string(),
+  memberCount: z.number().int().nonnegative(),
+});
+export type OpsOrganizationNav = z.infer<typeof OpsOrganizationNavSchema>;
+
 export const COMPUTER_UPDATE_STAGES = [
   "preparing",
   "saving",
@@ -2235,6 +2269,8 @@ export const MeSchema = z.object({
   userId: Id,
   email: z.string().email(),
   name: z.string(),
+  /** Profile image URL when the account has one. Absent from older servers. */
+  image: z.string().nullable().optional(),
   spaceId: Id,
   /** Deprecated: app accounts never have server administrator privileges. Always false. */
   isDeploymentOwner: z.boolean(),
@@ -2251,6 +2287,8 @@ export const MeSchema = z.object({
       targetName: z.string(),
       targetEmail: z.string(),
       expiresAt: z.string(),
+      /** Derived id for this impersonation window (`imp_${sessionId}_${expiresAtMs}`). */
+      impersonationSessionId: z.string(),
     })
     .nullable()
     .optional(),

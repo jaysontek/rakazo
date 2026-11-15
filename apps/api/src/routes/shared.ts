@@ -16,6 +16,7 @@ import {
 } from "@rakazo/contracts";
 import { isAdmin } from "../admins.js";
 import { effectiveSandboxProvider } from "../computer-provider-config.js";
+import { buildImpersonationSessionId } from "../impersonation.js";
 import type { RouterDeps } from "../router.js";
 
 export { createAdapterContext as computerContext } from "@rakazo/adapter-kit";
@@ -49,6 +50,7 @@ export async function meDto(
       select: {
         email: true,
         name: true,
+        image: true,
         timezone: true,
         locale: true,
         botAvatarSet: true,
@@ -61,6 +63,8 @@ export async function meDto(
   ]);
   // Where the deployment runs computers once an admin's choice in Settings applies.
   const sandboxProvider = effectiveSandboxProvider(setup.settings, deps.env.sandboxProvider);
+  const impersonationExpiresAt =
+    session?.impersonationExpiresAt ?? session?.expiresAt ?? new Date();
   return {
     ticketBoardEnabled: deps.env.ticketBoardEnabled === true,
     phoneCallsEnabled: deps.env.phoneCallsEnabled === true,
@@ -70,6 +74,7 @@ export async function meDto(
     userId: actor.userId,
     email: user.email,
     name: user.name,
+    image: user.image ?? null,
     spaceId: actor.spaceId,
     isDeploymentOwner: false,
     isAdmin: admin,
@@ -79,11 +84,11 @@ export async function meDto(
           targetUserId: actor.userId,
           targetName: user.name,
           targetEmail: user.email,
-          expiresAt: (
-            session?.impersonationExpiresAt ??
-            session?.expiresAt ??
-            new Date()
-          ).toISOString(),
+          expiresAt: impersonationExpiresAt.toISOString(),
+          impersonationSessionId: buildImpersonationSessionId(
+            sessionId!,
+            impersonationExpiresAt,
+          ),
         }
       : null,
     needsModel: setup.needsModel,
