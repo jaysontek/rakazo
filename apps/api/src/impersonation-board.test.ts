@@ -146,129 +146,24 @@ async function invokePath(
   return (current as (value?: unknown) => Promise<unknown>)(input);
 }
 
+function errorCode(error: unknown): string | undefined {
+  return error && typeof error === "object" && "code" in error
+    ? String((error as { code: unknown }).code)
+    : undefined;
+}
+
+function errorMessage(error: unknown): string | undefined {
+  return error && typeof error === "object" && "message" in error
+    ? String((error as { message: unknown }).message)
+    : undefined;
+}
+
 /**
- * Contract leaves that change state. Anything here must be denied while
- * impersonating unless it is explicitly on the allowlist (today: none except
- * stopImpersonation, which is excluded below).
+ * Procedures that intentionally do not sit on `authed` (no actor required).
+ * Everything else must be allowlisted or denied while impersonating.
  */
-const MUTATION_LEAVES = new Set([
-  "addAdminGrant",
-  "addSharedKeyBudgetMember",
-  "adoptTimezone",
-  "allow",
-  "answer",
-  "answerCall",
-  "appConnected",
-  "appendEvent",
-  "apply",
-  "approve",
-  "archive",
-  "begin",
-  "beginOAuth",
-  "boot",
-  "bootstrap",
-  "cancelOAuth",
-  "changeTier",
-  "checkout",
-  "choose",
-  "chooseForSpace",
-  "claimReferral",
-  "clear",
-  "comment",
-  "complete",
-  "completeOAuth",
-  "connect",
-  "connectProvider",
-  "create",
-  "declineCall",
-  "declineIncomingCall",
-  "disconnect",
-  "disconnectProvider",
-  "dismiss",
-  "dismissDiskWarning",
-  "dismissFocus",
-  "dismissUpdate",
-  "downloadFile",
-  "duplicate",
-  "endCall",
-  "endTrial",
-  "finishOAuth",
-  "followUp",
-  "heartbeat",
-  "importCreate",
-  "input",
-  "install",
-  "leave",
-  "markRead",
-  "markUnread",
-  "move",
-  "pin",
-  "prepare",
-  "probeCatalog",
-  "probeOpenAiCompatible",
-  "promptFocus",
-  "purchaseCredits",
-  "put",
-  "react",
-  "readFile",
-  "recover",
-  "refresh",
-  "registerCallPush",
-  "registerPush",
-  "registerWebPush",
-  "release",
-  "releaseInterrupted",
-  "remove",
-  "removeAdminGrant",
-  "rename",
-  "reorder",
-  "replace",
-  "reset",
-  "respond",
-  "restore",
-  "restoreInstructions",
-  "reveal",
-  "reverseSharedKeyAllotmentTransfer",
-  "review",
-  "revoke",
-  "rotateWebhookSecret",
-  "save",
-  "screen",
-  "selectFunding",
-  "send",
-  "sendWithRoutines",
-  "set",
-  "setBackups",
-  "setBot",
-  "setComputer",
-  "setDefault",
-  "setDefaultScope",
-  "setMonthlyCredits",
-  "setOverride",
-  "setRole",
-  "setSharedKeyMonthlyBudget",
-  "setSpeechModel",
-  "setVisibility",
-  "setVoice",
-  "signupSurvey",
-  "snapshot",
-  "start",
-  "startImpersonation",
-  "stop",
-  "submitOAuthCode",
-  "switchToYearly",
-  "takeover",
-  "test",
-  "testRun",
-  "transferSharedKeyAllotment",
-  "trust",
-  "unlink",
-  "unregisterPush",
-  "unregisterWebPush",
-  "update",
-  "updateDraft",
-  "updatePolicy",
-  "uploadFile",
+const PUBLIC_PATHS = new Map<string, string>([
+  ["health", "Unauthenticated liveness probe built on os, not authed."],
 ]);
 
 describe("board routes under impersonation", () => {
@@ -362,46 +257,57 @@ describe("board routes under impersonation", () => {
   });
 });
 
-describe("impersonation mutation allowlist meta", () => {
-  it("denies every non-allowlisted mutation procedure while impersonating", async () => {
+describe("impersonation allowlist meta", () => {
+  it("keeps PUBLIC_PATHS small and truly unauthenticated", async () => {
+    expect(PUBLIC_PATHS.size).toBeLessThanOrEqual(3);
+    const signedOut = createRouterClient(createRouter(makeDeps()), {
+      context: { actor: null },
+    });
+    for (const [dotted, reason] of PUBLIC_PATHS) {
+      expect(reason.length).toBeGreaterThan(0);
+      const path = dotted.split(".");
+      try {
+        await invokePath(signedOut, path, {});
+      } catch (error) {
+        expect(errorCode(error)).not.toBe("UNAUTHORIZED");
+      }
+    }
+  });
+
+  it("denies every non-allowlisted procedure while impersonating", async () => {
     const rpc = client("admin", makeDeps());
     const unguarded: string[] = [];
-    const checked: string[] = [];
+    const deniedPaths: string[] = [];
 
     for (const path of contractProcedurePaths(appContract)) {
-      const leaf = path[path.length - 1];
-      if (!leaf || !MUTATION_LEAVES.has(leaf)) continue;
-      if (isImpersonationAllowedProcedure(path)) {
-        unguarded.push(`${path.join(".")} (allowlisted mutation)`);
-        continue;
-      }
-      checked.push(path.join("."));
+      const dotted = path.join(".");
+      if (PUBLIC_PATHS.has(dotted)) continue;
+      if (isImpersonationAllowedProcedure(path)) continue;
 
       try {
         await invokePath(rpc, path, {});
-        unguarded.push(path.join("."));
+        unguarded.push(dotted);
       } catch (error) {
-        const code =
-          error && typeof error === "object" && "code" in error
-            ? String((error as { code: unknown }).code)
-            : undefined;
-        const message =
-          error && typeof error === "object" && "message" in error
-            ? String((error as { message: unknown }).message)
-            : undefined;
-        if (code === "FORBIDDEN" && message === "Not allowed while impersonating") continue;
-        unguarded.push(`${path.join(".")} (${code ?? "unknown"}: ${message ?? String(error)})`);
+        if (
+          errorCode(error) === "FORBIDDEN" &&
+          errorMessage(error) === "Not allowed while impersonating"
+        ) {
+          deniedPaths.push(dotted);
+          continue;
+        }
+        unguarded.push(`${dotted} (${errorCode(error) ?? "unknown"}: ${errorMessage(error) ?? String(error)})`);
       }
     }
 
-    expect(checked.length).toBeGreaterThan(50);
-    expect(checked).toEqual(expect.arrayContaining([
-      "boards.rename",
-      "tickets.create",
-      "tickets.update",
-      "tickets.move",
-      "tickets.comment",
-    ]));
+    expect(deniedPaths).toEqual(
+      expect.arrayContaining([
+        "boards.rename",
+        "tickets.create",
+        "tickets.update",
+        "tickets.move",
+        "tickets.comment",
+      ]),
+    );
     expect(unguarded).toEqual([]);
   });
 });
