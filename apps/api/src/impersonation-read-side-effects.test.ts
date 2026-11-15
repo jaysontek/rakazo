@@ -135,42 +135,6 @@ const ALLOWED_ERRORS: Record<string, { code?: string; reason: string; match?: Re
     reason: "Memory budget documents collection is absent from the recording memory stub.",
     match: /documents|Cannot read properties/i,
   },
-  "messaging.channels.list": {
-    reason: "Messaging channel list needs installed messaging adapters not present in fixtures.",
-    match: /./i,
-  },
-  "notifications.subscribe": {
-    reason: "SSE subscribe needs a live event bus; fixtures return a finished iterator shape mismatch.",
-    match: /./i,
-  },
-  "notifications.subscribeCalls": {
-    reason: "Call subscribe needs phone-call wiring absent from API unit fixtures.",
-    match: /./i,
-  },
-  "organizations.list": {
-    reason: "Organization DTO expects nested membership fields the stub omits.",
-    match: /./i,
-  },
-  "runs.list": {
-    reason: "Runs list aggregates shapes the recording Prisma stub cannot satisfy.",
-    match: /./i,
-  },
-  "search.query": {
-    reason: "Search index is not available under recording stubs.",
-    match: /./i,
-  },
-  "security.events": {
-    reason: "Security event DTO validation fails on stub row shapes.",
-    match: /./i,
-  },
-  "spaces.list": {
-    reason: "Space list decrypt/DTO path needs richer membership stubs.",
-    match: /./i,
-  },
-  "spendingLimit.get": {
-    reason: "Spending limit reads billing plan fields the stub status omits.",
-    match: /./i,
-  },
   "threads.get": {
     reason: "Thread computer relation is null under shallow Prisma stubs.",
     match: /controlRunId|Cannot read properties/i,
@@ -182,6 +146,43 @@ const ALLOWED_ERRORS: Record<string, { code?: string; reason: string; match?: Re
   "usage.summary": {
     reason: "Usage summary expects grouped run arrays; stub returns a scalar.",
     match: /runGroups|map is not a function/i,
+  },
+  // Former /./i catch-alls — narrowed to the exact fixture failures below.
+  "messaging.channels.list": {
+    reason: "Messaging channel list needs installed messaging adapters; stub returns null provider.",
+    match: /reading 'provider'/,
+  },
+  "notifications.subscribe": {
+    code: "NOT_FOUND",
+    reason: "SSE subscribe needs a live event bus the unit fixtures do not mount.",
+  },
+  "notifications.subscribeCalls": {
+    code: "NOT_FOUND",
+    reason: "Call subscribe needs phone-call wiring absent from API unit fixtures.",
+  },
+  "organizations.list": {
+    reason: "Organization membership array shape is incomplete under recording stubs.",
+    match: /reading '0'/,
+  },
+  "runs.list": {
+    reason: "Runs list joins bot/name fields the recording Prisma stub leaves null.",
+    match: /reading 'name'/,
+  },
+  "search.query": {
+    reason: "Search hits expect named entities the stub rows omit.",
+    match: /reading 'name'/,
+  },
+  "security.events": {
+    code: "FORBIDDEN",
+    reason: "Security event listing is owner-gated beyond the stub actor.",
+  },
+  "spaces.list": {
+    reason: "Space list decrypt path needs contentEncryptionOf.openRows on a real secret store.",
+    match: /openRows is not a function/,
+  },
+  "spendingLimit.get": {
+    reason: "Spending limit reads billing amount fields the stub status omits.",
+    match: /reading 'amount'/,
   },
 };
 
@@ -204,15 +205,22 @@ const SECRET_LOAD_EXEMPTIONS: Record<string, string> = {
     "May decrypt stored computer settings to build the form; secret fields are returned only as savedSecrets booleans, never plaintext.",
 };
 
-/** Known writers temporarily treated as reads to prove the harness catches them. */
+/**
+ * Known writers temporarily treated as reads to prove the harness catches them.
+ * Must reuse the MAIN walk's buildDeps + invokePath — not a separate fixture graph.
+ */
 const PROVE_TEETH_PATHS = [
   "computer.readFile",
   "computer.files",
   "computer.screenUrl",
+  "computer.terminalUrl",
   "connections.tools",
-  "paymentWallet.status",
   "mcp.servers.agents",
+  "paymentWallet.status",
   "capabilities.pluginParts",
+  "skills.snapshot",
+  "connections.catalog",
+  "voice.voices",
 ] as const;
 
 type SideEffect =
@@ -293,7 +301,8 @@ function computerFixture(): Record<string, unknown> {
     botId: "bot-1",
     state: "running",
     kind: "docker",
-    scope: "bot",
+    // parseComputerMode only accepts team|dedicated — never "bot".
+    scope: "team",
     providerRef: "provider-ref-1",
     homeKey: "home-1",
     controlHolder: "user",
@@ -301,6 +310,7 @@ function computerFixture(): Record<string, unknown> {
     controlBotId: "bot-1",
     controlRunId: "run-1",
     controlLeaseExpiresAt: LEASE_EXPIRES,
+    screenGeneration: 1,
     maintenanceId: null,
     createdAt: NOW,
     updatedAt: NOW,
@@ -336,9 +346,15 @@ function stubRow(model: string): Record<string, unknown> {
     impersonationOrganizationId: "org-1",
     activeOrganizationId: null,
     state: model === "computer" ? "running" : "stopped",
-    status: model === "teachingSession" ? "recording" : "todo",
+    status:
+      model === "teachingSession" ||
+      model === "TeachingSession" ||
+      model === "taughtSkill" ||
+      model === "TaughtSkill"
+        ? "recording"
+        : "todo",
     kind: "docker",
-    scope: "bot",
+    scope: "team",
     providerRef: model === "computer" ? "provider-ref-1" : null,
     homeKey: "home-1",
     controlHolder: model === "computer" ? "user" : "none",
@@ -346,6 +362,7 @@ function stubRow(model: string): Record<string, unknown> {
     controlBotId: model === "computer" ? "bot-1" : null,
     controlRunId: model === "computer" ? "run-1" : null,
     controlLeaseExpiresAt: model === "computer" ? LEASE_EXPIRES : null,
+    screenGeneration: 1,
     maintenanceId: null,
     ticketPrefix: "RAK",
     nextNumber: 2,
@@ -429,7 +446,13 @@ function stubRow(model: string): Record<string, unknown> {
     Object.assign(base, {
       id: "wallet-1",
       provider: "test-wallet",
-      status: "ready",
+      status: "connecting",
+      ciphertext: "cipher",
+      nextPollAt: new Date(0),
+      pollIntervalMs: 1000,
+      verificationUrl: "https://example.test/verify",
+      userCode: "ABCD",
+      expiresAt: new Date(Date.now() + 60_000),
       balanceCents: 0,
     });
   }
@@ -439,6 +462,48 @@ function stubRow(model: string): Record<string, unknown> {
       status: "recording",
       skillId: "skill-1",
       botId: "bot-1",
+    });
+  }
+  if (model === "taughtSkill" || model === "TaughtSkill") {
+    Object.assign(base, {
+      id: "skill-1",
+      status: "recording",
+      botId: "bot-1",
+      goal: "demo",
+      name: "Demo",
+      playbook: {},
+      recording: { events: [], snapshots: [] },
+      startedAt: NOW,
+      expiresAt: new Date(Date.now() + 60_000),
+      stoppedAt: null,
+    });
+  }
+  if (model === "capabilityInstall" || model === "CapabilityInstall") {
+    Object.assign(base, {
+      id: "plugin-1",
+      kind: "plugin",
+      version: "1.0.0",
+      digest: "sha256:deadbeef",
+      config: { parts: ["connector"] },
+      source: "https://example.test/plugin",
+      availableIn: [],
+    });
+  }
+  if (model === "userVoiceCredential" || model === "UserVoiceCredential") {
+    Object.assign(base, {
+      id: "voice-cred-1",
+      provider: "openai",
+      secretId: "secret-1",
+      voiceId: "alloy",
+      isDefault: true,
+    });
+  }
+  if (model === "secret" || model === "Secret") {
+    Object.assign(base, {
+      id: "secret-1",
+      ciphertext: "cipher",
+      kind: "voice",
+      spaceId: null,
     });
   }
   if (model === "userModelCredential" || model === "UserModelCredential") {
@@ -577,20 +642,31 @@ function recordable(
           return Promise.resolve(new Uint8Array());
         if (kind === "home" && String(prop) === "list") return Promise.resolve([]);
         if (kind === "secrets" && (String(prop) === "load" || String(prop) === "decrypt")) {
-          return Promise.resolve(null);
+          // Wallet poll needs a pending state blob; voice decrypt needs a key string.
+          return Promise.resolve(
+            JSON.stringify({ state: "pending-state", intervalMs: 1000, apiKey: "sk-test" }),
+          );
         }
         if (kind === "billing" && String(prop) === "status") {
           return Promise.resolve({
             enabled: true,
             plan: "pro",
             trialAvailable: false,
+            referralCode: null,
+            spendingLimitUsd: null,
+            softCapUsd: null,
           });
         }
         if (kind === "billing" && String(prop) === "claimReferral") {
           return Promise.resolve({ ok: true });
         }
         if (kind === "paymentWallet" && String(prop) === "status") {
-          return Promise.resolve({ provider: "test-wallet", status: "ready" });
+          return Promise.resolve({
+            status: "connecting",
+            verificationUrl: "https://example.test/verify",
+            userCode: "ABCD",
+            expiresAt: new Date(Date.now() + 60_000).toISOString(),
+          });
         }
         if (kind === "connectors" && String(prop) === "list") return [];
         if (kind === "connectors" && String(prop) === "get") return null;
@@ -642,11 +718,13 @@ const INPUT_FIXTURES: Record<string, unknown> = {
   "computer.readFile": { botId: "bot-1", path: "/readme.md" },
   "computer.screenUrl": { botId: "bot-1" },
   "computer.status": { botId: "bot-1" },
-  "connections.tools": { connectionId: "conn-1" },
+  "computer.terminalUrl": { botId: "bot-1" },
+  "connections.catalog": {},
+  "connections.tools": { connectorId: "managed-1", provider: "test" },
   "groups.get": { groupId: "group-1" },
   "marketplace.catalog": {},
   "mcp.assignments.list": { botId: "bot-1" },
-  "mcp.servers.agents": {},
+  "mcp.servers.agents": { id: "mcp-1", allBots: false, botIds: ["bot-1"] },
   "memory.budget": { botId: "bot-1" },
   "memory.exportMarkdown": {},
   "memory.list": {},
@@ -664,6 +742,7 @@ const INPUT_FIXTURES: Record<string, unknown> = {
   "security.events": {},
   "skills.get": { skillId: "skill-1" },
   "skills.list": { botId: "bot-1" },
+  "skills.snapshot": { skillId: "skill-1" },
   "threads.get": { botId: "bot-1" },
   "threads.head": { botId: "bot-1" },
   "threads.messages": { botId: "bot-1" },
@@ -672,6 +751,7 @@ const INPUT_FIXTURES: Record<string, unknown> = {
   "tickets.get": { id: "ticket-1" },
   "tickets.list": {},
   "updater.check": {},
+  "voice.voices": { provider: "openai", scope: "account" },
 };
 
 type InputSchema = {
@@ -796,30 +876,69 @@ function buildDeps(effects: SideEffect[], fetchMock: ReturnType<typeof vi.fn>): 
   const paymentWallet = recordable(
     effects,
     "paymentWallet",
-    ["status", "create", "refresh", "describe"],
+    ["status", "create", "refresh", "describe", "pollConnect", "beginConnect", "disconnect"],
     {
       describe: () => ({ id: "test-wallet", name: "Test Wallet" }),
       displayName: "Test Wallet",
+      pollConnect: async () => {
+        effects.push({ kind: "paymentWallet", method: "pollConnect" });
+        return { status: "pending" };
+      },
     },
   );
-  const pluginRepoFetcher = recordable(effects, "pluginRepoFetcher", ["fetch", "read"]);
+  const pluginRepoFetcher = recordable(effects, "pluginRepoFetcher", ["fetch", "read"], {
+    fetch: async () => {
+      effects.push({ kind: "pluginRepoFetcher", method: "fetch" });
+      return { files: {} };
+    },
+  });
   const providerCatalog = recordable(effects, "providerCatalog", ["get", "refresh", "list"]);
 
-  // Record wake/lease helper calls that would otherwise be silent prisma/sandbox paths.
-  const computerHelper = {
-    wake: async () => {
-      effects.push({ kind: "computer-helper", name: "wake" });
-    },
-    acquireLease: async () => {
-      effects.push({ kind: "computer-helper", name: "acquireLease" });
-    },
-    expireControl: async () => {
-      effects.push({ kind: "computer-helper", name: "expireControl" });
-    },
+  // Sandbox returns usable payloads so running-computer paths reach their writes.
+  sandbox.listFiles = async () => {
+    effects.push({ kind: "sandbox", method: "listFiles" });
+    return [];
   };
-  void computerHelper;
+  sandbox.readFile = async () => {
+    effects.push({ kind: "sandbox", method: "readFile" });
+    return new TextEncoder().encode("hello");
+  };
+  sandbox.connectScreen = async () => {
+    effects.push({ kind: "sandbox", method: "connectScreen" });
+    return { url: "https://example.test/screen" };
+  };
+  sandbox.connectTerminal = async () => {
+    effects.push({ kind: "sandbox", method: "connectTerminal" });
+    return { url: "https://example.test/terminal" };
+  };
+  sandbox.observe = async () => {
+    effects.push({ kind: "sandbox", method: "observe" });
+    return { activeWindow: { title: "demo" } };
+  };
+  // secrets.load: wallet poll needs JSON state; voice.voices needs a key string.
+  secrets.load = async () => {
+    effects.push({ kind: "secrets", method: "load" });
+    return JSON.stringify({ state: "pending-state", intervalMs: 1000 });
+  };
+  secrets.decrypt = async () => {
+    effects.push({ kind: "secrets", method: "decrypt" });
+    return "sk-test";
+  };
 
-  return {
+  const managedConnector = {
+    describe: () => ({ id: "managed-1", name: "Managed", provider: "test" }),
+    discoverTools: async () => {
+      effects.push({ kind: "connectors", method: "discoverTools" });
+      return [{ name: "tool", description: "demo" }];
+    },
+    catalog: async () => {
+      effects.push({ kind: "connectors", method: "catalog" });
+      return [{ slug: "demo", name: "Demo", connected: true }];
+    },
+    listReconnectRefs: async () => [],
+  };
+
+  const deps = {
     prisma,
     env: {
       ticketBoardEnabled: true,
@@ -871,15 +990,23 @@ function buildDeps(effects: SideEffect[], fetchMock: ReturnType<typeof vi.fn>): 
             id: "managed-1",
             name: "Managed",
             managed: true,
-            provider: "test-managed",
+            provider: "test",
           },
         ] as never[];
       },
       get: (id: string) => {
         effects.push({ kind: "connectors", method: "get" });
         return id === "managed-1"
-          ? ({ id, name: "Managed", managed: true, provider: "test-managed" } as never)
+          ? ({ id, name: "Managed", managed: true, provider: "test" } as never)
           : null;
+      },
+      managed: (id: string) => {
+        effects.push({ kind: "connectors", method: "managed" });
+        return id === "managed-1" ? (managedConnector as never) : null;
+      },
+      managedProviders: () => {
+        effects.push({ kind: "connectors", method: "managedProviders" });
+        return [managedConnector] as never;
       },
     },
     auth: {},
@@ -897,6 +1024,117 @@ function buildDeps(effects: SideEffect[], fetchMock: ReturnType<typeof vi.fn>): 
     providerCatalog: providerCatalog as never,
     oauthLogins: {} as never,
   } as unknown as RouterDeps;
+
+  deepenPrismaFixtures(deps, effects);
+  return deps;
+}
+
+/** Deep fixtures shared by the MAIN walk and the teeth walk. */
+function deepenPrismaFixtures(deps: RouterDeps, effects: SideEffect[]) {
+  const prisma = deps.prisma as unknown as Record<string, Record<string, unknown>>;
+  const model = (name: string) => prisma[name]!;
+  const runningComputer = computerFixture();
+  const botWithComputer = {
+    id: "bot-1",
+    name: "Test",
+    spaceId: ACTOR.spaceId,
+    userId: ACTOR.userId,
+    archivedAt: null,
+    screenGeneration: 1,
+    thread: { id: "thread-1", spaceId: ACTOR.spaceId, botId: "bot-1" },
+    computer: runningComputer,
+  };
+  const pluginInstall = {
+    id: "plugin-1",
+    userId: ACTOR.userId,
+    spaceId: ACTOR.spaceId,
+    kind: "plugin",
+    version: "1.0.0",
+    digest: "sha256:deadbeef",
+    config: { parts: ["connector"] },
+    source: "https://example.test/plugin",
+    availableIn: [],
+  };
+  const taughtSkill = {
+    id: "skill-1",
+    userId: ACTOR.userId,
+    spaceId: ACTOR.spaceId,
+    botId: "bot-1",
+    status: "recording",
+    goal: "demo",
+    name: "Demo",
+    playbook: {},
+    recording: { events: [], snapshots: [] },
+    startedAt: NOW,
+    expiresAt: new Date(Date.now() + 60_000),
+    stoppedAt: null,
+    createdAt: NOW,
+    updatedAt: NOW,
+  };
+
+  model("bot").findFirst = async () => botWithComputer;
+  model("bot").findUnique = async () => botWithComputer;
+  model("computer").findFirst = async () => runningComputer;
+  model("computer").findUnique = async () => runningComputer;
+  model("capabilityInstall").findFirst = async () => pluginInstall;
+  model("capabilityInstall").findUnique = async () => pluginInstall;
+  model("taughtSkill").findFirst = async () => taughtSkill;
+  model("taughtSkill").findUnique = async () => taughtSkill;
+  model("taughtSkill").findUniqueOrThrow = async () => taughtSkill;
+  model("mcpServer").findFirst = async () => ({
+    id: "mcp-1",
+    spaceId: ACTOR.spaceId,
+    userId: ACTOR.userId,
+    allBots: true,
+    availableIn: [],
+  });
+  model("connection").findFirst = async () => ({
+    id: "conn-1",
+    connectorId: "managed-1",
+    provider: "test",
+    displayName: "Demo",
+    providerRef: "ref-1",
+    status: "connected",
+  });
+  model("paymentWallet").findUnique = async () => ({
+    id: "wallet-1",
+    userId: ACTOR.userId,
+    provider: "test-wallet",
+    status: "connecting",
+    ciphertext: "cipher",
+    nextPollAt: new Date(0),
+    pollIntervalMs: 1000,
+    verificationUrl: "https://example.test/verify",
+    userCode: "ABCD",
+    expiresAt: new Date(Date.now() + 60_000),
+  });
+  model("userVoiceCredential").findFirst = async () => ({
+    id: "voice-cred-1",
+    userId: ACTOR.userId,
+    provider: "openai",
+    secretId: "secret-1",
+    voiceId: "alloy",
+    isDefault: true,
+  });
+  model("secret").findFirst = async () => ({
+    id: "secret-1",
+    userId: ACTOR.userId,
+    spaceId: null,
+    ciphertext: "cipher",
+    kind: "voice",
+  });
+
+  // Explicit write recorders so Proxy assignment overrides stay teeth-visible.
+  for (const name of ["computer", "paymentWallet", "capabilityInstall", "mcpServer", "taughtSkill"]) {
+    model(name).update = async () => {
+      effects.push({ kind: "prisma", model: name, method: "update" });
+      return stubRow(name);
+    };
+    model(name).updateMany = async () => {
+      effects.push({ kind: "prisma", model: name, method: "updateMany" });
+      return { count: 1 };
+    };
+  }
 }
 
 describe("impersonation read side-effect audit", () => {
@@ -919,7 +1157,7 @@ describe("impersonation read side-effect audit", () => {
 
   it("walks every contract leaf and records zero side effects on every read", async () => {
     const contractPaths = contractProcedurePaths(appContract);
-    expect(contractPaths.length).toBe(307);
+    expect(contractPaths.length).toBe(314);
 
     const reads = Object.entries(IMPERSONATION_PROCEDURE_KIND)
       .filter(([, kind]) => kind === "read")
@@ -1031,7 +1269,7 @@ describe("impersonation read side-effect audit", () => {
       },
     });
 
-    expect(contractPaths.length).toBe(307);
+    expect(contractPaths.length).toBe(314);
 
     const completed: string[] = [];
     const allowedErrorHits: string[] = [];
@@ -1103,6 +1341,7 @@ describe("impersonation read side-effect audit", () => {
   }, 120_000);
 
   it("proves teeth: temporarily allowing known writers fails the side-effect audit for each", async () => {
+    // Reuse the MAIN walk's buildDeps / resolveInput / invokePath / filterBadEffects.
     const allowlist = await import("./impersonation-allowlist.js");
     const originalAllowed = allowlist.isImpersonationAllowedProcedure;
     const allowed = vi
@@ -1112,158 +1351,7 @@ describe("impersonation read side-effect audit", () => {
         return originalAllowed(path);
       });
 
-    const runningComputer = {
-      id: "computer-1",
-      state: "running",
-      scope: "team",
-      kind: "docker",
-      providerRef: "provider-ref-1",
-      homeKey: "home-1",
-      controlHolder: "user",
-      controlLeaseId: "lease-1",
-      controlBotId: "bot-1",
-      controlRunId: "run-1",
-      controlLeaseExpiresAt: LEASE_EXPIRES,
-      userId: ACTOR.userId,
-      spaceId: ACTOR.spaceId,
-      botId: "bot-1",
-      updatedAt: NOW,
-      createdAt: NOW,
-    };
-    const botWithComputer = {
-      id: "bot-1",
-      name: "Test",
-      spaceId: ACTOR.spaceId,
-      userId: ACTOR.userId,
-      archivedAt: null,
-      thread: { id: "thread-1", spaceId: ACTOR.spaceId, botId: "bot-1" },
-      computer: runningComputer,
-    };
-    const pluginInstall = {
-      id: "plugin-1",
-      userId: ACTOR.userId,
-      spaceId: ACTOR.spaceId,
-      kind: "plugin",
-      version: "1.0.0",
-      digest: "sha256:deadbeef",
-      config: { parts: ["connector"] },
-      source: "https://example.test/plugin",
-      availableIn: [],
-    };
-
     const deps = buildDeps(effects, fetchMock);
-    // Prove-teeth overrides: recording Prisma is a Proxy, so assign methods the handlers hit.
-    const prisma = deps.prisma as unknown as Record<string, Record<string, unknown>>;
-    const model = (name: string) => prisma[name]!;
-    model("bot").findFirst = async () => botWithComputer;
-    model("capabilityInstall").findFirst = async () => pluginInstall;
-    model("capabilityInstall").findUnique = async () => pluginInstall;
-    model("capabilityInstall").update = async () => {
-      effects.push({ kind: "prisma", model: "capabilityInstall", method: "update" });
-      return pluginInstall;
-    };
-    model("mcpServer").findFirst = async () => ({
-      id: "mcp-1",
-      spaceId: ACTOR.spaceId,
-      userId: ACTOR.userId,
-      allBots: true,
-      availableIn: [],
-    });
-    model("mcpServer").update = async () => {
-      effects.push({ kind: "prisma", model: "mcpServer", method: "update" });
-      return {
-        id: "mcp-1",
-        spaceId: ACTOR.spaceId,
-        slug: "demo",
-        name: "Demo",
-        description: "",
-        transport: "sse",
-        endpoint: "https://example.test",
-        command: null,
-        args: null,
-        hasArgs: false,
-        env: null,
-        files: null,
-        headers: null,
-        secretId: null,
-        allBots: false,
-        enabled: true,
-        revision: 1,
-        healthStatus: "unknown",
-        healthMessage: null,
-        healthToolCount: null,
-        availableIn: [],
-      };
-    };
-    model("connection").findFirst = async () => ({
-      id: "conn-1",
-      displayName: "Demo",
-      providerRef: "ref-1",
-      status: "connected",
-    });
-    model("paymentWallet").findUnique = async () => ({
-      id: "wallet-1",
-      userId: ACTOR.userId,
-      provider: "test-wallet",
-      status: "connecting",
-      ciphertext: "cipher",
-      nextPollAt: new Date(0),
-      pollIntervalMs: 1000,
-      verificationUrl: "https://example.test",
-      userCode: "ABCD",
-      expiresAt: new Date(Date.now() + 60_000),
-    });
-    model("paymentWallet").updateMany = async () => {
-      effects.push({ kind: "prisma", model: "paymentWallet", method: "updateMany" });
-      return { count: 1 };
-    };
-    model("computer").updateMany = async () => {
-      effects.push({ kind: "prisma", model: "computer", method: "updateMany" });
-      return { count: 1 };
-    };
-
-    const sandbox = deps.sandbox as unknown as Record<string, unknown>;
-    sandbox.listFiles = async () => {
-      effects.push({ kind: "sandbox", method: "listFiles" });
-      return [];
-    };
-    sandbox.readFile = async () => {
-      effects.push({ kind: "sandbox", method: "readFile" });
-      return new TextEncoder().encode("hello");
-    };
-    sandbox.connectScreen = async () => {
-      effects.push({ kind: "sandbox", method: "connectScreen" });
-      return { url: "https://example.test/screen" };
-    };
-    const jobs = deps.jobs as unknown as Record<string, unknown>;
-    jobs.enqueue = async () => {
-      effects.push({ kind: "jobs", method: "enqueue" });
-    };
-    deps.connectors = {
-      list: () => [],
-      get: () => null,
-      managed: () => {
-        effects.push({ kind: "connectors", method: "managed" });
-        return {
-          discoverTools: async () => {
-            effects.push({ kind: "connectors", method: "discoverTools" });
-            return [{ name: "tool", description: "demo" }];
-          },
-        } as never;
-      },
-    } as never;
-    const paymentWallet = deps.paymentWallet as unknown as Record<string, unknown>;
-    paymentWallet.pollConnect = async () => {
-      effects.push({ kind: "paymentWallet", method: "pollConnect" });
-      return { status: "pending" };
-    };
-    const pluginRepoFetcher = (deps.pluginRepoFetcher ?? {}) as Record<string, unknown>;
-    pluginRepoFetcher.fetch = async () => {
-      effects.push({ kind: "pluginRepoFetcher", method: "fetch" });
-      return { files: {} };
-    };
-    deps.pluginRepoFetcher = pluginRepoFetcher as never;
-
     const rpc = createRouterClient(createRouter(deps), {
       context: {
         actor: ACTOR,
@@ -1272,19 +1360,31 @@ describe("impersonation read side-effect audit", () => {
       },
     });
 
-    const teethInputs: Record<string, unknown> = {
-      ...INPUT_FIXTURES,
-      "connections.tools": { connectorId: "managed-1", provider: "test" },
-      "mcp.servers.agents": { id: "mcp-1", allBots: false, botIds: ["bot-1"] },
-      // Same parts as the install config — still reaches the install update write.
-      "capabilities.pluginParts": { id: "plugin-1", parts: ["connector"] },
-    };
-
-    const teeth: Array<{ path: string; bad: SideEffect[]; error?: string }> = [];
+    const teeth: Array<{
+      path: string;
+      bad: SideEffect[];
+      error?: string;
+      fixtureError: boolean;
+    }> = [];
     for (const dotted of PROVE_TEETH_PATHS) {
       const before = effects.length;
       const segments = dotted.split(".");
-      const input = teethInputs[dotted] ?? {};
+      const node = segments.reduce<unknown>(
+        (current, key) => (current as Record<string, unknown> | null | undefined)?.[key],
+        appContract,
+      );
+      const schema = (node as { "~orpc"?: { inputSchema?: InputSchema } })?.["~orpc"]?.inputSchema;
+      const input = resolveInput(dotted, schema);
+      const schemaCheck = schema?.safeParse(input);
+      if (schema && schemaCheck && !schemaCheck.success) {
+        teeth.push({
+          path: dotted,
+          bad: [],
+          error: schemaCheck.error.issues.map((issue) => issue.message).join("; "),
+          fixtureError: true,
+        });
+        continue;
+      }
       let errorMessage: string | undefined;
       try {
         await invokePath(rpc, segments, input);
@@ -1295,7 +1395,12 @@ describe("impersonation read side-effect audit", () => {
             : String(error);
       }
       const bad = filterBadEffects(dotted, effects.slice(before));
-      teeth.push({ path: dotted, bad, error: errorMessage });
+      // Fixture/domain errors without a recorded side effect mean the harness missed the write.
+      const fixtureError =
+        bad.length === 0 &&
+        Boolean(errorMessage) &&
+        !/Output validation failed|Not allowed while impersonating/i.test(errorMessage ?? "");
+      teeth.push({ path: dotted, bad, error: errorMessage, fixtureError });
     }
 
     allowed.mockRestore();
@@ -1304,29 +1409,74 @@ describe("impersonation read side-effect audit", () => {
       teeth.map((row) => [
         row.path,
         {
-          failed: row.bad.length > 0,
+          detected: row.bad.length > 0,
           kinds: [...new Set(row.bad.map((effect) => effect.kind))],
+          fixtureError: row.fixtureError,
           error: row.error?.slice(0, 120),
         },
       ]),
     );
-    // Persist prove-teeth evidence for the PR body.
-    await import("node:fs/promises").then((fs) =>
-      fs.writeFile(
-        "/tmp/impersonation-prove-teeth.json",
-        JSON.stringify(results, null, 2),
-        "utf8",
-      ),
-    );
     const missed = teeth.filter((row) => row.bad.length === 0).map((row) => row.path);
-    expect({ missed, results }).toEqual({
+    const fixtureFailures = teeth.filter((row) => row.fixtureError).map((row) => row.path);
+    expect({ missed, fixtureFailures, results }).toEqual({
       missed: [],
+      fixtureFailures: [],
       results,
     });
     for (const row of teeth) {
-      expect(row.bad.length, `${row.path} must trip the side-effect recorder`).toBeGreaterThan(0);
+      expect(
+        row.bad.length,
+        `${row.path} must fail ONLY because a side effect was detected`,
+      ).toBeGreaterThan(0);
+      expect(row.fixtureError, `${row.path} must not fail on a fixture error`).toBe(false);
     }
   }, 120_000);
+
+  it("computer.status skips expireStaleComputerControl while impersonating", async () => {
+    const deps = buildDeps(effects, fetchMock);
+    const prisma = deps.prisma as unknown as Record<string, Record<string, unknown>>;
+    const staleComputer = {
+      ...computerFixture(),
+      // Expired lease: expire would write if status did not skip it.
+      controlLeaseExpiresAt: new Date(Date.now() - 60_000),
+      controlHolder: "user",
+      controlLeaseId: "lease-stale",
+    };
+    const bot = {
+      id: "bot-1",
+      name: "Test",
+      spaceId: ACTOR.spaceId,
+      userId: ACTOR.userId,
+      archivedAt: null,
+      screenGeneration: 1,
+      thread: { id: "thread-1", spaceId: ACTOR.spaceId, botId: "bot-1" },
+      computer: staleComputer,
+    };
+    prisma.bot!.findFirst = async () => bot;
+    prisma.bot!.findUnique = async () => bot;
+    prisma.computer!.findFirst = async () => staleComputer;
+    prisma.computer!.findUnique = async () => staleComputer;
+
+    const impersonated = createRouterClient(createRouter(deps), {
+      context: { actor: ACTOR, sessionId: SESSION_ID, impersonatedBy: "admin-1" },
+    });
+    const beforeImpersonated = effects.length;
+    await impersonated.computer.status({ botId: "bot-1" }).catch(() => undefined);
+    const impersonatedWrites = effects
+      .slice(beforeImpersonated)
+      .filter((effect) => effect.kind === "prisma" && effect.model === "computer");
+    expect(impersonatedWrites).toEqual([]);
+
+    const live = createRouterClient(createRouter(deps), {
+      context: { actor: ACTOR, sessionId: SESSION_ID },
+    });
+    const beforeLive = effects.length;
+    await live.computer.status({ botId: "bot-1" }).catch(() => undefined);
+    const liveWrites = effects
+      .slice(beforeLive)
+      .filter((effect) => effect.kind === "prisma" && effect.model === "computer");
+    expect(liveWrites.length).toBeGreaterThan(0);
+  });
 
   it("rejects billing.status referralCode while impersonating", async () => {
     const deps = buildDeps(effects, fetchMock);
