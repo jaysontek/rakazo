@@ -848,23 +848,33 @@ model SharedKeyMemberOverride {
 
 /// Append-only tracked-spend adjustments so ops can match the real provider bill.
 /// Never updated or deleted; reverse by inserting an opposite delta with reversesId.
+/// scope + snapshots keep spend math and audit stable if a user row is later removed;
+/// userId/createdById use RESTRICT so a null FK can never rewrite user→team scope.
 model SharedKeySpendAdjustment {
-  id                 String   @id @default(cuid())
-  periodStart        DateTime
-  /// Null = team-wide adjustment (ops pool totals). Set = per-user tracked spend.
-  userId             String?
-  user               User?    @relation("SharedKeySpendAdjustmentUser", fields: [userId], references: [id], onDelete: SetNull)
-  deltaUsd           Float
-  reason             String
-  createdById        String?
-  createdBy          User?    @relation("SharedKeySpendAdjustmentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  createdAt          DateTime @default(now())
-  previousTrackedUsd Float
-  newTrackedUsd      Float
-  reversesId         String?
-  reverses           SharedKeySpendAdjustment?  @relation("SharedKeySpendAdjustmentReverse", fields: [reversesId], references: [id], onDelete: SetNull)
-  reversedBy         SharedKeySpendAdjustment[] @relation("SharedKeySpendAdjustmentReverse")
+  id                     String   @id @default(cuid())
+  periodStart            DateTime
+  /// Explicit scope: "user" or "team". Never derive team-wide from a null userId alone.
+  scope                  String
+  /// Live FK for user-scoped rows; null only for team-wide (scope=team).
+  userId                 String?
+  user                   User?    @relation("SharedKeySpendAdjustmentUser", fields: [userId], references: [id], onDelete: Restrict)
+  /// Snapshot of the scoped user id at write time (spend math + audit).
+  userIdSnapshot         String?
+  deltaUsd               Float
+  reason                 String
+  createdById            String?
+  createdBy              User?    @relation("SharedKeySpendAdjustmentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdByIdSnapshot    String?
+  createdByEmailSnapshot String?
+  createdAt              DateTime @default(now())
+  previousTrackedUsd     Float
+  newTrackedUsd          Float
+  /// Unique so a row can only be reversed once.
+  reversesId             String?  @unique
+  reverses               SharedKeySpendAdjustment?  @relation("SharedKeySpendAdjustmentReverse", fields: [reversesId], references: [id], onDelete: Restrict)
+  reversedBy             SharedKeySpendAdjustment[] @relation("SharedKeySpendAdjustmentReverse")
 
+  @@index([periodStart, scope, userIdSnapshot])
   @@index([periodStart, userId])
   @@index([createdAt])
   @@map("shared_key_spend_adjustments")

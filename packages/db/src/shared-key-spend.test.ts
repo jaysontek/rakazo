@@ -10,12 +10,28 @@ import {
 type Usage = { userId: string; costUsd: number; sharedKey: boolean; createdAt: Date };
 type Adjustment = {
   periodStart: Date;
+  scope?: "user" | "team";
   userId: string | null;
+  userIdSnapshot?: string | null;
   deltaUsd: number;
+  createdAt?: Date;
 };
 
+function normalizeAdjustment(row: Adjustment): Required<
+  Pick<Adjustment, "scope" | "userIdSnapshot" | "createdAt">
+> &
+  Adjustment {
+  const scope = row.scope ?? (row.userId == null ? "team" : "user");
+  return {
+    ...row,
+    scope,
+    userIdSnapshot: row.userIdSnapshot ?? row.userId,
+    createdAt: row.createdAt ?? row.periodStart,
+  };
+}
+
 function fakeSpendPrisma(state: { usage: Usage[]; adjustments?: Adjustment[] }) {
-  const adjustments = state.adjustments ?? [];
+  const adjustments = (state.adjustments ?? []).map(normalizeAdjustment);
   return {
     usageRecord: {
       aggregate: vi.fn(
@@ -82,31 +98,64 @@ function fakeSpendPrisma(state: { usage: Usage[]; adjustments?: Adjustment[] }) 
         }: {
           where: {
             periodStart: Date;
+            scope?: string;
             userId?: string | null | { in: string[] };
-            OR?: Array<{ userId: null } | { userId: { in: string[] } }>;
+            userIdSnapshot?: string | { in: string[] };
+            OR?: Array<Record<string, unknown>>;
+            createdAt?: { gte?: Date; lt?: Date };
           };
         }) => {
           const sum = adjustments
             .filter((row) => {
               if (row.periodStart.getTime() !== where.periodStart.getTime()) return false;
+              if (where.scope && row.scope !== where.scope) return false;
+              if (where.createdAt?.lt && !(row.createdAt! < where.createdAt.lt)) return false;
+              if (where.createdAt?.gte && row.createdAt! < where.createdAt.gte) return false;
               if (where.OR) {
                 return where.OR.some((clause) => {
-                  if ("userId" in clause && clause.userId === null) return row.userId == null;
+                  if (clause.scope === "team") return row.scope === "team";
+                  if (clause.userId === null) return row.scope === "team";
                   if (
-                    "userId" in clause &&
-                    clause.userId &&
-                    typeof clause.userId === "object" &&
-                    "in" in clause.userId
+                    clause.userIdSnapshot &&
+                    typeof clause.userIdSnapshot === "object" &&
+                    "in" in (clause.userIdSnapshot as object)
                   ) {
-                    return row.userId != null && clause.userId.in.includes(row.userId);
+                    const ids = (clause.userIdSnapshot as { in: string[] }).in;
+                    return (
+                      row.scope === "user" &&
+                      row.userIdSnapshot != null &&
+                      ids.includes(row.userIdSnapshot)
+                    );
+                  }
+                  if (typeof clause.userIdSnapshot === "string") {
+                    return row.userIdSnapshot === clause.userIdSnapshot;
+                  }
+                  if (typeof clause.userId === "string") {
+                    return row.userId === clause.userId || row.userIdSnapshot === clause.userId;
                   }
                   return false;
                 });
               }
-              if (where.userId === null) return row.userId == null;
-              if (typeof where.userId === "string") return row.userId === where.userId;
-              if (where.userId && typeof where.userId === "object" && "in" in where.userId) {
-                return row.userId != null && where.userId.in.includes(row.userId);
+              if (where.userId === null || where.scope === "team") return row.scope === "team";
+              if (typeof where.userId === "string") {
+                return (
+                  row.scope === "user" &&
+                  (row.userId === where.userId || row.userIdSnapshot === where.userId)
+                );
+              }
+              if (typeof where.userIdSnapshot === "string") {
+                return row.scope === "user" && row.userIdSnapshot === where.userIdSnapshot;
+              }
+              if (
+                where.userIdSnapshot &&
+                typeof where.userIdSnapshot === "object" &&
+                "in" in where.userIdSnapshot
+              ) {
+                return (
+                  row.scope === "user" &&
+                  row.userIdSnapshot != null &&
+                  where.userIdSnapshot.in.includes(row.userIdSnapshot)
+                );
               }
               return true;
             })
@@ -118,20 +167,26 @@ function fakeSpendPrisma(state: { usage: Usage[]; adjustments?: Adjustment[] }) 
         async ({
           where,
         }: {
-          where: { periodStart: Date; userId: { in: string[] } };
+          where: {
+            periodStart: Date;
+            scope?: string;
+            userIdSnapshot?: { in: string[] };
+            userId?: { in: string[] };
+          };
         }) => {
           const map = new Map<string, number>();
           for (const row of adjustments) {
-            if (
-              row.periodStart.getTime() === where.periodStart.getTime() &&
-              row.userId != null &&
-              where.userId.in.includes(row.userId)
-            ) {
-              map.set(row.userId, (map.get(row.userId) ?? 0) + row.deltaUsd);
-            }
+            if (row.periodStart.getTime() !== where.periodStart.getTime()) continue;
+            if (where.scope && row.scope !== where.scope) continue;
+            const id = row.userIdSnapshot ?? row.userId;
+            if (id == null) continue;
+            const allowed =
+              where.userIdSnapshot?.in.includes(id) || where.userId?.in.includes(id);
+            if (!allowed) continue;
+            map.set(id, (map.get(id) ?? 0) + row.deltaUsd);
           }
-          return [...map.entries()].map(([userId, deltaUsd]) => ({
-            userId,
+          return [...map.entries()].map(([userIdSnapshot, deltaUsd]) => ({
+            userIdSnapshot,
             _sum: { deltaUsd },
           }));
         },
@@ -195,7 +250,13 @@ describe("shared-key tracked spend helper", () => {
     });
     expect(byUser.get("a")).toBe(12);
     expect(byUser.get("b") ?? 0).toBe(0);
-    expect(await sumSharedKeyUsageByUser(prisma, { userIds: ["a", "b"], since: periodStart, until: mid }).then((m) => m.get("b") ?? 0)).toBe(0);
+    expect(
+      await sumSharedKeyUsageByUser(prisma, {
+        userIds: ["a", "b"],
+        since: periodStart,
+        until: mid,
+      }).then((m) => m.get("b") ?? 0),
+    ).toBe(0);
 
     // Invariant: every aggregate/groupBy call filtered sharedKey: true.
     for (const call of prisma.usageRecord.aggregate.mock.calls) {

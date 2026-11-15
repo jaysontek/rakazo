@@ -1364,7 +1364,7 @@ export const OpsSharedKeyBudgetSettingsSchema = z.object({
   memberOverrides: z.array(
     z.object({
       userId: Id,
-      weeklyAllotmentUsd: z.number().positive(),
+      weeklyAllotmentUsd: z.number().nonnegative().max(1_000_000),
     }),
   ),
 });
@@ -1444,10 +1444,14 @@ export type OpsAgentOwner = z.infer<typeof OpsAgentOwnerSchema>;
 export const OpsSharedKeySpendAdjustmentSchema = z.object({
   id: Id,
   periodStart: z.string(),
+  scope: z.enum(["user", "team"]),
   userId: Id.nullable(),
+  userIdSnapshot: Id.nullable(),
   deltaUsd: z.number(),
   reason: z.string(),
   createdById: Id.nullable(),
+  createdByIdSnapshot: Id.nullable(),
+  createdByEmailSnapshot: z.string().nullable(),
   createdByEmail: z.string().nullable(),
   createdByName: z.string().nullable(),
   createdAt: z.string(),

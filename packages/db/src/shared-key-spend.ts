@@ -2,6 +2,10 @@
  * Single source for tracked shared-key spend: usage_records with sharedKey=true
  * plus append-only shared_key_spend_adjustments. Personal-key rows (sharedKey=false)
  * are never included.
+ *
+ * Spend math for adjustments always uses the explicit `scope` column (and
+ * userIdSnapshot for user rows) so a null live userId can never be reinterpreted
+ * as team-wide.
  */
 
 /**
@@ -22,6 +26,14 @@ export type SharedKeySpendWindow = {
   since?: Date;
   /** Exclusive upper bound. */
   until: Date;
+};
+
+export type SharedKeyAdjustmentWindow = {
+  periodStart: Date;
+  /** When set, only adjustments with createdAt < this instant (pre-join baseline). */
+  createdBefore?: Date;
+  /** When set, only adjustments with createdAt >= this instant. */
+  createdSince?: Date;
 };
 
 /**
@@ -78,14 +90,25 @@ export async function sumSharedKeyUsageByUser(
   return spent;
 }
 
+function adjustmentCreatedAtFilter(args: SharedKeyAdjustmentWindow):
+  | { createdAt?: { gte?: Date; lt?: Date } }
+  | Record<string, never> {
+  if (!args.createdBefore && !args.createdSince) return {};
+  return {
+    createdAt: {
+      ...(args.createdSince ? { gte: args.createdSince } : {}),
+      ...(args.createdBefore ? { lt: args.createdBefore } : {}),
+    },
+  };
+}
+
 /**
- * Sum of spend adjustments for a period. Team-wide rows (userId null) are included
- * when `userId` is omitted; when `userId` is set, only that user's rows (not team-wide).
+ * Sum of spend adjustments for a period.
+ * Team-wide: scope=team. Per-user: scope=user matched by userIdSnapshot (fallback userId).
  */
 export async function sumSharedKeyAdjustmentsUsd(
   prisma: UsageClient,
-  args: {
-    periodStart: Date;
+  args: SharedKeyAdjustmentWindow & {
     userId?: string | null;
     userIds?: string[];
   },
@@ -100,25 +123,28 @@ export async function sumSharedKeyAdjustmentsUsd(
 }
 
 /**
- * Per-user adjustment totals for a period (excludes team-wide null userId rows).
+ * Per-user adjustment totals for a period (excludes team-wide scope=team rows).
+ * Groups by userIdSnapshot so a null live userId still counts under the snapshot.
  */
 export async function sumSharedKeyAdjustmentsByUser(
   prisma: UsageClient,
-  args: { periodStart: Date; userIds: string[] },
+  args: SharedKeyAdjustmentWindow & { userIds: string[] },
 ): Promise<Map<string, number>> {
   const out = new Map<string, number>();
   if (!prisma.sharedKeySpendAdjustment || args.userIds.length === 0) return out;
   const groups = await prisma.sharedKeySpendAdjustment.groupBy({
-    by: ["userId"],
+    by: ["userIdSnapshot"],
     where: {
       periodStart: args.periodStart,
-      userId: { in: args.userIds },
+      scope: "user",
+      userIdSnapshot: { in: args.userIds },
+      ...adjustmentCreatedAtFilter(args),
     },
     _sum: { deltaUsd: true },
   });
   for (const group of groups) {
-    if (group.userId == null) continue;
-    out.set(group.userId, group._sum.deltaUsd ?? 0);
+    if (group.userIdSnapshot == null) continue;
+    out.set(group.userIdSnapshot, group._sum.deltaUsd ?? 0);
   }
   return out;
 }
@@ -133,6 +159,8 @@ export async function trackedSharedKeySpendUsd(
     userId: string;
     /** When set, include this period's per-user adjustments. */
     periodStart?: Date;
+    /** Limit included adjustments to createdAt < this (pre-join baseline). */
+    adjustmentCreatedBefore?: Date;
   },
 ): Promise<number> {
   const usage = await sumSharedKeyUsageUsd(prisma, {
@@ -144,6 +172,7 @@ export async function trackedSharedKeySpendUsd(
   const adjustments = await sumSharedKeyAdjustmentsUsd(prisma, {
     periodStart: args.periodStart,
     userId: args.userId,
+    createdBefore: args.adjustmentCreatedBefore,
   });
   return usage + adjustments;
 }
@@ -180,7 +209,7 @@ export async function trackedSharedKeySpendByUser(
 
 /**
  * Team tracked spend for ops totals: all shared-key usage in the window plus
- * team-wide adjustments for the period (userId null) and optionally per-user ones.
+ * team-wide adjustments for the period (scope=team) and optionally per-user ones.
  */
 export async function trackedSharedKeyTeamSpendUsd(
   prisma: UsageClient,
@@ -205,9 +234,14 @@ export async function trackedSharedKeyTeamSpendUsd(
       periodStart: args.periodStart,
       ...(includeUsers
         ? args.userIds
-          ? { OR: [{ userId: null }, { userId: { in: args.userIds } }] }
+          ? {
+              OR: [
+                { scope: "team" },
+                { scope: "user", userIdSnapshot: { in: args.userIds } },
+              ],
+            }
           : {}
-        : { userId: null }),
+        : { scope: "team" }),
     },
   });
   return usage + (_sum.deltaUsd ?? 0);
@@ -221,19 +255,29 @@ function usageUserFilter(args: { userId?: string; userIds?: string[] }): {
   return {};
 }
 
-function adjustmentWhere(args: {
-  periodStart: Date;
+function adjustmentWhere(args: SharedKeyAdjustmentWindow & {
   userId?: string | null;
   userIds?: string[];
-}): {
-  periodStart: Date;
-  userId?: string | null | { in: string[] };
-} {
-  if (args.userId !== undefined) {
-    return { periodStart: args.periodStart, userId: args.userId };
+}): Record<string, unknown> {
+  const created = adjustmentCreatedAtFilter(args);
+  if (args.userId === null) {
+    return { periodStart: args.periodStart, scope: "team", ...created };
+  }
+  if (typeof args.userId === "string") {
+    return {
+      periodStart: args.periodStart,
+      scope: "user",
+      OR: [{ userIdSnapshot: args.userId }, { userId: args.userId }],
+      ...created,
+    };
   }
   if (args.userIds) {
-    return { periodStart: args.periodStart, userId: { in: args.userIds } };
+    return {
+      periodStart: args.periodStart,
+      scope: "user",
+      userIdSnapshot: { in: args.userIds },
+      ...created,
+    };
   }
-  return { periodStart: args.periodStart };
+  return { periodStart: args.periodStart, ...created };
 }

@@ -608,7 +608,7 @@ function BudgetSettingsPanel({
                 <Input
                   type="number"
                   min={1}
-                  max={28}
+                  max={31}
                   inputMode="numeric"
                   aria-label={t`Reset day of month`}
                   className="tabular-nums"
@@ -942,9 +942,10 @@ function SpendAdjustmentsPanel({
   }
 
   function scopeLabel(row: OpsSharedKeySpendAdjustment): string {
-    if (!row.userId) return t`Team`;
-    const account = accountsById.get(row.userId);
-    return account ? accountLabel(account) : row.userId;
+    if (row.scope === "team" || (!row.userId && !row.userIdSnapshot)) return t`Team`;
+    const scopedId = row.userId ?? row.userIdSnapshot;
+    const account = scopedId ? accountsById.get(scopedId) : undefined;
+    return account ? accountLabel(account) : scopedId ?? t`Team`;
   }
 
   const reversedIds = useMemo(() => {
