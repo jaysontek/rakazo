@@ -1454,11 +1454,15 @@ export const appContract = {
           monthlyCapUsd: z.number().positive().max(1_000_000).nullable().optional(),
           period: z.enum(["week", "month"]).nullable().optional(),
           resetDow: z.number().int().min(0).max(6).nullable().optional(),
-          resetDom: z.number().int().min(1).max(28).nullable().optional(),
+          resetDom: z.number().int().min(1).max(31).nullable().optional(),
           resetMinutes: z.number().int().min(0).max(1439).nullable().optional(),
           timezone: z.string().min(1).nullable().optional(),
           autoEnrollMode: z.enum(["off", "gated", "open", "signup"]).nullable().optional(),
-          warningThresholds: z.array(z.number()).nullable().optional(),
+          warningThresholds: z
+            .array(z.number().min(0).max(100))
+            .max(10)
+            .nullable()
+            .optional(),
           hardStopEnabled: z.boolean().nullable().optional(),
           holdStaleMinutes: z.number().int().positive().max(1440).nullable().optional(),
           pruneInactive: z.boolean().nullable().optional(),
@@ -1471,7 +1475,7 @@ export const appContract = {
       .input(
         z.strictObject({
           userId: Id,
-          weeklyAllotmentUsd: z.number().positive().nullable(),
+          weeklyAllotmentUsd: z.number().nonnegative().max(1_000_000).nullable(),
         }),
       )
       .output(z.object({ ok: z.literal(true) })),
@@ -1483,7 +1487,7 @@ export const appContract = {
     setSharedKeyTrackedSpend: oc
       .input(
         z.strictObject({
-          targetUsd: z.number(),
+          targetUsd: z.number().nonnegative().max(1_000_000),
           reason: z.string().min(1).max(500),
           userId: Id.optional().nullable(),
         }),
@@ -1493,7 +1497,11 @@ export const appContract = {
     adjustSharedKeyTrackedSpend: oc
       .input(
         z.strictObject({
-          deltaUsd: z.number(),
+          deltaUsd: z
+            .number()
+            .min(-1_000_000)
+            .max(1_000_000)
+            .refine((value) => value !== 0, { message: "deltaUsd must be non-zero" }),
           reason: z.string().min(1).max(500),
           userId: Id.optional().nullable(),
         }),
