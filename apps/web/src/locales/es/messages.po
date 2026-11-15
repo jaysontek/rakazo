@@ -96,6 +96,11 @@ msgstr "{0} (más de {1})"
 msgid "{0} {unitLabel}"
 msgstr "{0} {unitLabel}"
 
+#. placeholder {0}: group.agents.length
+#: src/pages/AdminOpsPage.tsx
+msgid "{0} agents"
+msgstr "{0} agentes"
+
 #. placeholder {0}: block.name
 #: src/pages/shell/message-cards.tsx
 msgid "{0} connection"
@@ -538,6 +543,7 @@ msgstr "Acciones para {0}"
 msgid "Actions for space"
 msgstr "Acciones del espacio"
 
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/BillingSettingsPanel.tsx
 #: src/pages/RoutineEditor.tsx
 msgid "Active"
@@ -756,6 +762,10 @@ msgstr "Todos los bots"
 #: src/pages/AdminOpsPage.tsx
 msgid "All keys"
 msgstr "Todas las claves"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "All owners"
+msgstr "Todos los propietarios"
 
 #: src/components/integrations/space-availability.tsx
 msgid "All spaces"
@@ -995,6 +1005,7 @@ msgstr "Archivar"
 msgid "archived"
 msgstr "archivado"
 
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/shell/archived-chats.tsx
 msgid "Archived"
 msgstr "Archivado"
@@ -2651,6 +2662,7 @@ msgid "Create your Rakazo"
 msgstr "Crea tu Rakazo"
 
 #: src/components/AskCard.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Created"
 msgstr "Creado"
 
@@ -2759,6 +2771,10 @@ msgstr "Trabajo del día a día"
 #: src/lib/cron.ts
 msgid "days"
 msgstr "días"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Deactivated owners"
+msgstr "Propietarios desactivados"
 
 #: src/components/call/IncomingCall.tsx
 #: src/pages/MessagingSettingsPanel.tsx
@@ -3382,6 +3398,10 @@ msgstr "Filtrar por fecha"
 msgid "Filter by key type"
 msgstr "Filtrar por tipo de clave"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Filter by owner"
+msgstr "Filtrar por propietario"
+
 #: src/pages/Artifacts.tsx
 #: src/pages/shell/shell-sidebar.tsx
 msgid "Filters"
@@ -3941,6 +3961,10 @@ msgstr "Etiqueta"
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Language"
 msgstr "Idioma"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Last active"
+msgstr "Última actividad"
 
 #. placeholder {0}: new Date(state.checkedAt).toLocaleString()
 #: src/pages/RoutineEditor.tsx
@@ -4626,6 +4650,10 @@ msgstr "Página siguiente"
 msgid "Next settings sections"
 msgstr "Siguientes secciones de configuración"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "No agents match this filter."
+msgstr "Ningún agente coincide con este filtro."
+
 #: src/pages/PluginsOverlay.tsx
 msgid "No apps match your search."
 msgstr "Ninguna app coincide con tu búsqueda."
@@ -4697,6 +4725,10 @@ msgstr "No hay modelos en la lista."
 #: src/pages/shell/agent-import.tsx
 msgid "No OpenClaw, Hermes or agent document found."
 msgstr "No se encontraron archivos de OpenClaw, Hermes ni un documento de agente."
+
+#: src/pages/AdminOpsPage.tsx
+msgid "No owner / deleted account"
+msgstr "Sin propietario / cuenta eliminada"
 
 #: src/components/pages/PagesList.tsx
 msgid "No pages match “{query}”."

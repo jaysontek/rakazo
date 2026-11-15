@@ -49,14 +49,22 @@ export type OpsAccountRow = {
   pendingSharedBudgetApproval: boolean;
 };
 
+export type OpsAgentOwner = {
+  id: string;
+  name: string;
+  email: string;
+  deactivated: boolean;
+};
+
 export type OpsAgentRow = {
   id: string;
   name: string;
-  userId: string;
-  spaceId: string;
-  modelProvider: string | null;
-  modelId: string | null;
-  archived: boolean;
+  createdAt: string;
+  lastActiveAt: string | null;
+  status: "active" | "archived";
+  owner: OpsAgentOwner | null;
+  keyType: "company" | "personal";
+  needsReconnect: boolean;
 };
 
 export type OpsRequestLogRow = {
@@ -405,9 +413,9 @@ export async function loadOpsOverview(
     }
     const visibleBots = bots.filter((bot) => !hiddenUserIds.has(bot.userId));
     const activeBots = visibleBots.filter((bot) => bot.archivedAt == null);
-    const adminGrants = (
-      await listAdminGrants(prisma, options.envBootstrapAdmins ?? [])
-    ).filter((grant) => !isHiddenOpsEmail(grant.email));
+    const adminGrants = (await listAdminGrants(prisma, options.envBootstrapAdmins ?? [])).filter(
+      (grant) => !isHiddenOpsEmail(grant.email),
+    );
     // Also surface env bootstrap admins that have no DB grant row yet.
     for (const email of options.envBootstrapAdmins ?? []) {
       if (isHiddenOpsEmail(email)) continue;
@@ -509,7 +517,14 @@ export async function loadOpsOverview(
   });
 }
 
-export async function listOpsAgents(prisma: OpsDashboardPrisma): Promise<OpsAgentRow[]> {
+/** Cross-account agent roster with owner + last-active. Caller must enforce admin + LAN. */
+export async function listOpsAgents(
+  prisma: OpsDashboardPrisma,
+  options: {
+    secrets?: SecretStore;
+    deploymentModelKey?: string | null;
+  } = {},
+): Promise<OpsAgentRow[]> {
   return runAsSystem("operations dashboard agents", async () => {
     const bots = await prisma.bot.findMany({
       select: {
@@ -517,30 +532,99 @@ export async function listOpsAgents(prisma: OpsDashboardPrisma): Promise<OpsAgen
         name: true,
         userId: true,
         spaceId: true,
-        modelProvider: true,
-        modelId: true,
+        createdAt: true,
         archivedAt: true,
       },
       orderBy: [{ archivedAt: "asc" }, { name: "asc" }],
     });
-    const users = await prisma.user.findMany({
-      where: { id: { in: [...new Set(bots.map((bot) => bot.userId))] } },
-      select: { id: true, email: true },
-    });
+    const botIds = bots.map((bot) => bot.id);
+    const ownerIds = [...new Set(bots.map((bot) => bot.userId))];
+    const [users, lastActiveGroups] = await Promise.all([
+      ownerIds.length === 0
+        ? Promise.resolve(
+            [] as Array<{
+              id: string;
+              email: string;
+              name: string;
+              deactivatedAt: Date | null;
+            }>,
+          )
+        : prisma.user.findMany({
+            where: { id: { in: ownerIds } },
+            select: { id: true, email: true, name: true, deactivatedAt: true },
+          }),
+      botIds.length === 0
+        ? Promise.resolve([] as Array<{ botId: string; _max: { createdAt: Date | null } }>)
+        : prisma.run.groupBy({
+            by: ["botId"],
+            where: { botId: { in: botIds } },
+            _max: { createdAt: true },
+          }),
+    ]);
+    const userById = new Map(users.map((user) => [user.id, user]));
     const hiddenUsers = new Set(
       users.filter((user) => isHiddenOpsEmail(user.email)).map((user) => user.id),
     );
+    const lastActiveByBot = new Map(
+      lastActiveGroups.map((row) => [
+        row.botId,
+        row._max.createdAt ? row._max.createdAt.toISOString() : null,
+      ]),
+    );
+    const secretStore =
+      options.secrets ??
+      ({
+        load: async () => {
+          throw new Error("secret store unavailable");
+        },
+      } satisfies Pick<SecretStore, "load">);
+    const keyByOwner = new Map<
+      string,
+      { keyType: "company" | "personal"; needsReconnect: boolean }
+    >();
+    for (const user of users) {
+      if (hiddenUsers.has(user.id)) continue;
+      const sampleBot = bots.find((bot) => bot.userId === user.id);
+      const spaceId = sampleBot?.spaceId ?? user.id;
+      const resolution = await resolveModelKeyTypeSafe(
+        {
+          prisma,
+          secretStore,
+          deploymentModelKey: options.deploymentModelKey ?? undefined,
+        },
+        { userId: user.id, spaceId },
+      );
+      keyByOwner.set(user.id, {
+        keyType: resolution.keyType,
+        needsReconnect: resolution.needsReconnect,
+      });
+    }
     return bots
       .filter((bot) => !hiddenUsers.has(bot.userId))
-      .map((bot) => ({
-        id: bot.id,
-        name: bot.name,
-        userId: bot.userId,
-        spaceId: bot.spaceId,
-        modelProvider: bot.modelProvider,
-        modelId: bot.modelId,
-        archived: bot.archivedAt != null,
-      }));
+      .map((bot) => {
+        const user = userById.get(bot.userId);
+        const owner: OpsAgentOwner | null = user
+          ? {
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              deactivated: user.deactivatedAt != null,
+            }
+          : null;
+        const key = owner
+          ? (keyByOwner.get(owner.id) ?? { keyType: "company" as const, needsReconnect: false })
+          : { keyType: "company" as const, needsReconnect: false };
+        return {
+          id: bot.id,
+          name: bot.name,
+          createdAt: bot.createdAt.toISOString(),
+          lastActiveAt: lastActiveByBot.get(bot.id) ?? null,
+          status: bot.archivedAt != null ? ("archived" as const) : ("active" as const),
+          owner,
+          keyType: key.keyType,
+          needsReconnect: key.needsReconnect,
+        };
+      });
   });
 }
 

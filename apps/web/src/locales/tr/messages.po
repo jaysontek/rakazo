@@ -96,6 +96,11 @@ msgstr "{0} ({1} üzeri)"
 msgid "{0} {unitLabel}"
 msgstr "{0} {unitLabel}"
 
+#. placeholder {0}: group.agents.length
+#: src/pages/AdminOpsPage.tsx
+msgid "{0} agents"
+msgstr "{0} ajan"
+
 #. placeholder {0}: block.name
 #: src/pages/shell/message-cards.tsx
 msgid "{0} connection"
@@ -538,6 +543,7 @@ msgstr "{0} için işlemler"
 msgid "Actions for space"
 msgstr "Alan işlemleri"
 
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/BillingSettingsPanel.tsx
 #: src/pages/RoutineEditor.tsx
 msgid "Active"
@@ -756,6 +762,10 @@ msgstr "Tüm botlar"
 #: src/pages/AdminOpsPage.tsx
 msgid "All keys"
 msgstr "Tüm anahtarlar"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "All owners"
+msgstr "Tüm sahipler"
 
 #: src/components/integrations/space-availability.tsx
 msgid "All spaces"
@@ -995,6 +1005,7 @@ msgstr "Arşivle"
 msgid "archived"
 msgstr "arşivlendi"
 
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/shell/archived-chats.tsx
 msgid "Archived"
 msgstr "Arşivlendi"
@@ -2651,6 +2662,7 @@ msgid "Create your Rakazo"
 msgstr "Rakazo hesabını oluştur"
 
 #: src/components/AskCard.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Created"
 msgstr "Oluşturuldu"
 
@@ -2759,6 +2771,10 @@ msgstr "Günlük işler"
 #: src/lib/cron.ts
 msgid "days"
 msgstr "gün"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Deactivated owners"
+msgstr "Devre dışı sahipler"
 
 #: src/components/call/IncomingCall.tsx
 #: src/pages/MessagingSettingsPanel.tsx
@@ -3382,6 +3398,10 @@ msgstr "Tarihe göre filtrele"
 msgid "Filter by key type"
 msgstr "Anahtar türüne göre filtrele"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Filter by owner"
+msgstr "Sahibe göre filtrele"
+
 #: src/pages/Artifacts.tsx
 #: src/pages/shell/shell-sidebar.tsx
 msgid "Filters"
@@ -3941,6 +3961,10 @@ msgstr "Etiket"
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Language"
 msgstr "Dil"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Last active"
+msgstr "Son etkinlik"
 
 #. placeholder {0}: new Date(state.checkedAt).toLocaleString()
 #: src/pages/RoutineEditor.tsx
@@ -4626,6 +4650,10 @@ msgstr "Sonraki sayfa"
 msgid "Next settings sections"
 msgstr "Sonraki ayar bölümleri"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "No agents match this filter."
+msgstr "Bu filtreyle eşleşen ajan yok."
+
 #: src/pages/PluginsOverlay.tsx
 msgid "No apps match your search."
 msgstr "Aramanla eşleşen uygulama yok."
@@ -4697,6 +4725,10 @@ msgstr "Listelenen model yok."
 #: src/pages/shell/agent-import.tsx
 msgid "No OpenClaw, Hermes or agent document found."
 msgstr "OpenClaw, Hermes veya agent belgesi bulunamadı."
+
+#: src/pages/AdminOpsPage.tsx
+msgid "No owner / deleted account"
+msgstr "Sahip yok / silinmiş hesap"
 
 #: src/components/pages/PagesList.tsx
 msgid "No pages match “{query}”."

@@ -96,6 +96,11 @@ msgstr "{0}（超过 {1}）"
 msgid "{0} {unitLabel}"
 msgstr "{0} {unitLabel}"
 
+#. placeholder {0}: group.agents.length
+#: src/pages/AdminOpsPage.tsx
+msgid "{0} agents"
+msgstr "{0} 个智能体"
+
 #. placeholder {0}: block.name
 #: src/pages/shell/message-cards.tsx
 msgid "{0} connection"
@@ -538,6 +543,7 @@ msgstr "{0} 的操作"
 msgid "Actions for space"
 msgstr "工作区操作"
 
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/BillingSettingsPanel.tsx
 #: src/pages/RoutineEditor.tsx
 msgid "Active"
@@ -756,6 +762,10 @@ msgstr "全部 Bot"
 #: src/pages/AdminOpsPage.tsx
 msgid "All keys"
 msgstr "全部密钥"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "All owners"
+msgstr "全部所有者"
 
 #: src/components/integrations/space-availability.tsx
 msgid "All spaces"
@@ -995,6 +1005,7 @@ msgstr "归档"
 msgid "archived"
 msgstr "已归档"
 
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/shell/archived-chats.tsx
 msgid "Archived"
 msgstr "已归档"
@@ -2651,6 +2662,7 @@ msgid "Create your Rakazo"
 msgstr "创建你的 Rakazo"
 
 #: src/components/AskCard.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Created"
 msgstr "已创建"
 
@@ -2759,6 +2771,10 @@ msgstr "日常工作"
 #: src/lib/cron.ts
 msgid "days"
 msgstr "天"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Deactivated owners"
+msgstr "已停用的所有者"
 
 #: src/components/call/IncomingCall.tsx
 #: src/pages/MessagingSettingsPanel.tsx
@@ -3382,6 +3398,10 @@ msgstr "按日期筛选"
 msgid "Filter by key type"
 msgstr "按密钥类型筛选"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Filter by owner"
+msgstr "按所有者筛选"
+
 #: src/pages/Artifacts.tsx
 #: src/pages/shell/shell-sidebar.tsx
 msgid "Filters"
@@ -3941,6 +3961,10 @@ msgstr "标签"
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Language"
 msgstr "语言"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Last active"
+msgstr "最近活动"
 
 #. placeholder {0}: new Date(state.checkedAt).toLocaleString()
 #: src/pages/RoutineEditor.tsx
@@ -4626,6 +4650,10 @@ msgstr "下一页"
 msgid "Next settings sections"
 msgstr "下一组设置项"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "No agents match this filter."
+msgstr "没有符合此筛选条件的智能体。"
+
 #: src/pages/PluginsOverlay.tsx
 msgid "No apps match your search."
 msgstr "没有匹配的应用。"
@@ -4697,6 +4725,10 @@ msgstr "未列出模型。"
 #: src/pages/shell/agent-import.tsx
 msgid "No OpenClaw, Hermes or agent document found."
 msgstr "未找到 OpenClaw、Hermes 或 Agent 文档。"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "No owner / deleted account"
+msgstr "无所有者 / 已删除账户"
 
 #: src/components/pages/PagesList.tsx
 msgid "No pages match “{query}”."

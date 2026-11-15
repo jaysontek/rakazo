@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 
-import type { OpsOverview, OpsRequestLogRow } from "@rakazo/contracts";
+import type { OpsAgent, OpsOverview, OpsRequestLogRow } from "@rakazo/contracts";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ComponentProps, ReactNode } from "react";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { MemoryRouter } from "react-router-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 vi.mock("@lingui/react/macro", () => {
@@ -17,8 +17,9 @@ vi.mock("@lingui/react/macro", () => {
   };
 });
 
-const { addSharedKeyBudgetMember } = vi.hoisted(() => ({
+const { addSharedKeyBudgetMember, agentsRpc } = vi.hoisted(() => ({
   addSharedKeyBudgetMember: vi.fn(),
+  agentsRpc: vi.fn(),
 }));
 
 vi.mock("@rakazo/ui-web", () => {
@@ -51,20 +52,12 @@ vi.mock("@rakazo/ui-web", () => {
     CardTitle: Pass,
     DropdownMenu: Pass,
     DropdownMenuContent: Pass,
-    DropdownMenuItem: ({
-      children,
-      onClick,
-      disabled,
-    }: ComponentProps<"button">) => (
+    DropdownMenuItem: ({ children, onClick, disabled }: ComponentProps<"button">) => (
       <button type="button" role="menuitem" disabled={disabled} onClick={onClick}>
         {children}
       </button>
     ),
-    DropdownMenuTrigger: ({
-      children,
-      className,
-      ...props
-    }: ComponentProps<"button">) => (
+    DropdownMenuTrigger: ({ children, className, ...props }: ComponentProps<"button">) => (
       <button type="button" className={className} {...props}>
         {children}
       </button>
@@ -102,11 +95,14 @@ vi.mock("@rakazo/ui-web", () => {
   };
 });
 
+vi.mock("../lib/relative-time", () => ({ formatRelativeTime: () => "2d ago" }));
+
 vi.mock("../lib/rpc", () => ({
   rpc: {
     ops: {
       addSharedKeyBudgetMember: (...args: unknown[]) => addSharedKeyBudgetMember(...args),
       overview: vi.fn(),
+      agents: (...args: unknown[]) => agentsRpc(...args),
       requestLog: vi.fn(),
       chatLog: vi.fn(),
       setSharedKeyMonthlyBudget: vi.fn(),
@@ -212,6 +208,8 @@ beforeEach(() => {
   document.body.appendChild(container);
   root = createRoot(container);
   addSharedKeyBudgetMember.mockReset();
+  agentsRpc.mockReset();
+  agentsRpc.mockResolvedValue([]);
 });
 
 afterEach(() => {
@@ -257,7 +255,8 @@ it("shows Add failure reason in the accounts section when enrolled is false", as
 });
 
 function accountFixture(
-  overrides: Partial<OpsOverview["accounts"][number]> & Pick<OpsOverview["accounts"][number], "userId" | "email" | "name" | "keyType">,
+  overrides: Partial<OpsOverview["accounts"][number]> &
+    Pick<OpsOverview["accounts"][number], "userId" | "email" | "name" | "keyType">,
 ): OpsOverview["accounts"][number] {
   return {
     deactivated: false,
@@ -344,4 +343,144 @@ it("never renders an em dash for the Key column on desktop or mobile", async () 
   expect(mobileCards[1]?.textContent).toContain("Personal API");
   expect(mobileCards[2]?.textContent).toContain("Personal API");
   expect(mobileCards[2]?.textContent).toContain("Reconnect");
+});
+
+function agentFixture(overrides: Partial<OpsAgent> & Pick<OpsAgent, "id" | "name">): OpsAgent {
+  return {
+    createdAt: "2026-01-01T00:00:00.000Z",
+    lastActiveAt: "2026-11-10T12:00:00.000Z",
+    status: "active",
+    owner: {
+      id: "user_alex",
+      name: "Alex Rivera",
+      email: "alex@example.test",
+      deactivated: false,
+    },
+    keyType: "company",
+    needsReconnect: false,
+    ...overrides,
+  };
+}
+
+const fixtureAgents: OpsAgent[] = [
+  agentFixture({ id: "bot_alex", name: "Ops helper" }),
+  agentFixture({
+    id: "bot_sam",
+    name: "Inbox triage",
+    owner: {
+      id: "user_sam",
+      name: "Sam Chen",
+      email: "sam@example.test",
+      deactivated: false,
+    },
+    keyType: "personal",
+  }),
+  agentFixture({
+    id: "bot_orphan",
+    name: "Orphan agent",
+    owner: null,
+    lastActiveAt: null,
+  }),
+  agentFixture({
+    id: "bot_gone",
+    name: "Retired bot",
+    owner: {
+      id: "user_gone",
+      name: "Gone User",
+      email: "gone@example.test",
+      deactivated: true,
+    },
+  }),
+];
+
+it("groups agents by owner, shows the orphan group, and filters by owner", async () => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  await act(async () => {
+    root.render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <OpsDashboardView
+            data={overview}
+            onChanged={() => undefined}
+            selected={null as OpsRequestLogRow | null}
+            onSelect={() => undefined}
+            interactive={false}
+            fixtureAgents={fixtureAgents}
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+  });
+
+  const agentsSection = container.querySelector('[data-testid="ops-agents"]');
+  expect(agentsSection).toBeTruthy();
+  expect(agentsSection?.textContent).toContain("Alex Rivera");
+  expect(agentsSection?.textContent).toContain("Ops helper");
+  expect(agentsSection?.textContent).toContain("Sam Chen");
+  expect(agentsSection?.textContent).toContain("Inbox triage");
+
+  const orphans = container.querySelector('[data-testid="ops-agents-orphans"]');
+  expect(orphans).toBeTruthy();
+  expect(orphans?.textContent).toContain("No owner / deleted account");
+  expect(orphans?.textContent).toContain("Orphan agent");
+  expect(orphans?.textContent).not.toContain("Company API");
+
+  const deactivated = container.querySelector('[data-testid="ops-agents-deactivated"]');
+  expect(deactivated).toBeTruthy();
+  expect(deactivated?.textContent).toContain("Gone User");
+  expect(deactivated?.textContent).toContain("Retired bot");
+
+  const filter = container.querySelector(
+    '[data-testid="ops-agents"] select[aria-label="Filter by owner"]',
+  ) as HTMLSelectElement | null;
+  expect(filter).toBeTruthy();
+  await act(async () => {
+    filter!.value = "user_sam";
+    filter!.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  expect(container.querySelector('[data-testid="ops-agents"]')?.textContent).toContain(
+    "Inbox triage",
+  );
+  expect(container.querySelector('[data-testid="ops-agents"]')?.textContent).not.toContain(
+    "Ops helper",
+  );
+  expect(container.querySelector('[data-testid="ops-agents-orphans"]')).toBeNull();
+
+  await act(async () => {
+    filter!.value = "__orphan__";
+    filter!.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  expect(container.querySelector('[data-testid="ops-agents-orphans"]')?.textContent).toContain(
+    "Orphan agent",
+  );
+  expect(container.querySelector('[data-testid="ops-agents"]')?.textContent).not.toContain(
+    "Ops helper",
+  );
+});
+
+it("shows an empty state when no agents match", async () => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  await act(async () => {
+    root.render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <OpsDashboardView
+            data={overview}
+            onChanged={() => undefined}
+            selected={null as OpsRequestLogRow | null}
+            onSelect={() => undefined}
+            interactive={false}
+            fixtureAgents={[]}
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+  });
+  expect(container.querySelector('[data-testid="ops-agents-empty"]')?.textContent).toContain(
+    "No agents match this filter.",
+  );
 });

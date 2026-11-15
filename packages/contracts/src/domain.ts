@@ -1388,14 +1388,33 @@ export const OpsAllotmentTransferSchema = z.object({
 });
 export type OpsAllotmentTransfer = z.infer<typeof OpsAllotmentTransferSchema>;
 
+export const OpsAgentOwnerSchema = z.object({
+  id: Id,
+  name: z.string(),
+  email: z.string(),
+  deactivated: z.boolean(),
+});
+export type OpsAgentOwner = z.infer<typeof OpsAgentOwnerSchema>;
+
 export const OpsAgentSchema = z.object({
   id: Id,
   name: z.string(),
-  userId: Id,
-  spaceId: Id,
-  modelProvider: z.string().nullable(),
-  modelId: z.string().nullable(),
-  archived: z.boolean(),
+  createdAt: z.string(),
+  /** Latest Run.createdAt for this bot; null when the bot has never run. */
+  lastActiveAt: z.string().nullable(),
+  status: z.enum(["active", "archived"]),
+  /** Null when Bot.userId points at a missing or deleted account (no FK). */
+  owner: OpsAgentOwnerSchema.nullable(),
+  /**
+   * Live classification of the key a run would use for the owner: company
+   * (deployment/shared) or personal. Orphans default to company. Legacy servers
+   * may still send `none`; clients map that to company for one release.
+   */
+  keyType: z.preprocess(
+    (value) => (value === "none" || value === undefined || value === null ? "company" : value),
+    z.enum(["company", "personal"]),
+  ),
+  needsReconnect: z.boolean().default(false),
 });
 export type OpsAgent = z.infer<typeof OpsAgentSchema>;
 

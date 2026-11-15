@@ -1,5 +1,11 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import type { OpsAccount, OpsChatLog, OpsOverview, OpsRequestLogRow } from "@rakazo/contracts";
+import type {
+  OpsAccount,
+  OpsAgent,
+  OpsChatLog,
+  OpsOverview,
+  OpsRequestLogRow,
+} from "@rakazo/contracts";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,11 +16,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   Badge,
+  buttonVariants,
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
+  cn,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -28,8 +36,6 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
-  buttonVariants,
-  cn,
 } from "@rakazo/ui-web";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, MoreHorizontal } from "lucide-react";
@@ -38,6 +44,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { PageLoading } from "../components/PageLoading";
 import { useSpaceQueries } from "../lib/query";
+import { formatRelativeTime } from "../lib/relative-time";
 import { rpc } from "../lib/rpc";
 import { errorText } from "../lib/user-error";
 import { WindowChrome } from "./WindowChrome";
@@ -249,6 +256,7 @@ export function OpsDashboardView({
   selected,
   onSelect,
   interactive = true,
+  fixtureAgents,
 }: {
   data: OpsOverview;
   onChanged: () => void;
@@ -256,6 +264,8 @@ export function OpsDashboardView({
   onSelect: (row: OpsRequestLogRow) => void;
   /** When false, mutation controls stay visible but RPC is not called (fixture). */
   interactive?: boolean;
+  /** Agents roster for non-interactive fixtures (e2e / unit). */
+  fixtureAgents?: OpsAgent[];
 }) {
   return (
     <div data-testid="ops-dashboard" className="space-y-6">
@@ -276,7 +286,11 @@ export function OpsDashboardView({
           </TabsTrigger>
         </TabsList>
         <TabsContent value="accounts" className="space-y-4">
-          <AccountsSection accounts={data.accounts} onChanged={onChanged} interactive={interactive} />
+          <AccountsSection
+            accounts={data.accounts}
+            onChanged={onChanged}
+            interactive={interactive}
+          />
         </TabsContent>
         <TabsContent value="transfers" className="space-y-4">
           <TransfersSection data={data} onChanged={onChanged} interactive={interactive} />
@@ -285,7 +299,11 @@ export function OpsDashboardView({
           <AdminGrantsSection data={data} onChanged={onChanged} interactive={interactive} />
         </TabsContent>
         <TabsContent value="audit" className="space-y-8">
-          <AgentsSection data={data} />
+          <AgentsSection
+            interactive={interactive}
+            fixtureAgents={fixtureAgents}
+            overviewCounts={data.agents}
+          />
           <PerformanceSection data={data} />
           <RequestLogSection
             selected={selected}
@@ -326,8 +344,7 @@ function KpiRow({
   const [editing, setEditing] = useState(false);
   const pool = budget.weekPoolUsd;
   const spent = budget.weekSpentUsd;
-  const poolPct =
-    pool != null && pool > 0 ? Math.min(100, Math.max(0, (spent / pool) * 100)) : 0;
+  const poolPct = pool != null && pool > 0 ? Math.min(100, Math.max(0, (spent / pool) * 100)) : 0;
 
   useEffect(() => {
     setDraft(budget.monthlyCapUsd != null ? String(budget.monthlyCapUsd) : "");
@@ -450,10 +467,7 @@ function KpiRow({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
-          <UsageBar
-            percent={poolPct}
-            label={t`Weekly shared-key pool used`}
-          />
+          <UsageBar percent={poolPct} label={t`Weekly shared-key pool used`} />
           <p className="text-xs text-muted-foreground">
             <Trans>Resets in {resetCountdown(budget.resetsAt)}</Trans>
             {" · "}
@@ -481,7 +495,9 @@ function KpiRow({
         <CardContent className="space-y-1 text-xs text-muted-foreground">
           <div className="flex justify-between gap-2">
             <Trans>Shared</Trans>
-            <span className="tabular-nums text-foreground">{money(data.spend.sharedKeyCostUsd)}</span>
+            <span className="tabular-nums text-foreground">
+              {money(data.spend.sharedKeyCostUsd)}
+            </span>
           </div>
           <div className="flex justify-between gap-2">
             <Trans>Personal</Trans>
@@ -808,9 +824,7 @@ function AccountsSection({
             size="sm"
             value={keyFilter}
             aria-label={t`Filter by key type`}
-            onChange={(event) =>
-              setKeyFilter(event.target.value as "all" | "company" | "personal")
-            }
+            onChange={(event) => setKeyFilter(event.target.value as "all" | "company" | "personal")}
           >
             <NativeSelectOption value="all">{t`All keys`}</NativeSelectOption>
             <NativeSelectOption value="company">{t`Company API`}</NativeSelectOption>
@@ -830,31 +844,71 @@ function AccountsSection({
           <table className="w-full min-w-0 text-left text-sm">
             <thead className="text-muted-foreground">
               <tr className="border-b">
-                <th className="py-2 pr-3 font-normal" aria-sort={sortAriaValue("account", sortKey, sortDir)}>
-                  <SortButton column="account" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort}>
+                <th
+                  className="py-2 pr-3 font-normal"
+                  aria-sort={sortAriaValue("account", sortKey, sortDir)}
+                >
+                  <SortButton
+                    column="account"
+                    sortKey={sortKey}
+                    sortDir={sortDir}
+                    onToggle={toggleSort}
+                  >
                     <Trans>Account</Trans>
                   </SortButton>
                 </th>
-                <th className="py-2 pr-3 font-normal" aria-sort={sortAriaValue("key", sortKey, sortDir)}>
-                  <SortButton column="key" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort}>
+                <th
+                  className="py-2 pr-3 font-normal"
+                  aria-sort={sortAriaValue("key", sortKey, sortDir)}
+                >
+                  <SortButton
+                    column="key"
+                    sortKey={sortKey}
+                    sortDir={sortDir}
+                    onToggle={toggleSort}
+                  >
                     <Trans>Key</Trans>
                   </SortButton>
                 </th>
                 <th className="py-2 pr-3 font-normal">
                   <Trans>Model</Trans>
                 </th>
-                <th className="py-2 pr-3 font-normal" aria-sort={sortAriaValue("tokens", sortKey, sortDir)}>
-                  <SortButton column="tokens" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort}>
+                <th
+                  className="py-2 pr-3 font-normal"
+                  aria-sort={sortAriaValue("tokens", sortKey, sortDir)}
+                >
+                  <SortButton
+                    column="tokens"
+                    sortKey={sortKey}
+                    sortDir={sortDir}
+                    onToggle={toggleSort}
+                  >
                     <Trans>Tokens</Trans>
                   </SortButton>
                 </th>
-                <th className="py-2 pr-3 font-normal" aria-sort={sortAriaValue("spend", sortKey, sortDir)}>
-                  <SortButton column="spend" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort}>
+                <th
+                  className="py-2 pr-3 font-normal"
+                  aria-sort={sortAriaValue("spend", sortKey, sortDir)}
+                >
+                  <SortButton
+                    column="spend"
+                    sortKey={sortKey}
+                    sortDir={sortDir}
+                    onToggle={toggleSort}
+                  >
                     <Trans>Spend</Trans>
                   </SortButton>
                 </th>
-                <th className="py-2 pr-3 font-normal" aria-sort={sortAriaValue("sharedWeek", sortKey, sortDir)}>
-                  <SortButton column="sharedWeek" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort}>
+                <th
+                  className="py-2 pr-3 font-normal"
+                  aria-sort={sortAriaValue("sharedWeek", sortKey, sortDir)}
+                >
+                  <SortButton
+                    column="sharedWeek"
+                    sortKey={sortKey}
+                    sortDir={sortDir}
+                    onToggle={toggleSort}
+                  >
                     <Trans>Shared week</Trans>
                   </SortButton>
                 </th>
@@ -1459,23 +1513,276 @@ function TransfersSection({
   );
 }
 
-function AgentsSection({ data }: { data: OpsOverview }) {
+const ORPHAN_OWNER_FILTER = "__orphan__";
+const DEACTIVATED_OWNER_FILTER = "__deactivated__";
+
+type AgentOwnerGroup = {
+  key: string;
+  title: string;
+  email: string | null;
+  agents: OpsAgent[];
+};
+
+function groupAgentsByOwner(agents: OpsAgent[]): {
+  active: AgentOwnerGroup[];
+  deactivated: AgentOwnerGroup[];
+  orphans: OpsAgent[];
+} {
+  const activeMap = new Map<string, AgentOwnerGroup>();
+  const deactivatedMap = new Map<string, AgentOwnerGroup>();
+  const orphans: OpsAgent[] = [];
+  for (const agent of agents) {
+    if (!agent.owner) {
+      orphans.push(agent);
+      continue;
+    }
+    const map = agent.owner.deactivated ? deactivatedMap : activeMap;
+    const existing = map.get(agent.owner.id);
+    if (existing) {
+      existing.agents.push(agent);
+      continue;
+    }
+    map.set(agent.owner.id, {
+      key: agent.owner.id,
+      title: agent.owner.name || agent.owner.email,
+      email: agent.owner.email,
+      agents: [agent],
+    });
+  }
+  const byTitle = (a: AgentOwnerGroup, b: AgentOwnerGroup) =>
+    a.title.localeCompare(b.title, undefined, { sensitivity: "base" });
+  for (const group of [...activeMap.values(), ...deactivatedMap.values()]) {
+    group.agents.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+  }
+  orphans.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+  return {
+    active: [...activeMap.values()].sort(byTitle),
+    deactivated: [...deactivatedMap.values()].sort(byTitle),
+    orphans,
+  };
+}
+
+function AgentsSection({
+  interactive,
+  fixtureAgents,
+  overviewCounts,
+}: {
+  interactive: boolean;
+  fixtureAgents?: OpsAgent[];
+  overviewCounts: OpsOverview["agents"];
+}) {
+  const { t, i18n } = useLingui();
+  const [ownerFilter, setOwnerFilter] = useState("all");
+  const agentsQuery = useQuery({
+    queryKey: ["ops", "agents"],
+    queryFn: () => rpc.ops.agents(),
+    enabled: interactive,
+  });
+  const agents = interactive ? agentsQuery.data : (fixtureAgents ?? []);
+
+  const ownerOptions = useMemo(() => {
+    const seen = new Map<string, { value: string; label: string }>();
+    let hasOrphan = false;
+    let hasDeactivated = false;
+    for (const agent of agents ?? []) {
+      if (!agent.owner) {
+        hasOrphan = true;
+        continue;
+      }
+      if (agent.owner.deactivated) hasDeactivated = true;
+      if (!seen.has(agent.owner.id)) {
+        seen.set(agent.owner.id, {
+          value: agent.owner.id,
+          label: `${agent.owner.name || agent.owner.email} (${agent.owner.email})`,
+        });
+      }
+    }
+    const options = [...seen.values()].sort((a, b) =>
+      a.label.localeCompare(b.label, undefined, { sensitivity: "base" }),
+    );
+    return { options, hasOrphan, hasDeactivated };
+  }, [agents]);
+
+  const filteredAgents = useMemo(() => {
+    if (!agents) return [];
+    if (ownerFilter === "all") return agents;
+    if (ownerFilter === ORPHAN_OWNER_FILTER) return agents.filter((agent) => !agent.owner);
+    if (ownerFilter === DEACTIVATED_OWNER_FILTER) {
+      return agents.filter((agent) => agent.owner?.deactivated === true);
+    }
+    return agents.filter((agent) => agent.owner?.id === ownerFilter);
+  }, [agents, ownerFilter]);
+
+  const groups = useMemo(() => groupAgentsByOwner(filteredAgents), [filteredAgents]);
+
   return (
-    <section className="space-y-3">
-      <h2 className="font-medium">
-        <Trans>Agents</Trans>
-      </h2>
-      <p className="text-sm text-muted-foreground">
-        {data.agents.active} active · {data.agents.total} total
-      </p>
-      <ul className="columns-1 gap-x-8 text-sm sm:columns-2 lg:columns-3">
-        {data.agents.names.map((agent) => (
-          <li key={agent.id} className="break-inside-avoid py-0.5">
-            {agent.name}
+    <section className="space-y-3" data-testid="ops-agents">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <h2 className="font-medium">
+            <Trans>Agents</Trans>
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {overviewCounts.active} active · {overviewCounts.total} total
+          </p>
+        </div>
+        <div className="w-full min-w-0 sm:w-auto sm:min-w-[14rem]">
+          <NativeSelect
+            size="sm"
+            className="w-full max-w-full"
+            value={ownerFilter}
+            aria-label={t`Filter by owner`}
+            onChange={(event) => setOwnerFilter(event.target.value)}
+          >
+            <NativeSelectOption value="all">{t`All owners`}</NativeSelectOption>
+            {ownerOptions.hasDeactivated ? (
+              <NativeSelectOption value={DEACTIVATED_OWNER_FILTER}>
+                {t`Deactivated owners`}
+              </NativeSelectOption>
+            ) : null}
+            {ownerOptions.hasOrphan ? (
+              <NativeSelectOption value={ORPHAN_OWNER_FILTER}>
+                {t`No owner / deleted account`}
+              </NativeSelectOption>
+            ) : null}
+            {ownerOptions.options.map((option) => (
+              <NativeSelectOption key={option.value} value={option.value}>
+                {option.label}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+        </div>
+      </div>
+
+      {interactive && agentsQuery.isPending ? (
+        <Spinner />
+      ) : interactive && (agentsQuery.isError || !agentsQuery.data) ? (
+        <p className="text-sm text-muted-foreground">
+          {errorText(agentsQuery.error, "Agents unavailable")}
+        </p>
+      ) : filteredAgents.length === 0 ? (
+        <p className="text-sm text-muted-foreground" data-testid="ops-agents-empty">
+          <Trans>No agents match this filter.</Trans>
+        </p>
+      ) : (
+        <div className="space-y-6">
+          {groups.active.map((group) => (
+            <AgentOwnerGroupBlock
+              key={group.key}
+              group={group}
+              locale={i18n.locale || "en"}
+              showKeyBadge
+            />
+          ))}
+          {groups.deactivated.length > 0 ? (
+            <div className="space-y-3" data-testid="ops-agents-deactivated">
+              <h3 className="text-sm font-medium text-muted-foreground">
+                <Trans>Deactivated owners</Trans>
+              </h3>
+              {groups.deactivated.map((group) => (
+                <AgentOwnerGroupBlock
+                  key={group.key}
+                  group={group}
+                  locale={i18n.locale || "en"}
+                  showKeyBadge
+                />
+              ))}
+            </div>
+          ) : null}
+          {groups.orphans.length > 0 ? (
+            <AgentOwnerGroupBlock
+              key="orphan"
+              group={{
+                key: "orphan",
+                title: t`No owner / deleted account`,
+                email: null,
+                agents: groups.orphans,
+              }}
+              locale={i18n.locale || "en"}
+              showKeyBadge={false}
+              testId="ops-agents-orphans"
+            />
+          ) : null}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function AgentOwnerGroupBlock({
+  group,
+  locale,
+  showKeyBadge,
+  testId,
+}: {
+  group: AgentOwnerGroup;
+  locale: string;
+  showKeyBadge: boolean;
+  testId?: string;
+}) {
+  const { t } = useLingui();
+  return (
+    <div className="space-y-2" data-testid={testId}>
+      <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <h3 className="min-w-0 break-words font-medium">{group.title}</h3>
+        {group.email ? (
+          <span className="min-w-0 break-all text-sm text-muted-foreground">{group.email}</span>
+        ) : null}
+        <span className="text-sm text-muted-foreground tabular-nums">
+          {t`${group.agents.length} agents`}
+        </span>
+      </div>
+      <ul className="divide-y divide-border/60 rounded-xl border border-border/60">
+        {group.agents.map((agent) => (
+          <li key={agent.id} className="min-w-0 px-3 py-3 text-sm">
+            <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0 space-y-1">
+                <div className="break-words font-medium">{agent.name}</div>
+                <dl className="grid grid-cols-1 gap-1 text-muted-foreground sm:grid-cols-2">
+                  <div className="min-w-0">
+                    <dt className="sr-only">
+                      <Trans>Created</Trans>
+                    </dt>
+                    <dd className="break-words">
+                      <Trans>Created</Trans>{" "}
+                      <time dateTime={agent.createdAt}>
+                        {new Date(agent.createdAt).toLocaleDateString(locale)}
+                      </time>
+                    </dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="sr-only">
+                      <Trans>Last active</Trans>
+                    </dt>
+                    <dd className="break-words">
+                      <Trans>Last active</Trans>{" "}
+                      {agent.lastActiveAt ? (
+                        <time
+                          dateTime={agent.lastActiveAt}
+                          title={new Date(agent.lastActiveAt).toLocaleString(locale)}
+                        >
+                          {formatRelativeTime(agent.lastActiveAt)}
+                        </time>
+                      ) : (
+                        "—"
+                      )}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+              <div className="flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
+                <Badge variant={agent.status === "archived" ? "outline" : "secondary"}>
+                  {agent.status === "archived" ? <Trans>Archived</Trans> : <Trans>Active</Trans>}
+                </Badge>
+                {showKeyBadge && agent.owner ? (
+                  <KeyBadge keyType={agent.keyType} needsReconnect={agent.needsReconnect} />
+                ) : null}
+              </div>
+            </div>
           </li>
         ))}
       </ul>
-    </section>
+    </div>
   );
 }
 

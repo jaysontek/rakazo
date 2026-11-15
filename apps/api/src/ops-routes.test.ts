@@ -63,6 +63,7 @@ function makeDeps(allowlist = ["192.168.140.0/24"]): RouterDeps {
     run: {
       findMany: async () => [],
       findUnique: async () => null,
+      groupBy: async () => [],
     },
     message: {
       findMany: async () => [],
@@ -141,11 +142,15 @@ describe("ops dashboard routes", () => {
     vi.restoreAllMocks();
   });
 
-  it("denies non-admins for overview, requestLog, and chatLog", async () => {
+  it("denies non-admins for overview, agents, requestLog, and chatLog", async () => {
     const client = createRouterClient(createRouter(makeDeps()), {
       context: { actor: userActor, clientIp: "192.168.140.10" },
     });
     await expect(client.ops.overview()).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      message: "Admins only",
+    });
+    await expect(client.ops.agents()).rejects.toMatchObject({
       code: "FORBIDDEN",
       message: "Admins only",
     });

@@ -1,5 +1,5 @@
 import { I18nProvider } from "@lingui/react";
-import type { OpsOverview, OpsRequestLogRow } from "@rakazo/contracts";
+import type { OpsAgent, OpsOverview, OpsRequestLogRow } from "@rakazo/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -228,6 +228,79 @@ const fixtureOverview: OpsOverview = {
   ],
 };
 
+const fixtureAgents: OpsAgent[] = [
+  {
+    id: "bot_1",
+    name: "Ops helper",
+    createdAt: "2026-01-10T00:00:00.000Z",
+    lastActiveAt: "2026-11-12T18:00:00.000Z",
+    status: "active",
+    owner: {
+      id: "user_alex",
+      name: "Alex Rivera",
+      email: "alex@example.test",
+      deactivated: false,
+    },
+    keyType: "company",
+    needsReconnect: false,
+  },
+  {
+    id: "bot_5",
+    name: "Planning",
+    createdAt: "2026-02-01T00:00:00.000Z",
+    lastActiveAt: "2026-11-11T10:00:00.000Z",
+    status: "active",
+    owner: {
+      id: "user_alex",
+      name: "Alex Rivera",
+      email: "alex@example.test",
+      deactivated: false,
+    },
+    keyType: "company",
+    needsReconnect: false,
+  },
+  {
+    id: "bot_2",
+    name: "Inbox triage",
+    createdAt: "2026-03-01T00:00:00.000Z",
+    lastActiveAt: "2026-11-10T09:00:00.000Z",
+    status: "active",
+    owner: {
+      id: "user_sam",
+      name: "Sam Chen",
+      email: "sam@example.test",
+      deactivated: false,
+    },
+    keyType: "company",
+    needsReconnect: false,
+  },
+  {
+    id: "bot_3",
+    name: "Research",
+    createdAt: "2026-04-01T00:00:00.000Z",
+    lastActiveAt: null,
+    status: "archived",
+    owner: {
+      id: "user_jordan",
+      name: "Jordan Lee",
+      email: "jordan@example.test",
+      deactivated: false,
+    },
+    keyType: "personal",
+    needsReconnect: false,
+  },
+  {
+    id: "bot_orphan",
+    name: "Legacy orphan",
+    createdAt: "2025-12-01T00:00:00.000Z",
+    lastActiveAt: "2026-08-01T00:00:00.000Z",
+    status: "active",
+    owner: null,
+    keyType: "company",
+    needsReconnect: false,
+  },
+];
+
 function Fixture() {
   const [selected, setSelected] = useState<OpsRequestLogRow | null>(null);
   return (
@@ -244,6 +317,7 @@ function Fixture() {
             selected={selected}
             onSelect={setSelected}
             interactive={false}
+            fixtureAgents={fixtureAgents}
           />
         </div>
       </main>

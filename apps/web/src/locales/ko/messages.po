@@ -96,6 +96,11 @@ msgstr "{0} ({1} 초과)"
 msgid "{0} {unitLabel}"
 msgstr "{0} {unitLabel}"
 
+#. placeholder {0}: group.agents.length
+#: src/pages/AdminOpsPage.tsx
+msgid "{0} agents"
+msgstr "에이전트 {0}개"
+
 #. placeholder {0}: block.name
 #: src/pages/shell/message-cards.tsx
 msgid "{0} connection"
@@ -538,6 +543,7 @@ msgstr "{0} 작업 메뉴"
 msgid "Actions for space"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/BillingSettingsPanel.tsx
 #: src/pages/RoutineEditor.tsx
 msgid "Active"
@@ -756,6 +762,10 @@ msgstr ""
 #: src/pages/AdminOpsPage.tsx
 msgid "All keys"
 msgstr "모든 키"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "All owners"
+msgstr "모든 소유자"
 
 #: src/components/integrations/space-availability.tsx
 msgid "All spaces"
@@ -995,6 +1005,7 @@ msgstr "보관"
 msgid "archived"
 msgstr "보관됨"
 
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/shell/archived-chats.tsx
 msgid "Archived"
 msgstr "보관됨"
@@ -2651,6 +2662,7 @@ msgid "Create your Rakazo"
 msgstr "Rakazo 계정 만들기"
 
 #: src/components/AskCard.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Created"
 msgstr "생성됨"
 
@@ -2759,6 +2771,10 @@ msgstr ""
 #: src/lib/cron.ts
 msgid "days"
 msgstr "일"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Deactivated owners"
+msgstr "비활성화된 소유자"
 
 #: src/components/call/IncomingCall.tsx
 #: src/pages/MessagingSettingsPanel.tsx
@@ -3382,6 +3398,10 @@ msgstr ""
 msgid "Filter by key type"
 msgstr "키 유형으로 필터"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Filter by owner"
+msgstr "소유자로 필터"
+
 #: src/pages/Artifacts.tsx
 #: src/pages/shell/shell-sidebar.tsx
 msgid "Filters"
@@ -3941,6 +3961,10 @@ msgstr "레이블"
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Language"
 msgstr "언어"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Last active"
+msgstr "최근 활동"
 
 #. placeholder {0}: new Date(state.checkedAt).toLocaleString()
 #: src/pages/RoutineEditor.tsx
@@ -4626,6 +4650,10 @@ msgstr "다음 페이지"
 msgid "Next settings sections"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "No agents match this filter."
+msgstr "이 필터와 일치하는 에이전트가 없습니다."
+
 #: src/pages/PluginsOverlay.tsx
 msgid "No apps match your search."
 msgstr "검색 결과가 없습니다."
@@ -4697,6 +4725,10 @@ msgstr "나열된 모델이 없습니다."
 #: src/pages/shell/agent-import.tsx
 msgid "No OpenClaw, Hermes or agent document found."
 msgstr "OpenClaw, Hermes 또는 에이전트 문서를 찾지 못했습니다."
+
+#: src/pages/AdminOpsPage.tsx
+msgid "No owner / deleted account"
+msgstr "소유자 없음 / 삭제된 계정"
 
 #: src/components/pages/PagesList.tsx
 msgid "No pages match “{query}”."

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { loadOpsOverview } from "./ops-dashboard.js";
+import { listOpsAgents, loadOpsOverview } from "./ops-dashboard.js";
 
 type UserRow = { id: string; email: string; name: string; deactivatedAt: Date | null };
 
@@ -89,9 +89,7 @@ function opsPrisma(
       ),
     },
     sharedKeyBudgetEnrollmentRequest: {
-      findMany: vi.fn(async () =>
-        (options.notEnrolledHits ?? []).map((userId) => ({ userId })),
-      ),
+      findMany: vi.fn(async () => (options.notEnrolledHits ?? []).map((userId) => ({ userId }))),
     },
     sharedKeyWeekAllotment: {
       findMany: vi.fn(async () => []),
@@ -153,11 +151,7 @@ function opsPrisma(
     },
     secret: {
       findFirst: vi.fn(
-        async ({
-          where,
-        }: {
-          where: { id: string; userId: string; spaceId: null };
-        }) => {
+        async ({ where }: { where: { id: string; userId: string; spaceId: null } }) => {
           const row = secretById.get(where.id);
           if (!row || row.userId !== where.userId) return null;
           if (row.spaceId !== null) return null;
@@ -461,5 +455,195 @@ describe("loadOpsOverview", () => {
     } finally {
       vi.unstubAllEnvs();
     }
+  });
+});
+
+describe("listOpsAgents", () => {
+  beforeEach(() => {
+    vi.stubEnv("PI_DEFAULT_PROVIDER", "google");
+    vi.stubEnv("GEMINI_API_KEY", "deployment-key");
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  function agentsPrisma(args: {
+    bots: Array<{
+      id: string;
+      name: string;
+      userId: string;
+      spaceId: string;
+      createdAt: Date;
+      archivedAt: Date | null;
+    }>;
+    users: UserRow[];
+    lastActive?: Array<{ botId: string; createdAt: Date }>;
+    credentials?: CredSpec[];
+  }) {
+    const base = opsPrisma(args.users, { credentials: args.credentials }) as ReturnType<
+      typeof opsPrisma
+    > & {
+      run: { findMany: unknown; groupBy: ReturnType<typeof vi.fn> };
+    };
+    base.bot.findMany = vi.fn(async () => args.bots) as never;
+    base.user.findMany = vi.fn(async ({ where }: { where?: { id?: { in: string[] } } } = {}) => {
+      const ids = where?.id?.in;
+      if (!ids) return args.users;
+      return args.users.filter((user) => ids.includes(user.id));
+    }) as never;
+    base.run.groupBy = vi.fn(async ({ where }: { where?: { botId?: { in: string[] } } } = {}) => {
+      const ids = new Set(where?.botId?.in ?? args.bots.map((bot) => bot.id));
+      const byBot = new Map<string, Date>();
+      for (const row of args.lastActive ?? []) {
+        if (!ids.has(row.botId)) continue;
+        const prev = byBot.get(row.botId);
+        if (!prev || row.createdAt > prev) byBot.set(row.botId, row.createdAt);
+      }
+      return [...byBot.entries()].map(([botId, createdAt]) => ({
+        botId,
+        _max: { createdAt },
+      }));
+    });
+    return base;
+  }
+
+  it("returns owners, orphans, deactivated owners, and null lastActiveAt without runs", async () => {
+    const prisma = agentsPrisma({
+      users: [
+        { id: "alice", email: "alice@example.test", name: "Alice", deactivatedAt: null },
+        {
+          id: "gone",
+          email: "gone@example.test",
+          name: "Gone",
+          deactivatedAt: new Date("2026-10-01T00:00:00Z"),
+        },
+      ],
+      bots: [
+        {
+          id: "bot-alice",
+          name: "Alice bot",
+          userId: "alice",
+          spaceId: "space",
+          createdAt: new Date("2026-01-01T00:00:00Z"),
+          archivedAt: null,
+        },
+        {
+          id: "bot-archived",
+          name: "Archived bot",
+          userId: "alice",
+          spaceId: "space",
+          createdAt: new Date("2026-01-02T00:00:00Z"),
+          archivedAt: new Date("2026-02-01T00:00:00Z"),
+        },
+        {
+          id: "bot-deactivated",
+          name: "Deactivated owner bot",
+          userId: "gone",
+          spaceId: "space",
+          createdAt: new Date("2026-01-03T00:00:00Z"),
+          archivedAt: null,
+        },
+        {
+          id: "bot-orphan",
+          name: "Orphan bot",
+          userId: "missing-user",
+          spaceId: "space",
+          createdAt: new Date("2026-01-04T00:00:00Z"),
+          archivedAt: null,
+        },
+      ],
+      lastActive: [
+        { botId: "bot-alice", createdAt: new Date("2026-11-01T12:00:00Z") },
+        { botId: "bot-alice", createdAt: new Date("2026-11-05T09:00:00Z") },
+      ],
+    });
+
+    const agents = await listOpsAgents(prisma as never, {
+      deploymentModelKey: "deployment-key",
+      secrets: { load: prisma.secretsLoad } as never,
+    });
+
+    expect(agents.map((row) => row.id)).toEqual([
+      "bot-alice",
+      "bot-archived",
+      "bot-deactivated",
+      "bot-orphan",
+    ]);
+
+    const byId = Object.fromEntries(agents.map((row) => [row.id, row]));
+    expect(byId["bot-alice"]?.owner).toEqual({
+      id: "alice",
+      name: "Alice",
+      email: "alice@example.test",
+      deactivated: false,
+    });
+    expect(byId["bot-alice"]?.status).toBe("active");
+    expect(byId["bot-alice"]?.lastActiveAt).toBe("2026-11-05T09:00:00.000Z");
+    expect(byId["bot-alice"]?.createdAt).toBe("2026-01-01T00:00:00.000Z");
+    expect(
+      byId["bot-alice"]?.keyType === "company" || byId["bot-alice"]?.keyType === "personal",
+    ).toBe(true);
+
+    expect(byId["bot-archived"]?.status).toBe("archived");
+    expect(byId["bot-archived"]?.lastActiveAt).toBeNull();
+
+    expect(byId["bot-deactivated"]?.owner).toMatchObject({
+      id: "gone",
+      deactivated: true,
+    });
+
+    expect(byId["bot-orphan"]?.owner).toBeNull();
+    expect(byId["bot-orphan"]?.lastActiveAt).toBeNull();
+    expect(byId["bot-orphan"]?.status).toBe("active");
+    expect(byId["bot-orphan"]?.keyType).toBe("company");
+
+    expect(prisma.run.groupBy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        by: ["botId"],
+        _max: { createdAt: true },
+      }),
+    );
+  });
+
+  it("hides bots owned by builddrive.net accounts but keeps orphans", async () => {
+    const prisma = agentsPrisma({
+      users: [
+        { id: "hidden", email: "ops@builddrive.net", name: "Hidden", deactivatedAt: null },
+        { id: "visible", email: "user@example.test", name: "Visible", deactivatedAt: null },
+      ],
+      bots: [
+        {
+          id: "bot-hidden",
+          name: "Hidden bot",
+          userId: "hidden",
+          spaceId: "space",
+          createdAt: new Date("2026-01-01T00:00:00Z"),
+          archivedAt: null,
+        },
+        {
+          id: "bot-visible",
+          name: "Visible bot",
+          userId: "visible",
+          spaceId: "space",
+          createdAt: new Date("2026-01-02T00:00:00Z"),
+          archivedAt: null,
+        },
+        {
+          id: "bot-orphan",
+          name: "Orphan bot",
+          userId: "deleted-user",
+          spaceId: "space",
+          createdAt: new Date("2026-01-03T00:00:00Z"),
+          archivedAt: null,
+        },
+      ],
+    });
+
+    const agents = await listOpsAgents(prisma as never, {
+      deploymentModelKey: "deployment-key",
+      secrets: { load: prisma.secretsLoad } as never,
+    });
+
+    expect(agents.map((row) => row.id)).toEqual(["bot-visible", "bot-orphan"]);
   });
 });

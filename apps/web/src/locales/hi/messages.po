@@ -96,6 +96,11 @@ msgstr "{0} ({1} से अधिक)"
 msgid "{0} {unitLabel}"
 msgstr "{0} {unitLabel}"
 
+#. placeholder {0}: group.agents.length
+#: src/pages/AdminOpsPage.tsx
+msgid "{0} agents"
+msgstr "{0} एजेंट"
+
 #. placeholder {0}: block.name
 #: src/pages/shell/message-cards.tsx
 msgid "{0} connection"
@@ -538,6 +543,7 @@ msgstr "{0} के लिए कार्रवाइयां"
 msgid "Actions for space"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/BillingSettingsPanel.tsx
 #: src/pages/RoutineEditor.tsx
 msgid "Active"
@@ -756,6 +762,10 @@ msgstr ""
 #: src/pages/AdminOpsPage.tsx
 msgid "All keys"
 msgstr "सभी कुंजियाँ"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "All owners"
+msgstr "सभी स्वामी"
 
 #: src/components/integrations/space-availability.tsx
 msgid "All spaces"
@@ -995,6 +1005,7 @@ msgstr "आर्काइव करें"
 msgid "archived"
 msgstr "आर्काइव किया गया"
 
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/shell/archived-chats.tsx
 msgid "Archived"
 msgstr "आर्काइव किया गया"
@@ -2651,6 +2662,7 @@ msgid "Create your Rakazo"
 msgstr "अपना Rakazo बनाएं"
 
 #: src/components/AskCard.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Created"
 msgstr ""
 
@@ -2759,6 +2771,10 @@ msgstr ""
 #: src/lib/cron.ts
 msgid "days"
 msgstr "दिन"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Deactivated owners"
+msgstr "निष्क्रिय स्वामी"
 
 #: src/components/call/IncomingCall.tsx
 #: src/pages/MessagingSettingsPanel.tsx
@@ -3382,6 +3398,10 @@ msgstr ""
 msgid "Filter by key type"
 msgstr "कुंजी प्रकार से फ़िल्टर करें"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Filter by owner"
+msgstr "स्वामी के अनुसार फ़िल्टर करें"
+
 #: src/pages/Artifacts.tsx
 #: src/pages/shell/shell-sidebar.tsx
 msgid "Filters"
@@ -3941,6 +3961,10 @@ msgstr "लेबल"
 #: src/pages/AccountSettingsOverlay.tsx
 msgid "Language"
 msgstr "भाषा"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Last active"
+msgstr "अंतिम सक्रिय"
 
 #. placeholder {0}: new Date(state.checkedAt).toLocaleString()
 #: src/pages/RoutineEditor.tsx
@@ -4626,6 +4650,10 @@ msgstr "अगला पृष्ठ"
 msgid "Next settings sections"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "No agents match this filter."
+msgstr "इस फ़िल्टर से कोई एजेंट मेल नहीं खाता।"
+
 #: src/pages/PluginsOverlay.tsx
 msgid "No apps match your search."
 msgstr "आपकी खोज से कोई ऐप मेल नहीं खाता।"
@@ -4697,6 +4725,10 @@ msgstr "कोई मॉडल सूचीबद्ध नहीं।"
 #: src/pages/shell/agent-import.tsx
 msgid "No OpenClaw, Hermes or agent document found."
 msgstr "कोई OpenClaw, Hermes या एजेंट दस्तावेज़ नहीं मिला।"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "No owner / deleted account"
+msgstr "कोई स्वामी नहीं / हटाया गया खाता"
 
 #: src/components/pages/PagesList.tsx
 msgid "No pages match “{query}”."
