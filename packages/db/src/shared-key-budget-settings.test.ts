@@ -78,8 +78,13 @@ describe("shared-key budget settings", () => {
         aggregate: vi.fn(async () => ({ _sum: { costUsd: 0 } })),
         groupBy: vi.fn(async () => []),
       },
-      user: { findMany: vi.fn(async () => []), findUnique: vi.fn(async () => null) },
-      member: { findMany: vi.fn(async () => []) },
+      user: {
+        findMany: vi.fn(async () => []),
+        findUnique: vi.fn(async () => ({ email: "admin@example.test" })),
+      },
+      member: {
+        findMany: vi.fn(async () => [{ organizationId: "org-admin" }]),
+      },
       adminGrant: { findMany: vi.fn(async () => []) },
       auditEvent: { createMany: vi.fn(async () => ({ count: 0 })) },
       space: { findUnique: vi.fn(async () => null) },
@@ -90,11 +95,16 @@ describe("shared-key budget settings", () => {
       }),
       $transaction: vi.fn(async (work: (tx: unknown) => Promise<unknown>) => work(client)),
     };
-    await updateSharedKeyBudgetSettings(client as never, {
-      hardStopEnabled: false,
-      holdStaleMinutes: 45,
-    });
+    await updateSharedKeyBudgetSettings(
+      client as never,
+      {
+        hardStopEnabled: false,
+        holdStaleMinutes: 45,
+      },
+      { actorUserId: "admin", gatedDeployment: false },
+    );
     expect(locks.some((key) => key.includes("shared-key-budget:members"))).toBe(true);
+    expect(client.auditEvent.createMany).toHaveBeenCalled();
   });
 
   it("refuses to remove env-pinned members", async () => {

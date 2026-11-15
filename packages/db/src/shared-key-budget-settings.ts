@@ -1,14 +1,18 @@
 /**
  * Ops-editable shared-key budget settings. Every write takes the members advisory lock
- * and runs in one transaction with allotment recompute when needed.
+ * and runs in one transaction with allotment recompute when needed. Audit rows are
+ * written inside the same locked transaction via appendAuditEventTx.
  */
 import {
   parseSharedKeyMonthlyBudgetInput,
   parseSharedKeyTimezone,
   resolveSharedKeyPeriodSchedule,
+  roundUsdToCents,
+  sharedKeyPeriodPoolUsd,
   sharedKeyPeriodStart,
   type SharedKeyPeriodKind,
 } from "@rakazo/core";
+import { appendAuditEventTx } from "./audit-events.js";
 import type { PrismaClient } from "./client.js";
 import { Prisma } from "./client.js";
 import {
@@ -183,19 +187,44 @@ export type SharedKeyBudgetSettingsPatch = {
   applyScheduleNow?: boolean;
 };
 
+export type UpdateSharedKeyBudgetSettingsOptions = {
+  actorUserId: string;
+  /** True when the deployment is already gated (signups off / allowlist / etc.). */
+  gatedDeployment: boolean;
+  now?: Date;
+};
+
+type AuditScalar = string | number | boolean | null;
+
+function settingsAuditPrev(
+  previous: SharedKeyBudgetSettingsRow | null,
+  key: keyof SharedKeyBudgetSettingsRow,
+): AuditScalar {
+  if (!previous) return null;
+  const value = previous[key];
+  if (value instanceof Date) return value.toISOString();
+  if (Array.isArray(value)) return JSON.stringify(value);
+  if (value === undefined) return null;
+  return value as AuditScalar;
+}
+
 /**
  * Persist ops budget settings under the members lock. Schedule changes take effect at
- * the next boundary unless applyScheduleNow is set (audited by the caller).
+ * the next boundary unless applyScheduleNow is set. Every changed field is audited
+ * inside the same locked transaction (prev→new); failure rolls the tx back.
  */
 export async function updateSharedKeyBudgetSettings(
   prisma: SettingsPrisma,
   patch: SharedKeyBudgetSettingsPatch,
-  now = new Date(),
+  options: UpdateSharedKeyBudgetSettingsOptions,
 ): Promise<{ previous: SharedKeyBudgetSettingsRow | null; applyScheduleNow: boolean }> {
+  const now = options.now ?? new Date();
   let previous: SharedKeyBudgetSettingsRow | null = null;
   const applyScheduleNow = patch.applyScheduleNow === true;
 
   const data: Record<string, unknown> = {};
+  const changed: Array<{ field: string; prev: AuditScalar; next: AuditScalar }> = [];
+
   if ("monthlyCapUsd" in patch) {
     if (patch.monthlyCapUsd == null) {
       data.sharedKeyMonthlyBudgetUsd = null;
@@ -218,9 +247,9 @@ export async function updateSharedKeyBudgetSettings(
   }
   if ("resetDom" in patch) {
     if (patch.resetDom == null) data.sharedKeyResetDom = null;
-    else if (Number.isInteger(patch.resetDom) && patch.resetDom >= 1 && patch.resetDom <= 28) {
+    else if (Number.isInteger(patch.resetDom) && patch.resetDom >= 1 && patch.resetDom <= 31) {
       data.sharedKeyResetDom = patch.resetDom;
-    } else throw new Error("resetDom must be an integer 1–28");
+    } else throw new Error("resetDom must be an integer 1–31");
   }
   if ("resetMinutes" in patch) {
     if (patch.resetMinutes == null) data.sharedKeyResetMinutes = null;
@@ -248,15 +277,29 @@ export async function updateSharedKeyBudgetSettings(
       patch.autoEnrollMode === "gated" ||
       patch.autoEnrollMode === "open"
     ) {
+      if (patch.autoEnrollMode === "gated" && !options.gatedDeployment) {
+        throw new Error(
+          "autoEnrollMode 'gated' requires a gated shared-key deployment (signups closed, allowlist, single-account, or directory)",
+        );
+      }
       data.sharedKeyAutoEnrollMode = patch.autoEnrollMode;
     } else throw new Error("Invalid auto-enroll mode");
   }
   if ("warningThresholds" in patch) {
     if (patch.warningThresholds == null) data.sharedKeyWarningThresholds = Prisma.DbNull;
     else {
-      const values = resolveWarningThresholds(patch.warningThresholds);
-      if (values.length === 0) throw new Error("warningThresholds must be a non-empty number array");
-      data.sharedKeyWarningThresholds = values;
+      if (!Array.isArray(patch.warningThresholds) || patch.warningThresholds.length === 0) {
+        throw new Error("warningThresholds must be a non-empty number array");
+      }
+      if (patch.warningThresholds.length > 10) {
+        throw new Error("warningThresholds accepts at most 10 entries");
+      }
+      for (const value of patch.warningThresholds) {
+        if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 100) {
+          throw new Error("warningThresholds entries must be numbers from 0 to 100");
+        }
+      }
+      data.sharedKeyWarningThresholds = resolveWarningThresholds(patch.warningThresholds);
     }
   }
   if ("hardStopEnabled" in patch) {
@@ -324,11 +367,64 @@ export async function updateSharedKeyBudgetSettings(
       }
     }
 
+    const fieldMap: Array<{ patchKey: keyof SharedKeyBudgetSettingsPatch; dbKey: keyof SharedKeyBudgetSettingsRow; dataKey: string }> = [
+      { patchKey: "monthlyCapUsd", dbKey: "sharedKeyMonthlyBudgetUsd", dataKey: "sharedKeyMonthlyBudgetUsd" },
+      { patchKey: "period", dbKey: "sharedKeyPeriod", dataKey: "sharedKeyPeriod" },
+      { patchKey: "resetDow", dbKey: "sharedKeyResetDow", dataKey: "sharedKeyResetDow" },
+      { patchKey: "resetDom", dbKey: "sharedKeyResetDom", dataKey: "sharedKeyResetDom" },
+      { patchKey: "resetMinutes", dbKey: "sharedKeyResetMinutes", dataKey: "sharedKeyResetMinutes" },
+      { patchKey: "timezone", dbKey: "sharedKeyTimezone", dataKey: "sharedKeyTimezone" },
+      { patchKey: "autoEnrollMode", dbKey: "sharedKeyAutoEnrollMode", dataKey: "sharedKeyAutoEnrollMode" },
+      { patchKey: "warningThresholds", dbKey: "sharedKeyWarningThresholds", dataKey: "sharedKeyWarningThresholds" },
+      { patchKey: "hardStopEnabled", dbKey: "sharedKeyHardStopEnabled", dataKey: "sharedKeyHardStopEnabled" },
+      { patchKey: "holdStaleMinutes", dbKey: "sharedKeyHoldStaleMinutes", dataKey: "sharedKeyHoldStaleMinutes" },
+      { patchKey: "pruneInactive", dbKey: "sharedKeyPruneInactive", dataKey: "sharedKeyPruneInactive" },
+    ];
+    for (const { patchKey, dbKey, dataKey } of fieldMap) {
+      if (!(patchKey in patch) || !(dataKey in data)) continue;
+      const nextRaw = data[dataKey];
+      const next: AuditScalar =
+        nextRaw instanceof Date
+          ? nextRaw.toISOString()
+          : Array.isArray(nextRaw)
+            ? JSON.stringify(nextRaw)
+            : nextRaw === Prisma.DbNull || nextRaw === undefined
+              ? null
+              : (nextRaw as AuditScalar);
+      changed.push({
+        field: patchKey,
+        prev: settingsAuditPrev(previous, dbKey),
+        next,
+      });
+    }
+    if (applyScheduleNow && data.sharedKeyActivePeriodStart instanceof Date) {
+      changed.push({
+        field: "applyScheduleNow",
+        prev: previous?.sharedKeyActivePeriodStart?.toISOString() ?? null,
+        next: data.sharedKeyActivePeriodStart.toISOString(),
+      });
+    }
+
     await tx.deploymentSettings.upsert({
       where: { id: "default" },
       create: { id: "default", ...data },
       update: data,
     });
+
+    if (changed.length > 0) {
+      const metadata: Record<string, string | number | boolean | null> = {
+        applyScheduleNow,
+      };
+      for (const row of changed) {
+        metadata[`prev.${row.field}`] = row.prev;
+        metadata[`next.${row.field}`] = row.next;
+      }
+      await appendAuditEventTx(tx, {
+        action: "shared_key_budget.settings.changed",
+        actor: { type: "user", id: options.actorUserId },
+        metadata,
+      });
+    }
 
     const needsRebase = applyScheduleNow || "monthlyCapUsd" in patch;
     if (needsRebase) {
@@ -344,17 +440,21 @@ export async function updateSharedKeyBudgetSettings(
 /** Set or clear a per-user weekly allotment override under the members lock. */
 export async function setSharedKeyMemberOverride(
   prisma: SettingsPrisma,
-  input: { userId: string; weeklyAllotmentUsd: number | null; now?: Date },
+  input: {
+    userId: string;
+    weeklyAllotmentUsd: number | null;
+    actorUserId: string;
+    now?: Date;
+  },
 ): Promise<void> {
   const now = input.now ?? new Date();
+  let nextOverride: number | null = null;
   if (input.weeklyAllotmentUsd != null) {
-    if (
-      !Number.isFinite(input.weeklyAllotmentUsd) ||
-      input.weeklyAllotmentUsd <= 0 ||
-      input.weeklyAllotmentUsd > 1_000_000
-    ) {
-      throw new Error("weeklyAllotmentUsd must be a positive number within the allowed range");
+    const rounded = roundUsdToCents(input.weeklyAllotmentUsd);
+    if (!Number.isFinite(rounded) || rounded < 0 || rounded > 1_000_000) {
+      throw new Error("weeklyAllotmentUsd must be a non-negative number within the allowed range");
     }
+    nextOverride = rounded;
   }
   await prisma.$transaction(async (tx) => {
     await lockSharedKeyBudget(tx, SHARED_KEY_BUDGET_MEMBERS_LOCK);
@@ -363,15 +463,54 @@ export async function setSharedKeyMemberOverride(
       select: { userId: true },
     });
     if (!member) throw new Error("User is not on the shared-key roster");
-    if (input.weeklyAllotmentUsd == null) {
-      await tx.sharedKeyMemberOverride.deleteMany({ where: { userId: input.userId } });
-    } else {
+
+    const existing = await tx.sharedKeyMemberOverride.findUnique({
+      where: { userId: input.userId },
+      select: { weeklyAllotmentUsd: true },
+    });
+    const prevOverride = existing?.weeklyAllotmentUsd ?? null;
+
+    if (nextOverride != null) {
+      const settings = await tx.deploymentSettings.findUnique({
+        where: { id: "default" },
+        select: SETTINGS_SELECT,
+      });
+      const monthly = settings?.sharedKeyMonthlyBudgetUsd;
+      if (!(monthly != null && monthly > 0)) {
+        throw new Error("Set a monthly shared-key cap before assigning overrides");
+      }
+      const { schedule } = resolveSharedKeyPeriodBounds(settings, now);
+      const pool = sharedKeyPeriodPoolUsd(monthly, schedule.period);
+      const others = await tx.sharedKeyMemberOverride.findMany({
+        where: { userId: { not: input.userId } },
+        select: { weeklyAllotmentUsd: true },
+      });
+      const othersSum = others.reduce((sum, row) => sum + row.weeklyAllotmentUsd, 0);
+      if (othersSum + nextOverride > pool) {
+        throw new Error(
+          `Sum of member overrides (${othersSum + nextOverride}) exceeds the period pool (${pool})`,
+        );
+      }
       await tx.sharedKeyMemberOverride.upsert({
         where: { userId: input.userId },
-        create: { userId: input.userId, weeklyAllotmentUsd: input.weeklyAllotmentUsd },
-        update: { weeklyAllotmentUsd: input.weeklyAllotmentUsd },
+        create: { userId: input.userId, weeklyAllotmentUsd: nextOverride },
+        update: { weeklyAllotmentUsd: nextOverride },
       });
+    } else {
+      await tx.sharedKeyMemberOverride.deleteMany({ where: { userId: input.userId } });
     }
+
+    await appendAuditEventTx(tx, {
+      action: "shared_key_budget.member.override",
+      actor: { type: "user", id: input.actorUserId },
+      target: { type: "user", id: input.userId },
+      metadata: {
+        userId: input.userId,
+        "prev.weeklyAllotmentUsd": prevOverride,
+        "next.weeklyAllotmentUsd": nextOverride,
+      },
+    });
+
     await recomputeSharedKeyWeekAllotmentsTx(tx, now, { rebaseOnMonthlyCap: true });
   });
 }

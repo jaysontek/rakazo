@@ -338,26 +338,48 @@ export function opsRoutes(ctx: RouterContext) {
         async ({ context, input }) => {
           await gate(context);
           try {
-            const result = await updateSharedKeyBudgetSettings(deps.prisma, input);
+            const result = await updateSharedKeyBudgetSettings(deps.prisma, input, {
+              actorUserId: context.actor.userId,
+              gatedDeployment: deps.env?.sharedKeyGatedDeployment === true,
+            });
+            const previous = result.previous;
+            const changedMeta: Record<string, string | number | boolean | null> = {
+              procedure: "ops.updateSharedKeyBudgetSettings",
+              applyScheduleNow: result.applyScheduleNow,
+            };
+            const track = (
+              field: string,
+              prev: string | number | boolean | null | undefined,
+              next: string | number | boolean | null | undefined,
+            ) => {
+              if (next === undefined) return;
+              changedMeta[`prev.${field}`] = prev ?? null;
+              changedMeta[`next.${field}`] = next;
+            };
+            track("monthlyCapUsd", previous?.sharedKeyMonthlyBudgetUsd, input.monthlyCapUsd);
+            track("period", previous?.sharedKeyPeriod, input.period);
+            track("resetDow", previous?.sharedKeyResetDow, input.resetDow);
+            track("resetDom", previous?.sharedKeyResetDom, input.resetDom);
+            track("resetMinutes", previous?.sharedKeyResetMinutes, input.resetMinutes);
+            track("timezone", previous?.sharedKeyTimezone, input.timezone);
+            track("autoEnrollMode", previous?.sharedKeyAutoEnrollMode, input.autoEnrollMode);
+            if (input.warningThresholds !== undefined) {
+              track(
+                "warningThresholds",
+                previous?.sharedKeyWarningThresholds == null
+                  ? null
+                  : JSON.stringify(previous.sharedKeyWarningThresholds),
+                input.warningThresholds == null ? null : JSON.stringify(input.warningThresholds),
+              );
+            }
+            track("hardStopEnabled", previous?.sharedKeyHardStopEnabled, input.hardStopEnabled);
+            track("holdStaleMinutes", previous?.sharedKeyHoldStaleMinutes, input.holdStaleMinutes);
+            track("pruneInactive", previous?.sharedKeyPruneInactive, input.pruneInactive);
             await recordSecurityEvent({
               type: "ops.shared_key_budget.settings.changed",
               userId: context.actor.userId,
               spaceId: context.actor.spaceId,
-              metadata: {
-                procedure: "ops.updateSharedKeyBudgetSettings",
-                ...(result.applyScheduleNow ? { applyScheduleNow: true } : {}),
-                ...(input.monthlyCapUsd !== undefined
-                  ? { monthlyCapUsd: input.monthlyCapUsd }
-                  : {}),
-                ...(input.period !== undefined ? { period: input.period } : {}),
-                ...(input.timezone !== undefined ? { timezone: input.timezone } : {}),
-                ...(input.autoEnrollMode !== undefined
-                  ? { autoEnrollMode: input.autoEnrollMode }
-                  : {}),
-                ...(input.hardStopEnabled !== undefined
-                  ? { hardStopEnabled: input.hardStopEnabled }
-                  : {}),
-              },
+              metadata: changedMeta,
             });
             return loadSharedKeyBudgetSettingsView(
               deps.prisma,
@@ -375,6 +397,7 @@ export function opsRoutes(ctx: RouterContext) {
             await setSharedKeyMemberOverride(deps.prisma, {
               userId: input.userId,
               weeklyAllotmentUsd: input.weeklyAllotmentUsd,
+              actorUserId: context.actor.userId,
             });
             await recordSecurityEvent({
               type: "ops.shared_key_budget.member.override",
@@ -383,7 +406,7 @@ export function opsRoutes(ctx: RouterContext) {
               metadata: {
                 procedure: "ops.setSharedKeyMemberOverride",
                 targetUserId: input.userId,
-                weeklyAllotmentUsd: input.weeklyAllotmentUsd,
+                "next.weeklyAllotmentUsd": input.weeklyAllotmentUsd,
               },
             });
             return { ok: true as const };
