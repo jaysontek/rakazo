@@ -8095,3 +8095,9 @@ msgstr "Ses sağlayıcınız anahtarı reddetti."
 #: src/components/vault/VaultItemEditor.tsx
 msgid "ZIP or postal code"
 msgstr "Posta kodu"
+
+msgid "Could not load team"
+msgstr "Ekip yüklenemedi"
+
+msgid "Could not load teams"
+msgstr "Ekipler yüklenemedi"

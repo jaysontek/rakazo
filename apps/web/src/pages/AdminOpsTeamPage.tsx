@@ -83,6 +83,7 @@ export function AdminOpsTeamPage() {
 }
 
 function TeamDashboard({ organizationId }: { organizationId: string }) {
+  const { t } = useLingui();
   const team = useQuery({
     queryKey: ["ops", "team", organizationId],
     queryFn: () => rpc.ops.team({ organizationId }),
@@ -98,7 +99,7 @@ function TeamDashboard({ organizationId }: { organizationId: string }) {
   if (team.isError || !team.data) {
     return (
       <p className="text-sm text-muted-foreground">
-        {errorText(team.error, "Could not load team")}
+        {errorText(team.error, t`Could not load team`)}
       </p>
     );
   }

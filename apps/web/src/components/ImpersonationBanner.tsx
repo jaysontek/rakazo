@@ -5,11 +5,12 @@ import {
   NativeSelectOption,
 } from "@rakazo/ui-web";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { hardSwitchImpersonation } from "../lib/impersonation-switch";
 import {
   readImpersonationOrgId,
   readImpersonationTeammates,
+  syncImpersonationTeammatesFromServer,
 } from "../lib/impersonation-teammates";
 import { rpc } from "../lib/rpc";
 import { errorText } from "../lib/user-error";
@@ -37,6 +38,11 @@ export function ImpersonationBanner() {
   const [error, setError] = useState<string | null>(null);
 
   const impersonating = me.data?.impersonating;
+  // Server ended or expired the window — drop cached teammates so a later start
+  // cannot show the previous team's switcher.
+  useEffect(() => {
+    if (me.isSuccess) syncImpersonationTeammatesFromServer(impersonating);
+  }, [me.isSuccess, impersonating]);
   const teammates = useMemo(
     () => (impersonating ? readImpersonationTeammates() : []),
     [impersonating],

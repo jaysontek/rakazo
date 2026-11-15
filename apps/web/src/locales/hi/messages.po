@@ -8095,3 +8095,9 @@ msgstr "आपके आवाज़ प्रोवाइडर ने कु�
 #: src/components/vault/VaultItemEditor.tsx
 msgid "ZIP or postal code"
 msgstr ""
+
+msgid "Could not load team"
+msgstr "टीम लोड नहीं हो सकी"
+
+msgid "Could not load teams"
+msgstr "टीमें लोड नहीं हो सकीं"

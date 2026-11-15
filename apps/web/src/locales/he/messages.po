@@ -8095,3 +8095,9 @@ msgstr "ספק הקול שלך דחה את המפתח."
 #: src/components/vault/VaultItemEditor.tsx
 msgid "ZIP or postal code"
 msgstr ""
+
+msgid "Could not load team"
+msgstr "לא ניתן לטעון את הצוות"
+
+msgid "Could not load teams"
+msgstr "לא ניתן לטעון את הצוותים"

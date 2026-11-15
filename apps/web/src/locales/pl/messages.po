@@ -8095,3 +8095,9 @@ msgstr "Klucz dostawcy głosu został odrzucony."
 #: src/components/vault/VaultItemEditor.tsx
 msgid "ZIP or postal code"
 msgstr "Kod pocztowy"
+
+msgid "Could not load team"
+msgstr "Nie udało się wczytać zespołu"
+
+msgid "Could not load teams"
+msgstr "Nie udało się wczytać zespołów"

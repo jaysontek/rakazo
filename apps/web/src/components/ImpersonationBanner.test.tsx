@@ -34,12 +34,15 @@ vi.mock("../lib/impersonation-switch", () => ({
   hardSwitchImpersonation: (...args: unknown[]) => hardSwitch(...args),
 }));
 
+const syncTeammates = vi.fn();
+
 vi.mock("../lib/impersonation-teammates", () => ({
   readImpersonationOrgId: () => "org-1",
   readImpersonationTeammates: () => [
     { userId: "u1", name: "Ada", email: "ada@example.com" },
     { userId: "u2", name: "Bob", email: "bob@example.com" },
   ],
+  syncImpersonationTeammatesFromServer: (...args: unknown[]) => syncTeammates(...args),
 }));
 
 vi.mock("@rakazo/ui-web", () => ({
@@ -84,6 +87,7 @@ beforeEach(() => {
   stopImpersonation.mockReset();
   switchImpersonation.mockReset();
   hardSwitch.mockReset();
+  syncTeammates.mockReset();
 });
 
 afterEach(() => {
@@ -136,6 +140,13 @@ describe("ImpersonationBanner", () => {
     expect(hardSwitch).toHaveBeenCalledWith(
       expect.objectContaining({ target: "/admin/ops", clearTeammates: true }),
     );
+  });
+
+  it("clears cached teammates when the server is no longer impersonating", async () => {
+    me.mockResolvedValue({ impersonating: null });
+    await renderBanner();
+    expect(syncTeammates).toHaveBeenCalledWith(null);
+    expect(host!.querySelector('[data-testid="impersonation-banner"]')).toBeNull();
   });
 
   it("switches teammates via ops.switchImpersonation", async () => {

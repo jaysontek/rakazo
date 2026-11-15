@@ -8096,3 +8096,9 @@ msgstr "你的語音供應商拒絕了該金鑰。"
 #: src/components/vault/VaultItemEditor.tsx
 msgid "ZIP or postal code"
 msgstr ""
+
+msgid "Could not load team"
+msgstr "無法載入團隊"
+
+msgid "Could not load teams"
+msgstr "無法載入團隊列表"

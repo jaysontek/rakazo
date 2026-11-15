@@ -8095,3 +8095,9 @@ msgstr "음성 서비스에서 키를 거부했습니다."
 #: src/components/vault/VaultItemEditor.tsx
 msgid "ZIP or postal code"
 msgstr ""
+
+msgid "Could not load team"
+msgstr "팀을 불러올 수 없습니다"
+
+msgid "Could not load teams"
+msgstr "팀 목록을 불러올 수 없습니다"

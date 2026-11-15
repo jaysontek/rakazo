@@ -8095,3 +8095,9 @@ msgstr "音声プロバイダーのキーが拒否されました。"
 #: src/components/vault/VaultItemEditor.tsx
 msgid "ZIP or postal code"
 msgstr ""
+
+msgid "Could not load team"
+msgstr "チームを読み込めませんでした"
+
+msgid "Could not load teams"
+msgstr "チーム一覧を読み込めませんでした"

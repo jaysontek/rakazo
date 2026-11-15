@@ -15,6 +15,7 @@ import {
   IMPERSONATION_ORG_ID_KEY,
   IMPERSONATION_TEAMMATES_KEY,
   storeImpersonationTeammates,
+  syncImpersonationTeammatesFromServer,
 } from "./impersonation-teammates";
 
 describe("clearImpersonationLocalState", () => {
@@ -139,5 +140,18 @@ describe("impersonation teammates storage", () => {
     ]);
     clearImpersonationTeammates();
     expect(sessionStorage.getItem(IMPERSONATION_ORG_ID_KEY)).toBeNull();
+  });
+
+  it("clears cached teammates when me/bootstrap reports not impersonating", () => {
+    storeImpersonationTeammates("org-9", [
+      { userId: "a", name: "A", email: "a@x.com" },
+    ]);
+    syncImpersonationTeammatesFromServer({ targetUserId: "a" });
+    expect(sessionStorage.getItem(IMPERSONATION_ORG_ID_KEY)).toBe("org-9");
+    expect(sessionStorage.getItem(IMPERSONATION_TEAMMATES_KEY)).toBeTruthy();
+
+    syncImpersonationTeammatesFromServer(null);
+    expect(sessionStorage.getItem(IMPERSONATION_ORG_ID_KEY)).toBeNull();
+    expect(sessionStorage.getItem(IMPERSONATION_TEAMMATES_KEY)).toBeNull();
   });
 });

@@ -56,3 +56,8 @@ export function clearImpersonationTeammates(): void {
     // Ignore storage failures on stop.
   }
 }
+
+/** Drop cached teammates when me/bootstrap reports the server is not impersonating. */
+export function syncImpersonationTeammatesFromServer(impersonating: unknown): void {
+  if (!impersonating) clearImpersonationTeammates();
+}

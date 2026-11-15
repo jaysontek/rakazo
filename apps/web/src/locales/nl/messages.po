@@ -8095,3 +8095,9 @@ msgstr "Je spraakaanbieder heeft de sleutel geweigerd."
 #: src/components/vault/VaultItemEditor.tsx
 msgid "ZIP or postal code"
 msgstr ""
+
+msgid "Could not load team"
+msgstr "Kon team niet laden"
+
+msgid "Could not load teams"
+msgstr "Kon teams niet laden"

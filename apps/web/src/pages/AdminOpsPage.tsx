@@ -446,6 +446,7 @@ function sortAriaValue(
 }
 
 function TeamsSection() {
+  const { t } = useLingui();
   const orgs = useQuery({
     queryKey: ["ops", "organizations"],
     queryFn: () => rpc.ops.organizations(),
@@ -461,7 +462,7 @@ function TeamsSection() {
   if (orgs.isError || !orgs.data) {
     return (
       <p className="text-sm text-muted-foreground">
-        {errorText(orgs.error, "Could not load teams")}
+        {errorText(orgs.error, t`Could not load teams`)}
       </p>
     );
   }

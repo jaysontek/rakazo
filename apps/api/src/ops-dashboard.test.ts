@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { listOpsAgents, loadOpsOverview } from "./ops-dashboard.js";
+import { listOpsAgents, listOpsOrganizations, loadOpsOverview } from "./ops-dashboard.js";
 
 type UserRow = { id: string; email: string; name: string; deactivatedAt: Date | null };
 
@@ -463,6 +463,26 @@ describe("loadOpsOverview", () => {
     } finally {
       vi.unstubAllEnvs();
     }
+  });
+});
+
+describe("listOpsOrganizations", () => {
+  it("omits sole-member Personal orgs from the Teams list", async () => {
+    const prisma = {
+      organization: {
+        findMany: vi.fn(async () => [
+          { id: "personal", name: "Personal", _count: { members: 1 } },
+          { id: "solo-named", name: "Ada", _count: { members: 1 } },
+          { id: "team", name: "Acme", _count: { members: 2 } },
+          { id: "large", name: "Big Co", _count: { members: 5 } },
+        ]),
+      },
+    };
+
+    await expect(listOpsOrganizations(prisma as never)).resolves.toEqual([
+      { id: "team", name: "Acme", memberCount: 2 },
+      { id: "large", name: "Big Co", memberCount: 5 },
+    ]);
   });
 });
 

@@ -2287,7 +2287,7 @@ export const MeSchema = z.object({
       targetName: z.string(),
       targetEmail: z.string(),
       expiresAt: z.string(),
-      /** Derived id for this impersonation window (`imp_${sessionId}_${expiresAtMs}`). */
+      /** Hashed opaque id for this impersonation window (`imp_` + hex); never the raw session id. */
       impersonationSessionId: z.string(),
     })
     .nullable()

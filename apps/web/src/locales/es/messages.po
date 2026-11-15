@@ -8095,3 +8095,9 @@ msgstr "Tu proveedor de voz rechazó la clave."
 #: src/components/vault/VaultItemEditor.tsx
 msgid "ZIP or postal code"
 msgstr ""
+
+msgid "Could not load team"
+msgstr "No se pudo cargar el equipo"
+
+msgid "Could not load teams"
+msgstr "No se pudieron cargar los equipos"
