@@ -76,7 +76,9 @@ export function computerRoutes(ctx: RouterContext) {
   return {
     computer: {
       status: authed.computer.status.handler(async ({ context, input }) =>
-        computerStatus(deps, context.actor, input.botId),
+        computerStatus(deps, context.actor, input.botId, {
+          skipExpire: Boolean(context.impersonatedBy),
+        }),
       ),
       boot: authed.computer.boot.handler(async ({ context, input }) => {
         const bot = await repos.getBot(context.actor, input.botId);
@@ -884,10 +886,12 @@ async function computerStatus(
   deps: RouterDeps,
   actor: Actor,
   botId: string,
+  options?: { skipExpire?: boolean },
 ): Promise<ComputerStatus> {
   const repos = createRepos(deps.prisma);
   let bot = await repos.getBot(actor, botId);
-  if (await expireStaleComputerControl(deps, bot.computer)) {
+  // View-only: never expire control leases while impersonating.
+  if (!options?.skipExpire && (await expireStaleComputerControl(deps, bot.computer))) {
     bot = await repos.getBot(actor, botId);
   }
   const busyBotName = await resolveBusyBotName(deps.prisma, {

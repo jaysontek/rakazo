@@ -48,6 +48,7 @@ export const IMPERSONATION_PROCEDURE_KIND = {
   "billing.refresh": "write",
   "billing.selectFunding": "write",
   "billing.setMonthlyCredits": "write",
+  // Read-only while impersonating; referralCode claims are rejected in the handler.
   "billing.status": "read",
   "billing.switchToYearly": "write",
   "boards.get": "read",
@@ -81,7 +82,8 @@ export const IMPERSONATION_PROCEDURE_KIND = {
   "capabilities.catalogSearch": "read",
   "capabilities.install": "write",
   "capabilities.list": "read",
-  "capabilities.pluginParts": "read",
+  // setPluginParts mutates install rows / MCP assignments.
+  "capabilities.pluginParts": "write",
   // Loads/renders plugin packages — side-effectful under view-only.
   "capabilities.pluginPreview": "write",
   "capabilities.remove": "write",
@@ -111,10 +113,12 @@ export const IMPERSONATION_PROCEDURE_KIND = {
   "computer.uploadFile": "write",
   "computerProvider.account.get": "read",
   "computerProvider.account.update": "write",
-  "computerProvider.get": "read",
+  // Deployment computer settings — denied while impersonating (requireNotImpersonating).
+  "computerProvider.get": "write",
   "computerProvider.update": "write",
   "connections.begin": "write",
-  "connections.catalog": "read",
+  // Managed providers + reconcileConnections write connection rows.
+  "connections.catalog": "write",
   "connections.complete": "write",
   "connections.list": "read",
   "connections.rename": "write",
@@ -139,10 +143,12 @@ export const IMPERSONATION_PROCEDURE_KIND = {
   "health": "read",
   "integrationSetup.get": "read",
   "integrationSetup.save": "write",
-  "links.favicon": "read",
+  // Outbound fetch for site icons — blocked while impersonating.
+  "links.favicon": "write",
   "marketplace.catalog": "read",
   "marketplace.review": "write",
-  "marketplace.submissions": "read",
+  // Plugin submission queue is an ops/admin surface.
+  "marketplace.submissions": "write",
   "mcp.assignments.all": "read",
   "mcp.assignments.approve": "write",
   "mcp.assignments.dismiss": "write",
@@ -154,6 +160,7 @@ export const IMPERSONATION_PROCEDURE_KIND = {
   // Writes mcpServer.allBots / botMcpServer and reverts approvals in a transaction.
   "mcp.servers.agents": "write",
   "mcp.servers.create": "write",
+  // View-only skips OAuth/credential decrypt and serves connection flags only.
   "mcp.servers.list": "read",
   "mcp.servers.remove": "write",
   "mcp.servers.test": "write",
@@ -190,6 +197,7 @@ export const IMPERSONATION_PROCEDURE_KIND = {
   "models.credentials": "read",
   "models.disconnect": "write",
   "models.finishOAuth": "write",
+  // View-only serves the static catalog (no decrypt / live fetch / OAuth refresh).
   "models.forRole": "read",
   "models.list": "read",
   // Probes call external providers / refresh remote catalogs.
@@ -267,7 +275,8 @@ export const IMPERSONATION_PROCEDURE_KIND = {
   "skills.list": "read",
   "skills.remove": "write",
   "skills.save": "write",
-  "skills.snapshot": "read",
+  // Captures from the target's computer and updates the teaching recording.
+  "skills.snapshot": "write",
   "skills.start": "write",
   "skills.stop": "write",
   "skills.testRun": "write",

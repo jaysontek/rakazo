@@ -380,6 +380,16 @@ export function mcpRoutes(ctx: RouterContext) {
             include: { availableIn: AVAILABILITY_SELECT },
             orderBy: [{ name: "asc" }, { createdAt: "asc" }],
           });
+          // View-only: never decrypt OAuth/credential material while impersonating.
+          if (context.impersonatedBy) {
+            return rows.map((row) =>
+              mcpServerDto(row, {
+                status: row.secretId ? "connected" : "none",
+                clientId: null,
+                credential: Boolean(row.secretId),
+              }),
+            );
+          }
           const secretIds = rows.flatMap((row) => (row.secretId ? [row.secretId] : []));
           const secrets = secretIds.length
             ? await deps.prisma.secret.findMany({

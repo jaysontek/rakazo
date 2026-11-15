@@ -26,6 +26,7 @@ type SessionRow = {
   impersonationExpiresAt: Date | null;
   expiresAt: Date;
   activeOrganizationId: string | null;
+  impersonationOrganizationId: string | null;
 };
 
 type SecurityEvent = {
@@ -102,6 +103,7 @@ describe("impersonation", () => {
         if (where.id !== session.id) throw new Error("missing session");
         session.impersonatedBy = null;
         session.impersonationExpiresAt = null;
+        session.impersonationOrganizationId = null;
         return session;
       }),
     },
@@ -246,6 +248,7 @@ describe("impersonation", () => {
       impersonationExpiresAt: null,
       expiresAt: new Date(Date.now() + 60 * 60 * 1000),
       activeOrganizationId: "org-1",
+      impersonationOrganizationId: null,
     };
   });
 
@@ -318,6 +321,7 @@ describe("impersonation", () => {
       userId: "user",
       impersonatedBy: "admin",
       activeOrganizationId: null,
+      impersonationOrganizationId: null,
     });
     expect(session.impersonationExpiresAt?.getTime()).toBeGreaterThanOrEqual(
       before + IMPERSONATION_TTL_MS - 1000,
@@ -351,12 +355,13 @@ describe("impersonation", () => {
       targetUserId: "user",
       organizationId: "org-1",
     });
-    expect(session.activeOrganizationId).toBe("org-1");
+    expect(session.impersonationOrganizationId).toBe("org-1");
+    expect(session.activeOrganizationId).toBeNull();
 
     session.userId = "admin";
     session.impersonatedBy = null;
     session.impersonationExpiresAt = null;
-    session.activeOrganizationId = null;
+    session.impersonationOrganizationId = null;
     members.push({ id: "m-personal", organizationId: "personal-1", userId: "user" });
     await expect(
       startImpersonation(deps as never, {
@@ -388,6 +393,7 @@ describe("impersonation", () => {
       userId: "admin",
       impersonatedBy: null,
       impersonationExpiresAt: null,
+      impersonationOrganizationId: null,
       activeOrganizationId: null,
     });
     expect(deletedPush).toEqual(
@@ -460,7 +466,9 @@ describe("impersonation", () => {
     session.userId = "user";
     session.impersonatedBy = "admin";
     session.impersonationExpiresAt = originalExpiry;
-    session.activeOrganizationId = "org-1";
+    session.impersonationOrganizationId = "org-1";
+    // activeOrganizationId may auto-pin to something else; switch must ignore it.
+    session.activeOrganizationId = "other-org";
     const previousSessionId = buildImpersonationSessionId(session.id, originalExpiry);
 
     const result = await switchImpersonation(deps as never, {
@@ -473,7 +481,7 @@ describe("impersonation", () => {
     expect(session).toMatchObject({
       userId: "user-2",
       impersonatedBy: "admin",
-      activeOrganizationId: "org-1",
+      impersonationOrganizationId: "org-1",
     });
     expect(session.impersonationExpiresAt?.getTime()).toBe(originalExpiry.getTime());
     expect(result.impersonationExpiresAt.getTime()).toBe(originalExpiry.getTime());
@@ -496,11 +504,37 @@ describe("impersonation", () => {
     });
   });
 
+  it("A→B→A switch never extends the original expiry", async () => {
+    const originalExpiry = new Date(Date.now() + 90_000);
+    session.userId = "user";
+    session.impersonatedBy = "admin";
+    session.impersonationExpiresAt = originalExpiry;
+    session.impersonationOrganizationId = "org-1";
+
+    await switchImpersonation(deps as never, {
+      sessionId: session.id,
+      adminUserId: "admin",
+      targetUserId: "user-2",
+      organizationId: "org-1",
+    });
+    expect(session.userId).toBe("user-2");
+    expect(session.impersonationExpiresAt?.getTime()).toBe(originalExpiry.getTime());
+
+    await switchImpersonation(deps as never, {
+      sessionId: session.id,
+      adminUserId: "admin",
+      targetUserId: "user",
+      organizationId: "org-1",
+    });
+    expect(session.userId).toBe("user");
+    expect(session.impersonationExpiresAt?.getTime()).toBe(originalExpiry.getTime());
+  });
+
   it("refuses switch when a concurrent stop already cleared impersonation", async () => {
     session.userId = "user";
     session.impersonatedBy = "admin";
     session.impersonationExpiresAt = new Date(Date.now() + 60_000);
-    session.activeOrganizationId = "org-1";
+    session.impersonationOrganizationId = "org-1";
     prisma.session.updateMany.mockImplementationOnce(async () => ({ count: 0 }));
     await expect(
       switchImpersonation(deps as never, {
@@ -543,7 +577,7 @@ describe("impersonation", () => {
     session.userId = "user";
     session.impersonatedBy = "admin";
     session.impersonationExpiresAt = new Date(Date.now() + 60_000);
-    session.activeOrganizationId = "org-1";
+    session.impersonationOrganizationId = "org-1";
     await expect(
       switchImpersonation(deps as never, {
         sessionId: session.id,
@@ -562,7 +596,7 @@ describe("impersonation", () => {
     session.userId = "user";
     session.impersonatedBy = "admin";
     session.impersonationExpiresAt = new Date(Date.now() + 60_000);
-    session.activeOrganizationId = "org-1";
+    session.impersonationOrganizationId = "org-1";
     members.push(
       { id: "m3", organizationId: "org-2", userId: "user" },
       { id: "m4", organizationId: "org-2", userId: "user-2" },
@@ -581,10 +615,13 @@ describe("impersonation", () => {
   });
 
   it("refuses switch when impersonation has no organization scope", async () => {
-    session.userId = "user";
-    session.impersonatedBy = "admin";
-    session.impersonationExpiresAt = new Date(Date.now() + 60_000);
-    session.activeOrganizationId = null;
+    // Unscoped start (accounts list): switching is denied.
+    await startImpersonation(deps as never, {
+      sessionId: session.id,
+      adminUserId: "admin",
+      targetUserId: "user",
+    });
+    expect(session.impersonationOrganizationId).toBeNull();
     await expect(
       switchImpersonation(deps as never, {
         sessionId: session.id,
@@ -598,11 +635,31 @@ describe("impersonation", () => {
     });
   });
 
+  it("clears impersonationOrganizationId on stop and expiry", async () => {
+    session.userId = "user";
+    session.impersonatedBy = "admin";
+    session.impersonationExpiresAt = new Date(Date.now() + 60_000);
+    session.impersonationOrganizationId = "org-1";
+    await stopImpersonation(deps as never, {
+      sessionId: session.id,
+      expectedAdminUserId: "admin",
+      reason: "manual",
+    });
+    expect(session.impersonationOrganizationId).toBeNull();
+
+    session.userId = "user";
+    session.impersonatedBy = "admin";
+    session.impersonationExpiresAt = new Date(Date.now() - 1000);
+    session.impersonationOrganizationId = "org-1";
+    await enforceImpersonationSession(deps as never, session.id);
+    expect(session.impersonationOrganizationId).toBeNull();
+  });
+
   it("refuses switch for a non-admin", async () => {
     session.userId = "user";
     session.impersonatedBy = "admin";
     session.impersonationExpiresAt = new Date(Date.now() + 60_000);
-    session.activeOrganizationId = "org-1";
+    session.impersonationOrganizationId = "org-1";
     deps.env.adminEmails = [];
     await expect(
       switchImpersonation(deps as never, {

@@ -187,7 +187,9 @@ export function deviceSessionFromRequest(
  * Start viewing as another user on the current session. Stores the real admin
  * id in session.impersonatedBy and sets an independent impersonationExpiresAt
  * hard cap (session refresh cannot extend it). When `organizationId` is set,
- * it is stored on activeOrganizationId as the fixed switch scope.
+ * it is stored on impersonationOrganizationId as the fixed switch scope
+ * (never on activeOrganizationId, which the session may auto-pin later).
+ * An unscoped start means teammate switching is denied until stop.
  */
 export async function startImpersonation(
   deps: ImpersonationDeps,
@@ -235,8 +237,10 @@ export async function startImpersonation(
         impersonatedBy: input.adminUserId,
         impersonationExpiresAt,
         expiresAt,
-        // Org scope for later switches; null when started from the accounts list.
-        activeOrganizationId: organizationId,
+        impersonationOrganizationId: organizationId,
+        // Do not pin activeOrganizationId — that column is for the user's own org
+        // switcher and may be auto-updated by later requests.
+        activeOrganizationId: null,
       },
     });
     await writeImpersonationAudit(client, {
@@ -299,7 +303,7 @@ export async function stopImpersonation(
     impersonationSessionId,
     procedure: auditType === "ops.impersonation.stopped" ? "ops.stopImpersonation" : undefined,
     reason: auditType === "ops.impersonation.stopped" ? reason : undefined,
-    organizationId: session.activeOrganizationId,
+    organizationId: session.impersonationOrganizationId,
     spaceId: input.spaceId,
     ip: input.ip,
     userAgent: input.userAgent,
@@ -324,6 +328,7 @@ export async function stopImpersonation(
         userId: adminUserId,
         impersonatedBy: null,
         impersonationExpiresAt: null,
+        impersonationOrganizationId: null,
         activeOrganizationId: null,
       },
     });
@@ -359,7 +364,8 @@ export async function switchImpersonation(
   if (session.impersonatedBy !== input.adminUserId) {
     throw new ORPCError("FORBIDDEN", { message: "Impersonator mismatch" });
   }
-  const scopedOrganizationId = session.activeOrganizationId;
+  // Scope is fixed at start on impersonationOrganizationId — never activeOrganizationId.
+  const scopedOrganizationId = session.impersonationOrganizationId;
   if (!scopedOrganizationId) {
     throw new ORPCError("FORBIDDEN", {
       message: "Impersonation was not started with an organization scope",
@@ -404,7 +410,7 @@ export async function switchImpersonation(
         impersonatedBy: input.adminUserId,
         impersonationExpiresAt,
         expiresAt,
-        activeOrganizationId: scopedOrganizationId,
+        impersonationOrganizationId: scopedOrganizationId,
       },
     });
     if (switched.count === 0) {
