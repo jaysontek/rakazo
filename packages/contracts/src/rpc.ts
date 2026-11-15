@@ -1422,12 +1422,19 @@ export const appContract = {
       .output(OpsAdminGrantSchema),
     removeAdminGrant: oc.input(z.strictObject({ userId: Id })).output(z.object({ ok: z.literal(true) })),
     startImpersonation: oc
-      .input(z.strictObject({ userId: Id }))
+      .input(
+        z.strictObject({
+          userId: Id,
+          /** When set, fixes the impersonation org scope for later switches. Must be a multi-member org. */
+          organizationId: Id.optional(),
+        }),
+      )
       .output(MeSchema),
     stopImpersonation: oc.output(MeSchema),
     /**
-     * Switch the current impersonation target to another member of the given org.
+     * Switch the current impersonation target to another member of the org fixed at start.
      * Allowlisted while impersonating; verifies the impersonator is still admin.
+     * Does not extend the original impersonation TTL.
      */
     switchImpersonation: oc
       .input(z.strictObject({ userId: Id, organizationId: Id }))

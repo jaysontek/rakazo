@@ -98,6 +98,16 @@ describe("impersonation", () => {
               row.organizationId === where.organizationId && row.userId === where.userId,
           ) ?? null,
       ),
+      findMany: vi.fn(
+        async ({
+          where,
+        }: {
+          where: { organizationId: string };
+        }) =>
+          members
+            .filter((row) => row.organizationId === where.organizationId)
+            .map((row) => ({ userId: row.userId })),
+      ),
     },
     securityEvent: {
       create: vi.fn(async ({ data }: { data: SecurityEvent }) => {
@@ -151,6 +161,7 @@ describe("impersonation", () => {
     securityEvents.length = 0;
     deletedPush.length = 0;
     resetImpersonationDeniedAggregatorForTests();
+    vi.clearAllMocks();
     deps.env.adminEmails = ["admin@example.test"];
     users.set("admin", {
       id: "admin",
@@ -272,7 +283,7 @@ describe("impersonation", () => {
     });
   });
 
-  it("starts impersonation with a hard TTL, session id, and audits in the same transaction", async () => {
+  it("starts impersonation with a hard TTL, hashed session id, and audits in the same transaction", async () => {
     const before = Date.now();
     const result = await startImpersonation(deps as never, {
       sessionId: session.id,
@@ -294,6 +305,8 @@ describe("impersonation", () => {
     expect(result.impersonationSessionId).toBe(
       buildImpersonationSessionId(session.id, session.impersonationExpiresAt!),
     );
+    expect(result.impersonationSessionId).toMatch(/^imp_[a-f0-9]{32}$/);
+    expect(result.impersonationSessionId).not.toContain(session.id);
     expect(securityEvents).toEqual([
       expect.objectContaining({
         type: "ops.impersonation.started",
@@ -306,6 +319,33 @@ describe("impersonation", () => {
         }),
       }),
     ]);
+  });
+
+  it("stores organization scope on start and rejects Personal orgs", async () => {
+    await startImpersonation(deps as never, {
+      sessionId: session.id,
+      adminUserId: "admin",
+      targetUserId: "user",
+      organizationId: "org-1",
+    });
+    expect(session.activeOrganizationId).toBe("org-1");
+
+    session.userId = "admin";
+    session.impersonatedBy = null;
+    session.impersonationExpiresAt = null;
+    session.activeOrganizationId = null;
+    members.push({ id: "m-personal", organizationId: "personal-1", userId: "user" });
+    await expect(
+      startImpersonation(deps as never, {
+        sessionId: session.id,
+        adminUserId: "admin",
+        targetUserId: "user",
+        organizationId: "personal-1",
+      }),
+    ).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      message: "Cannot impersonate within a Personal organization",
+    });
   });
 
   it("stop restores the admin, clears push rows, and audits without requiring admin status", async () => {
@@ -367,7 +407,7 @@ describe("impersonation", () => {
       expect.objectContaining({
         type: "ops.impersonation.expired",
         metadata: expect.objectContaining({
-          impersonationSessionId: expect.stringMatching(/^imp_session-1_/),
+          impersonationSessionId: expect.stringMatching(/^imp_[a-f0-9]{32}$/),
         }),
       }),
     ]);
@@ -392,14 +432,13 @@ describe("impersonation", () => {
     expect(result).toEqual({ ok: false, reason: "admin_deleted" });
   });
 
-  it("switches to another org member and emits stopped + switched + started", async () => {
+  it("switches to another org member, preserves TTL, and emits stopped + switched + started", async () => {
+    const originalExpiry = new Date(Date.now() + 60_000);
     session.userId = "user";
     session.impersonatedBy = "admin";
-    session.impersonationExpiresAt = new Date(Date.now() + 60_000);
-    const previousSessionId = buildImpersonationSessionId(
-      session.id,
-      session.impersonationExpiresAt,
-    );
+    session.impersonationExpiresAt = originalExpiry;
+    session.activeOrganizationId = "org-1";
+    const previousSessionId = buildImpersonationSessionId(session.id, originalExpiry);
 
     const result = await switchImpersonation(deps as never, {
       sessionId: session.id,
@@ -411,11 +450,12 @@ describe("impersonation", () => {
     expect(session).toMatchObject({
       userId: "user-2",
       impersonatedBy: "admin",
+      activeOrganizationId: "org-1",
     });
-    expect(result.impersonationSessionId).toBe(
-      buildImpersonationSessionId(session.id, session.impersonationExpiresAt!),
-    );
-    expect(result.impersonationSessionId).not.toBe(previousSessionId);
+    expect(session.impersonationExpiresAt?.getTime()).toBe(originalExpiry.getTime());
+    expect(result.impersonationExpiresAt.getTime()).toBe(originalExpiry.getTime());
+    expect(result.impersonationSessionId).toBe(previousSessionId);
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
     expect(securityEvents.map((event) => event.type)).toEqual([
       "ops.impersonation.stopped",
       "ops.impersonation.switched",
@@ -437,6 +477,7 @@ describe("impersonation", () => {
     session.userId = "user";
     session.impersonatedBy = "admin";
     session.impersonationExpiresAt = new Date(Date.now() + 60_000);
+    session.activeOrganizationId = "org-1";
     await expect(
       switchImpersonation(deps as never, {
         sessionId: session.id,
@@ -451,10 +492,51 @@ describe("impersonation", () => {
     expect(session.userId).toBe("user");
   });
 
+  it("refuses switch when caller organizationId does not match the fixed scope", async () => {
+    session.userId = "user";
+    session.impersonatedBy = "admin";
+    session.impersonationExpiresAt = new Date(Date.now() + 60_000);
+    session.activeOrganizationId = "org-1";
+    members.push(
+      { id: "m3", organizationId: "org-2", userId: "user" },
+      { id: "m4", organizationId: "org-2", userId: "user-2" },
+    );
+    await expect(
+      switchImpersonation(deps as never, {
+        sessionId: session.id,
+        adminUserId: "admin",
+        targetUserId: "user-2",
+        organizationId: "org-2",
+      }),
+    ).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      message: "Organization does not match impersonation scope",
+    });
+  });
+
+  it("refuses switch when impersonation has no organization scope", async () => {
+    session.userId = "user";
+    session.impersonatedBy = "admin";
+    session.impersonationExpiresAt = new Date(Date.now() + 60_000);
+    session.activeOrganizationId = null;
+    await expect(
+      switchImpersonation(deps as never, {
+        sessionId: session.id,
+        adminUserId: "admin",
+        targetUserId: "user-2",
+        organizationId: "org-1",
+      }),
+    ).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      message: "Impersonation was not started with an organization scope",
+    });
+  });
+
   it("refuses switch for a non-admin", async () => {
     session.userId = "user";
     session.impersonatedBy = "admin";
     session.impersonationExpiresAt = new Date(Date.now() + 60_000);
+    session.activeOrganizationId = "org-1";
     deps.env.adminEmails = [];
     await expect(
       switchImpersonation(deps as never, {
@@ -469,8 +551,8 @@ describe("impersonation", () => {
     });
   });
 
-  it("aggregates denied-write audits to one event per session per minute", async () => {
-    const impersonationSessionId = "imp_session-1_1";
+  it("aggregates denied-write audits to one event per actor per minute", async () => {
+    const impersonationSessionId = "imp_abcdef0123456789abcdef0123456789";
     await recordImpersonationDenied(deps as never, {
       adminUserId: "admin",
       targetUserId: "user",
@@ -492,6 +574,7 @@ describe("impersonation", () => {
     expect(securityEvents).toHaveLength(1);
     expect(securityEvents[0]).toMatchObject({
       type: "ops.impersonation.denied",
+      userId: "admin",
       metadata: expect.objectContaining({
         procedure: "bots.create",
         count: 1,

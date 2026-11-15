@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { ORPCError } from "@orpc/server";
 import { isHiddenOpsEmail, runAsSystem, runAsSystemInTransaction } from "@rakazo/db";
 import { isAdmin } from "./admins.js";
@@ -5,6 +6,8 @@ import type { RouterDeps } from "./router.js";
 
 export const IMPERSONATION_TTL_MS = 30 * 60 * 1000;
 export const IMPERSONATION_DENIED_AGGREGATE_MS = 60_000;
+/** Cap in-memory denied buckets so a long-lived process cannot grow without bound. */
+export const IMPERSONATION_DENIED_MAX_BUCKETS = 256;
 
 type ImpersonationDeps = Pick<RouterDeps, "prisma" | "env">;
 
@@ -15,6 +18,7 @@ type TxClient = {
   webPushSubscription: ImpersonationDeps["prisma"]["webPushSubscription"];
   callPushDevice: ImpersonationDeps["prisma"]["callPushDevice"];
   userDevice: ImpersonationDeps["prisma"]["userDevice"];
+  member: ImpersonationDeps["prisma"]["member"];
   $queryRaw: ImpersonationDeps["prisma"]["$queryRaw"];
 };
 
@@ -36,14 +40,22 @@ export type ImpersonationAuditMeta = {
   reason?: ImpersonationStopReason | string;
   count?: number;
   previousTargetUserId?: string;
+  organizationId?: string | null;
   spaceId?: string | null;
   ip?: string | null;
   userAgent?: string | null;
 };
 
-/** Derived id for one impersonation window — no DB column required. */
+/**
+ * Opaque id for one impersonation window — hash of session + expiry so the raw
+ * session id never appears in Me / audit metadata.
+ */
 export function buildImpersonationSessionId(sessionId: string, expiresAt: Date): string {
-  return `imp_${sessionId}_${expiresAt.getTime()}`;
+  const digest = createHash("sha256")
+    .update(`imp:${sessionId}:${expiresAt.getTime()}`)
+    .digest("hex")
+    .slice(0, 32);
+  return `imp_${digest}`;
 }
 
 async function writeImpersonationAudit(tx: TxClient, meta: ImpersonationAuditMeta): Promise<void> {
@@ -65,6 +77,7 @@ async function writeImpersonationAudit(tx: TxClient, meta: ImpersonationAuditMet
           ...(meta.previousTargetUserId
             ? { previousTargetUserId: meta.previousTargetUserId }
             : {}),
+          ...(meta.organizationId ? { organizationId: meta.organizationId } : {}),
         },
       },
     }),
@@ -87,6 +100,41 @@ async function clearPushCreatedDuringImpersonation(
       data: { revokedAt: now, revokedBy: "session" },
     }),
   ]);
+}
+
+/**
+ * Personal orgs are sole-member bootstrap spaces. Impersonation switch scope
+ * must be a multi-member organization so the admin cannot pivot across tenants.
+ */
+export async function assertNonPersonalOrganization(
+  deps: ImpersonationDeps,
+  organizationId: string,
+): Promise<void> {
+  const members = await deps.prisma.member.findMany({
+    where: { organizationId },
+    select: { userId: true },
+  });
+  if (members.length === 0) {
+    throw new ORPCError("NOT_FOUND", { message: "Organization not found" });
+  }
+  const unique = new Set(members.map((row) => row.userId));
+  if (unique.size <= 1) {
+    throw new ORPCError("FORBIDDEN", { message: "Cannot impersonate within a Personal organization" });
+  }
+}
+
+async function assertOrganizationMember(
+  deps: ImpersonationDeps,
+  organizationId: string,
+  userId: string,
+): Promise<void> {
+  const membership = await deps.prisma.member.findFirst({
+    where: { organizationId, userId },
+    select: { id: true },
+  });
+  if (!membership) {
+    throw new ORPCError("FORBIDDEN", { message: "Target is not a member of that organization" });
+  }
 }
 
 /** Shared target eligibility checks used by start and switch. */
@@ -134,7 +182,8 @@ export function deviceSessionFromRequest(
 /**
  * Start viewing as another user on the current session. Stores the real admin
  * id in session.impersonatedBy and sets an independent impersonationExpiresAt
- * hard cap (session refresh cannot extend it).
+ * hard cap (session refresh cannot extend it). When `organizationId` is set,
+ * it is stored on activeOrganizationId as the fixed switch scope.
  */
 export async function startImpersonation(
   deps: ImpersonationDeps,
@@ -142,6 +191,7 @@ export async function startImpersonation(
     sessionId: string;
     adminUserId: string;
     targetUserId: string;
+    organizationId?: string | null;
     spaceId?: string | null;
     ip?: string | null;
     userAgent?: string | null;
@@ -151,6 +201,11 @@ export async function startImpersonation(
     throw new ORPCError("FORBIDDEN", { message: "Admins only" });
   }
   const target = await assertImpersonationTarget(deps, input.adminUserId, input.targetUserId);
+  const organizationId = input.organizationId ?? null;
+  if (organizationId) {
+    await assertNonPersonalOrganization(deps, organizationId);
+    await assertOrganizationMember(deps, organizationId, target.id);
+  }
   const session = await deps.prisma.session.findUnique({ where: { id: input.sessionId } });
   if (!session || session.userId !== input.adminUserId) {
     throw new ORPCError("UNAUTHORIZED", { message: "Session mismatch" });
@@ -176,7 +231,8 @@ export async function startImpersonation(
         impersonatedBy: input.adminUserId,
         impersonationExpiresAt,
         expiresAt,
-        activeOrganizationId: null,
+        // Org scope for later switches; null when started from the accounts list.
+        activeOrganizationId: organizationId,
       },
     });
     await writeImpersonationAudit(client, {
@@ -185,6 +241,7 @@ export async function startImpersonation(
       targetUserId: target.id,
       impersonationSessionId,
       procedure: "ops.startImpersonation",
+      organizationId,
       spaceId: input.spaceId,
       ip: input.ip,
       userAgent: input.userAgent,
@@ -238,6 +295,7 @@ export async function stopImpersonation(
     impersonationSessionId,
     procedure: auditType === "ops.impersonation.stopped" ? "ops.stopImpersonation" : undefined,
     reason: auditType === "ops.impersonation.stopped" ? reason : undefined,
+    organizationId: session.activeOrganizationId,
     spaceId: input.spaceId,
     ip: input.ip,
     userAgent: input.userAgent,
@@ -271,8 +329,9 @@ export async function stopImpersonation(
 }
 
 /**
- * Switch the current impersonation target to another member of `organizationId`.
- * Emits stopped (reason=switched) + switched, then starts a fresh window.
+ * Switch the current impersonation target within the org fixed at start.
+ * Preserves the original impersonationExpiresAt (never extends TTL) and runs
+ * stop+switch+start audits in a single transaction.
  */
 export async function switchImpersonation(
   deps: ImpersonationDeps,
@@ -296,70 +355,122 @@ export async function switchImpersonation(
   if (session.impersonatedBy !== input.adminUserId) {
     throw new ORPCError("FORBIDDEN", { message: "Impersonator mismatch" });
   }
-  const previousTargetUserId = session.userId;
-  const previousExpiresAt = session.impersonationExpiresAt ?? session.expiresAt;
-  const previousSessionId = buildImpersonationSessionId(input.sessionId, previousExpiresAt);
-
-  const membership = await deps.prisma.member.findFirst({
-    where: { organizationId: input.organizationId, userId: input.targetUserId },
-    select: { id: true },
-  });
-  if (!membership) {
-    throw new ORPCError("FORBIDDEN", { message: "Target is not a member of that organization" });
+  const scopedOrganizationId = session.activeOrganizationId;
+  if (!scopedOrganizationId) {
+    throw new ORPCError("FORBIDDEN", {
+      message: "Impersonation was not started with an organization scope",
+    });
   }
-
+  if (input.organizationId !== scopedOrganizationId) {
+    throw new ORPCError("FORBIDDEN", { message: "Organization does not match impersonation scope" });
+  }
+  await assertNonPersonalOrganization(deps, scopedOrganizationId);
+  await assertOrganizationMember(deps, scopedOrganizationId, input.targetUserId);
   const target = await assertImpersonationTarget(deps, input.adminUserId, input.targetUserId);
 
-  await stopImpersonation(deps, {
-    sessionId: input.sessionId,
-    expectedAdminUserId: input.adminUserId,
-    spaceId: input.spaceId,
-    ip: input.ip,
-    userAgent: input.userAgent,
-    reason: "switched",
-  });
-
-  await runAsSystem("append a security event", () =>
-    deps.prisma.securityEvent.create({
-      data: {
-        type: "ops.impersonation.switched",
-        userId: input.adminUserId,
-        spaceId: input.spaceId ?? null,
-        ip: input.ip ?? null,
-        userAgent: input.userAgent ?? null,
-        metadata: {
-          impersonatedBy: input.adminUserId,
-          targetUserId: target.id,
-          previousTargetUserId,
-          impersonationSessionId: previousSessionId,
-          procedure: "ops.switchImpersonation",
-          reason: "switched",
-        },
-      },
-    }),
+  const previousTargetUserId = session.userId;
+  if (previousTargetUserId === target.id) {
+    throw new ORPCError("BAD_REQUEST", { message: "Already viewing as that user" });
+  }
+  const impersonationExpiresAt = session.impersonationExpiresAt;
+  if (!impersonationExpiresAt || impersonationExpiresAt.getTime() <= Date.now()) {
+    throw new ORPCError("FORBIDDEN", { message: "Impersonation expired" });
+  }
+  const impersonationSessionId = buildImpersonationSessionId(
+    input.sessionId,
+    impersonationExpiresAt,
+  );
+  const expiresAt = new Date(
+    Math.min(session.expiresAt.getTime(), impersonationExpiresAt.getTime()),
   );
 
-  return startImpersonation(deps, {
-    sessionId: input.sessionId,
-    adminUserId: input.adminUserId,
-    targetUserId: target.id,
-    spaceId: input.spaceId,
-    ip: input.ip,
-    userAgent: input.userAgent,
+  await deps.prisma.$transaction(async (tx) => {
+    const client = tx as unknown as TxClient;
+    await clearPushCreatedDuringImpersonation(client, previousTargetUserId, input.sessionId);
+    await client.session.update({
+      where: { id: input.sessionId },
+      data: {
+        userId: target.id,
+        // Keep the original admin, TTL, and org scope — switch never extends expiry.
+        impersonatedBy: input.adminUserId,
+        impersonationExpiresAt,
+        expiresAt,
+        activeOrganizationId: scopedOrganizationId,
+      },
+    });
+    await writeImpersonationAudit(client, {
+      type: "ops.impersonation.stopped",
+      adminUserId: input.adminUserId,
+      targetUserId: previousTargetUserId,
+      impersonationSessionId,
+      procedure: "ops.stopImpersonation",
+      reason: "switched",
+      organizationId: scopedOrganizationId,
+      spaceId: input.spaceId,
+      ip: input.ip,
+      userAgent: input.userAgent,
+    });
+    await writeImpersonationAudit(client, {
+      type: "ops.impersonation.switched",
+      adminUserId: input.adminUserId,
+      targetUserId: target.id,
+      previousTargetUserId,
+      impersonationSessionId,
+      procedure: "ops.switchImpersonation",
+      reason: "switched",
+      organizationId: scopedOrganizationId,
+      spaceId: input.spaceId,
+      ip: input.ip,
+      userAgent: input.userAgent,
+    });
+    await writeImpersonationAudit(client, {
+      type: "ops.impersonation.started",
+      adminUserId: input.adminUserId,
+      targetUserId: target.id,
+      impersonationSessionId,
+      procedure: "ops.startImpersonation",
+      organizationId: scopedOrganizationId,
+      spaceId: input.spaceId,
+      ip: input.ip,
+      userAgent: input.userAgent,
+    });
   });
+
+  return { impersonationExpiresAt, impersonationSessionId };
 }
 
 type DeniedBucket = {
   pending: number;
   lastEmittedAt: number;
+  touchedAt: number;
 };
 
-/** In-memory aggregate so a write-spam doesn't flood security_events. */
-const deniedByImpersonationSession = new Map<string, DeniedBucket>();
+/** In-memory aggregate keyed by actor so a write-spam doesn't flood security_events. */
+const deniedByActor = new Map<string, DeniedBucket>();
+
+function pruneDeniedBuckets(now: number): void {
+  for (const [key, bucket] of deniedByActor) {
+    if (now - bucket.touchedAt > IMPERSONATION_DENIED_AGGREGATE_MS * 10) {
+      deniedByActor.delete(key);
+    }
+  }
+  while (deniedByActor.size > IMPERSONATION_DENIED_MAX_BUCKETS) {
+    let oldestKey: string | null = null;
+    let oldestTouched = Number.POSITIVE_INFINITY;
+    for (const [key, bucket] of deniedByActor) {
+      if (bucket.touchedAt < oldestTouched) {
+        oldestTouched = bucket.touchedAt;
+        oldestKey = key;
+      }
+    }
+    if (!oldestKey) break;
+    deniedByActor.delete(oldestKey);
+  }
+}
 
 /**
  * Rate-limited auditor for denied procedures while impersonating.
- * At most one `ops.impersonation.denied` event per impersonation session per 60s;
+ * At most one `ops.impersonation.denied` event per actor per 60s;
  * metadata includes the suppressed count and the latest procedure path.
  */
 export async function recordImpersonationDenied(
@@ -375,12 +486,14 @@ export async function recordImpersonationDenied(
   },
 ): Promise<void> {
   const now = Date.now();
-  let bucket = deniedByImpersonationSession.get(input.impersonationSessionId);
+  pruneDeniedBuckets(now);
+  let bucket = deniedByActor.get(input.adminUserId);
   if (!bucket) {
-    bucket = { pending: 0, lastEmittedAt: 0 };
-    deniedByImpersonationSession.set(input.impersonationSessionId, bucket);
+    bucket = { pending: 0, lastEmittedAt: 0, touchedAt: now };
+    deniedByActor.set(input.adminUserId, bucket);
   }
   bucket.pending += 1;
+  bucket.touchedAt = now;
   if (bucket.lastEmittedAt > 0 && now - bucket.lastEmittedAt < IMPERSONATION_DENIED_AGGREGATE_MS) {
     return;
   }
@@ -410,7 +523,7 @@ export async function recordImpersonationDenied(
 
 /** Test helper: clear the denied-event aggregate map. */
 export function resetImpersonationDeniedAggregatorForTests(): void {
-  deniedByImpersonationSession.clear();
+  deniedByActor.clear();
 }
 
 export async function requireNotImpersonating(
@@ -520,6 +633,7 @@ export async function recordImpersonationAuditStandalone(
           ...(meta.previousTargetUserId
             ? { previousTargetUserId: meta.previousTargetUserId }
             : {}),
+          ...(meta.organizationId ? { organizationId: meta.organizationId } : {}),
         },
       },
     }),

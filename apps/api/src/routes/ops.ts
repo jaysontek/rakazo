@@ -219,6 +219,7 @@ export function opsRoutes(ctx: RouterContext) {
           sessionId: context.sessionId,
           adminUserId: context.actor.userId,
           targetUserId: input.userId,
+          organizationId: input.organizationId,
           spaceId: context.actor.spaceId,
           ip: context.clientIp,
         });

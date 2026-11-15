@@ -124,7 +124,10 @@ export function TeamView({ data }: { data: OpsTeam }) {
           email: row.email,
         })),
       );
-      await rpc.ops.startImpersonation({ userId: member.userId });
+      await rpc.ops.startImpersonation({
+        userId: member.userId,
+        organizationId: data.organizationId,
+      });
       hardSwitchImpersonation({ queryClient, target: "/app" });
     } catch (err) {
       setError(errorText(err, t`Could not impersonate`));
