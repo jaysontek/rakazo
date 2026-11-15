@@ -1,16 +1,26 @@
 import type { SecretStore } from "@rakazo/adapter-kit";
 import { resolveModelKeyTypeSafe } from "@rakazo/adapters";
-import { sharedKeyWeekEnd, sharedKeyWeekStart } from "@rakazo/core";
-import type { AdminGrantRow, AllotmentTransferRow, PrismaClient } from "@rakazo/db";
+import type {
+  AdminGrantRow,
+  AllotmentTransferRow,
+  PrismaClient,
+  SharedKeyBudgetSettingsView,
+  SharedKeySpendAdjustmentRow,
+} from "@rakazo/db";
 import {
   isHiddenOpsEmail,
   listAdminGrants,
   listSharedKeyAllotmentTransfers,
   listSharedKeyBudgetMembers,
   listSharedKeyBudgetNotEnrolledHits,
+  listSharedKeySpendAdjustments,
+  loadSharedKeyBudgetSettingsView,
+  resolveSharedKeyPeriodBounds,
   runAsSystem,
   sharedKeyMonthlyBudgetUsd,
   sharedKeyWeeklyBudgetStatus,
+  trackedSharedKeySpendByUser,
+  trackedSharedKeyTeamSpendUsd,
 } from "@rakazo/db";
 
 const RECENT_RUN_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
@@ -144,9 +154,13 @@ export type OpsAccountRow = {
     hardStopped: boolean;
     weekStartsAt: string;
     resetsAt: string;
-    timezone: "America/New_York";
+    timezone: string;
+    hardStopEnabled: boolean;
+    warningThresholds: number[];
   } | null;
   pendingSharedBudgetApproval: boolean;
+  envPinned: boolean;
+  allotmentOverrideUsd: number | null;
 };
 
 export type OpsAgentOwner = {
@@ -219,7 +233,8 @@ export type OpsOverview = {
     weekSpentUsd: number;
     weekStartsAt: string;
     resetsAt: string;
-    timezone: "America/New_York";
+    timezone: string;
+    settings: SharedKeyBudgetSettingsView;
   };
   performance: {
     sampleWindowHours: number;
@@ -240,6 +255,7 @@ export type OpsOverview = {
   adminGrants: AdminGrantRow[];
   envBootstrapAdmins: string[];
   allotmentTransfers: AllotmentTransferRow[];
+  spendAdjustments: SharedKeySpendAdjustmentRow[];
 };
 
 /** First plain text block from a message; used for admin chat-log drill-in. */
@@ -310,23 +326,23 @@ export async function loadOpsOverview(
     /** Deployment shared API key for whatever provider resolveDeploymentModel selects. */
     deploymentModelKey?: string | null;
     envBootstrapAdmins?: string[];
+    /** SHARED_KEY_BUDGET_USER_IDS — marked envPinned on account rows. */
+    sharedKeyBudgetUserIds?: string[];
   } = {},
 ): Promise<OpsOverview> {
   return runAsSystem("operations dashboard overview", async () => {
     const weekAgo = new Date(now.getTime() - RECENT_RUN_WINDOW_MS);
-    const weekStart = sharedKeyWeekStart(now);
     const [
       users,
       usageGroups,
-      sharedUsageGroups,
       personalUsageGroups,
-      weekSharedUsage,
       recentModels,
       bots,
       recentRuns,
       monthlyCap,
       members,
-      notEnrolledHits,
+      settingsRow,
+      settingsView,
       database,
     ] = await Promise.all([
       prisma.user.findMany({
@@ -344,17 +360,7 @@ export async function loadOpsOverview(
       }),
       prisma.usageRecord.groupBy({
         by: ["userId"],
-        where: { sharedKey: true },
-        _sum: { costUsd: true },
-      }),
-      prisma.usageRecord.groupBy({
-        by: ["userId"],
         where: { sharedKey: false },
-        _sum: { costUsd: true },
-      }),
-      prisma.usageRecord.groupBy({
-        by: ["userId"],
-        where: { sharedKey: true, createdAt: { gte: weekStart, lt: now } },
         _sum: { costUsd: true },
       }),
       prisma.usageRecord.findMany({
@@ -391,19 +397,56 @@ export async function loadOpsOverview(
       }),
       sharedKeyMonthlyBudgetUsd(prisma, envSharedKeyMonthlyBudgetUsd),
       listSharedKeyBudgetMembers(prisma),
-      listSharedKeyBudgetNotEnrolledHits(prisma, weekStart),
+      prisma.deploymentSettings.findUnique({
+        where: { id: "default" },
+        select: {
+          sharedKeyPeriod: true,
+          sharedKeyResetDow: true,
+          sharedKeyResetDom: true,
+          sharedKeyResetMinutes: true,
+          sharedKeyTimezone: true,
+          sharedKeyActivePeriodStart: true,
+        },
+      }),
+      loadSharedKeyBudgetSettingsView(prisma, envSharedKeyMonthlyBudgetUsd, now),
       probeDatabase(prisma),
     ]);
+    const { schedule, periodStart, periodEnd } = resolveSharedKeyPeriodBounds(settingsRow, now);
+    const [
+      notEnrolledHits,
+      allotmentTransfers,
+      spendAdjustments,
+      sharedByUserMap,
+      weekSpentUsd,
+    ] = await Promise.all([
+      listSharedKeyBudgetNotEnrolledHits(prisma, periodStart),
+      listSharedKeyAllotmentTransfers(prisma, periodStart),
+      listSharedKeySpendAdjustments(prisma, { periodStart, now }),
+      trackedSharedKeySpendByUser(prisma, {
+        userIds: users.map((user) => user.id),
+        until: now,
+      }),
+      // Tracked company shared-key spend for the current period (usage + adjustments).
+      // Personal-key rows are never included. Visible-account filter applied below.
+      trackedSharedKeyTeamSpendUsd(prisma, {
+        since: periodStart,
+        until: now,
+        periodStart,
+      }),
+    ]);
     const notEnrolledHitIds = new Set(notEnrolledHits);
+    const envPinnedIds = new Set(
+      (options.sharedKeyBudgetUserIds ?? []).map((id) => id.trim()).filter(Boolean),
+    );
+    const overrideByUser = new Map(
+      settingsView.memberOverrides.map((row) => [row.userId, row.weeklyAllotmentUsd]),
+    );
 
     const usageByUser = new Map(
       usageGroups.map((row) => [
         row.userId,
         { totalTokens: row._sum.totalTokens, totalCostUsd: row._sum.costUsd },
       ]),
-    );
-    const sharedByUser = new Map(
-      sharedUsageGroups.map((row) => [row.userId, row._sum.costUsd ?? 0]),
     );
     const personalByUser = new Map(
       personalUsageGroups.map((row) => [row.userId, row._sum.costUsd ?? 0]),
@@ -452,6 +495,7 @@ export async function loadOpsOverview(
           status.weeklyCapUsd - status.spentUsd - status.reservedUsd,
         );
         const hardStopped =
+          status.hardStopEnabled &&
           status.enabled &&
           status.member &&
           status.weeklyCapUsd > 0 &&
@@ -468,6 +512,8 @@ export async function loadOpsOverview(
           weekStartsAt: status.weekStartsAt,
           resetsAt: status.resetsAt,
           timezone: status.timezone,
+          hardStopEnabled: status.hardStopEnabled,
+          warningThresholds: status.warningThresholds,
         };
       }
       const keyResolution = keyByUser.get(user.id) ?? {
@@ -494,10 +540,12 @@ export async function loadOpsOverview(
         needsReconnect: keyResolution.needsReconnect,
         totalTokens: usage?.totalTokens ?? null,
         totalCostUsd: usage?.totalCostUsd ?? null,
-        sharedKeyCostUsd: sharedByUser.get(user.id) ?? 0,
+        sharedKeyCostUsd: sharedByUserMap.get(user.id) ?? 0,
         personalKeyCostUsd: personalByUser.get(user.id) ?? 0,
         sharedKeyBudget: budget,
         pendingSharedBudgetApproval,
+        envPinned: envPinnedIds.has(user.id),
+        allotmentOverrideUsd: overrideByUser.get(user.id) ?? null,
       });
     }
     const visibleBots = bots.filter((bot) => !hiddenUserIds.has(bot.userId));
@@ -523,7 +571,6 @@ export async function loadOpsOverview(
         envBootstrap: true,
       });
     }
-    const allotmentTransfers = await listSharedKeyAllotmentTransfers(prisma, weekStart);
     const firstResponses: number[] = [];
     const totals: number[] = [];
     let errorCount = 0;
@@ -543,16 +590,19 @@ export async function loadOpsOverview(
 
     const sharedKeyCostUsd = accounts.reduce((sum, row) => sum + row.sharedKeyCostUsd, 0);
     const personalKeyCostUsd = accounts.reduce((sum, row) => sum + row.personalKeyCostUsd, 0);
-    // Real company shared-key spend since Monday (visible accounts) — not effective
-    // allotment spend, which subtracts preJoin baselines and would undercount the pool.
-    const weekSpentUsd = weekSharedUsage.reduce((sum, row) => {
-      if (hiddenUserIds.has(row.userId)) return sum;
-      return sum + (row._sum.costUsd ?? 0);
-    }, 0);
-    const budgetWindow = {
-      weekStartsAt: weekStart.toISOString(),
-      resetsAt: sharedKeyWeekEnd(weekStart).toISOString(),
-    };
+    // Exclude hidden-account usage from the team week total. Team-wide adjustments
+    // (userId null) remain in weekSpentUsd from trackedSharedKeyTeamSpendUsd.
+    let hiddenWeekShared = 0;
+    if (hiddenUserIds.size > 0) {
+      const hiddenTracked = await trackedSharedKeySpendByUser(prisma, {
+        userIds: [...hiddenUserIds],
+        since: periodStart,
+        until: now,
+        periodStart,
+      });
+      for (const value of hiddenTracked.values()) hiddenWeekShared += value;
+    }
+    const visibleWeekSpentUsd = Math.max(0, weekSpentUsd - hiddenWeekShared);
 
     return {
       accounts,
@@ -576,10 +626,11 @@ export async function loadOpsOverview(
         rosterConfigured: members.length > 0 || monthlyCap != null,
         memberCount: members.length,
         weekPoolUsd: monthlyCap != null && monthlyCap > 0 ? monthlyCap / 4 : null,
-        weekSpentUsd,
-        weekStartsAt: budgetWindow.weekStartsAt,
-        resetsAt: budgetWindow.resetsAt,
-        timezone: "America/New_York",
+        weekSpentUsd: visibleWeekSpentUsd,
+        weekStartsAt: periodStart.toISOString(),
+        resetsAt: periodEnd.toISOString(),
+        timezone: schedule.timezone,
+        settings: settingsView,
       },
       performance: {
         sampleWindowHours: 24 * 7,
@@ -602,6 +653,7 @@ export async function loadOpsOverview(
         (email) => !isHiddenOpsEmail(email),
       ),
       allotmentTransfers,
+      spendAdjustments,
     };
   });
 }

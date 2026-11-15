@@ -102,6 +102,14 @@ function opsPrisma(
     sharedKeyAllotmentTransfer: {
       findMany: vi.fn(async () => []),
     },
+    sharedKeyMemberOverride: {
+      findMany: vi.fn(async () => []),
+    },
+    sharedKeySpendAdjustment: {
+      findMany: vi.fn(async () => []),
+      aggregate: vi.fn(async () => ({ _sum: { deltaUsd: 0 } })),
+      groupBy: vi.fn(async () => []),
+    },
     adminGrant: {
       findMany: vi.fn(async () => []),
     },

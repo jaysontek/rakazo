@@ -100,6 +100,14 @@ function makeDeps(allowlist = ["192.168.140.0/24"]): RouterDeps {
     sharedKeyAllotmentTransfer: {
       findMany: async () => [],
     },
+    sharedKeyMemberOverride: {
+      findMany: async () => [],
+    },
+    sharedKeySpendAdjustment: {
+      findMany: async () => [],
+      aggregate: async () => ({ _sum: { deltaUsd: 0 } }),
+      groupBy: async () => [],
+    },
     spaceMember: {
       findMany: async () => [],
     },

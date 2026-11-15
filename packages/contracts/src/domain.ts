@@ -1277,9 +1277,9 @@ export const SharedKeyWeeklyBudgetSchema = z.object({
   spentUsd: z.number().nonnegative().optional(),
   /** Weekly allotment in USD; omitted for non-admins. */
   weeklyCapUsd: z.number().nonnegative().optional(),
-  /** ISO timestamp when the America/New_York week resets. */
+  /** ISO timestamp when the configured shared-key period resets. */
   resetsAt: z.string(),
-  timezone: z.literal("America/New_York"),
+  timezone: z.string().min(1),
 });
 export type SharedKeyWeeklyBudget = z.infer<typeof SharedKeyWeeklyBudgetSchema>;
 
@@ -1289,7 +1289,7 @@ export const UsageLimitSchema = z.discriminatedUnion("kind", [
     kind: z.literal("shared_weekly"),
     percentUsed: z.number().min(0).max(100),
     resetsAt: z.string(),
-    timezone: z.literal("America/New_York"),
+    timezone: z.string().min(1),
   }),
   z.object({ kind: z.literal("personal_key") }),
   z.object({ kind: z.literal("none") }),
@@ -1326,9 +1326,49 @@ export const OpsSharedKeyBudgetSchema = z.object({
   hardStopped: z.boolean(),
   weekStartsAt: z.string(),
   resetsAt: z.string(),
-  timezone: z.literal("America/New_York"),
+  timezone: z.string().min(1),
+  hardStopEnabled: z.boolean().default(true),
+  warningThresholds: z.array(z.number()).default([80, 95]),
 });
 export type OpsSharedKeyBudget = z.infer<typeof OpsSharedKeyBudgetSchema>;
+
+export const OpsSharedKeySettingSourceSchema = z.enum(["db", "env", "default"]);
+export type OpsSharedKeySettingSource = z.infer<typeof OpsSharedKeySettingSourceSchema>;
+
+/** Ops-editable shared-key budget settings with provenance for each field. */
+export const OpsSharedKeyBudgetSettingsSchema = z.object({
+  monthlyCapUsd: z.number().nullable(),
+  monthlyCapSource: OpsSharedKeySettingSourceSchema,
+  period: z.enum(["week", "month"]),
+  periodSource: OpsSharedKeySettingSourceSchema,
+  resetDow: z.number().int(),
+  resetDowSource: OpsSharedKeySettingSourceSchema,
+  resetDom: z.number().int(),
+  resetDomSource: OpsSharedKeySettingSourceSchema,
+  resetMinutes: z.number().int(),
+  resetMinutesSource: OpsSharedKeySettingSourceSchema,
+  timezone: z.string().min(1),
+  timezoneSource: OpsSharedKeySettingSourceSchema,
+  weekStartsAt: z.string(),
+  resetsAt: z.string(),
+  autoEnrollMode: z.enum(["off", "gated", "open", "signup"]),
+  autoEnrollModeSource: OpsSharedKeySettingSourceSchema,
+  warningThresholds: z.array(z.number()),
+  warningThresholdsSource: OpsSharedKeySettingSourceSchema,
+  hardStopEnabled: z.boolean(),
+  hardStopEnabledSource: OpsSharedKeySettingSourceSchema,
+  holdStaleMinutes: z.number().int(),
+  holdStaleMinutesSource: OpsSharedKeySettingSourceSchema,
+  pruneInactive: z.boolean(),
+  pruneInactiveSource: OpsSharedKeySettingSourceSchema,
+  memberOverrides: z.array(
+    z.object({
+      userId: Id,
+      weeklyAllotmentUsd: z.number().positive(),
+    }),
+  ),
+});
+export type OpsSharedKeyBudgetSettings = z.infer<typeof OpsSharedKeyBudgetSettingsSchema>;
 
 export const OpsAccountSchema = z.object({
   userId: Id,
@@ -1361,6 +1401,10 @@ export const OpsAccountSchema = z.object({
    * hit SharedKeyBudgetNotEnrolledError this week or uses the deployment company key.
    */
   pendingSharedBudgetApproval: z.boolean().default(false),
+  /** Pinned by SHARED_KEY_BUDGET_USER_IDS — cannot be removed from the roster. */
+  envPinned: z.boolean().default(false),
+  /** Absolute weekly allotment override when set; null when using the even-split share. */
+  allotmentOverrideUsd: z.number().nullable().optional(),
 });
 export type OpsAccount = z.infer<typeof OpsAccountSchema>;
 
@@ -1388,6 +1432,7 @@ export const OpsAllotmentTransferSchema = z.object({
 });
 export type OpsAllotmentTransfer = z.infer<typeof OpsAllotmentTransferSchema>;
 
+<<<<<<< HEAD
 export const OpsAgentOwnerSchema = z.object({
   id: Id,
   name: z.string(),
@@ -1395,6 +1440,24 @@ export const OpsAgentOwnerSchema = z.object({
   deactivated: z.boolean(),
 });
 export type OpsAgentOwner = z.infer<typeof OpsAgentOwnerSchema>;
+=======
+/** Append-only tracked shared-key spend adjustment (team-wide or per user). */
+export const OpsSharedKeySpendAdjustmentSchema = z.object({
+  id: Id,
+  periodStart: z.string(),
+  userId: Id.nullable(),
+  deltaUsd: z.number(),
+  reason: z.string(),
+  createdById: Id.nullable(),
+  createdByEmail: z.string().nullable(),
+  createdByName: z.string().nullable(),
+  createdAt: z.string(),
+  previousTrackedUsd: z.number(),
+  newTrackedUsd: z.number(),
+  reversesId: Id.nullable(),
+});
+export type OpsSharedKeySpendAdjustment = z.infer<typeof OpsSharedKeySpendAdjustmentSchema>;
+>>>>>>> ea458ab40 (part 2/5: tracked-spend adjustments with full audit trail)
 
 export const OpsAgentSchema = z.object({
   id: Id,
@@ -1481,7 +1544,8 @@ export const OpsOverviewSchema = z.object({
     weekSpentUsd: z.number().nonnegative(),
     weekStartsAt: z.string(),
     resetsAt: z.string(),
-    timezone: z.literal("America/New_York"),
+    timezone: z.string().min(1),
+    settings: OpsSharedKeyBudgetSettingsSchema.optional(),
   }),
   performance: z.object({
     sampleWindowHours: z.number().int().positive(),
@@ -1503,6 +1567,7 @@ export const OpsOverviewSchema = z.object({
   /** Env bootstrap admin emails (not removable). */
   envBootstrapAdmins: z.array(z.string()).default([]),
   allotmentTransfers: z.array(OpsAllotmentTransferSchema).default([]),
+  spendAdjustments: z.array(OpsSharedKeySpendAdjustmentSchema).default([]),
 });
 export type OpsOverview = z.infer<typeof OpsOverviewSchema>;
 
