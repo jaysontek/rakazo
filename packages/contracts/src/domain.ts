@@ -1337,8 +1337,20 @@ export const OpsAccountSchema = z.object({
   deactivated: z.boolean(),
   modelProvider: z.string().nullable(),
   modelId: z.string().nullable(),
-  /** Live classification: company shared key, distinct personal key, or none. */
-  keyType: z.enum(["company", "personal", "none"]).default("none"),
+  /**
+   * Live classification of the key a run would use: company (deployment/shared) or
+   * personal. Legacy servers may still send `none`; clients map that to company
+   * for one release.
+   */
+  keyType: z.preprocess(
+    (value) => (value === "none" || value === undefined || value === null ? "company" : value),
+    z.enum(["company", "personal"]),
+  ),
+  /**
+   * Stored credential cannot be used (decrypt failed or empty). Hint next to the
+   * label — not a third key type.
+   */
+  needsReconnect: z.boolean().default(false),
   totalTokens: z.number().nullable(),
   totalCostUsd: z.number().nullable(),
   sharedKeyCostUsd: z.number().nonnegative(),

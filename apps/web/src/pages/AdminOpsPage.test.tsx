@@ -144,7 +144,8 @@ const overview: OpsOverview = {
       deactivated: false,
       modelProvider: "google",
       modelId: "gemini-2.5-flash",
-      keyType: "none",
+      keyType: "company",
+      needsReconnect: false,
       totalTokens: 100,
       totalCostUsd: 0.1,
       sharedKeyCostUsd: 0.1,
@@ -253,4 +254,94 @@ it("shows Add failure reason in the accounts section when enrolled is false", as
   const alert = container.querySelector('[role="alert"]');
   expect(alert?.textContent).toBe("Not eligible for the shared budget");
   expect(addSharedKeyBudgetMember).toHaveBeenCalledWith({ userId: "user_pending" });
+});
+
+function accountFixture(
+  overrides: Partial<OpsOverview["accounts"][number]> & Pick<OpsOverview["accounts"][number], "userId" | "email" | "name" | "keyType">,
+): OpsOverview["accounts"][number] {
+  return {
+    deactivated: false,
+    modelProvider: "google",
+    modelId: "gemini-2.5-flash",
+    needsReconnect: false,
+    totalTokens: 10,
+    totalCostUsd: 0.01,
+    sharedKeyCostUsd: 0.01,
+    personalKeyCostUsd: 0,
+    sharedKeyBudget: null,
+    pendingSharedBudgetApproval: false,
+    ...overrides,
+  };
+}
+
+it("never renders an em dash for the Key column on desktop or mobile", async () => {
+  const data: OpsOverview = {
+    ...overview,
+    accounts: [
+      accountFixture({
+        userId: "user_company",
+        email: "company@example.test",
+        name: "Company User",
+        keyType: "company",
+      }),
+      accountFixture({
+        userId: "user_personal",
+        email: "personal@example.test",
+        name: "Personal User",
+        keyType: "personal",
+        sharedKeyCostUsd: 0,
+        personalKeyCostUsd: 0.01,
+      }),
+      accountFixture({
+        userId: "user_reconnect",
+        email: "reconnect@example.test",
+        name: "Reconnect User",
+        keyType: "personal",
+        needsReconnect: true,
+        sharedKeyCostUsd: 0,
+        personalKeyCostUsd: 0,
+      }),
+    ],
+  };
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  await act(async () => {
+    root.render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <OpsDashboardView
+            data={data}
+            onChanged={() => undefined}
+            selected={null as OpsRequestLogRow | null}
+            onSelect={() => undefined}
+            interactive
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+  });
+
+  const desktopRows = Array.from(container.querySelectorAll("table tbody tr"));
+  expect(desktopRows).toHaveLength(3);
+  for (const row of desktopRows) {
+    const keyCell = row.querySelectorAll("td")[1];
+    expect(keyCell?.textContent).not.toContain("—");
+    expect(
+      keyCell?.textContent?.includes("Company API") ||
+        keyCell?.textContent?.includes("Personal API") ||
+        keyCell?.textContent?.includes("Company key — pending admin approval"),
+    ).toBe(true);
+  }
+  expect(desktopRows[0]?.querySelectorAll("td")[1]?.textContent).toContain("Company API");
+  expect(desktopRows[1]?.querySelectorAll("td")[1]?.textContent).toContain("Personal API");
+  expect(desktopRows[2]?.querySelectorAll("td")[1]?.textContent).toContain("Personal API");
+  expect(desktopRows[2]?.querySelectorAll("td")[1]?.textContent).toContain("Reconnect");
+
+  const mobileCards = Array.from(container.querySelectorAll("ul.grid li"));
+  expect(mobileCards).toHaveLength(3);
+  expect(mobileCards[0]?.textContent).toContain("Company API");
+  expect(mobileCards[1]?.textContent).toContain("Personal API");
+  expect(mobileCards[2]?.textContent).toContain("Personal API");
+  expect(mobileCards[2]?.textContent).toContain("Reconnect");
 });

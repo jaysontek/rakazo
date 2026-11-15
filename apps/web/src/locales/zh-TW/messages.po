@@ -1698,8 +1698,8 @@ msgid "Compact"
 msgstr "緊湊"
 
 #: src/pages/AdminOpsPage.tsx
-msgid "Company"
-msgstr ""
+msgid "Company API"
+msgstr "公司 API"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Company key — pending admin approval"
@@ -4652,10 +4652,6 @@ msgstr ""
 msgid "No bots match"
 msgstr "沒有符合的機器人"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "No key"
-msgstr "無金鑰"
-
 #: src/components/AskCard.tsx
 #: src/components/SecretAskCard.tsx
 msgid "No longer active"
@@ -5198,6 +5194,10 @@ msgstr "個人"
 msgid "Personal {0}"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Personal API"
+msgstr "個人 API"
+
 #: src/components/vault/VaultItemDetail.tsx
 #: src/components/vault/VaultItemEditor.tsx
 msgid "Phone"
@@ -5410,6 +5410,7 @@ msgid "Recommended"
 msgstr ""
 
 #: src/components/integrations/plugin-marketplace.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Reconnect"
 msgstr "重新連線"
