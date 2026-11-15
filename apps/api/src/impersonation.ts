@@ -12,7 +12,9 @@ export const IMPERSONATION_DENIED_MAX_BUCKETS = 256;
 type ImpersonationDeps = Pick<RouterDeps, "prisma" | "env">;
 
 type TxClient = {
-  session: ImpersonationDeps["prisma"]["session"];
+  session: ImpersonationDeps["prisma"]["session"] & {
+    updateMany: ImpersonationDeps["prisma"]["session"]["updateMany"];
+  };
   securityEvent: ImpersonationDeps["prisma"]["securityEvent"];
   pushToken: ImpersonationDeps["prisma"]["pushToken"];
   webPushSubscription: ImpersonationDeps["prisma"]["webPushSubscription"];
@@ -110,9 +112,11 @@ export async function assertNonPersonalOrganization(
   deps: ImpersonationDeps,
   organizationId: string,
 ): Promise<void> {
+  // Only need to know whether there is more than one member — stop after two.
   const members = await deps.prisma.member.findMany({
     where: { organizationId },
     select: { userId: true },
+    take: 2,
   });
   if (members.length === 0) {
     throw new ORPCError("NOT_FOUND", { message: "Organization not found" });
@@ -387,8 +391,13 @@ export async function switchImpersonation(
   await deps.prisma.$transaction(async (tx) => {
     const client = tx as unknown as TxClient;
     await clearPushCreatedDuringImpersonation(client, previousTargetUserId, input.sessionId);
-    await client.session.update({
-      where: { id: input.sessionId },
+    // Conditional update so a concurrent stop cannot be undone by this switch.
+    const switched = await client.session.updateMany({
+      where: {
+        id: input.sessionId,
+        impersonatedBy: input.adminUserId,
+        userId: previousTargetUserId,
+      },
       data: {
         userId: target.id,
         // Keep the original admin, TTL, and org scope — switch never extends expiry.
@@ -398,6 +407,9 @@ export async function switchImpersonation(
         activeOrganizationId: scopedOrganizationId,
       },
     });
+    if (switched.count === 0) {
+      throw new ORPCError("CONFLICT", { message: "Impersonation changed concurrently" });
+    }
     await writeImpersonationAudit(client, {
       type: "ops.impersonation.stopped",
       adminUserId: input.adminUserId,

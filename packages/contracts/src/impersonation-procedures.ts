@@ -91,7 +91,8 @@ export const IMPERSONATION_PROCEDURE_KIND = {
   "computer.dismissUpdate": "write",
   // File bytes leave the host / wake the computer — not view-only.
   "computer.downloadFile": "write",
-  "computer.files": "read",
+  // Touches computer.updatedAt, schedules sleep, and ensures workspace layout.
+  "computer.files": "write",
   "computer.heartbeat": "write",
   "computer.input": "write",
   "computer.readFile": "write",
@@ -150,7 +151,8 @@ export const IMPERSONATION_PROCEDURE_KIND = {
   "mcp.oauth.begin": "write",
   "mcp.oauth.complete": "write",
   "mcp.oauth.disconnect": "write",
-  "mcp.servers.agents": "read",
+  // Writes mcpServer.allBots / botMcpServer and reverts approvals in a transaction.
+  "mcp.servers.agents": "write",
   "mcp.servers.create": "write",
   "mcp.servers.list": "read",
   "mcp.servers.remove": "write",
@@ -242,7 +244,8 @@ export const IMPERSONATION_PROCEDURE_KIND = {
   "pages.setVisibility": "write",
   "paymentWallet.connect": "write",
   "paymentWallet.disconnect": "write",
-  "paymentWallet.status": "read",
+  // Decrypts, polls the provider, may update/remove the wallet, and audits.
+  "paymentWallet.status": "write",
   "preferences.adoptTimezone": "write",
   "preferences.update": "write",
   "routines.create": "write",
@@ -320,7 +323,8 @@ export const IMPERSONATION_PROCEDURE_KIND = {
   "voice.setSpeechModel": "write",
   "voice.setVoice": "write",
   "voice.status": "read",
-  "voice.voices": "read",
+  // Decrypts the voice API key and calls the provider's listVoices.
+  "voice.voices": "write",
 } as const satisfies Record<string, "read" | "write" | "ops">;
 
 export type ImpersonationProcedurePath = keyof typeof IMPERSONATION_PROCEDURE_KIND;

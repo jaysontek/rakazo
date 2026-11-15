@@ -79,6 +79,25 @@ describe("impersonation", () => {
           return session;
         },
       ),
+      updateMany: vi.fn(
+        async ({
+          where,
+          data,
+        }: {
+          where: { id: string; impersonatedBy?: string; userId?: string };
+          data: Partial<SessionRow>;
+        }) => {
+          if (where.id !== session.id) return { count: 0 };
+          if (where.impersonatedBy != null && session.impersonatedBy !== where.impersonatedBy) {
+            return { count: 0 };
+          }
+          if (where.userId != null && session.userId !== where.userId) {
+            return { count: 0 };
+          }
+          Object.assign(session, data);
+          return { count: 1 };
+        },
+      ),
       delete: vi.fn(async ({ where }: { where: { id: string } }) => {
         if (where.id !== session.id) throw new Error("missing session");
         session.impersonatedBy = null;
@@ -101,12 +120,16 @@ describe("impersonation", () => {
       findMany: vi.fn(
         async ({
           where,
+          take,
         }: {
           where: { organizationId: string };
-        }) =>
-          members
+          take?: number;
+        }) => {
+          const rows = members
             .filter((row) => row.organizationId === where.organizationId)
-            .map((row) => ({ userId: row.userId })),
+            .map((row) => ({ userId: row.userId }));
+          return take != null ? rows.slice(0, take) : rows;
+        },
       ),
     },
     securityEvent: {
@@ -471,6 +494,49 @@ describe("impersonation", () => {
       targetUserId: "user-2",
       procedure: "ops.switchImpersonation",
     });
+  });
+
+  it("refuses switch when a concurrent stop already cleared impersonation", async () => {
+    session.userId = "user";
+    session.impersonatedBy = "admin";
+    session.impersonationExpiresAt = new Date(Date.now() + 60_000);
+    session.activeOrganizationId = "org-1";
+    prisma.session.updateMany.mockImplementationOnce(async () => ({ count: 0 }));
+    await expect(
+      switchImpersonation(deps as never, {
+        sessionId: session.id,
+        adminUserId: "admin",
+        targetUserId: "user-2",
+        organizationId: "org-1",
+      }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      message: "Impersonation changed concurrently",
+    });
+    expect(prisma.session.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: session.id,
+          impersonatedBy: "admin",
+          userId: "user",
+        },
+      }),
+    );
+  });
+
+  it("limits personal-org membership lookup to two rows", async () => {
+    await startImpersonation(deps as never, {
+      sessionId: session.id,
+      adminUserId: "admin",
+      targetUserId: "user",
+      organizationId: "org-1",
+    });
+    expect(prisma.member.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { organizationId: "org-1" },
+        take: 2,
+      }),
+    );
   });
 
   it("refuses switch when the target is outside the organization", async () => {
