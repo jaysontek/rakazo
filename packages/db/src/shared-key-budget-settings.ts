@@ -12,7 +12,10 @@ import {
   sharedKeyPeriodStart,
   type SharedKeyPeriodKind,
 } from "@rakazo/core";
-import { appendAuditEventTx } from "./audit-events.js";
+import {
+  appendAuditEventTx,
+  DEPLOYMENT_AUDIT_ORGANIZATION_ID,
+} from "./audit-events.js";
 import type { PrismaClient } from "./client.js";
 import { Prisma } from "./client.js";
 import {
@@ -191,8 +194,50 @@ export type UpdateSharedKeyBudgetSettingsOptions = {
   actorUserId: string;
   /** True when the deployment is already gated (signups off / allowlist / etc.). */
   gatedDeployment: boolean;
+  /**
+   * Audit target so appendAuditEventTx never writes zero rows. Prefer the actor's
+   * space; fall back to the deployment-level organization sentinel.
+   */
+  spaceId?: string | null;
+  organizationId?: string | null;
   now?: Date;
 };
+
+function auditTarget(options: {
+  spaceId?: string | null;
+  organizationId?: string | null;
+}): { spaceId?: string; organizationId?: string } {
+  if (options.spaceId) return { spaceId: options.spaceId };
+  if (options.organizationId) return { organizationId: options.organizationId };
+  return { organizationId: DEPLOYMENT_AUDIT_ORGANIZATION_ID };
+}
+
+/** Reject when the sum of absolute overrides would exceed the period pool. */
+async function assertOverridesFitPool(
+  tx: Pick<Prisma.TransactionClient, "sharedKeyMemberOverride">,
+  monthlyCapUsd: number | null | undefined,
+  period: SharedKeyPeriodKind,
+): Promise<void> {
+  if (!(monthlyCapUsd != null && monthlyCapUsd > 0)) {
+    const any = await tx.sharedKeyMemberOverride.findFirst({
+      select: { userId: true },
+    });
+    if (any) {
+      throw new Error("Clear member overrides before removing the monthly shared-key cap");
+    }
+    return;
+  }
+  const pool = sharedKeyPeriodPoolUsd(monthlyCapUsd, period);
+  const overrides = await tx.sharedKeyMemberOverride.findMany({
+    select: { weeklyAllotmentUsd: true },
+  });
+  const sum = overrides.reduce((acc, row) => acc + row.weeklyAllotmentUsd, 0);
+  if (sum > pool) {
+    throw new Error(
+      `Sum of member overrides (${sum}) exceeds the period pool (${pool})`,
+    );
+  }
+}
 
 type AuditScalar = string | number | boolean | null;
 
@@ -326,6 +371,21 @@ export async function updateSharedKeyBudgetSettings(
       select: SETTINGS_SELECT,
     });
 
+    // Cap reduction or period shrink (e.g. month→week) must not leave overrides over pool.
+    if ("monthlyCapUsd" in patch || "period" in patch) {
+      const nextMonthly =
+        "monthlyCapUsd" in patch
+          ? (data.sharedKeyMonthlyBudgetUsd as number | null | undefined)
+          : previous?.sharedKeyMonthlyBudgetUsd;
+      const nextPeriodRaw =
+        "period" in patch
+          ? (data.sharedKeyPeriod as string | null | undefined)
+          : previous?.sharedKeyPeriod;
+      const nextPeriod: SharedKeyPeriodKind =
+        nextPeriodRaw === "month" ? "month" : "week";
+      await assertOverridesFitPool(tx, nextMonthly, nextPeriod);
+    }
+
     const scheduleFieldsChanged =
       "period" in patch ||
       "resetDow" in patch ||
@@ -358,6 +418,7 @@ export async function updateSharedKeyBudgetSettings(
             ? (patch.timezone ?? undefined)
             : (previous?.sharedKeyTimezone ?? undefined),
       });
+      // applyScheduleNow only rebases when schedule fields actually change; alone it is a no-op.
       if (applyScheduleNow) {
         data.sharedKeyActivePeriodStart = sharedKeyPeriodStart(mergedForSchedule, now);
       } else if (previous?.sharedKeyActivePeriodStart == null) {
@@ -422,11 +483,16 @@ export async function updateSharedKeyBudgetSettings(
       await appendAuditEventTx(tx, {
         action: "shared_key_budget.settings.changed",
         actor: { type: "user", id: options.actorUserId },
+        ...auditTarget(options),
         metadata,
       });
     }
 
-    const needsRebase = applyScheduleNow || "monthlyCapUsd" in patch;
+    // Cap edits always rebase (audited via the monthlyCapUsd field change above).
+    // applyScheduleNow only rebases when schedule fields changed — otherwise it is a
+    // no-op so an unaudited rebase cannot run.
+    const needsRebase =
+      "monthlyCapUsd" in patch || (applyScheduleNow && scheduleFieldsChanged);
     if (needsRebase) {
       await recomputeSharedKeyWeekAllotmentsTx(tx, now, {
         rebaseOnMonthlyCap: true,
@@ -444,6 +510,8 @@ export async function setSharedKeyMemberOverride(
     userId: string;
     weeklyAllotmentUsd: number | null;
     actorUserId: string;
+    spaceId?: string | null;
+    organizationId?: string | null;
     now?: Date;
   },
 ): Promise<void> {
@@ -504,6 +572,7 @@ export async function setSharedKeyMemberOverride(
       action: "shared_key_budget.member.override",
       actor: { type: "user", id: input.actorUserId },
       target: { type: "user", id: input.userId },
+      ...auditTarget(input),
       metadata: {
         userId: input.userId,
         "prev.weeklyAllotmentUsd": prevOverride,
@@ -511,6 +580,8 @@ export async function setSharedKeyMemberOverride(
       },
     });
 
-    await recomputeSharedKeyWeekAllotmentsTx(tx, now, { rebaseOnMonthlyCap: true });
+    // Mid-period override edits keep the headroom-only rule: never raise continuing
+    // peers above their current allotment (PR #16). Freed gap may fund joiners only.
+    await recomputeSharedKeyWeekAllotmentsTx(tx, now);
   });
 }

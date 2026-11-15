@@ -78,6 +78,8 @@ export async function recordAuditEvent(input: AuditEventInput): Promise<void> {
 /**
  * Append the same audit row(s) through an interactive transaction. Throws on
  * failure so the caller's transaction rolls back with the audited action.
+ * Fail closed: callers must pass spaceId or organizationId (or the actor must
+ * have org memberships); writing zero rows is an error, not a silent no-op.
  */
 export async function appendAuditEventTx(
   tx: AuditEventTx,
@@ -86,9 +88,20 @@ export async function appendAuditEventTx(
   const caller = input.actor.type === "user" ? securityRequestCaller() : undefined;
   await runAsSystemInTransaction(tx, "append an audit event", async () => {
     const rows = await auditRows(tx, input, caller);
-    if (rows.length) await tx.auditEvent.createMany({ data: rows });
+    if (rows.length === 0) {
+      throw new Error(
+        "Audit event has no organization target (pass spaceId or organizationId)",
+      );
+    }
+    await tx.auditEvent.createMany({ data: rows });
   });
 }
+
+/**
+ * Organization id for deployment-wide ops audit events. AuditEvent.organizationId
+ * has no FK, so this sentinel always yields a writable row without an Organization.
+ */
+export const DEPLOYMENT_AUDIT_ORGANIZATION_ID = "deployment";
 
 async function auditRows(
   db: Pick<AuditEventDb, "space" | "user" | "member">,

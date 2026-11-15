@@ -1739,6 +1739,99 @@ describe("shared-key weekly budget", () => {
     expect(applyAutoEnrollMode(alreadyGated, "open").gatedDeployment).toBe(false);
   });
 
+  it("excludes pre-join adjustments after joining, including a negative pre-join credit", async () => {
+    const joinAt = midweek;
+    const state = {
+      monthly: 400,
+      members: [{ userId: "a", joinedAt: weekStart }],
+      allotments: [
+        allotment({ weekStart, userId: "a", allotmentUsd: 50, reservedUsd: 0 }),
+      ],
+      usage: [
+        {
+          userId: "c",
+          costUsd: 20,
+          sharedKey: true,
+          createdAt: new Date(joinAt.getTime() + 1_000),
+        },
+      ] as Usage[],
+      knownUserIds: ["a", "c"],
+    };
+    const { client } = fakePrisma(state);
+    const adjustments = [
+      {
+        periodStart: weekStart,
+        scope: "user",
+        userId: "c",
+        userIdSnapshot: "c",
+        deltaUsd: -10,
+        createdAt: new Date(weekStart.getTime() + 500),
+      },
+      {
+        periodStart: weekStart,
+        scope: "user",
+        userId: "c",
+        userIdSnapshot: "c",
+        deltaUsd: 5,
+        createdAt: new Date(joinAt.getTime() + 2_000),
+      },
+    ];
+    vi.mocked(client.sharedKeySpendAdjustment.aggregate).mockImplementation((async (args: {
+      where: {
+        periodStart: Date;
+        createdAt?: { lt?: Date };
+        OR?: Array<Record<string, unknown>>;
+        userIdSnapshot?: string | { in: string[] };
+        userId?: string;
+        scope?: string;
+      };
+    }) => {
+      const where = args.where;
+      const sum = adjustments
+        .filter((row) => {
+          if (row.periodStart.getTime() !== where.periodStart.getTime()) return false;
+          if (where.createdAt?.lt && !(row.createdAt < where.createdAt.lt)) return false;
+          if (where.scope === "team") return false;
+          if (typeof where.userIdSnapshot === "string") {
+            return row.userIdSnapshot === where.userIdSnapshot;
+          }
+          if (where.OR) {
+            return where.OR.some((clause) => {
+              if (typeof clause.userIdSnapshot === "string") {
+                return row.userIdSnapshot === clause.userIdSnapshot;
+              }
+              if (typeof clause.userId === "string") return row.userId === clause.userId;
+              return false;
+            });
+          }
+          if (typeof where.userId === "string") {
+            return row.userId === where.userId || row.userIdSnapshot === where.userId;
+          }
+          return true;
+        })
+        .reduce((acc, row) => acc + row.deltaUsd, 0);
+      return { _sum: { deltaUsd: sum } };
+    }) as never);
+    vi.mocked(client.sharedKeySpendAdjustment.groupBy).mockImplementation(async () => {
+      const map = new Map<string, number>();
+      for (const row of adjustments) {
+        map.set(row.userIdSnapshot, (map.get(row.userIdSnapshot) ?? 0) + row.deltaUsd);
+      }
+      return [...map.entries()].map(([userIdSnapshot, deltaUsd]) => ({
+        userIdSnapshot,
+        _sum: { deltaUsd },
+      }));
+    });
+
+    await addSharedKeyBudgetMember(client as never, "c", joinAt, { policy: gated });
+    const baseline = state.allotments.find((row) => row.userId === "c")?.preJoinSpendUsd;
+    // Pre-join credit (−10) must be stored as-is, not clamped to 0.
+    expect(baseline).toBe(-10);
+    const status = await sharedKeyWeeklyBudgetStatus(client as never, "c", new Date(joinAt.getTime() + 60_000));
+    // monday = 20 − 10 + 5 = 15; effective = 15 − (−10) = 25 (post-join only).
+    expect(status.spentUsd).toBe(25);
+  });
+
   it("prunes on usage activity, not adjusted tracked spend", async () => {
     const nextWeek = sharedKeyWeekEnd(weekStart);
     const state = {

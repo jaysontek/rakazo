@@ -848,22 +848,22 @@ model SharedKeyMemberOverride {
 
 /// Append-only tracked-spend adjustments so ops can match the real provider bill.
 /// Never updated or deleted; reverse by inserting an opposite delta with reversesId.
-/// scope + snapshots keep spend math and audit stable if a user row is later removed;
-/// userId/createdById use RESTRICT so a null FK can never rewrite user→team scope.
+/// scope + userIdSnapshot decide spend math; live userId/createdById use SET NULL so
+/// account deletion can proceed (RESTRICT would leave a half-deleted account).
 model SharedKeySpendAdjustment {
   id                     String   @id @default(cuid())
   periodStart            DateTime
   /// Explicit scope: "user" or "team". Never derive team-wide from a null userId alone.
   scope                  String
-  /// Live FK for user-scoped rows; null only for team-wide (scope=team).
+  /// Live FK; SET NULL on user delete. Null does not mean team — see scope + snapshot.
   userId                 String?
-  user                   User?    @relation("SharedKeySpendAdjustmentUser", fields: [userId], references: [id], onDelete: Restrict)
-  /// Snapshot of the scoped user id at write time (spend math + audit).
+  user                   User?    @relation("SharedKeySpendAdjustmentUser", fields: [userId], references: [id], onDelete: SetNull)
+  /// Snapshot of the scoped user id at write time (spend math + audit). Required when scope=user.
   userIdSnapshot         String?
   deltaUsd               Float
   reason                 String
   createdById            String?
-  createdBy              User?    @relation("SharedKeySpendAdjustmentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdBy              User?    @relation("SharedKeySpendAdjustmentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   createdByIdSnapshot    String?
   createdByEmailSnapshot String?
   createdAt              DateTime @default(now())

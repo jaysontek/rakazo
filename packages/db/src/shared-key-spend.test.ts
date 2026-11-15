@@ -299,4 +299,108 @@ describe("shared-key tracked spend helper", () => {
       }),
     ).toBe(28);
   });
+
+  it("counts a deleted user's scope=user row via userIdSnapshot, never as team", async () => {
+    const prisma = fakeSpendPrisma({
+      usage: [
+        {
+          userId: "gone",
+          costUsd: 7,
+          sharedKey: true,
+          createdAt: new Date(periodStart.getTime() + 1_000),
+        },
+      ],
+      adjustments: [
+        {
+          periodStart,
+          scope: "user",
+          userId: null,
+          userIdSnapshot: "gone",
+          deltaUsd: 3,
+        },
+        {
+          periodStart,
+          scope: "team",
+          userId: null,
+          userIdSnapshot: null,
+          deltaUsd: 11,
+        },
+      ],
+    });
+    expect(
+      await trackedSharedKeySpendUsd(prisma, {
+        userId: "gone",
+        since: periodStart,
+        until: mid,
+        periodStart,
+      }),
+    ).toBe(10);
+    const byUser = await trackedSharedKeySpendByUser(prisma, {
+      userIds: ["gone"],
+      since: periodStart,
+      until: mid,
+      periodStart,
+    });
+    expect(byUser.get("gone")).toBe(10);
+    // Team total includes usage + user adj + team adj; the null-FK user row stays user-scoped.
+    expect(
+      await trackedSharedKeyTeamSpendUsd(prisma, {
+        since: periodStart,
+        until: mid,
+        periodStart,
+        includeUserAdjustments: true,
+      }),
+    ).toBe(21);
+    expect(
+      await trackedSharedKeyTeamSpendUsd(prisma, {
+        since: periodStart,
+        until: mid,
+        periodStart,
+        includeUserAdjustments: false,
+      }),
+    ).toBe(18);
+  });
+
+  it("limits baseline adjustments to createdAt before join, including negative deltas", async () => {
+    const joinAt = new Date(periodStart.getTime() + 3 * 24 * 60 * 60 * 1000);
+    const prisma = fakeSpendPrisma({
+      usage: [
+        {
+          userId: "c",
+          costUsd: 20,
+          sharedKey: true,
+          createdAt: new Date(joinAt.getTime() + 1_000),
+        },
+      ],
+      adjustments: [
+        {
+          periodStart,
+          userId: "c",
+          deltaUsd: -10,
+          createdAt: new Date(periodStart.getTime() + 1_000),
+        },
+        {
+          periodStart,
+          userId: "c",
+          deltaUsd: 5,
+          createdAt: new Date(joinAt.getTime() + 2_000),
+        },
+      ],
+    });
+    const baseline = await trackedSharedKeySpendUsd(prisma, {
+      userId: "c",
+      since: periodStart,
+      until: joinAt,
+      periodStart,
+      adjustmentCreatedBefore: joinAt,
+    });
+    expect(baseline).toBe(-10);
+    const monday = await trackedSharedKeySpendUsd(prisma, {
+      userId: "c",
+      since: periodStart,
+      until: mid,
+      periodStart,
+    });
+    expect(monday).toBe(15); // 20 − 10 + 5
+  });
 });

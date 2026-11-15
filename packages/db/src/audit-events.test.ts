@@ -1,6 +1,11 @@
 import { createLogger, createTestSink, installLogger } from "@rakazo/logging";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { installAuditEventStore, listAuditEvents, recordAuditEvent } from "./audit-events.js";
+import {
+  appendAuditEventTx,
+  installAuditEventStore,
+  listAuditEvents,
+  recordAuditEvent,
+} from "./audit-events.js";
 import { recordSecurityEvent, withSecurityRequest } from "./security-events.js";
 
 function fakeStore() {
@@ -149,6 +154,42 @@ describe("security events in the audit log", () => {
     await recordSecurityEvent({ type: "rate_limit.hit", userId: "user-1", ip: "203.0.113.5" });
     await recordSecurityEvent({ type: "deployment.settings.changed", userId: "user-1" });
     expect(store.rows).toEqual([]);
+  });
+});
+
+describe("appendAuditEventTx", () => {
+  it("throws when zero rows would be written (fail closed)", async () => {
+    store.member.findMany.mockResolvedValueOnce([]);
+    const tx = {
+      ...store,
+      $queryRaw: vi.fn(async () => [{ bypass: "off", key: "", login: "test" }]),
+    };
+    await expect(
+      appendAuditEventTx(tx as never, {
+        action: "shared_key_budget.settings.changed",
+        actor: { type: "user", id: "orphan" },
+      }),
+    ).rejects.toThrow(/no organization target/);
+    expect(store.auditEvent.createMany).not.toHaveBeenCalled();
+  });
+
+  it("writes when an explicit organizationId is provided", async () => {
+    const tx = {
+      ...store,
+      $queryRaw: vi.fn(async () => [{ bypass: "off", key: "", login: "test" }]),
+    };
+    await appendAuditEventTx(tx as never, {
+      action: "shared_key_budget.settings.changed",
+      actor: { type: "user", id: "admin" },
+      organizationId: "deployment",
+      metadata: { "prev.hardStopEnabled": null, "next.hardStopEnabled": false },
+    });
+    expect(store.rows).toEqual([
+      expect.objectContaining({
+        organizationId: "deployment",
+        action: "shared_key_budget.settings.changed",
+      }),
+    ]);
   });
 });
 

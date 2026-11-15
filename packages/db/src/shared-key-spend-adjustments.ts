@@ -2,12 +2,13 @@
  * Append-only tracked-spend adjustments for the shared company key.
  * Every mutation takes the shared-key budget advisory lock; there is no update/delete.
  */
-import { effectiveSharedKeySpendUsd, roundUsdToCents } from "@rakazo/core";
+import { effectiveSharedKeySpendUsd, roundUsdToCents, sharedKeyPeriodEnd } from "@rakazo/core";
 import type { PrismaClient } from "./client.js";
 import { Prisma } from "./client.js";
 import {
   lockSharedKeyBudget,
   resolveSharedKeyPeriodBounds,
+  scheduleFromSettings,
   SHARED_KEY_BUDGET_MEMBERS_LOCK,
 } from "./shared-key-budget.js";
 import {
@@ -57,9 +58,15 @@ export type SharedKeySpendAdjustmentRow = {
 
 async function currentTrackedUsd(
   tx: AdjTx,
-  args: { periodStart: Date; until: Date; userId: string | null },
+  args: {
+    periodStart: Date;
+    until: Date;
+    scope: "user" | "team";
+    /** Live FK or snapshot id used for per-user spend lookup. */
+    userKey: string | null;
+  },
 ): Promise<number> {
-  if (args.userId == null) {
+  if (args.scope === "team" || args.userKey == null) {
     return trackedSharedKeyTeamSpendUsd(tx, {
       since: args.periodStart,
       until: args.until,
@@ -67,13 +74,13 @@ async function currentTrackedUsd(
     });
   }
   const raw = await trackedSharedKeySpendUsd(tx, {
-    userId: args.userId,
+    userId: args.userKey,
     since: args.periodStart,
     until: args.until,
     periodStart: args.periodStart,
   });
   const allotment = await tx.sharedKeyWeekAllotment.findUnique({
-    where: { weekStart_userId: { weekStart: args.periodStart, userId: args.userId } },
+    where: { weekStart_userId: { weekStart: args.periodStart, userId: args.userKey } },
     select: { preJoinSpendUsd: true },
   });
   return effectiveSharedKeySpendUsd(raw, allotment?.preJoinSpendUsd ?? 0);
@@ -98,7 +105,10 @@ function toRow(
   },
   createdBy?: { email: string; name: string } | null,
 ): SharedKeySpendAdjustmentRow {
-  const scope = row.scope === "user" ? "user" : "team";
+  if (row.scope !== "user" && row.scope !== "team") {
+    throw new Error(`Invalid spend-adjustment scope: ${row.scope}`);
+  }
+  const scope = row.scope;
   return {
     id: row.id,
     periodStart: row.periodStart.toISOString(),
@@ -124,7 +134,15 @@ async function appendAdjustment(
   input: {
     periodStart: Date;
     until: Date;
+    /** Live user FK; null for team-wide or after the scoped user was deleted. */
     userId: string | null;
+    /**
+     * Explicit scope. Defaults from userId when omitted (new adjustments).
+     * Reversals pass the original scope so a null live userId never becomes team.
+     */
+    scope?: "user" | "team";
+    /** Defaults to userId; reversals keep the original snapshot after user delete. */
+    userIdSnapshot?: string | null;
     deltaUsd: number;
     reason: string;
     createdById: string;
@@ -142,7 +160,18 @@ async function appendAdjustment(
     select: { id: true, email: true, name: true },
   });
   if (!creator) throw new Error("Creator not found");
-  if (input.userId) {
+  const scope: "user" | "team" =
+    input.scope ?? (input.userId == null ? "team" : "user");
+  const userIdSnapshot =
+    input.userIdSnapshot !== undefined ? input.userIdSnapshot : input.userId;
+  if (scope === "user" && userIdSnapshot == null) {
+    throw new Error("user-scoped adjustments require a userIdSnapshot");
+  }
+  if (scope === "team" && userIdSnapshot != null) {
+    throw new Error("team-scoped adjustments must not set userIdSnapshot");
+  }
+  // New per-user adjustments need a live user; reversals may keep a null FK after delete.
+  if (input.userId && !input.reversesId) {
     const user = await tx.user.findUnique({
       where: { id: input.userId },
       select: { id: true },
@@ -153,21 +182,21 @@ async function appendAdjustment(
     await currentTrackedUsd(tx, {
       periodStart: input.periodStart,
       until: input.until,
-      userId: input.userId,
+      scope,
+      userKey: userIdSnapshot,
     }),
   );
   const newTrackedUsd = roundUsdToCents(previousTrackedUsd + deltaUsd);
   if (newTrackedUsd < 0) {
     throw new Error("Tracked spend cannot go below zero");
   }
-  const scope = input.userId == null ? "team" : "user";
   try {
     const created = await tx.sharedKeySpendAdjustment.create({
       data: {
         periodStart: input.periodStart,
         scope,
         userId: input.userId,
-        userIdSnapshot: input.userId,
+        userIdSnapshot,
         deltaUsd,
         reason,
         createdById: input.createdById,
@@ -221,11 +250,13 @@ export async function setSharedKeyTrackedSpend(
       },
     });
     const { periodStart } = resolveSharedKeyPeriodBounds(settings, now);
+    const scope: "user" | "team" = input.userId == null ? "team" : "user";
     const previous = roundUsdToCents(
       await currentTrackedUsd(tx, {
         periodStart,
         until: now,
-        userId: input.userId ?? null,
+        scope,
+        userKey: input.userId ?? null,
       }),
     );
     const deltaUsd = roundUsdToCents(targetUsd - previous);
@@ -236,6 +267,7 @@ export async function setSharedKeyTrackedSpend(
       periodStart,
       until: now,
       userId: input.userId ?? null,
+      scope,
       deltaUsd,
       reason: input.reason,
       createdById: input.createdById,
@@ -301,20 +333,41 @@ export async function reverseSharedKeySpendAdjustment(
       where: { id: input.adjustmentId },
     });
     if (!existing) throw new Error("Adjustment not found");
+    if (existing.reversesId) {
+      throw new Error("Cannot reverse a reversal");
+    }
     const already = await tx.sharedKeySpendAdjustment.findFirst({
       where: { reversesId: existing.id },
       select: { id: true },
     });
     if (already) throw new Error("Adjustment already reversed");
-    // Reversal applies to the original period, not the current one.
-    const scopeUserId =
-      existing.scope === "user"
-        ? (existing.userId ?? existing.userIdSnapshot)
-        : null;
+    if (existing.scope !== "user" && existing.scope !== "team") {
+      throw new Error(`Invalid spend-adjustment scope: ${existing.scope}`);
+    }
+    const settings = await tx.deploymentSettings.findUnique({
+      where: { id: "default" },
+      select: {
+        sharedKeyPeriod: true,
+        sharedKeyResetDow: true,
+        sharedKeyResetDom: true,
+        sharedKeyResetMinutes: true,
+        sharedKeyTimezone: true,
+        sharedKeyActivePeriodStart: true,
+      },
+    });
+    const schedule = scheduleFromSettings(settings);
+    const originalPeriodEnd = sharedKeyPeriodEnd(schedule, existing.periodStart);
+    // Tracked before/after for a past-period reverse is measured at the end of
+    // that period, not "now" (which would pull in later usage).
+    const until =
+      originalPeriodEnd.getTime() < now.getTime() ? originalPeriodEnd : now;
     return appendAdjustment(tx, {
       periodStart: existing.periodStart,
-      until: now,
-      userId: scopeUserId,
+      until,
+      // Keep the live FK as-is (may already be null after account delete).
+      userId: existing.userId,
+      scope: existing.scope,
+      userIdSnapshot: existing.userIdSnapshot,
       deltaUsd: -existing.deltaUsd,
       reason: input.reason.trim() || `Reverse ${existing.id}`,
       createdById: input.createdById,

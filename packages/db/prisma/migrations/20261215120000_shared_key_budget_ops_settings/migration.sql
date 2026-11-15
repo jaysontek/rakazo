@@ -40,7 +40,14 @@ CREATE TABLE "shared_key_spend_adjustments" (
     "newTrackedUsd" DOUBLE PRECISION NOT NULL,
     "reversesId" TEXT,
 
-    CONSTRAINT "shared_key_spend_adjustments_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "shared_key_spend_adjustments_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "shared_key_spend_adjustments_scope_check" CHECK ("scope" IN ('user', 'team')),
+    -- Scope is decided by userIdSnapshot, not the nullable live userId FK (SET NULL on
+    -- account delete). A deleted user's per-user row keeps its snapshot and never
+    -- becomes team-wide.
+    CONSTRAINT "shared_key_spend_adjustments_scope_userIdSnapshot_check" CHECK (
+      ("scope" = 'user' AND "userIdSnapshot" IS NOT NULL) OR ("scope" = 'team' AND "userIdSnapshot" IS NULL)
+    )
 );
 
 CREATE UNIQUE INDEX "shared_key_spend_adjustments_reversesId_key" ON "shared_key_spend_adjustments"("reversesId");
@@ -48,8 +55,8 @@ CREATE INDEX "shared_key_spend_adjustments_periodStart_scope_userIdSnapshot_idx"
 CREATE INDEX "shared_key_spend_adjustments_periodStart_userId_idx" ON "shared_key_spend_adjustments"("periodStart", "userId");
 CREATE INDEX "shared_key_spend_adjustments_createdAt_idx" ON "shared_key_spend_adjustments"("createdAt");
 
--- RESTRICT on user-scoped FKs so deleting a user cannot null the FK and turn a
--- per-user adjustment into a team-wide one. Snapshots keep audit + spend math.
-ALTER TABLE "shared_key_spend_adjustments" ADD CONSTRAINT "shared_key_spend_adjustments_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-ALTER TABLE "shared_key_spend_adjustments" ADD CONSTRAINT "shared_key_spend_adjustments_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+-- SET NULL so account self-deletion can remove the user row after beforeDelete commits.
+-- Spend math and scope use scope + userIdSnapshot, never the live userId FK.
+ALTER TABLE "shared_key_spend_adjustments" ADD CONSTRAINT "shared_key_spend_adjustments_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "shared_key_spend_adjustments" ADD CONSTRAINT "shared_key_spend_adjustments_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "shared_key_spend_adjustments" ADD CONSTRAINT "shared_key_spend_adjustments_reversesId_fkey" FOREIGN KEY ("reversesId") REFERENCES "shared_key_spend_adjustments"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

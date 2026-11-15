@@ -334,6 +334,10 @@ describe("shared-key weekly budget math", () => {
     expect(effectiveSharedKeySpendUsd(40, 10)).toBe(30);
     expect(effectiveSharedKeySpendUsd(5, 10)).toBe(0);
     expect(effectiveSharedKeySpendUsd(0, 0)).toBe(0);
+    // Negative pre-join baseline (credit adjustment before join) must not clamp to 0.
+    // monday=15 (post usage 20 + pre adj −10), baseline=−10 → effective 25 = post-only.
+    expect(effectiveSharedKeySpendUsd(15, -10)).toBe(25);
+    expect(effectiveSharedKeySpendUsd(0, -10)).toBe(10);
   });
 
   it("uses preJoin baselines when redistributing so mid-week prior spend is not charged", () => {
@@ -667,5 +671,158 @@ describe("shared-key period schedule math", () => {
     });
     const overSum = [...over.values()].reduce((acc, v) => acc + v, 0);
     expect(overSum).toBeLessThanOrEqual(100);
+  });
+
+  it("counts an overspent override as max(override, spent) so the gap is not handed to peers", () => {
+    // Pool $100. X spent $50 with override $10. Without the floor take, a and b
+    // would each get $45 and total spendable would be $140.
+    const weekStart = new Date("2026-11-02T05:00:00.000Z");
+    const mid = new Date("2026-11-05T12:00:00.000Z");
+    const previous = new Map([
+      ["x", 50],
+      ["a", 25],
+      ["b", 25],
+    ]);
+    const spent = new Map([
+      ["x", 50],
+      ["a", 0],
+      ["b", 0],
+    ]);
+    const allotments = redivideWeeklyAllotments({
+      monthlyCapUsd: 400, // week pool 100
+      members: [
+        { userId: "x", joinedAt: weekStart },
+        { userId: "a", joinedAt: weekStart },
+        { userId: "b", joinedAt: weekStart },
+      ],
+      weekStart,
+      now: mid,
+      previousAllotments: previous,
+      spentByUser: spent,
+      overrides: new Map([["x", 10]]),
+      rebaseOnMonthlyCap: true,
+    });
+    expect(allotments.get("x")).toBe(10);
+    // Remainder pool is 100 − max(10, 50) = 50 → $25 each, not $45.
+    expect(allotments.get("a")).toBeCloseTo(25, 5);
+    expect(allotments.get("b")).toBeCloseTo(25, 5);
+    const spendable = [...allotments.entries()].reduce((sum, [userId, allotment]) => {
+      return sum + Math.max(allotment, spent.get(userId) ?? 0);
+    }, 0);
+    expect(spendable).toBeLessThanOrEqual(100 + 1e-9);
+  });
+
+  it("keeps total spendable (max(allotment, spent)) ≤ pool for override/spend mixes", () => {
+    const weekStart = new Date("2026-11-02T05:00:00.000Z");
+    const mid = new Date("2026-11-05T12:00:00.000Z");
+    const pool = 100;
+    const monthlyCapUsd = 400;
+    const ids = ["a", "b", "c", "d"] as const;
+    const mixes: Array<{
+      overrides: Map<string, number>;
+      spent: Map<string, number>;
+      previous: Map<string, number>;
+      rebase: boolean;
+    }> = [
+      {
+        overrides: new Map([["a", 10]]),
+        spent: new Map([
+          ["a", 50],
+          ["b", 5],
+          ["c", 0],
+          ["d", 0],
+        ]),
+        previous: new Map(ids.map((id) => [id, 25])),
+        rebase: true,
+      },
+      {
+        overrides: new Map([
+          ["a", 40],
+          ["b", 5],
+        ]),
+        spent: new Map([
+          ["a", 10],
+          ["b", 20],
+          ["c", 15],
+          ["d", 0],
+        ]),
+        previous: new Map(ids.map((id) => [id, 25])),
+        rebase: true,
+      },
+      {
+        // Mid-period: no member already over their prior allotment, and sum(spent) ≤ pool
+        // so unused prior slices cannot push spendable past the cap.
+        overrides: new Map([["c", 0]]),
+        spent: new Map([
+          ["a", 20],
+          ["b", 20],
+          ["c", 25],
+          ["d", 0],
+        ]),
+        previous: new Map(ids.map((id) => [id, 25])),
+        rebase: false,
+      },
+      {
+        overrides: new Map([
+          ["a", 60],
+          ["b", 30],
+        ]),
+        spent: new Map([
+          ["a", 70],
+          ["b", 5],
+          ["c", 0],
+          ["d", 0],
+        ]),
+        previous: new Map(ids.map((id) => [id, 25])),
+        rebase: true,
+      },
+    ];
+    for (const mix of mixes) {
+      const allotments = redivideWeeklyAllotments({
+        monthlyCapUsd,
+        members: ids.map((userId) => ({ userId, joinedAt: weekStart })),
+        weekStart,
+        now: mid,
+        previousAllotments: mix.previous,
+        spentByUser: mix.spent,
+        overrides: mix.overrides,
+        rebaseOnMonthlyCap: mix.rebase,
+      });
+      const spendable = [...allotments.entries()].reduce((sum, [userId, allotment]) => {
+        return sum + Math.max(allotment, mix.spent.get(userId) ?? 0);
+      }, 0);
+      expect(spendable).toBeLessThanOrEqual(pool + 1e-6);
+    }
+  });
+
+  it("does not raise continuing peers when an override is lowered mid-period", () => {
+    const weekStart = new Date("2026-11-02T05:00:00.000Z");
+    const mid = new Date("2026-11-05T12:00:00.000Z");
+    const previous = new Map([
+      ["x", 50],
+      ["a", 25],
+      ["b", 25],
+    ]);
+    const allotments = redivideWeeklyAllotments({
+      monthlyCapUsd: 400,
+      members: [
+        { userId: "x", joinedAt: weekStart },
+        { userId: "a", joinedAt: weekStart },
+        { userId: "b", joinedAt: weekStart },
+      ],
+      weekStart,
+      now: mid,
+      previousAllotments: previous,
+      spentByUser: new Map([
+        ["x", 10],
+        ["a", 5],
+        ["b", 0],
+      ]),
+      overrides: new Map([["x", 20]]),
+      rebaseOnMonthlyCap: false,
+    });
+    expect(allotments.get("x")).toBe(20);
+    expect(allotments.get("a")!).toBeLessThanOrEqual(25 + 1e-9);
+    expect(allotments.get("b")!).toBeLessThanOrEqual(25 + 1e-9);
   });
 });

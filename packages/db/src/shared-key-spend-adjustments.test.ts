@@ -305,4 +305,84 @@ describe("shared-key spend adjustments", () => {
       }),
     ).rejects.toThrow(/already reversed/);
   });
+
+  it("computes reverse tracked totals at the original period end, not now", async () => {
+    const { client } = fakePrisma(state);
+    const adjusted = await adjustSharedKeyTrackedSpend(client as never, {
+      deltaUsd: 5,
+      reason: "prior",
+      createdById: "admin",
+      userId: "a",
+      now,
+    });
+    expect(adjusted.previousTrackedUsd).toBe(20);
+    expect(adjusted.newTrackedUsd).toBe(25);
+
+    // Usage after the original Monday week ends must not inflate reverse tracked figures.
+    const periodEnd = new Date("2026-11-09T05:00:00.000Z");
+    state.usage.push({
+      userId: "a",
+      costUsd: 100,
+      sharedKey: true,
+      createdAt: new Date(periodEnd.getTime() + 60_000),
+    });
+    const later = new Date("2026-11-12T12:00:00.000Z");
+    const reversed = await reverseSharedKeySpendAdjustment(client as never, {
+      adjustmentId: adjusted.id,
+      reason: "undo prior",
+      createdById: "admin",
+      now: later,
+    });
+    expect(reversed.periodStart).toBe(periodStart.toISOString());
+    // until = period end → usage still 20 (+ adj 5) before reverse, not 120.
+    expect(reversed.previousTrackedUsd).toBe(25);
+    expect(reversed.newTrackedUsd).toBe(20);
+  });
+
+  it("blocks reversing a reversal row", async () => {
+    const { client } = fakePrisma(state);
+    const adjusted = await adjustSharedKeyTrackedSpend(client as never, {
+      deltaUsd: 3,
+      reason: "bump",
+      createdById: "admin",
+      userId: "a",
+      now,
+    });
+    const reversed = await reverseSharedKeySpendAdjustment(client as never, {
+      adjustmentId: adjusted.id,
+      reason: "undo bump",
+      createdById: "admin",
+      now,
+    });
+    await expect(
+      reverseSharedKeySpendAdjustment(client as never, {
+        adjustmentId: reversed.id,
+        reason: "undo the undo",
+        createdById: "admin",
+        now,
+      }),
+    ).rejects.toThrow(/Cannot reverse a reversal/);
+  });
+
+  it("toRow rejects an unknown scope", async () => {
+    const { client } = fakePrisma(state);
+    const row = await adjustSharedKeyTrackedSpend(client as never, {
+      deltaUsd: 1,
+      reason: "ok",
+      createdById: "admin",
+      userId: "a",
+      now,
+    });
+    expect(row.scope).toBe("user");
+    // Corrupt the stored row and ensure list/toRow would throw via reverse path scope check.
+    state.adjustments[0]!.scope = "weird";
+    await expect(
+      reverseSharedKeySpendAdjustment(client as never, {
+        adjustmentId: row.id,
+        reason: "nope",
+        createdById: "admin",
+        now,
+      }),
+    ).rejects.toThrow(/Invalid spend-adjustment scope/);
+  });
 });

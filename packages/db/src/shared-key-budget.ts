@@ -16,7 +16,10 @@ import {
 
 export { SHARED_KEY_BUDGET_TIMEZONE, sharedKeyPeriodPoolUsd } from "@rakazo/core";
 import { getLogger } from "@rakazo/logging";
-import { appendAuditEventTx } from "./audit-events.js";
+import {
+  appendAuditEventTx,
+  DEPLOYMENT_AUDIT_ORGANIZATION_ID,
+} from "./audit-events.js";
 import type { PrismaClient } from "./client.js";
 import { Prisma } from "./client.js";
 import { isHiddenOpsEmail } from "./ops-email-filter.js";
@@ -816,6 +819,7 @@ async function enrollSharedKeyBudgetMemberTx(
         action: "shared_key_budget.member.added",
         actor: { type: "user", id: options.adminActorUserId },
         target: { type: "user", id: userId },
+        organizationId: DEPLOYMENT_AUDIT_ORGANIZATION_ID,
         metadata: {
           userId,
           weekStartsAt: weekStart.toISOString(),
@@ -826,6 +830,7 @@ async function enrollSharedKeyBudgetMemberTx(
         action: "shared_key_budget.member.auto_enrolled",
         actor: { type: "system", label: "shared-key-budget" },
         target: { type: "user", id: userId },
+        organizationId: DEPLOYMENT_AUDIT_ORGANIZATION_ID,
         metadata: {
           userId,
           weekStartsAt: weekStart.toISOString(),
@@ -905,6 +910,7 @@ export async function removeSharedKeyBudgetMember(
         action: "shared_key_budget.member.removed",
         actor: { type: "user", id: options.actorUserId },
         target: { type: "user", id: userId },
+        organizationId: DEPLOYMENT_AUDIT_ORGANIZATION_ID,
         metadata: { userId },
       });
     }

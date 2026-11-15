@@ -273,10 +273,13 @@ export function midWeekJoinFraction(joinedAt: Date, weekStart: Date): number {
  * Spend charged against a weekly allotment: Monday→now shared-key total minus the baseline
  * captured at first enrollment this week. Pre-join company spend cannot instantly exhaust a
  * pro-rated slice; remove/re-add reuses the same baseline so the pool cannot be overspent.
+ *
+ * Pre-join baselines may be negative (a pre-join credit adjustment). Do not clamp the
+ * baseline to 0 — that would leave the credit inside mondaySpend and over-charge the member.
  */
 export function effectiveSharedKeySpendUsd(mondaySpendUsd: number, preJoinSpendUsd: number): number {
-  if (!(mondaySpendUsd > 0)) return 0;
-  return Math.max(0, mondaySpendUsd - Math.max(0, preJoinSpendUsd));
+  if (!Number.isFinite(mondaySpendUsd) || !Number.isFinite(preJoinSpendUsd)) return 0;
+  return Math.max(0, mondaySpendUsd - preJoinSpendUsd);
 }
 
 export type SharedKeyBudgetMember = { userId: string; joinedAt: Date };
@@ -344,24 +347,38 @@ export function redivideWeeklyAllotments(args: {
     if (!(amount >= 0) || !Number.isFinite(amount)) continue;
     overrides.set(userId, amount);
   }
-  let overrideSum = 0;
-  for (const amount of overrides.values()) overrideSum += amount;
-  // Callers reject writes that exceed the pool; clamp here so allotments never overshoot.
-  if (overrideSum > periodPool) {
-    const scale = periodPool / overrideSum;
-    for (const [userId, amount] of overrides) {
-      overrides.set(userId, amount * scale);
-    }
-    overrideSum = periodPool;
-  }
-
-  const remainderMembers = members.filter((member) => !overrides.has(member.userId));
-  const remainderPool = Math.max(0, periodPool - overrideSum);
-  const remainderN = remainderMembers.length;
-  const fullShare = remainderN > 0 ? remainderPool / remainderN : 0;
 
   const effective = (userId: string) =>
     effectiveSharedKeySpendUsd(spentByUser.get(userId) ?? 0, preJoinSpendByUser.get(userId) ?? 0);
+  const floorOf = (userId: string) => effective(userId) + (reservedByUser.get(userId) ?? 0);
+  /**
+   * An override below already-committed spend must still reserve that floor against
+   * the pool — otherwise the gap is handed to everyone else and total spendable
+   * (max(allotment, spent)) exceeds the cap.
+   */
+  const overridePoolTake = (userId: string, overrideUsd: number) =>
+    Math.max(overrideUsd, floorOf(userId));
+
+  let overrideTakeSum = 0;
+  for (const [userId, amount] of overrides) {
+    overrideTakeSum += overridePoolTake(userId, amount);
+  }
+  // Callers reject writes that exceed the pool; clamp override amounts so take never overshoots.
+  if (overrideTakeSum > periodPool) {
+    const scale = periodPool / overrideTakeSum;
+    for (const [userId, amount] of overrides) {
+      overrides.set(userId, amount * scale);
+    }
+    overrideTakeSum = 0;
+    for (const [userId, amount] of overrides) {
+      overrideTakeSum += overridePoolTake(userId, amount);
+    }
+  }
+
+  const remainderMembers = members.filter((member) => !overrides.has(member.userId));
+  const remainderPool = Math.max(0, periodPool - overrideTakeSum);
+  const remainderN = remainderMembers.length;
+  const fullShare = remainderN > 0 ? remainderPool / remainderN : 0;
 
   const shareOf = (member: SharedKeyBudgetMember) => {
     if (overrides.has(member.userId)) return overrides.get(member.userId)!;
@@ -372,6 +389,7 @@ export function redivideWeeklyAllotments(args: {
 
   const applyOverrides = () => {
     for (const [userId, amount] of overrides) {
+      // Store the override ceiling; spendable accounting uses max(allotment, spent).
       result.set(userId, amount);
     }
   };
@@ -387,15 +405,15 @@ export function redivideWeeklyAllotments(args: {
 
   if (rebaseOnMonthlyCap) {
     // New pool minus everything already committed (all prior rows, including removed).
-    // Override holders take their absolute slice out of the pool first.
-    let committed = overrideSum;
+    // Override holders reserve max(override, spent+reserved) — never just the override.
+    let committed = overrideTakeSum;
     for (const [userId] of previousAllotments) {
       if (overrides.has(userId)) continue;
-      committed += effective(userId) + (reservedByUser.get(userId) ?? 0);
+      committed += floorOf(userId);
     }
     for (const member of remainderMembers) {
       if (!previousAllotments.has(member.userId)) {
-        committed += effective(member.userId) + (reservedByUser.get(member.userId) ?? 0);
+        committed += floorOf(member.userId);
       }
     }
     const free = Math.max(0, periodPool - committed);
@@ -426,12 +444,21 @@ export function redivideWeeklyAllotments(args: {
   }
 
   // Never raise a continuing non-override member; joiners are funded only from headroom.
-  // Override holders get their absolute amount (ops intentional raise/lower).
+  // Override holders get their absolute amount; lowering one frees only the unused gap
+  // (previous allotment − max(override, floor)) into joiner funding — never raises peers.
   const headroom = new Map<string, number>();
   let freed = 0;
   for (const [userId, allotment] of previousAllotments) {
-    if (overrides.has(userId)) continue;
-    const head = Math.max(0, allotment - effective(userId) - (reservedByUser.get(userId) ?? 0));
+    if (overrides.has(userId)) {
+      const take = overridePoolTake(userId, overrides.get(userId)!);
+      if (members.some((member) => member.userId === userId)) {
+        freed += Math.max(0, allotment - take);
+      } else {
+        freed += Math.max(0, allotment - floorOf(userId));
+      }
+      continue;
+    }
+    const head = Math.max(0, allotment - floorOf(userId));
     if (remainderMembers.some((member) => member.userId === userId)) headroom.set(userId, head);
     else freed += head;
   }

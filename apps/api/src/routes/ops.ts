@@ -341,6 +341,7 @@ export function opsRoutes(ctx: RouterContext) {
             const result = await updateSharedKeyBudgetSettings(deps.prisma, input, {
               actorUserId: context.actor.userId,
               gatedDeployment: deps.env?.sharedKeyGatedDeployment === true,
+              spaceId: context.actor.spaceId,
             });
             const previous = result.previous;
             const changedMeta: Record<string, string | number | boolean | null> = {
@@ -398,6 +399,7 @@ export function opsRoutes(ctx: RouterContext) {
               userId: input.userId,
               weeklyAllotmentUsd: input.weeklyAllotmentUsd,
               actorUserId: context.actor.userId,
+              spaceId: context.actor.spaceId,
             });
             await recordSecurityEvent({
               type: "ops.shared_key_budget.member.override",
