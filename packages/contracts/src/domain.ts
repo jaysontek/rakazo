@@ -1444,6 +1444,8 @@ export type OpsAgentOwner = z.infer<typeof OpsAgentOwnerSchema>;
 export const OpsSharedKeySpendAdjustmentSchema = z.object({
   id: Id,
   periodStart: z.string(),
+  /** Period end stored at write; null only for rows written before the column existed. */
+  periodEnd: z.string().nullable(),
   scope: z.enum(["user", "team"]),
   userId: Id.nullable(),
   userIdSnapshot: Id.nullable(),

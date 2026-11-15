@@ -359,13 +359,28 @@ export function redivideWeeklyAllotments(args: {
   const overridePoolTake = (userId: string, overrideUsd: number) =>
     Math.max(overrideUsd, floorOf(userId));
 
+  const remainderMembers = members.filter((member) => !overrides.has(member.userId));
+  // Non-override committed spend must stay reserved; scale overrides against what
+  // remains of the pool, not the whole pool (otherwise overspent peers are starved
+  // while override takes inflate past the cap).
+  let othersCommitted = 0;
+  for (const member of remainderMembers) {
+    othersCommitted += floorOf(member.userId);
+  }
+  for (const [userId] of previousAllotments) {
+    if (overrides.has(userId)) continue;
+    if (remainderMembers.some((member) => member.userId === userId)) continue;
+    // Removed prior holders: their spent+reserved still counts against the pool.
+    othersCommitted += floorOf(userId);
+  }
+  const availableForOverrides = Math.max(0, periodPool - othersCommitted);
+
   let overrideTakeSum = 0;
   for (const [userId, amount] of overrides) {
     overrideTakeSum += overridePoolTake(userId, amount);
   }
-  // Callers reject writes that exceed the pool; clamp override amounts so take never overshoots.
-  if (overrideTakeSum > periodPool) {
-    const scale = periodPool / overrideTakeSum;
+  if (overrideTakeSum > availableForOverrides && overrideTakeSum > 0) {
+    const scale = availableForOverrides / overrideTakeSum;
     for (const [userId, amount] of overrides) {
       overrides.set(userId, amount * scale);
     }
@@ -375,7 +390,6 @@ export function redivideWeeklyAllotments(args: {
     }
   }
 
-  const remainderMembers = members.filter((member) => !overrides.has(member.userId));
   const remainderPool = Math.max(0, periodPool - overrideTakeSum);
   const remainderN = remainderMembers.length;
   const fullShare = remainderN > 0 ? remainderPool / remainderN : 0;
@@ -387,10 +401,34 @@ export function redivideWeeklyAllotments(args: {
       : fullShare;
   };
 
-  const applyOverrides = () => {
+  /**
+   * Apply override ceilings. Mid-period (no rebase): an increase may only consume
+   * free pool headroom (pool − Σ current allotments of active members). Raises
+   * beyond that are clamped so sum(allotments) never exceeds the pool; decreases
+   * apply in full. Callers that write overrides also reject raises past this
+   * bound (BAD_REQUEST) — clamp here is the safety net for redivide itself.
+   */
+  const applyOverrides = (opts?: { clampRaisesToHeadroom?: boolean }) => {
+    if (!opts?.clampRaisesToHeadroom) {
+      for (const [userId, amount] of overrides) {
+        result.set(userId, amount);
+      }
+      return;
+    }
+    let free = Math.max(
+      0,
+      periodPool -
+        members.reduce((sum, member) => sum + (previousAllotments.get(member.userId) ?? 0), 0),
+    );
     for (const [userId, amount] of overrides) {
-      // Store the override ceiling; spendable accounting uses max(allotment, spent).
-      result.set(userId, amount);
+      const prev = previousAllotments.get(userId) ?? 0;
+      if (amount > prev) {
+        const allowed = Math.min(amount - prev, free);
+        free -= allowed;
+        result.set(userId, prev + allowed);
+      } else {
+        result.set(userId, amount);
+      }
     }
   };
 
@@ -484,7 +522,7 @@ export function redivideWeeklyAllotments(args: {
     result.set(userId, Math.min(prev, spent + reserved + head - take));
   }
 
-  applyOverrides();
+  applyOverrides({ clampRaisesToHeadroom: true });
   return result;
 }
 

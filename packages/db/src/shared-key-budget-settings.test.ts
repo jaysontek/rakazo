@@ -9,6 +9,8 @@ import {
 function settingsClient(overrides?: {
   settings?: Record<string, unknown>;
   memberOverrides?: Array<{ userId: string; weeklyAllotmentUsd: number }>;
+  members?: Array<{ userId: string }>;
+  allotments?: Array<{ userId: string; allotmentUsd: number; weekStart?: Date }>;
   auditFail?: boolean;
   noOrg?: boolean;
 }) {
@@ -29,6 +31,8 @@ function settingsClient(overrides?: {
   };
   let liveSettings = { ...settingsRow };
   const memberOverrides = [...(overrides?.memberOverrides ?? [])];
+  const members = [...(overrides?.members ?? [])];
+  const allotments = [...(overrides?.allotments ?? [])];
   const auditRows: Array<Record<string, unknown>> = [];
   const client = {
     deploymentSettings: {
@@ -78,13 +82,25 @@ function settingsClient(overrides?: {
       }),
     },
     sharedKeyBudgetMember: {
-      findMany: vi.fn(async () => []),
-      findUnique: vi.fn(async ({ where }: { where: { userId: string } }) =>
-        where.userId ? { userId: where.userId } : null,
-      ),
+      findMany: vi.fn(async () => members.map((row) => ({ ...row }))),
+      findUnique: vi.fn(async ({ where }: { where: { userId: string } }) => {
+        if (members.length > 0) {
+          return members.find((row) => row.userId === where.userId) ?? null;
+        }
+        return where.userId ? { userId: where.userId } : null;
+      }),
     },
     sharedKeyWeekAllotment: {
-      findMany: vi.fn(async () => []),
+      findMany: vi.fn(async () =>
+        allotments.map((row) => ({
+          userId: row.userId,
+          allotmentUsd: row.allotmentUsd,
+          reservedUsd: 0,
+          preJoinSpendUsd: 0,
+          joinedAt: new Date("2026-11-02T05:00:00.000Z"),
+          weekStart: row.weekStart ?? new Date("2026-11-02T05:00:00.000Z"),
+        })),
+      ),
       findUnique: vi.fn(async () => null),
       upsert: vi.fn(async () => null),
       update: vi.fn(async () => null),
@@ -402,6 +418,61 @@ describe("shared-key budget settings", () => {
         spaceId: "space-ops",
       }),
     ).rejects.toThrow(/exceeds the period pool/);
+  });
+
+  it("rejects mid-period override raises past free headroom ($60 and $90)", async () => {
+    // Pool $100, three members at $33.33 — free headroom is ~$0.01 after rounding.
+    // Raising x to $60 or $90 would stack on top of peers and over-allot.
+    const members = [{ userId: "x" }, { userId: "a" }, { userId: "b" }];
+    const allotments = [
+      { userId: "x", allotmentUsd: 33.33 },
+      { userId: "a", allotmentUsd: 33.33 },
+      { userId: "b", allotmentUsd: 33.34 },
+    ];
+    const { client, memberOverrides } = settingsClient({
+      settings: { sharedKeyMonthlyBudgetUsd: 400 },
+      members,
+      allotments,
+    });
+    await expect(
+      setSharedKeyMemberOverride(client as never, {
+        userId: "x",
+        weeklyAllotmentUsd: 60,
+        actorUserId: "admin",
+        spaceId: "space-ops",
+      }),
+    ).rejects.toThrow(/free headroom/);
+    await expect(
+      setSharedKeyMemberOverride(client as never, {
+        userId: "x",
+        weeklyAllotmentUsd: 90,
+        actorUserId: "admin",
+        spaceId: "space-ops",
+      }),
+    ).rejects.toThrow(/free headroom/);
+    expect(memberOverrides).toHaveLength(0);
+  });
+
+  it("allows an override decrease mid-period without raising peers", async () => {
+    const members = [{ userId: "x" }, { userId: "a" }, { userId: "b" }];
+    const allotments = [
+      { userId: "x", allotmentUsd: 50 },
+      { userId: "a", allotmentUsd: 25 },
+      { userId: "b", allotmentUsd: 25 },
+    ];
+    const { client, memberOverrides } = settingsClient({
+      settings: { sharedKeyMonthlyBudgetUsd: 400 },
+      members,
+      allotments,
+      memberOverrides: [{ userId: "x", weeklyAllotmentUsd: 50 }],
+    });
+    await setSharedKeyMemberOverride(client as never, {
+      userId: "x",
+      weeklyAllotmentUsd: 20,
+      actorUserId: "admin",
+      spaceId: "space-ops",
+    });
+    expect(memberOverrides.find((row) => row.userId === "x")?.weeklyAllotmentUsd).toBe(20);
   });
 
   it("rejects a cap reduction that puts the pool below current overrides", async () => {

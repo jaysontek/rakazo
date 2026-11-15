@@ -853,6 +853,9 @@ model SharedKeyMemberOverride {
 model SharedKeySpendAdjustment {
   id                     String   @id @default(cuid())
   periodStart            DateTime
+  /// Period end stored at write time from the schedule then in force. Reverse uses this
+  /// so a later schedule change cannot move the original window.
+  periodEnd              DateTime?
   /// Explicit scope: "user" or "team". Never derive team-wide from a null userId alone.
   scope                  String
   /// Live FK; SET NULL on user delete. Null does not mean team — see scope + snapshot.

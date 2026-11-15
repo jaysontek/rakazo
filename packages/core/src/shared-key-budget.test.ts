@@ -1,3 +1,4 @@
+import * as fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_SHARED_KEY_PERIOD_SCHEDULE,
@@ -13,6 +14,7 @@ import {
   SHARED_KEY_BUDGET_TIMEZONE,
   sharedKeyBudgetPercentUsed,
   sharedKeyPeriodEnd,
+  sharedKeyPeriodPoolUsd,
   sharedKeyPeriodStart,
   sharedKeyWeekEnd,
   sharedKeyWeekStart,
@@ -824,5 +826,263 @@ describe("shared-key period schedule math", () => {
     expect(allotments.get("x")).toBe(20);
     expect(allotments.get("a")!).toBeLessThanOrEqual(25 + 1e-9);
     expect(allotments.get("b")!).toBeLessThanOrEqual(25 + 1e-9);
+  });
+
+  it("clamps mid-period override raises to free headroom so sum stays ≤ pool", () => {
+    const weekStart = new Date("2026-11-02T05:00:00.000Z");
+    const mid = new Date("2026-11-05T12:00:00.000Z");
+    const previous = new Map([
+      ["x", 33.33],
+      ["a", 33.33],
+      ["b", 33.34],
+    ]);
+    for (const raise of [60, 90]) {
+      const allotments = redivideWeeklyAllotments({
+        monthlyCapUsd: 400, // week pool 100
+        members: [
+          { userId: "x", joinedAt: weekStart },
+          { userId: "a", joinedAt: weekStart },
+          { userId: "b", joinedAt: weekStart },
+        ],
+        weekStart,
+        now: mid,
+        previousAllotments: previous,
+        spentByUser: new Map(),
+        overrides: new Map([["x", raise]]),
+        rebaseOnMonthlyCap: false,
+      });
+      const sum = [...allotments.values()].reduce((acc, v) => acc + v, 0);
+      expect(sum).toBeLessThanOrEqual(100 + 1e-9);
+      expect(allotments.get("a")).toBeCloseTo(33.33, 5);
+      expect(allotments.get("b")).toBeCloseTo(33.34, 5);
+      expect(allotments.get("x")!).toBeLessThanOrEqual(33.33 + 1e-9);
+    }
+  });
+
+  it("scales overcommitted overrides against pool minus others' committed (N6)", () => {
+    // Pool $50. Non-override b has spent+reserved $20. Overrides a+c want $60 total.
+    // Available for overrides = 50 − 20 = 30 → scale 30/60.
+    const weekStart = new Date("2026-11-02T05:00:00.000Z");
+    const allotments = redivideWeeklyAllotments({
+      monthlyCapUsd: 200, // week pool 50
+      members: [
+        { userId: "a", joinedAt: weekStart },
+        { userId: "b", joinedAt: weekStart },
+        { userId: "c", joinedAt: weekStart },
+      ],
+      weekStart,
+      now: weekStart,
+      previousAllotments: new Map(),
+      spentByUser: new Map([["b", 20]]),
+      overrides: new Map([
+        ["a", 40],
+        ["c", 20],
+      ]),
+    });
+    expect(allotments.get("a")).toBeCloseTo(20, 5);
+    expect(allotments.get("c")).toBeCloseTo(10, 5);
+    expect(allotments.get("b")).toBeCloseTo(20, 5); // floor of spent
+    const sum = [...allotments.values()].reduce((acc, v) => acc + v, 0);
+    expect(sum).toBeLessThanOrEqual(50 + 1e-9);
+    const spendable = [...allotments.entries()].reduce((acc, [userId, allotment]) => {
+      const spent = userId === "b" ? 20 : 0;
+      return acc + Math.max(allotment, spent);
+    }, 0);
+    expect(spendable).toBeLessThanOrEqual(50 + 1e-9);
+  });
+
+  it("property: random ops keep allotment sum ≤ pool and the spendable bound", () => {
+    const weekStart = new Date("2026-11-02T05:00:00.000Z");
+    const periodEnd = sharedKeyWeekEnd(weekStart);
+    const mid = new Date("2026-11-05T12:00:00.000Z");
+    const ids = ["a", "b", "c", "d"] as const;
+
+    type Sim = {
+      monthlyCapUsd: number;
+      members: Map<string, Date>;
+      allotments: Map<string, number>;
+      spent: Map<string, number>;
+      reserved: Map<string, number>;
+      overrides: Map<string, number>;
+    };
+
+    const poolOf = (monthly: number) => sharedKeyPeriodPoolUsd(monthly, "week");
+
+    const assertBounds = (sim: Sim) => {
+      const pool = poolOf(sim.monthlyCapUsd);
+      const memberIds = [...sim.members.keys()];
+      const sumAllot = memberIds.reduce((sum, id) => sum + (sim.allotments.get(id) ?? 0), 0);
+      expect(sumAllot).toBeLessThanOrEqual(pool + 1e-6);
+
+      let sumSpendable = 0;
+      let sumCommitted = 0;
+      for (const id of memberIds) {
+        const allotment = sim.allotments.get(id) ?? 0;
+        const committed = (sim.spent.get(id) ?? 0) + (sim.reserved.get(id) ?? 0);
+        sumSpendable += Math.max(allotment, committed);
+        sumCommitted += committed;
+      }
+      expect(sumSpendable).toBeLessThanOrEqual(Math.max(pool, sumCommitted) + 1e-6);
+    };
+
+    const redivide = (sim: Sim, rebaseOnMonthlyCap: boolean) => {
+      const members = [...sim.members.entries()].map(([userId, joinedAt]) => ({
+        userId,
+        joinedAt,
+      }));
+      const next = redivideWeeklyAllotments({
+        monthlyCapUsd: sim.monthlyCapUsd,
+        members,
+        weekStart,
+        now: mid,
+        previousAllotments: new Map(sim.allotments),
+        spentByUser: new Map(sim.spent),
+        reservedByUser: new Map(sim.reserved),
+        overrides: new Map(sim.overrides),
+        rebaseOnMonthlyCap,
+        period: "week",
+        periodEnd,
+      });
+      sim.allotments = next;
+    };
+
+    const commandArb = fc.oneof(
+      fc.record({
+        kind: fc.constant("override" as const),
+        user: fc.constantFrom(...ids),
+        amount: fc.integer({ min: 0, max: 120 }),
+      }),
+      fc.record({
+        kind: fc.constant("clearOverride" as const),
+        user: fc.constantFrom(...ids),
+      }),
+      fc.record({
+        kind: fc.constant("cap" as const),
+        monthly: fc.constantFrom(100, 200, 400, 800),
+      }),
+      fc.record({
+        kind: fc.constant("join" as const),
+        user: fc.constantFrom(...ids),
+      }),
+      fc.record({
+        kind: fc.constant("prune" as const),
+        user: fc.constantFrom(...ids),
+      }),
+      fc.record({
+        kind: fc.constant("spend" as const),
+        user: fc.constantFrom(...ids),
+        amount: fc.integer({ min: 1, max: 40 }),
+      }),
+      fc.record({
+        kind: fc.constant("reserve" as const),
+        user: fc.constantFrom(...ids),
+        amount: fc.integer({ min: 1, max: 20 }),
+      }),
+    );
+
+    fc.assert(
+      fc.property(fc.array(commandArb, { minLength: 8, maxLength: 40 }), (commands) => {
+        const sim: Sim = {
+          monthlyCapUsd: 400,
+          members: new Map(ids.slice(0, 3).map((id) => [id, weekStart])),
+          allotments: new Map(),
+          spent: new Map(),
+          reserved: new Map(),
+          overrides: new Map(),
+        };
+        redivide(sim, true);
+        assertBounds(sim);
+
+        for (const cmd of commands) {
+          switch (cmd.kind) {
+            case "override": {
+              if (!sim.members.has(cmd.user)) break;
+              const pool = poolOf(sim.monthlyCapUsd);
+              const othersSum = [...sim.overrides.entries()]
+                .filter(([id]) => id !== cmd.user)
+                .reduce((sum, [, v]) => sum + v, 0);
+              if (othersSum + cmd.amount > pool) break;
+              const sumAllot = [...sim.members.keys()].reduce(
+                (sum, id) => sum + (sim.allotments.get(id) ?? 0),
+                0,
+              );
+              const current = sim.allotments.get(cmd.user) ?? 0;
+              const free = Math.max(0, pool - sumAllot);
+              if (cmd.amount > current + free + 1e-9) break; // API reject
+              sim.overrides.set(cmd.user, cmd.amount);
+              redivide(sim, false);
+              break;
+            }
+            case "clearOverride": {
+              sim.overrides.delete(cmd.user);
+              if (sim.members.has(cmd.user)) redivide(sim, false);
+              break;
+            }
+            case "cap": {
+              const pool = poolOf(cmd.monthly);
+              const overrideSum = [...sim.overrides.values()].reduce((sum, v) => sum + v, 0);
+              if (overrideSum > pool) break;
+              // Cutting the pool below already-committed spend would force allotment
+              // floors above the pool; skip those ops so the invariants stay meaningful.
+              const committed = [...sim.members.keys()].reduce((sum, id) => {
+                return sum + (sim.spent.get(id) ?? 0) + (sim.reserved.get(id) ?? 0);
+              }, 0);
+              if (committed > pool + 1e-9) break;
+              sim.monthlyCapUsd = cmd.monthly;
+              redivide(sim, true);
+              break;
+            }
+            case "join": {
+              if (sim.members.has(cmd.user)) break;
+              sim.members.set(cmd.user, mid);
+              redivide(sim, false);
+              break;
+            }
+            case "prune": {
+              if (!sim.members.has(cmd.user) || sim.members.size <= 1) break;
+              // Keep prior allotment/spent in the maps through redivide so freed
+              // headroom returns to the pool, then drop the ledger so a later
+              // re-join is a true new member (same-week re-add is not modeled).
+              const priorAllotments = new Map(sim.allotments);
+              const priorSpent = new Map(sim.spent);
+              const priorReserved = new Map(sim.reserved);
+              sim.members.delete(cmd.user);
+              sim.overrides.delete(cmd.user);
+              sim.allotments = priorAllotments;
+              sim.spent = priorSpent;
+              sim.reserved = priorReserved;
+              redivide(sim, false);
+              sim.spent.delete(cmd.user);
+              sim.reserved.delete(cmd.user);
+              break;
+            }
+            case "spend": {
+              if (!sim.members.has(cmd.user)) break;
+              const allotment = sim.allotments.get(cmd.user) ?? 0;
+              const spent = sim.spent.get(cmd.user) ?? 0;
+              const reserved = sim.reserved.get(cmd.user) ?? 0;
+              const room = Math.max(0, allotment - spent - reserved);
+              const delta = Math.min(cmd.amount, room);
+              if (delta <= 0) break;
+              sim.spent.set(cmd.user, spent + delta);
+              break;
+            }
+            case "reserve": {
+              if (!sim.members.has(cmd.user)) break;
+              const allotment = sim.allotments.get(cmd.user) ?? 0;
+              const spent = sim.spent.get(cmd.user) ?? 0;
+              const reserved = sim.reserved.get(cmd.user) ?? 0;
+              const room = Math.max(0, allotment - spent - reserved);
+              const delta = Math.min(cmd.amount, room);
+              if (delta <= 0) break;
+              sim.reserved.set(cmd.user, reserved + delta);
+              break;
+            }
+          }
+          assertBounds(sim);
+        }
+      }),
+      { numRuns: 100 },
+    );
   });
 });

@@ -128,11 +128,15 @@ async function auditRows(
       ? db.member.findMany({ where: { userId: personId }, select: { organizationId: true } })
       : [],
   ]);
+  // Deleted/missing spaceId must not write zero rows: fall back to the deployment
+  // org sentinel so ops mutations still audit (caller already passed a space target).
   const organizations = input.organizationId
     ? [input.organizationId]
     : space
       ? [space.organizationId]
-      : memberships.map((member) => member.organizationId);
+      : input.spaceId
+        ? [DEPLOYMENT_AUDIT_ORGANIZATION_ID]
+        : memberships.map((member) => member.organizationId);
   const row = {
     spaceId: bounded(input.spaceId, 128),
     spaceName: bounded(input.spaceName ?? space?.name, 200),

@@ -9,6 +9,7 @@ type Usage = { userId: string; costUsd: number; sharedKey: boolean; createdAt: D
 type Adj = {
   id: string;
   periodStart: Date;
+  periodEnd: Date | null;
   scope: string;
   userId: string | null;
   userIdSnapshot: string | null;
@@ -23,7 +24,14 @@ type Adj = {
   reversesId: string | null;
 };
 
-function fakePrisma(state: { usage: Usage[]; adjustments: Adj[]; locks?: string[] }) {
+function fakePrisma(
+  state: {
+    usage: Usage[];
+    adjustments: Adj[];
+    locks?: string[];
+    settings?: Record<string, unknown>;
+  },
+) {
   const locks = state.locks ?? [];
   let nextId = 1;
   const client = {
@@ -35,6 +43,7 @@ function fakePrisma(state: { usage: Usage[]; adjustments: Adj[]; locks?: string[
         sharedKeyResetMinutes: null,
         sharedKeyTimezone: null,
         sharedKeyActivePeriodStart: null,
+        ...state.settings,
       })),
     },
     user: {
@@ -167,7 +176,12 @@ function fakePrisma(state: { usage: Usage[]; adjustments: Adj[]; locks?: string[
 describe("shared-key spend adjustments", () => {
   const periodStart = new Date("2026-11-02T05:00:00.000Z");
   const now = new Date("2026-11-05T12:00:00.000Z");
-  let state: { usage: Usage[]; adjustments: Adj[]; locks: string[] };
+  let state: {
+    usage: Usage[];
+    adjustments: Adj[];
+    locks: string[];
+    settings?: Record<string, unknown>;
+  };
 
   beforeEach(() => {
     state = {
@@ -335,6 +349,49 @@ describe("shared-key spend adjustments", () => {
     });
     expect(reversed.periodStart).toBe(periodStart.toISOString());
     // until = period end → usage still 20 (+ adj 5) before reverse, not 120.
+    expect(reversed.previousTrackedUsd).toBe(25);
+    expect(reversed.newTrackedUsd).toBe(20);
+  });
+
+  it("stores periodEnd at write and ignores a later schedule change on reverse", async () => {
+    const { client } = fakePrisma(state);
+    const adjusted = await adjustSharedKeyTrackedSpend(client as never, {
+      deltaUsd: 5,
+      reason: "prior",
+      createdById: "admin",
+      userId: "a",
+      now,
+    });
+    // Default week schedule: Mon 05:00Z → next Mon 05:00Z.
+    const storedEnd = new Date("2026-11-09T05:00:00.000Z");
+    expect(adjusted.periodEnd).toBe(storedEnd.toISOString());
+    expect(state.adjustments[0]!.periodEnd?.toISOString()).toBe(storedEnd.toISOString());
+
+    // Change deployment schedule to monthly — must not move the stored window.
+    state.settings = {
+      sharedKeyPeriod: "month",
+      sharedKeyResetDow: null,
+      sharedKeyResetDom: 1,
+      sharedKeyResetMinutes: null,
+      sharedKeyTimezone: null,
+      sharedKeyActivePeriodStart: null,
+    };
+    // Usage after the original week end but inside a monthly window.
+    state.usage.push({
+      userId: "a",
+      costUsd: 100,
+      sharedKey: true,
+      createdAt: new Date(storedEnd.getTime() + 60_000),
+    });
+    const later = new Date("2026-11-20T12:00:00.000Z");
+    const reversed = await reverseSharedKeySpendAdjustment(client as never, {
+      adjustmentId: adjusted.id,
+      reason: "undo prior",
+      createdById: "admin",
+      now: later,
+    });
+    expect(reversed.periodEnd).toBe(storedEnd.toISOString());
+    // until = stored week end → post-week usage excluded.
     expect(reversed.previousTrackedUsd).toBe(25);
     expect(reversed.newTrackedUsd).toBe(20);
   });

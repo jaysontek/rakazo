@@ -40,6 +40,7 @@ type AdjTx = Pick<
 export type SharedKeySpendAdjustmentRow = {
   id: string;
   periodStart: string;
+  periodEnd: string | null;
   scope: "user" | "team";
   userId: string | null;
   userIdSnapshot: string | null;
@@ -90,6 +91,7 @@ function toRow(
   row: {
     id: string;
     periodStart: Date;
+    periodEnd?: Date | null;
     scope: string;
     userId: string | null;
     userIdSnapshot: string | null;
@@ -112,6 +114,7 @@ function toRow(
   return {
     id: row.id,
     periodStart: row.periodStart.toISOString(),
+    periodEnd: row.periodEnd ? row.periodEnd.toISOString() : null,
     scope,
     userId: row.userId,
     userIdSnapshot: row.userIdSnapshot,
@@ -133,6 +136,8 @@ async function appendAdjustment(
   tx: AdjTx,
   input: {
     periodStart: Date;
+    /** End of the period under the schedule in force at write; stored on the row. */
+    periodEnd: Date;
     until: Date;
     /** Live user FK; null for team-wide or after the scoped user was deleted. */
     userId: string | null;
@@ -194,6 +199,7 @@ async function appendAdjustment(
     const created = await tx.sharedKeySpendAdjustment.create({
       data: {
         periodStart: input.periodStart,
+        periodEnd: input.periodEnd,
         scope,
         userId: input.userId,
         userIdSnapshot,
@@ -249,7 +255,7 @@ export async function setSharedKeyTrackedSpend(
         sharedKeyActivePeriodStart: true,
       },
     });
-    const { periodStart } = resolveSharedKeyPeriodBounds(settings, now);
+    const { periodStart, periodEnd } = resolveSharedKeyPeriodBounds(settings, now);
     const scope: "user" | "team" = input.userId == null ? "team" : "user";
     const previous = roundUsdToCents(
       await currentTrackedUsd(tx, {
@@ -265,6 +271,7 @@ export async function setSharedKeyTrackedSpend(
     }
     return appendAdjustment(tx, {
       periodStart,
+      periodEnd,
       until: now,
       userId: input.userId ?? null,
       scope,
@@ -304,9 +311,10 @@ export async function adjustSharedKeyTrackedSpend(
         sharedKeyActivePeriodStart: true,
       },
     });
-    const { periodStart } = resolveSharedKeyPeriodBounds(settings, now);
+    const { periodStart, periodEnd } = resolveSharedKeyPeriodBounds(settings, now);
     return appendAdjustment(tx, {
       periodStart,
+      periodEnd,
       until: now,
       userId: input.userId ?? null,
       deltaUsd,
@@ -344,25 +352,33 @@ export async function reverseSharedKeySpendAdjustment(
     if (existing.scope !== "user" && existing.scope !== "team") {
       throw new Error(`Invalid spend-adjustment scope: ${existing.scope}`);
     }
-    const settings = await tx.deploymentSettings.findUnique({
-      where: { id: "default" },
-      select: {
-        sharedKeyPeriod: true,
-        sharedKeyResetDow: true,
-        sharedKeyResetDom: true,
-        sharedKeyResetMinutes: true,
-        sharedKeyTimezone: true,
-        sharedKeyActivePeriodStart: true,
-      },
-    });
-    const schedule = scheduleFromSettings(settings);
-    const originalPeriodEnd = sharedKeyPeriodEnd(schedule, existing.periodStart);
+    // Prefer the periodEnd stored when the row was written so a later schedule
+    // change cannot move the original window. Fall back only for legacy rows.
+    let originalPeriodEnd: Date;
+    if (existing.periodEnd) {
+      originalPeriodEnd = existing.periodEnd;
+    } else {
+      const settings = await tx.deploymentSettings.findUnique({
+        where: { id: "default" },
+        select: {
+          sharedKeyPeriod: true,
+          sharedKeyResetDow: true,
+          sharedKeyResetDom: true,
+          sharedKeyResetMinutes: true,
+          sharedKeyTimezone: true,
+          sharedKeyActivePeriodStart: true,
+        },
+      });
+      const schedule = scheduleFromSettings(settings);
+      originalPeriodEnd = sharedKeyPeriodEnd(schedule, existing.periodStart);
+    }
     // Tracked before/after for a past-period reverse is measured at the end of
     // that period, not "now" (which would pull in later usage).
     const until =
       originalPeriodEnd.getTime() < now.getTime() ? originalPeriodEnd : now;
     return appendAdjustment(tx, {
       periodStart: existing.periodStart,
+      periodEnd: originalPeriodEnd,
       until,
       // Keep the live FK as-is (may already be null after account delete).
       userId: existing.userId,

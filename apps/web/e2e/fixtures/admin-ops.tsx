@@ -225,6 +225,7 @@ const fixtureOverview: OpsOverview = {
     {
       id: "adj_1",
       periodStart: weekStart,
+      periodEnd: "2026-11-16T05:00:00.000Z",
       scope: "team",
       userId: null,
       userIdSnapshot: null,

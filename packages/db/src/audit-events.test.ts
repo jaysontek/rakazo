@@ -191,6 +191,26 @@ describe("appendAuditEventTx", () => {
       }),
     ]);
   });
+
+  it("falls back to the deployment org when spaceId belongs to a deleted space", async () => {
+    const tx = {
+      ...store,
+      $queryRaw: vi.fn(async () => [{ bypass: "off", key: "", login: "test" }]),
+    };
+    await appendAuditEventTx(tx as never, {
+      action: "shared_key_budget.member.override",
+      actor: { type: "user", id: "admin" },
+      spaceId: "deleted-space",
+      target: { type: "user", id: "member-1" },
+    });
+    expect(store.rows).toEqual([
+      expect.objectContaining({
+        organizationId: "deployment",
+        spaceId: "deleted-space",
+        action: "shared_key_budget.member.override",
+      }),
+    ]);
+  });
 });
 
 describe("listAuditEvents", () => {

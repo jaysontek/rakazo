@@ -547,7 +547,7 @@ export async function setSharedKeyMemberOverride(
       if (!(monthly != null && monthly > 0)) {
         throw new Error("Set a monthly shared-key cap before assigning overrides");
       }
-      const { schedule } = resolveSharedKeyPeriodBounds(settings, now);
+      const { schedule, periodStart } = resolveSharedKeyPeriodBounds(settings, now);
       const pool = sharedKeyPeriodPoolUsd(monthly, schedule.period);
       const others = await tx.sharedKeyMemberOverride.findMany({
         where: { userId: { not: input.userId } },
@@ -557,6 +557,30 @@ export async function setSharedKeyMemberOverride(
       if (othersSum + nextOverride > pool) {
         throw new Error(
           `Sum of member overrides (${othersSum + nextOverride}) exceeds the period pool (${pool})`,
+        );
+      }
+      // Mid-period raises may only consume free headroom (pool − Σ current
+      // allotments). Peers keep their allotments; stacking a raise on top would
+      // over-allot. Decreases always pass and free headroom without raising anyone.
+      // Core redivide also clamps raises as a safety net; this reject is the API contract.
+      const roster = await tx.sharedKeyBudgetMember.findMany({ select: { userId: true } });
+      const rosterIds = new Set(roster.map((row) => row.userId));
+      const allotmentRows = await tx.sharedKeyWeekAllotment.findMany({
+        where: { weekStart: periodStart },
+        select: { userId: true, allotmentUsd: true },
+      });
+      let sumAllotments = 0;
+      let currentAllotment = 0;
+      for (const row of allotmentRows) {
+        if (!rosterIds.has(row.userId)) continue;
+        sumAllotments += row.allotmentUsd;
+        if (row.userId === input.userId) currentAllotment = row.allotmentUsd;
+      }
+      const freeHeadroom = Math.max(0, pool - sumAllotments);
+      const maxRaise = currentAllotment + freeHeadroom;
+      if (nextOverride > maxRaise + 1e-9) {
+        throw new Error(
+          `Override raise exceeds free headroom (requested ${nextOverride}, max ${roundUsdToCents(maxRaise)} with pool ${pool} and current allotments ${roundUsdToCents(sumAllotments)})`,
         );
       }
       await tx.sharedKeyMemberOverride.upsert({
