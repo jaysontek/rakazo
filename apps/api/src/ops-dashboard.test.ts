@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { listOpsAgents, loadOpsOverview } from "./ops-dashboard.js";
+import {
+  listOpsAgents,
+  listOpsOrganizations,
+  loadOpsOverview,
+  loadOpsTeam,
+} from "./ops-dashboard.js";
 
 type UserRow = { id: string; email: string; name: string; deactivatedAt: Date | null };
 
@@ -463,6 +468,60 @@ describe("loadOpsOverview", () => {
     } finally {
       vi.unstubAllEnvs();
     }
+  });
+});
+
+describe("listOpsOrganizations", () => {
+  it("omits sole-member Personal orgs from the Teams list", async () => {
+    const prisma = {
+      organization: {
+        findMany: vi.fn(async () => [
+          { id: "personal", name: "Personal", _count: { members: 1 } },
+          { id: "solo-named", name: "Ada", _count: { members: 1 } },
+          { id: "team", name: "Acme", _count: { members: 2 } },
+          { id: "large", name: "Big Co", _count: { members: 5 } },
+        ]),
+      },
+    };
+
+    await expect(listOpsOrganizations(prisma as never)).resolves.toEqual([
+      { id: "team", name: "Acme", memberCount: 2 },
+      { id: "large", name: "Big Co", memberCount: 5 },
+    ]);
+  });
+});
+
+describe("loadOpsTeam", () => {
+  it("refuses a Personal org accessed by id", async () => {
+    const prisma = {
+      organization: {
+        findUnique: vi.fn(async () => ({
+          id: "personal",
+          name: "Personal",
+          members: [{ userId: "user-1" }],
+        })),
+      },
+    };
+
+    await expect(loadOpsTeam(prisma as never, "personal")).rejects.toThrow(
+      "Organization not found",
+    );
+  });
+
+  it("refuses an org with duplicate membership rows for one user", async () => {
+    const prisma = {
+      organization: {
+        findUnique: vi.fn(async () => ({
+          id: "solo-dup",
+          name: "Solo Dup",
+          members: [{ userId: "user-1" }, { userId: "user-1" }],
+        })),
+      },
+    };
+
+    await expect(loadOpsTeam(prisma as never, "solo-dup")).rejects.toThrow(
+      "Organization not found",
+    );
   });
 });
 

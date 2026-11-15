@@ -1,16 +1,37 @@
+import {
+  IMPERSONATION_ALLOWED_OPS,
+  IMPERSONATION_PROCEDURE_KIND,
+} from "@rakazo/contracts";
 import { describe, expect, it } from "vitest";
 import { isImpersonationAllowedProcedure } from "./impersonation-allowlist.js";
 
 describe("isImpersonationAllowedProcedure", () => {
-  it("allows me, health, and stopImpersonation", () => {
+  it("allows me, health, bootstrap, spendingLimit.get, stop, and switch", () => {
     expect(isImpersonationAllowedProcedure(["me"])).toBe(true);
     expect(isImpersonationAllowedProcedure(["health"])).toBe(true);
+    expect(isImpersonationAllowedProcedure(["bootstrap"])).toBe(true);
+    expect(isImpersonationAllowedProcedure(["spendingLimit", "get"])).toBe(true);
     expect(isImpersonationAllowedProcedure(["ops", "stopImpersonation"])).toBe(true);
+    expect(isImpersonationAllowedProcedure(["ops", "switchImpersonation"])).toBe(true);
+  });
+
+  it("allows every classified read and only the stop/switch ops exceptions", () => {
+    const allowedOps = new Set<string>(IMPERSONATION_ALLOWED_OPS);
+    for (const [path, kind] of Object.entries(IMPERSONATION_PROCEDURE_KIND)) {
+      const segments = path.split(".");
+      if (kind === "read" || allowedOps.has(path)) {
+        expect(isImpersonationAllowedProcedure(segments), path).toBe(true);
+      } else {
+        expect(isImpersonationAllowedProcedure(segments), path).toBe(false);
+      }
+    }
   });
 
   it("allows a sample of read procedures that exist on the contract", () => {
     expect(isImpersonationAllowedProcedure(["usage", "list"])).toBe(true);
+    expect(isImpersonationAllowedProcedure(["usage", "summary"])).toBe(true);
     expect(isImpersonationAllowedProcedure(["bots", "list"])).toBe(true);
+    expect(isImpersonationAllowedProcedure(["groups", "list"])).toBe(true);
     expect(isImpersonationAllowedProcedure(["threads", "messages"])).toBe(true);
     expect(isImpersonationAllowedProcedure(["accessGrants", "list"])).toBe(true);
     expect(isImpersonationAllowedProcedure(["boards", "list"])).toBe(true);
@@ -43,7 +64,7 @@ describe("isImpersonationAllowedProcedure", () => {
     expect(isImpersonationAllowedProcedure(["models", "status"])).toBe(false);
   });
 
-  it("denies sensitive mutations by default", () => {
+  it("denies sensitive mutations and ops reads by default", () => {
     for (const path of [
       ["models", "connect"],
       ["models", "disconnect"],
@@ -62,6 +83,9 @@ describe("isImpersonationAllowedProcedure", () => {
       ["notifications", "register"],
       ["ops", "startImpersonation"],
       ["ops", "addAdminGrant"],
+      ["ops", "team"],
+      ["ops", "organizations"],
+      ["ops", "overview"],
       ["preferences", "update"],
     ] as const) {
       expect(isImpersonationAllowedProcedure(path)).toBe(false);

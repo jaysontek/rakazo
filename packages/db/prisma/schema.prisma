@@ -136,6 +136,9 @@ model Session {
   impersonatedBy       String?
   /// Hard cap for impersonation; independent of better-auth session refresh.
   impersonationExpiresAt DateTime?
+  /// Org fixed at impersonation start for teammate switching. Independent of
+  /// activeOrganizationId; view-only impersonation must not auto-pin that column.
+  impersonationOrganizationId String?
 
   @@unique([token])
   @@index([userId])

@@ -29,6 +29,8 @@ export const SECURITY_EVENT_TYPES = [
   "ops.impersonation.started",
   "ops.impersonation.stopped",
   "ops.impersonation.expired",
+  "ops.impersonation.switched",
+  "ops.impersonation.denied",
   "ops.shared_key_allotment.transferred",
   "ops.shared_key_allotment.reversed",
   "ops.shared_key_spend.adjusted",

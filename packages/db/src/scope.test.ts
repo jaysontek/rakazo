@@ -106,6 +106,16 @@ describe("requireMembership", () => {
     });
   });
 
+  it("does not pin activeOrganizationId when sessionId is omitted", async () => {
+    // View-only impersonation passes undefined so updateMany never runs.
+    const prisma = prismaForMembership(true, ["space-recent"]);
+
+    await requireMembership(prisma, "user-1", null, undefined);
+
+    expect(prisma.session.findUnique).not.toHaveBeenCalled();
+    expect(prisma.session.updateMany).not.toHaveBeenCalled();
+  });
+
   it("keeps a session in the organization it was first given", async () => {
     const prisma = prismaForMembership(true, ["space-elsewhere"], { pinned: "org-pinned" });
 

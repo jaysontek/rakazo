@@ -258,6 +258,32 @@ export type OpsOverview = {
   spendAdjustments: SharedKeySpendAdjustmentRow[];
 };
 
+export type OpsTeamMemberRow = OpsAccountRow & { agentCount: number };
+
+export type OpsTeam = {
+  organizationId: string;
+  organizationName: string;
+  memberCount: number;
+  members: OpsTeamMemberRow[];
+  agents: {
+    total: number;
+    active: number;
+    names: Array<{ id: string; name: string; userId: string }>;
+  };
+  spend: {
+    totalCostUsd: number | null;
+    sharedKeyCostUsd: number;
+    personalKeyCostUsd: number;
+    totalTokens: number | null;
+  };
+};
+
+export type OpsOrganizationNavRow = {
+  id: string;
+  name: string;
+  memberCount: number;
+};
+
 /** First plain text block from a message; used for admin chat-log drill-in. */
 function messageText(blocks: unknown): string {
   if (!Array.isArray(blocks)) return "";
@@ -412,28 +438,23 @@ export async function loadOpsOverview(
       probeDatabase(prisma),
     ]);
     const { schedule, periodStart, periodEnd } = resolveSharedKeyPeriodBounds(settingsRow, now);
-    const [
-      notEnrolledHits,
-      allotmentTransfers,
-      spendAdjustments,
-      sharedByUserMap,
-      weekSpentUsd,
-    ] = await Promise.all([
-      listSharedKeyBudgetNotEnrolledHits(prisma, periodStart),
-      listSharedKeyAllotmentTransfers(prisma, periodStart),
-      listSharedKeySpendAdjustments(prisma, { periodStart, now }),
-      trackedSharedKeySpendByUser(prisma, {
-        userIds: users.map((user) => user.id),
-        until: now,
-      }),
-      // Tracked company shared-key spend for the current period (usage + adjustments).
-      // Personal-key rows are never included. Visible-account filter applied below.
-      trackedSharedKeyTeamSpendUsd(prisma, {
-        since: periodStart,
-        until: now,
-        periodStart,
-      }),
-    ]);
+    const [notEnrolledHits, allotmentTransfers, spendAdjustments, sharedByUserMap, weekSpentUsd] =
+      await Promise.all([
+        listSharedKeyBudgetNotEnrolledHits(prisma, periodStart),
+        listSharedKeyAllotmentTransfers(prisma, periodStart),
+        listSharedKeySpendAdjustments(prisma, { periodStart, now }),
+        trackedSharedKeySpendByUser(prisma, {
+          userIds: users.map((user) => user.id),
+          until: now,
+        }),
+        // Tracked company shared-key spend for the current period (usage + adjustments).
+        // Personal-key rows are never included. Visible-account filter applied below.
+        trackedSharedKeyTeamSpendUsd(prisma, {
+          since: periodStart,
+          until: now,
+          periodStart,
+        }),
+      ]);
     const notEnrolledHitIds = new Set(notEnrolledHits);
     const envPinnedIds = new Set(
       (options.sharedKeyBudgetUserIds ?? []).map((id) => id.trim()).filter(Boolean),
@@ -660,6 +681,105 @@ export async function loadOpsOverview(
       allotmentTransfers,
       spendAdjustments,
     };
+  });
+}
+
+/**
+ * Org-scoped team drill-down: overview account fields for members of `organizationId`,
+ * plus per-member agent counts and aggregate spend/agents.
+ */
+export async function loadOpsTeam(
+  prisma: OpsDashboardPrisma,
+  organizationId: string,
+  health: {
+    degraded?: boolean;
+    revision?: string | null;
+    runtime?: string | null;
+    sandbox?: string | null;
+  } = {},
+  envSharedKeyMonthlyBudgetUsd?: number | null,
+  options: {
+    secrets?: SecretStore;
+    deploymentModelKey?: string | null;
+    envBootstrapAdmins?: string[];
+  } = {},
+): Promise<OpsTeam> {
+  const org = await runAsSystem("operations dashboard team org", async () =>
+    prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: {
+        id: true,
+        name: true,
+        members: { select: { userId: true } },
+      },
+    }),
+  );
+  if (!org) throw new Error("Organization not found");
+
+  // Personal orgs are sole-member bootstrap spaces — same rule as assertNonPersonalOrganization.
+  const uniqueMemberIds = new Set(org.members.map((member) => member.userId));
+  if (uniqueMemberIds.size <= 1) throw new Error("Organization not found");
+
+  const memberIds = uniqueMemberIds;
+  const [overview, bots] = await Promise.all([
+    loadOpsOverview(prisma, health, undefined, envSharedKeyMonthlyBudgetUsd, options),
+    listOpsAgents(prisma, {
+      secrets: options.secrets,
+      deploymentModelKey: options.deploymentModelKey,
+    }),
+  ]);
+
+  const memberAccounts = overview.accounts.filter((account) => memberIds.has(account.userId));
+  const memberBots = bots.filter((bot) => bot.owner && memberIds.has(bot.owner.id));
+  const activeBots = memberBots.filter((bot) => bot.status === "active");
+  const members: OpsTeamMemberRow[] = memberAccounts.map((account) => ({
+    ...account,
+    agentCount: memberBots.filter((bot) => bot.owner?.id === account.userId).length,
+  }));
+
+  return {
+    organizationId: org.id,
+    organizationName: org.name,
+    memberCount: members.length,
+    members,
+    agents: {
+      total: memberBots.length,
+      active: activeBots.length,
+      names: activeBots.map((bot) => ({
+        id: bot.id,
+        name: bot.name,
+        userId: bot.owner!.id,
+      })),
+    },
+    spend: {
+      totalCostUsd: sumNullable(members.map((row) => row.totalCostUsd)),
+      sharedKeyCostUsd: members.reduce((sum, row) => sum + row.sharedKeyCostUsd, 0),
+      personalKeyCostUsd: members.reduce((sum, row) => sum + row.personalKeyCostUsd, 0),
+      totalTokens: sumNullable(members.map((row) => row.totalTokens)),
+    },
+  };
+}
+
+/** Organizations for the ops nav switcher (id, name, member count). Sole-member Personal orgs are omitted. */
+export async function listOpsOrganizations(
+  prisma: OpsDashboardPrisma,
+): Promise<OpsOrganizationNavRow[]> {
+  return runAsSystem("operations dashboard organizations", async () => {
+    const organizations = await prisma.organization.findMany({
+      select: {
+        id: true,
+        name: true,
+        _count: { select: { members: true } },
+      },
+      orderBy: [{ name: "asc" }, { id: "asc" }],
+    });
+    return organizations
+      .filter((organization) => organization._count.members > 1)
+      .map((organization) => ({
+        id: organization.id,
+        name: organization.name,
+        memberCount: organization._count.members,
+      }));
   });
 }
 

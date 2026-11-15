@@ -68,7 +68,9 @@ export function modelsRoutes(ctx: RouterContext) {
   } = ctx;
   return {
     models: {
-      list: authed.models.list.handler(async ({ context }) => chatCatalog(context.actor)),
+      list: authed.models.list.handler(async ({ context }) =>
+        chatCatalog(context.actor, { viewOnly: Boolean(context.impersonatedBy) }),
+      ),
       credentials: authed.models.credentials.handler(async ({ context }) => {
         const [rows, main] = await Promise.all([
           deps.prisma.userModelCredential.findMany({
@@ -146,7 +148,9 @@ export function modelsRoutes(ctx: RouterContext) {
         );
       }),
       forRole: authed.models.forRole.handler(async ({ context, input }) =>
-        modelRoleCatalog(context.actor, input.role),
+        modelRoleCatalog(context.actor, input.role, {
+          viewOnly: Boolean(context.impersonatedBy),
+        }),
       ),
       role: authed.models.role.handler(async ({ context, input }) => {
         if (input.expectedUserId && input.expectedUserId !== context.actor.userId)

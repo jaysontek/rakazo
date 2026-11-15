@@ -70,6 +70,7 @@ export function ShellSidebar({
   openIntegrations,
   openSkills,
   openSpaceChat,
+  readOnly = false,
 }: {
   isMobile: boolean;
   mobileOpen: boolean;
@@ -99,6 +100,8 @@ export function ShellSidebar({
   openIntegrations: () => void;
   openSkills: () => void;
   openSpaceChat: (spaceId: string, path: string) => void;
+  /** Hide create controls while an admin is impersonating. */
+  readOnly?: boolean;
 }) {
   const { t } = useLingui();
   const {
@@ -153,6 +156,7 @@ export function ShellSidebar({
           mini={mini}
           createMenuOpen={createMenuOpen}
           setCreateMenuOpen={setCreateMenuOpen}
+          readOnly={readOnly}
           activityMode={activityMode}
           toggleActivityMode={() => {
             if (mini) setCollapsedPref(false);

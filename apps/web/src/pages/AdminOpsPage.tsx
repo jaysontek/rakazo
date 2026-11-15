@@ -41,8 +41,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, MoreHorizontal } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { PageLoading } from "../components/PageLoading";
+import { hardSwitchImpersonation } from "../lib/impersonation-switch";
 import { useSpaceQueries } from "../lib/query";
 import { formatRelativeTime } from "../lib/relative-time";
 import { rpc } from "../lib/rpc";
@@ -269,6 +270,9 @@ export function OpsDashboardView({
           <TabsTrigger value="accounts">
             <Trans>Accounts</Trans>
           </TabsTrigger>
+          <TabsTrigger value="teams">
+            <Trans>Teams</Trans>
+          </TabsTrigger>
           <TabsTrigger value="transfers">
             <Trans>Transfers</Trans>
           </TabsTrigger>
@@ -285,6 +289,9 @@ export function OpsDashboardView({
             onChanged={onChanged}
             interactive={interactive}
           />
+        </TabsContent>
+        <TabsContent value="teams" className="space-y-4">
+          <TeamsSection />
         </TabsContent>
         <TabsContent value="transfers" className="space-y-4">
           <TransfersSection data={data} onChanged={onChanged} interactive={interactive} />
@@ -438,6 +445,54 @@ function sortAriaValue(
   return sortDir === "asc" ? "ascending" : "descending";
 }
 
+function TeamsSection() {
+  const { t } = useLingui();
+  const orgs = useQuery({
+    queryKey: ["ops", "organizations"],
+    queryFn: () => rpc.ops.organizations(),
+  });
+
+  if (orgs.isPending) {
+    return (
+      <div className="flex justify-center py-8">
+        <Spinner />
+      </div>
+    );
+  }
+  if (orgs.isError || !orgs.data) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        {errorText(orgs.error, t`Could not load teams`)}
+      </p>
+    );
+  }
+  if (orgs.data.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        <Trans>No teams</Trans>
+      </p>
+    );
+  }
+
+  return (
+    <ul className="divide-y rounded-lg border" data-testid="ops-teams">
+      {orgs.data.map((org) => (
+        <li key={org.id}>
+          <Link
+            to={`/admin/ops/teams/${org.id}`}
+            className="flex items-center justify-between gap-3 px-4 py-3 text-sm hover:bg-muted/40"
+          >
+            <span className="min-w-0 truncate font-medium">{org.name}</span>
+            <span className="shrink-0 text-muted-foreground tabular-nums">
+              <Trans>{org.memberCount} members</Trans>
+            </span>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function AccountsSection({
   accounts,
   onChanged,
@@ -448,8 +503,6 @@ function AccountsSection({
   interactive: boolean;
 }) {
   const { t } = useLingui();
-  const navigate = useNavigate();
-  const queries = useSpaceQueries();
   const queryClient = useQueryClient();
   const roster = accounts.filter((account) => account.sharedKeyBudget?.member);
   const [impersonate, setImpersonate] = useState<OpsAccount | null>(null);
@@ -529,11 +582,9 @@ function AccountsSection({
     setBusy(true);
     setError(null);
     try {
-      const next = await rpc.ops.startImpersonation({ userId: impersonate.userId });
-      queryClient.setQueryData(queries.me.queryKey(), next);
-      await queryClient.invalidateQueries();
+      await rpc.ops.startImpersonation({ userId: impersonate.userId });
       setImpersonate(null);
-      navigate("/app", { replace: true });
+      hardSwitchImpersonation({ queryClient, target: "/app" });
     } catch (err) {
       setError(errorText(err, t`Could not impersonate`));
       setBusy(false);

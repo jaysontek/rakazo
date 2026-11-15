@@ -186,7 +186,7 @@ export function spacesRoutes(ctx: RouterContext) {
     bootstrap: authed.bootstrap.handler(async ({ context, input }) => {
       const actor = context.actor;
       const [me, navigation, archivedBots, archivedGroups] = await Promise.all([
-        meDto(deps, actor),
+        meDto(deps, actor, context.sessionId),
         spaceNavigationDto(deps, actor, repos, groupRepos),
         repos.listBots(actor, { archived: true }),
         groupRepos.listGroups(actor, { archived: true }),

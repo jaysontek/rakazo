@@ -141,6 +141,11 @@ msgstr "{0} KB"
 msgid "{0} MB"
 msgstr "{0} MB"
 
+#. placeholder {0}: org.memberCount
+#: src/pages/AdminOpsPage.tsx
+msgid "{0} members"
+msgstr "멤버 {0}명"
+
 #. placeholder {0}: sender.name
 #: src/pages/ExternalConversationSettings.tsx
 msgid "{0} rollup hours"
@@ -525,6 +530,7 @@ msgid "Accounts"
 msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Actions"
 msgstr ""
 
@@ -754,7 +760,12 @@ msgstr "고급..."
 msgid "Agent from another app"
 msgstr ""
 
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "agents"
+msgstr "에이전트"
+
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Agents"
 msgstr ""
 
@@ -1156,6 +1167,7 @@ msgstr "아바타 스튜디오"
 #: src/components/vault/VaultPageHeader.tsx
 #: src/pages/AdminAccessPage.tsx
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 #: src/pages/AdminPluginsPage.tsx
 #: src/pages/Auth.tsx
 #: src/pages/Board.tsx
@@ -1759,6 +1771,7 @@ msgid "Compact"
 msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Company API"
 msgstr "회사 API"
 
@@ -2261,6 +2274,7 @@ msgid "Could not grant access"
 msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Could not impersonate"
 msgstr ""
 
@@ -2591,6 +2605,10 @@ msgstr "답변을 보내지 못했습니다."
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "Could not switch {failedNames}. Try again."
 msgstr ""
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Could not switch impersonation"
+msgstr "가장 전환에 실패했습니다"
 
 #: src/pages/shell/use-computer.tsx
 msgid "Could not take control"
@@ -4049,6 +4067,7 @@ msgid "key"
 msgstr "key"
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Key"
 msgstr ""
 
@@ -4350,7 +4369,12 @@ msgid "Medium"
 msgstr "보통"
 
 #: src/lib/identity-display.ts
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Member"
+msgstr "멤버"
+
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "members"
 msgstr "멤버"
 
 #. placeholder {0}: selected.length
@@ -4903,6 +4927,10 @@ msgstr "아직 스킬이 없습니다"
 msgid "No submissions"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "No teams"
+msgstr "팀이 없습니다"
+
 #: src/pages/Board.tsx
 msgid "No tickets yet"
 msgstr ""
@@ -5360,11 +5388,14 @@ msgid "Personal"
 msgstr ""
 
 #. placeholder {0}: money(account.personalKeyCostUsd)
+#. placeholder {0}: money(member.personalKeyCostUsd)
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Personal {0}"
 msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Personal API"
 msgstr "개인 API"
 
@@ -5550,6 +5581,14 @@ msgstr "반응"
 #: src/pages/shell/bot-panel.tsx
 msgid "Read replies aloud"
 msgstr "답변을 자동으로 읽기"
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Read-only · Viewing as {targetEmail} · Ends {endsAt}"
+msgstr "읽기 전용 · {targetEmail}(으)로 보는 중 · {endsAt}에 종료"
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Read-only · Viewing as {targetName} ({targetEmail}) · Ends {endsAt}"
+msgstr "읽기 전용 · {targetName}({targetEmail})(으)로 보는 중 · {endsAt}에 종료"
 
 #: src/pages/shell/import-status.ts
 msgid "Ready"
@@ -6498,7 +6537,9 @@ msgid "Shared"
 msgstr "함께 사용"
 
 #. placeholder {0}: money(account.sharedKeyCostUsd)
+#. placeholder {0}: money(member.sharedKeyCostUsd)
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Shared {0}"
 msgstr ""
 
@@ -6507,6 +6548,7 @@ msgid "Shared memory"
 msgstr "공유 기억"
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Shared week"
 msgstr ""
 
@@ -6739,6 +6781,7 @@ msgstr "음성 모델"
 
 #: src/pages/AdminOpsBudget.tsx
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Spend"
 msgstr ""
 
@@ -6937,6 +6980,10 @@ msgstr "사고 모드 지원"
 msgid "Switch"
 msgstr "전환"
 
+#: src/components/ImpersonationBanner.tsx
+msgid "Switch member"
+msgstr "멤버 전환"
+
 #: src/components/ModelCredits.tsx
 msgid "Switch to {tierTargetName}?"
 msgstr "{tierTargetName}(으)로 변경할까요?"
@@ -6979,6 +7026,7 @@ msgid "Teaching in progress. Stop teaching before sending a new message."
 msgstr "작업을 가르치는 중입니다. 새 메시지를 보내려면 먼저 가르치기를 종료하세요."
 
 #: src/pages/AdminOpsBudget.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Team"
 msgstr "팀 공용"
@@ -6986,6 +7034,10 @@ msgstr "팀 공용"
 #: src/pages/shell/computer-view.tsx
 msgid "Team Computer"
 msgstr "팀 컴퓨터"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Teams"
+msgstr "팀"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Teams message"
@@ -7335,6 +7387,10 @@ msgstr "오늘"
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Toggle sidebar"
 msgstr "사이드바 표시/숨기기"
+
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "tokens"
+msgstr "토큰"
 
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/AdminOpsPage.tsx
@@ -7713,16 +7769,12 @@ msgstr ""
 msgid "View all"
 msgstr ""
 
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "View as"
+msgstr "다음으로 보기"
+
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "View source"
-msgstr ""
-
-#: src/components/ImpersonationBanner.tsx
-msgid "Viewing as {targetEmail}"
-msgstr ""
-
-#: src/components/ImpersonationBanner.tsx
-msgid "Viewing as {targetName} ({targetEmail})"
 msgstr ""
 
 #: src/components/call/CallStrip.tsx
@@ -8043,3 +8095,9 @@ msgstr "음성 서비스에서 키를 거부했습니다."
 #: src/components/vault/VaultItemEditor.tsx
 msgid "ZIP or postal code"
 msgstr ""
+
+msgid "Could not load team"
+msgstr "팀을 불러올 수 없습니다"
+
+msgid "Could not load teams"
+msgstr "팀 목록을 불러올 수 없습니다"

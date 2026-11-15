@@ -119,10 +119,12 @@ import {
   OpsAgentSchema,
   OpsAllotmentTransferSchema,
   OpsChatLogSchema,
+  OpsOrganizationNavSchema,
   OpsOverviewSchema,
   OpsRequestLogRowSchema,
   OpsSharedKeyBudgetSettingsSchema,
   OpsSharedKeySpendAdjustmentSchema,
+  OpsTeamSchema,
   PluginMarketplaceCatalogSchema,
   PluginPartSchema,
   PluginPreviewSchema,
@@ -1420,9 +1422,27 @@ export const appContract = {
       .output(OpsAdminGrantSchema),
     removeAdminGrant: oc.input(z.strictObject({ userId: Id })).output(z.object({ ok: z.literal(true) })),
     startImpersonation: oc
-      .input(z.strictObject({ userId: Id }))
+      .input(
+        z.strictObject({
+          userId: Id,
+          /** When set, fixes the impersonation org scope for later switches. Must be a multi-member org. */
+          organizationId: Id.optional(),
+        }),
+      )
       .output(MeSchema),
     stopImpersonation: oc.output(MeSchema),
+    /**
+     * Switch the current impersonation target to another member of the org fixed at start.
+     * Allowlisted while impersonating; verifies the impersonator is still admin.
+     * Does not extend the original impersonation TTL.
+     */
+    switchImpersonation: oc
+      .input(z.strictObject({ userId: Id, organizationId: Id }))
+      .output(MeSchema),
+    /** Org members + spend/agents for the ops team drill-down. Denied while impersonating. */
+    team: oc.input(z.strictObject({ organizationId: Id })).output(OpsTeamSchema),
+    /** Orgs for the ops nav switcher. Denied while impersonating. */
+    organizations: oc.output(z.array(OpsOrganizationNavSchema)),
     transferSharedKeyAllotment: oc
       .input(z.strictObject({ fromUserId: Id, toUserId: Id }))
       .output(OpsAllotmentTransferSchema),

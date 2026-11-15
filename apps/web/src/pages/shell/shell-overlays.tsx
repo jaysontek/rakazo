@@ -105,6 +105,7 @@ export function SettingsOverlays({
   setPeerConversation,
   active,
   peerBot,
+  readOnly = false,
 }: {
   rpc: ReturnType<typeof createSpaceRpc>;
   queries: SpaceQueries;
@@ -128,6 +129,8 @@ export function SettingsOverlays({
   setPeerConversation: (peer: null) => void;
   active: Bot | undefined;
   peerBot: (botId: string) => { color: string; avatarSet?: BotAvatarSet } | undefined;
+  /** Disable account mutation controls while impersonating. */
+  readOnly?: boolean;
 }) {
   // Read when Usage opens; a reopened Usage shows the last summary while it refreshes.
   const usageQuery = useQuery({ ...queries.usage.summary.queryOptions(), enabled: false });
@@ -148,9 +151,13 @@ export function SettingsOverlays({
           }}
           onOpenSpace={(spaceId) => setOverlay({ ...overlay, section: "space", spaceId })}
           name={user?.name ?? ""}
-          onNameSaved={async () => {
-            await refetchSession();
-          }}
+          onNameSaved={
+            readOnly
+              ? undefined
+              : async () => {
+                  await refetchSession();
+                }
+          }
           email={user?.email}
           usage={usage}
           onUsageOpen={refreshUsage}
@@ -158,36 +165,61 @@ export function SettingsOverlays({
           onSectionChange={(section) => setOverlay({ ...overlay, section })}
           billingEnabled={bootstrapMe?.billingEnabled === true}
           sandboxProvider={bootstrapMe?.sandboxProvider}
-          canConfigureComputers={bootstrapMe?.isAdmin === true}
-          onSandboxProviderChange={(sandboxProvider) =>
-            setBootstrapMe((prev) => (prev ? { ...prev, sandboxProvider } : prev))
+          canConfigureComputers={!readOnly && bootstrapMe?.isAdmin === true}
+          onSandboxProviderChange={
+            readOnly
+              ? undefined
+              : (sandboxProvider) =>
+                  setBootstrapMe((prev) => (prev ? { ...prev, sandboxProvider } : prev))
           }
           messagingEnabled={messagingEnabled}
           paymentWalletProvider={bootstrapMe?.paymentWalletProvider ?? null}
           timezone={bootstrapMe?.timezone ?? null}
-          onTimezoneChange={async (timezone) => {
-            const nextMe = await rpc.preferences.update({ timezone });
-            setBootstrapMe((prev) => (prev ? { ...prev, timezone: nextMe.timezone } : nextMe));
-          }}
+          onTimezoneChange={
+            readOnly
+              ? async () => undefined
+              : async (timezone) => {
+                  const nextMe = await rpc.preferences.update({ timezone });
+                  setBootstrapMe((prev) =>
+                    prev ? { ...prev, timezone: nextMe.timezone } : nextMe,
+                  );
+                }
+          }
           botAvatarSet={bootstrapMe?.botAvatarSet}
-          onBotAvatarSetChange={async (botAvatarSet) => {
-            const nextMe = await rpc.preferences.update({ botAvatarSet });
-            setBootstrapMe((prev) =>
-              prev ? { ...prev, botAvatarSet: nextMe.botAvatarSet } : nextMe,
-            );
-            // Unpinned bots were restyled with it. The save already succeeded, so a failed
-            // refresh only waits for the roster's next poll.
-            void refreshSpaces().catch(() => undefined);
-          }}
-          onAccountImported={refreshSpaces}
-          onImportAgent={() => {
-            setOverlay(null);
-            openAgentImport();
-          }}
+          onBotAvatarSetChange={
+            readOnly
+              ? undefined
+              : async (botAvatarSet) => {
+                  const nextMe = await rpc.preferences.update({ botAvatarSet });
+                  setBootstrapMe((prev) =>
+                    prev ? { ...prev, botAvatarSet: nextMe.botAvatarSet } : nextMe,
+                  );
+                  // Unpinned bots were restyled with it. The save already succeeded, so a failed
+                  // refresh only waits for the roster's next poll.
+                  void refreshSpaces().catch(() => undefined);
+                }
+          }
+          onAccountImported={readOnly ? undefined : refreshSpaces}
+          onImportAgent={
+            readOnly
+              ? undefined
+              : () => {
+                  setOverlay(null);
+                  openAgentImport();
+                }
+          }
           memoryConfig={memoryConfig}
-          onMemoryConfigChange={(config) => {
-            void writeSaved(queryClient, queries.memory.providerConfig.queryKey(), () => config);
-          }}
+          onMemoryConfigChange={
+            readOnly
+              ? () => undefined
+              : (config) => {
+                  void writeSaved(
+                    queryClient,
+                    queries.memory.providerConfig.queryKey(),
+                    () => config,
+                  );
+                }
+          }
           onVoiceStatusMaybeChanged={async () => {
             try {
               queryClient.setQueryData(
@@ -199,6 +231,7 @@ export function SettingsOverlays({
               void queryClient.resetQueries({ queryKey: voiceStatusKey });
             }
           }}
+          readOnly={readOnly}
           onClose={() => setOverlay(null)}
         />
       ) : null}

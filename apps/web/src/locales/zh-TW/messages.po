@@ -142,6 +142,11 @@ msgstr "{0} KB"
 msgid "{0} MB"
 msgstr "{0} MB"
 
+#. placeholder {0}: org.memberCount
+#: src/pages/AdminOpsPage.tsx
+msgid "{0} members"
+msgstr "{0} 位成員"
+
 #. placeholder {0}: sender.name
 #: src/pages/ExternalConversationSettings.tsx
 msgid "{0} rollup hours"
@@ -526,6 +531,7 @@ msgid "Accounts"
 msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Actions"
 msgstr ""
 
@@ -755,7 +761,12 @@ msgstr "進階..."
 msgid "Agent from another app"
 msgstr ""
 
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "agents"
+msgstr "代理"
+
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Agents"
 msgstr ""
 
@@ -1157,6 +1168,7 @@ msgstr "頭像工作室"
 #: src/components/vault/VaultPageHeader.tsx
 #: src/pages/AdminAccessPage.tsx
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 #: src/pages/AdminPluginsPage.tsx
 #: src/pages/Auth.tsx
 #: src/pages/Board.tsx
@@ -1760,6 +1772,7 @@ msgid "Compact"
 msgstr "緊湊"
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Company API"
 msgstr "公司 API"
 
@@ -2262,6 +2275,7 @@ msgid "Could not grant access"
 msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Could not impersonate"
 msgstr ""
 
@@ -2592,6 +2606,10 @@ msgstr "無法提交此回答"
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "Could not switch {failedNames}. Try again."
 msgstr "無法切換 {failedNames}，請再試一次。"
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Could not switch impersonation"
+msgstr "無法切換模擬登入"
 
 #: src/pages/shell/use-computer.tsx
 msgid "Could not take control"
@@ -4050,6 +4068,7 @@ msgid "key"
 msgstr "金鑰"
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Key"
 msgstr ""
 
@@ -4351,7 +4370,12 @@ msgid "Medium"
 msgstr "中"
 
 #: src/lib/identity-display.ts
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Member"
+msgstr "成員"
+
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "members"
 msgstr "成員"
 
 #. placeholder {0}: selected.length
@@ -4904,6 +4928,10 @@ msgstr "尚無技能"
 msgid "No submissions"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "No teams"
+msgstr "沒有團隊"
+
 #: src/pages/Board.tsx
 msgid "No tickets yet"
 msgstr "尚無工作項目"
@@ -5361,11 +5389,14 @@ msgid "Personal"
 msgstr "個人"
 
 #. placeholder {0}: money(account.personalKeyCostUsd)
+#. placeholder {0}: money(member.personalKeyCostUsd)
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Personal {0}"
 msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Personal API"
 msgstr "個人 API"
 
@@ -5551,6 +5582,14 @@ msgstr "表情回應"
 #: src/pages/shell/bot-panel.tsx
 msgid "Read replies aloud"
 msgstr "朗讀回覆"
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Read-only · Viewing as {targetEmail} · Ends {endsAt}"
+msgstr "唯讀 · 正在以 {targetEmail} 身份檢視 · {endsAt} 結束"
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Read-only · Viewing as {targetName} ({targetEmail}) · Ends {endsAt}"
+msgstr "唯讀 · 正在以 {targetName}（{targetEmail}）身份檢視 · {endsAt} 結束"
 
 #: src/pages/shell/import-status.ts
 msgid "Ready"
@@ -6499,7 +6538,9 @@ msgid "Shared"
 msgstr "共享"
 
 #. placeholder {0}: money(account.sharedKeyCostUsd)
+#. placeholder {0}: money(member.sharedKeyCostUsd)
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Shared {0}"
 msgstr ""
 
@@ -6508,6 +6549,7 @@ msgid "Shared memory"
 msgstr "共用記憶"
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Shared week"
 msgstr ""
 
@@ -6740,6 +6782,7 @@ msgstr "語音模型"
 
 #: src/pages/AdminOpsBudget.tsx
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Spend"
 msgstr ""
 
@@ -6938,6 +6981,10 @@ msgstr "支援思考"
 msgid "Switch"
 msgstr "切換"
 
+#: src/components/ImpersonationBanner.tsx
+msgid "Switch member"
+msgstr "切換成員"
+
 #: src/components/ModelCredits.tsx
 msgid "Switch to {tierTargetName}?"
 msgstr "切換到 {tierTargetName}？"
@@ -6980,6 +7027,7 @@ msgid "Teaching in progress. Stop teaching before sending a new message."
 msgstr "正在示範，傳送新訊息前請先停止示範。"
 
 #: src/pages/AdminOpsBudget.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Team"
 msgstr "團隊"
@@ -6987,6 +7035,10 @@ msgstr "團隊"
 #: src/pages/shell/computer-view.tsx
 msgid "Team Computer"
 msgstr "團隊電腦"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Teams"
+msgstr "團隊"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Teams message"
@@ -7336,6 +7388,10 @@ msgstr "今天"
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Toggle sidebar"
 msgstr "顯示或隱藏側邊欄"
+
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "tokens"
+msgstr "權杖"
 
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/AdminOpsPage.tsx
@@ -7714,16 +7770,12 @@ msgstr "版本"
 msgid "View all"
 msgstr ""
 
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "View as"
+msgstr "以此身分檢視"
+
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "View source"
-msgstr ""
-
-#: src/components/ImpersonationBanner.tsx
-msgid "Viewing as {targetEmail}"
-msgstr ""
-
-#: src/components/ImpersonationBanner.tsx
-msgid "Viewing as {targetName} ({targetEmail})"
 msgstr ""
 
 #: src/components/call/CallStrip.tsx
@@ -8044,3 +8096,9 @@ msgstr "你的語音供應商拒絕了該金鑰。"
 #: src/components/vault/VaultItemEditor.tsx
 msgid "ZIP or postal code"
 msgstr ""
+
+msgid "Could not load team"
+msgstr "無法載入團隊"
+
+msgid "Could not load teams"
+msgstr "無法載入團隊列表"

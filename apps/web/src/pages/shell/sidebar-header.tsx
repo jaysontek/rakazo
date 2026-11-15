@@ -23,6 +23,7 @@ export function SidebarHeader({
   navigate,
   setNewSpaceOpen,
   setCreateBotOpen,
+  readOnly = false,
 }: {
   mini?: boolean;
   createMenuOpen: boolean;
@@ -38,6 +39,7 @@ export function SidebarHeader({
   navigate: (path: string) => void;
   setNewSpaceOpen: (open: boolean) => void;
   setCreateBotOpen: (open: boolean) => void;
+  readOnly?: boolean;
 }) {
   const { t } = useLingui();
   const hasWindowChrome = Boolean(desktopBridge());
@@ -98,54 +100,56 @@ export function SidebarHeader({
             )}
           </Button>
         </IconTooltip>
-        <Popover open={createMenuOpen} onOpenChange={setCreateMenuOpen}>
-          <IconTooltip label={t`Create`}>
-            <PopoverTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="app-no-drag text-muted-foreground"
+        {readOnly ? null : (
+          <Popover open={createMenuOpen} onOpenChange={setCreateMenuOpen}>
+            <IconTooltip label={t`Create`}>
+              <PopoverTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="app-no-drag text-muted-foreground"
+                  />
+                }
+                aria-label={t`Create`}
+                data-testid="create-menu-trigger"
+              >
+                <Plus size={15} strokeWidth={1.8} aria-hidden="true" />
+              </PopoverTrigger>
+            </IconTooltip>
+            {/* Unmount with the state change so the panel it opens never coexists with the menu. */}
+            {createMenuOpen ? (
+              <PopoverContent
+                align="end"
+                className="app-no-drag w-auto gap-0 overflow-hidden p-0 data-closed:animate-none"
+              >
+                <BotCreatePicker
+                  bots={bots}
+                  onCreateBot={() => {
+                    setCreateMenuOpen(false);
+                    setMobileSidebarOpen(false);
+                    setCreateBotOpen(true);
+                  }}
+                  onOpenBot={(id) => {
+                    setCreateMenuOpen(false);
+                    setMobileSidebarOpen(false);
+                    navigate(`/app/${id}`);
+                  }}
+                  onCreateGroup={() => {
+                    setCreateMenuOpen(false);
+                    setMobileSidebarOpen(false);
+                    setPanel("create-group");
+                  }}
+                  onCreateSpace={() => {
+                    setCreateMenuOpen(false);
+                    setMobileSidebarOpen(false);
+                    setNewSpaceOpen(true);
+                  }}
                 />
-              }
-              aria-label={t`Create`}
-              data-testid="create-menu-trigger"
-            >
-              <Plus size={15} strokeWidth={1.8} aria-hidden="true" />
-            </PopoverTrigger>
-          </IconTooltip>
-          {/* Unmount with the state change so the panel it opens never coexists with the menu. */}
-          {createMenuOpen ? (
-            <PopoverContent
-              align="end"
-              className="app-no-drag w-auto gap-0 overflow-hidden p-0 data-closed:animate-none"
-            >
-              <BotCreatePicker
-                bots={bots}
-                onCreateBot={() => {
-                  setCreateMenuOpen(false);
-                  setMobileSidebarOpen(false);
-                  setCreateBotOpen(true);
-                }}
-                onOpenBot={(id) => {
-                  setCreateMenuOpen(false);
-                  setMobileSidebarOpen(false);
-                  navigate(`/app/${id}`);
-                }}
-                onCreateGroup={() => {
-                  setCreateMenuOpen(false);
-                  setMobileSidebarOpen(false);
-                  setPanel("create-group");
-                }}
-                onCreateSpace={() => {
-                  setCreateMenuOpen(false);
-                  setMobileSidebarOpen(false);
-                  setNewSpaceOpen(true);
-                }}
-              />
-            </PopoverContent>
-          ) : null}
-        </Popover>
+              </PopoverContent>
+            ) : null}
+          </Popover>
+        )}
       </div>
     </div>
   );

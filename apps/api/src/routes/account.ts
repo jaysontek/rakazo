@@ -113,8 +113,16 @@ export function accountRoutes(ctx: RouterContext) {
       ),
       status: authed.billing.status.handler(async ({ context, input }) => {
         const billing = requireBilling(deps);
-        // A failed claim fails the request, so the client keeps the code and sends it again.
-        if (input?.referralCode) await billing.claimReferral(context.actor, input.referralCode);
+        // View-only: never claim a referral (DB write) while impersonating.
+        if (input?.referralCode) {
+          if (context.impersonatedBy) {
+            throw new ORPCError("FORBIDDEN", {
+              message: "Not allowed while impersonating",
+            });
+          }
+          // A failed claim fails the request, so the client keeps the code and sends it again.
+          await billing.claimReferral(context.actor, input.referralCode);
+        }
         return billing.status(context.actor);
       }),
       refresh: authed.billing.refresh.handler(async ({ context }) => {

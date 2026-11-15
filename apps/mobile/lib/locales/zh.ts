@@ -1408,6 +1408,10 @@ export const ZH_MESSAGES: Record<string, string> = {
   "{amount} spent this week": "本周已花费 {amount}",
   "{amount} spent this month": "本月已花费 {amount}",
   "{amount} spent": "已花费 {amount}",
+  "Read-only · Viewing as {name} ({email}) · Ends {time}": "只读 · 正在以 {name}（{email}）身份查看 · {time} 结束",
+  "Read-only · Viewing as {email} · Ends {time}": "只读 · 正在以 {email} 身份查看 · {time} 结束",
+  "Could not stop impersonation": "无法停止模拟登录",
+
 };
 
 export const PEER_MESSAGE_FORMS: Partial<Record<Intl.LDMLPluralRule, string>> = {

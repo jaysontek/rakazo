@@ -258,8 +258,8 @@ describe("board routes under impersonation", () => {
 });
 
 describe("impersonation allowlist meta", () => {
-  it("keeps PUBLIC_PATHS small and truly unauthenticated", async () => {
-    expect(PUBLIC_PATHS.size).toBeLessThanOrEqual(3);
+  it("keeps PUBLIC_PATHS exactly {health} and truly unauthenticated", async () => {
+    expect([...PUBLIC_PATHS.keys()]).toEqual(["health"]);
     const signedOut = createRouterClient(createRouter(makeDeps()), {
       context: { actor: null },
     });

@@ -15,6 +15,7 @@ import type { RefObject } from "react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { takeInitialBootstrap } from "../../lib/bootstrap";
 import { linkedBotRoute } from "../../lib/bootstrap-target";
+import { syncImpersonationTeammatesFromServer } from "../../lib/impersonation-teammates";
 import { localTimezone } from "../../lib/local-timezone";
 import { markOnce } from "../../lib/performance";
 import type { ChatTarget } from "../../lib/query";
@@ -342,6 +343,7 @@ export function useSpaceBootstrap({
         if (cancelled) return;
         const groupList = bootstrap.groups;
         setBootstrapMe(bootstrap.me);
+        syncImpersonationTeammatesFromServer(bootstrap.me.impersonating);
         // First sign-in with no saved timezone: adopt this browser's, once. A choice made
         // in Settings is never overwritten; a failure just leaves bots on UTC.
         if (bootstrap.me.timezone === null) {

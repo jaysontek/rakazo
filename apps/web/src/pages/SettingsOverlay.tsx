@@ -57,6 +57,7 @@ export function SettingsOverlay({
   onMemoryConfigChange,
   onClose,
   onVoiceStatusMaybeChanged,
+  readOnly = false,
 }: {
   /** The space the Space page edits; it need not be the selected space. */
   space?: SettingsSpace | null;
@@ -77,6 +78,8 @@ export function SettingsOverlay({
   onBotAvatarSetChange?: (set: BotAvatarSet) => Promise<void>;
   onAccountImported?: () => Promise<void>;
   onImportAgent?: () => void;
+  /** Disable mutation controls while viewing as another account. */
+  readOnly?: boolean;
   billingEnabled?: boolean;
   sandboxProvider?: string | null;
   onSandboxProviderChange?: (sandboxProvider: string) => void;
@@ -365,6 +368,7 @@ export function SettingsOverlay({
                         onBotAvatarSetChange={onBotAvatarSetChange}
                         onAccountImported={onAccountImported}
                         onImportAgent={onImportAgent}
+                        readOnly={readOnly}
                       />
                       {/* One space is just the app, so there is nothing to tell apart or manage. */}
                       {spaces.length > 1 && onOpenSpace ? (

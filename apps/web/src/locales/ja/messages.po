@@ -141,6 +141,11 @@ msgstr "{0} KB"
 msgid "{0} MB"
 msgstr "{0} MB"
 
+#. placeholder {0}: org.memberCount
+#: src/pages/AdminOpsPage.tsx
+msgid "{0} members"
+msgstr "{0} 人のメンバー"
+
 #. placeholder {0}: sender.name
 #: src/pages/ExternalConversationSettings.tsx
 msgid "{0} rollup hours"
@@ -525,6 +530,7 @@ msgid "Accounts"
 msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Actions"
 msgstr ""
 
@@ -754,7 +760,12 @@ msgstr "詳細設定..."
 msgid "Agent from another app"
 msgstr ""
 
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "agents"
+msgstr "エージェント"
+
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Agents"
 msgstr ""
 
@@ -1156,6 +1167,7 @@ msgstr "Avatar Studio"
 #: src/components/vault/VaultPageHeader.tsx
 #: src/pages/AdminAccessPage.tsx
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 #: src/pages/AdminPluginsPage.tsx
 #: src/pages/Auth.tsx
 #: src/pages/Board.tsx
@@ -1759,6 +1771,7 @@ msgid "Compact"
 msgstr "コンパクト"
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Company API"
 msgstr "会社API"
 
@@ -2261,6 +2274,7 @@ msgid "Could not grant access"
 msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Could not impersonate"
 msgstr ""
 
@@ -2591,6 +2605,10 @@ msgstr "この回答を送信できませんでした"
 #: src/pages/model-settings/space-bots-model.tsx
 msgid "Could not switch {failedNames}. Try again."
 msgstr "{failedNames}を切り替えられませんでした。もう一度お試しください。"
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Could not switch impersonation"
+msgstr "なりすましを切り替えられませんでした"
 
 #: src/pages/shell/use-computer.tsx
 msgid "Could not take control"
@@ -4049,6 +4067,7 @@ msgid "key"
 msgstr "キー"
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Key"
 msgstr ""
 
@@ -4350,7 +4369,12 @@ msgid "Medium"
 msgstr "中"
 
 #: src/lib/identity-display.ts
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Member"
+msgstr "メンバー"
+
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "members"
 msgstr "メンバー"
 
 #. placeholder {0}: selected.length
@@ -4903,6 +4927,10 @@ msgstr "スキルはまだありません"
 msgid "No submissions"
 msgstr ""
 
+#: src/pages/AdminOpsPage.tsx
+msgid "No teams"
+msgstr "チームがありません"
+
 #: src/pages/Board.tsx
 msgid "No tickets yet"
 msgstr "チケットはまだありません"
@@ -5360,11 +5388,14 @@ msgid "Personal"
 msgstr "個人"
 
 #. placeholder {0}: money(account.personalKeyCostUsd)
+#. placeholder {0}: money(member.personalKeyCostUsd)
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Personal {0}"
 msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Personal API"
 msgstr "個人API"
 
@@ -5550,6 +5581,14 @@ msgstr "リアクション"
 #: src/pages/shell/bot-panel.tsx
 msgid "Read replies aloud"
 msgstr "返信を読み上げる"
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Read-only · Viewing as {targetEmail} · Ends {endsAt}"
+msgstr "読み取り専用 · {targetEmail} として表示中 · {endsAt} に終了"
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Read-only · Viewing as {targetName} ({targetEmail}) · Ends {endsAt}"
+msgstr "読み取り専用 · {targetName}（{targetEmail}）として表示中 · {endsAt} に終了"
 
 #: src/pages/shell/import-status.ts
 msgid "Ready"
@@ -6498,7 +6537,9 @@ msgid "Shared"
 msgstr "共有"
 
 #. placeholder {0}: money(account.sharedKeyCostUsd)
+#. placeholder {0}: money(member.sharedKeyCostUsd)
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Shared {0}"
 msgstr ""
 
@@ -6507,6 +6548,7 @@ msgid "Shared memory"
 msgstr "共有メモリ"
 
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Shared week"
 msgstr ""
 
@@ -6739,6 +6781,7 @@ msgstr "音声モデル"
 
 #: src/pages/AdminOpsBudget.tsx
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 msgid "Spend"
 msgstr ""
 
@@ -6937,6 +6980,10 @@ msgstr "思考に対応"
 msgid "Switch"
 msgstr "切り替え"
 
+#: src/components/ImpersonationBanner.tsx
+msgid "Switch member"
+msgstr "メンバーを切り替え"
+
 #: src/components/ModelCredits.tsx
 msgid "Switch to {tierTargetName}?"
 msgstr "{tierTargetName} に切り替えますか？"
@@ -6979,6 +7026,7 @@ msgid "Teaching in progress. Stop teaching before sending a new message."
 msgstr "ティーチング中です。新しいメッセージを送信する前にティーチングを停止してください。"
 
 #: src/pages/AdminOpsBudget.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 #: src/pages/shell/bot-panel.tsx
 msgid "Team"
 msgstr "チーム"
@@ -6986,6 +7034,10 @@ msgstr "チーム"
 #: src/pages/shell/computer-view.tsx
 msgid "Team Computer"
 msgstr "チームのコンピューター"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Teams"
+msgstr "チーム"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Teams message"
@@ -7335,6 +7387,10 @@ msgstr "今日"
 #: src/pages/shell/keyboard-shortcuts-dialog.tsx
 msgid "Toggle sidebar"
 msgstr "サイドバーの表示切り替え"
+
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "tokens"
+msgstr "トークン"
 
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/AdminOpsPage.tsx
@@ -7713,16 +7769,12 @@ msgstr "バージョン"
 msgid "View all"
 msgstr ""
 
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "View as"
+msgstr "次として表示"
+
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "View source"
-msgstr ""
-
-#: src/components/ImpersonationBanner.tsx
-msgid "Viewing as {targetEmail}"
-msgstr ""
-
-#: src/components/ImpersonationBanner.tsx
-msgid "Viewing as {targetName} ({targetEmail})"
 msgstr ""
 
 #: src/components/call/CallStrip.tsx
@@ -8043,3 +8095,9 @@ msgstr "音声プロバイダーのキーが拒否されました。"
 #: src/components/vault/VaultItemEditor.tsx
 msgid "ZIP or postal code"
 msgstr ""
+
+msgid "Could not load team"
+msgstr "チームを読み込めませんでした"
+
+msgid "Could not load teams"
+msgstr "チーム一覧を読み込めませんでした"

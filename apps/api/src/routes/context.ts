@@ -138,7 +138,13 @@ export function createRouterContext(deps: RouterDeps) {
   });
   // The scripted fixture only exists to drive the scripted runtime; a real runtime
   // cannot execute it, so it stays out of the user-facing catalog otherwise.
-  const chatCatalog = async (actor: Actor) => {
+  // View-only serves the static disconnected catalog — no decrypt, live fetch, or
+  // OAuth refresh (those are side effects under impersonation).
+  const chatCatalog = async (actor: Actor, opts?: { viewOnly?: boolean }) => {
+    if (opts?.viewOnly) {
+      const catalog = listAvailablePiCatalog();
+      return deps.env.agentRuntime === "scripted" ? [...catalog, scriptedCatalogEntry] : catalog;
+    }
     const catalog = await catalogForSpace(actor);
     return deps.env.agentRuntime === "scripted" ? [...catalog, scriptedCatalogEntry] : catalog;
   };
@@ -214,19 +220,23 @@ export function createRouterContext(deps: RouterDeps) {
         : { env: process.env };
     return { ...settings, deploymentPrimary: deploymentModelRole(role, defaults).primary };
   };
-  const modelRoleCatalog = async (actor: Actor, role: ModelRole): Promise<ModelCatalogEntry[]> => {
-    const catalog = await chatCatalog(actor);
+  const modelRoleCatalog = async (
+    actor: Actor,
+    role: ModelRole,
+    opts?: { viewOnly?: boolean },
+  ): Promise<ModelCatalogEntry[]> => {
+    const catalog = await chatCatalog(actor, opts);
     const decisions = role === "approval" ? decisionModelCatalog() : [];
     const managedProviders = new Set(
       catalog.filter((entry) => "managed" in entry && entry.managed).map((entry) => entry.provider),
     );
-    return withServingConnections(
-      actor,
-      [
-        ...catalog,
-        ...decisions.map((entry) => ({ ...entry, managed: managedProviders.has(entry.provider) })),
-      ].filter((entry) => modelSupportsRole(entry, role)),
-    );
+    const filtered = [
+      ...catalog,
+      ...decisions.map((entry) => ({ ...entry, managed: managedProviders.has(entry.provider) })),
+    ].filter((entry) => modelSupportsRole(entry, role));
+    // View-only skips connectionServe probes (decrypt / live checks).
+    if (opts?.viewOnly) return filtered;
+    return withServingConnections(actor, filtered);
   };
   /**
    * The space's catalog merges what any of a provider's connections can run. Where two
@@ -370,10 +380,39 @@ export function createRouterContext(deps: RouterDeps) {
       return asTenant(actor, () => next({ context: { ...context, actor } }));
     })
     .use(async ({ context, next, path }) => {
-      // Deny-by-default while impersonating: only an explicit read allowlist + stop.
+      // Deny-by-default while impersonating: only reads + stop/switch.
       if (context.impersonatedBy) {
         const { isImpersonationAllowedProcedure } = await import("../impersonation-allowlist.js");
         if (!isImpersonationAllowedProcedure(path)) {
+          const procedure = path.join(".");
+          if (context.sessionId) {
+            try {
+              const {
+                buildImpersonationSessionId,
+                recordImpersonationDenied,
+              } = await import("../impersonation.js");
+              const session = await deps.prisma.session.findUnique({
+                where: { id: context.sessionId },
+                select: { impersonationExpiresAt: true, expiresAt: true },
+              });
+              const expiresAt = session?.impersonationExpiresAt ?? session?.expiresAt;
+              if (expiresAt) {
+                await recordImpersonationDenied(deps, {
+                  adminUserId: context.impersonatedBy,
+                  targetUserId: context.actor.userId,
+                  impersonationSessionId: buildImpersonationSessionId(
+                    context.sessionId,
+                    expiresAt,
+                  ),
+                  procedure,
+                  spaceId: context.actor.spaceId,
+                  ip: context.clientIp,
+                });
+              }
+            } catch {
+              // Audit must never change the deny response or leak details.
+            }
+          }
           throw new ORPCError("FORBIDDEN", { message: "Not allowed while impersonating" });
         }
       }

@@ -36,12 +36,12 @@ function makeDeps(allowlist = ["192.168.140.0/24"]): RouterDeps {
       findMany: async () => [],
     },
     session: {
-      findUnique: async () => ({
+      findUnique: vi.fn(async () => ({
         impersonatedBy: null,
         impersonationExpiresAt: null,
         expiresAt: new Date(),
         userId: "admin",
-      }),
+      })),
     },
     securityEvent: {
       create: async () => ({}),
@@ -167,6 +167,45 @@ describe("ops dashboard routes", () => {
       message: "Admins only",
     });
     await expect(client.ops.chatLog({ runId: "run_missing" })).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      message: "Admins only",
+    });
+  });
+
+  it("denies non-admins for team, organizations, and switchImpersonation", async () => {
+    const deps = makeDeps();
+    const client = createRouterClient(createRouter(deps), {
+      context: { actor: userActor, clientIp: "192.168.140.10", sessionId: "session-1" },
+    });
+    await expect(client.ops.team({ organizationId: "org-1" })).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      message: "Admins only",
+    });
+    await expect(client.ops.organizations()).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      message: "Admins only",
+    });
+
+    // switch checks the impersonator's admin status (actor is the current target).
+    (deps.prisma.session.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+      impersonatedBy: "user",
+      userId: "someone",
+      impersonationExpiresAt: new Date(Date.now() + 60_000),
+      expiresAt: new Date(Date.now() + 60_000),
+    });
+    const switching = createRouterClient(createRouter(deps), {
+      context: {
+        actor: { ...userActor, userId: "someone" },
+        clientIp: "192.168.140.10",
+        sessionId: "session-1",
+      },
+    });
+    await expect(
+      switching.ops.switchImpersonation({
+        userId: "user",
+        organizationId: "org-1",
+      }),
+    ).rejects.toMatchObject({
       code: "FORBIDDEN",
       message: "Admins only",
     });
