@@ -1403,7 +1403,6 @@ export const NL_MESSAGES: Record<string, string> = {
   "Read-only · Viewing as {name} ({email}) · Ends {time}": "Alleen-lezen · Weergave als {name} ({email}) · Eindigt {time}",
   "Read-only · Viewing as {email} · Ends {time}": "Alleen-lezen · Weergave als {email} · Eindigt {time}",
   "Could not stop impersonation": "Impersonatie kon niet worden gestopt",
-  "Stop": "Stoppen",
 
 };
 

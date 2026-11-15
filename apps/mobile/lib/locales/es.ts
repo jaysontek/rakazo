@@ -1354,7 +1354,6 @@ export const ES_MESSAGES: Record<string, string> = {
   "Read-only · Viewing as {name} ({email}) · Ends {time}": "Solo lectura · Viendo como {name} ({email}) · Termina {time}",
   "Read-only · Viewing as {email} · Ends {time}": "Solo lectura · Viendo como {email} · Termina {time}",
   "Could not stop impersonation": "No se pudo detener la suplantación",
-  "Stop": "Detener",
 
 };
 

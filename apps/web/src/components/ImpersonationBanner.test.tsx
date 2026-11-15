@@ -1,7 +1,5 @@
 // @vitest-environment jsdom
 
-import { i18n } from "@lingui/core";
-import { I18nProvider } from "@lingui/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ComponentProps, ReactNode } from "react";
 import { act } from "react";
@@ -12,6 +10,15 @@ const stopImpersonation = vi.fn();
 const switchImpersonation = vi.fn();
 const me = vi.fn();
 const hardSwitch = vi.fn();
+
+vi.mock("@lingui/react/macro", () => {
+  const t = (strings: TemplateStringsArray, ...values: unknown[]) =>
+    strings.flatMap((part, index) => [part, values[index] ?? ""]).join("");
+  return {
+    useLingui: () => ({ t, i18n: { locale: "en" } }),
+    Trans: ({ children }: { children?: ReactNode }) => children,
+  };
+});
 
 vi.mock("../lib/rpc", () => ({
   rpc: {
@@ -50,11 +57,7 @@ function Providers({ children }: { children: ReactNode }) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return (
-    <I18nProvider i18n={i18n}>
-      <QueryClientProvider client={client}>{children}</QueryClientProvider>
-    </I18nProvider>
-  );
+  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
 
 async function renderBanner() {
@@ -77,8 +80,6 @@ async function renderBanner() {
 }
 
 beforeEach(() => {
-  i18n.load("en", {});
-  i18n.activate("en");
   me.mockReset();
   stopImpersonation.mockReset();
   switchImpersonation.mockReset();

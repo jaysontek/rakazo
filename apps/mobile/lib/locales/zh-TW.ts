@@ -1409,7 +1409,6 @@ export const ZH_TW_MESSAGES: Record<string, string> = {
   "Read-only · Viewing as {name} ({email}) · Ends {time}": "唯讀 · 正在以 {name}（{email}）身份檢視 · {time} 結束",
   "Read-only · Viewing as {email} · Ends {time}": "唯讀 · 正在以 {email} 身份檢視 · {time} 結束",
   "Could not stop impersonation": "無法停止模擬登入",
-  "Stop": "停止",
 
 };
 

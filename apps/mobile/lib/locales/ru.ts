@@ -1444,7 +1444,6 @@ export const RU_MESSAGES: Record<string, string> = {
   "Read-only · Viewing as {name} ({email}) · Ends {time}": "Только чтение · Просмотр как {name} ({email}) · До {time}",
   "Read-only · Viewing as {email} · Ends {time}": "Только чтение · Просмотр как {email} · До {time}",
   "Could not stop impersonation": "Не удалось остановить олицетворение",
-  "Stop": "Стоп",
 
 };
 

@@ -1397,7 +1397,6 @@ export const PL_MESSAGES: Record<string, string> = {
   "Read-only · Viewing as {name} ({email}) · Ends {time}": "Tylko odczyt · Widok jako {name} ({email}) · Kończy się {time}",
   "Read-only · Viewing as {email} · Ends {time}": "Tylko odczyt · Widok jako {email} · Kończy się {time}",
   "Could not stop impersonation": "Nie udało się zakończyć podszywania",
-  "Stop": "Zatrzymaj",
 
 };
 
