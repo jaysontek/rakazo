@@ -399,16 +399,12 @@ export function createRouterContext(deps: RouterDeps) {
     return next();
   });
 
-  const boardEnabled = os
-    .use(async ({ next }) => {
-      if (!deps.env?.ticketBoardEnabled) throw new ORPCError("NOT_FOUND");
-      return next();
-    })
-    .use(async ({ context, next }) => {
-      const actor = context.actor;
-      if (!actor) throw new ORPCError("UNAUTHORIZED");
-      return asTenant(actor, () => next({ context: { ...context, actor } }));
-    });
+  // Build from `authed` so board/ticket procedures share the impersonation
+  // deny-by-default middleware (and tenant scoping) with every other tenant route.
+  const boardEnabled = authed.use(async ({ next }) => {
+    if (!deps.env?.ticketBoardEnabled) throw new ORPCError("NOT_FOUND");
+    return next();
+  });
   const ticketDeps = {
     prisma: deps.prisma,
     ticketBoardEnabled: deps.env?.ticketBoardEnabled,

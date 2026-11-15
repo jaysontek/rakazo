@@ -13,6 +13,24 @@ describe("isImpersonationAllowedProcedure", () => {
     expect(isImpersonationAllowedProcedure(["bots", "list"])).toBe(true);
     expect(isImpersonationAllowedProcedure(["threads", "messages"])).toBe(true);
     expect(isImpersonationAllowedProcedure(["accessGrants", "list"])).toBe(true);
+    expect(isImpersonationAllowedProcedure(["boards", "list"])).toBe(true);
+    expect(isImpersonationAllowedProcedure(["boards", "get"])).toBe(true);
+    expect(isImpersonationAllowedProcedure(["boards", "subscribe"])).toBe(true);
+    expect(isImpersonationAllowedProcedure(["tickets", "list"])).toBe(true);
+    expect(isImpersonationAllowedProcedure(["tickets", "get"])).toBe(true);
+    expect(isImpersonationAllowedProcedure(["tickets", "comments"])).toBe(true);
+  });
+
+  it("denies board and ticket mutations", () => {
+    for (const path of [
+      ["boards", "rename"],
+      ["tickets", "create"],
+      ["tickets", "update"],
+      ["tickets", "move"],
+      ["tickets", "comment"],
+    ] as const) {
+      expect(isImpersonationAllowedProcedure(path)).toBe(false);
+    }
   });
 
   it("does not allow pruned non-contract paths", () => {
