@@ -54,15 +54,15 @@ const ALLOWED_ERRORS: Record<string, { code?: string; reason: string; match?: Re
   },
   "bots.importSetupState": {
     reason: "Import setup expects persisted import draft rows the stub graph does not model.",
-    match: /mcpServers|Cannot read properties/i,
+    match: /reading 'mcpServers'/,
   },
   "updater.check": {
+    code: "FORBIDDEN",
     reason: "Desktop updater routes are host-gated and unavailable in API unit fixtures.",
-    match: /FORBIDDEN|NOT_FOUND|updater/i,
   },
   "updater.status": {
+    code: "FORBIDDEN",
     reason: "Desktop updater routes are host-gated and unavailable in API unit fixtures.",
-    match: /FORBIDDEN|NOT_FOUND|updater/i,
   },
   "accessGrants.list": {
     code: "FORBIDDEN",
@@ -78,71 +78,75 @@ const ALLOWED_ERRORS: Record<string, { code?: string; reason: string; match?: Re
   },
   "aiConsent.status": {
     reason: "Consent provider row shape is incomplete under recording stubs.",
-    match: /provider|Cannot read properties/i,
+    match: /reading 'provider'/,
   },
   "artifacts.get": {
     reason: "Artifact store returns undefined bytes under the recording stub.",
-    match: /first argument|Buffer|undefined/i,
+    match: /Received undefined/,
   },
   "artifacts.getById": {
     reason: "Artifact store returns undefined bytes under the recording stub.",
-    match: /first argument|Buffer|undefined/i,
+    match: /Received undefined/,
   },
   bootstrap: {
     reason: "Bootstrap opens encrypted content rows the stub SecretStore does not implement.",
-    match: /contentEncryptionOf|openRows/i,
+    match: /openRows is not a function/,
   },
   "bots.get": {
     reason: "Bot DTO decrypt path needs contentEncryptionOf.openRows on a real secret store.",
-    match: /contentEncryptionOf|openRows/i,
+    match: /openRows is not a function/,
   },
   "bots.list": {
     reason: "Bot list decrypt path needs contentEncryptionOf.openRows on a real secret store.",
-    match: /contentEncryptionOf|openRows/i,
+    match: /openRows is not a function/,
   },
   "bots.listArchived": {
     reason: "Archived bot list decrypt path needs contentEncryptionOf.openRows.",
-    match: /contentEncryptionOf|openRows/i,
+    match: /openRows is not a function/,
   },
   "computer.status": {
-    reason: "Computer relation from getBot is null under shallow Prisma stubs.",
-    match: /controlRunId|Cannot read properties/i,
+    reason: "Busy-lease join returns null computer under recording stubs.",
+    match: /reading 'controlRunId'/,
   },
   "computer.updates": {
     reason: "Update roster expects nested bot collections the stub omits.",
-    match: /bots|Cannot read properties/i,
+    match: /reading 'bots'/,
   },
   "groups.get": {
     reason: "Group membership graph is incomplete under recording stubs.",
-    match: /Cannot read properties|undefined/i,
+    match: /reading 'id'/,
   },
   "groups.list": {
     reason: "Group list decrypt path needs contentEncryptionOf.openRows.",
-    match: /contentEncryptionOf|openRows/i,
+    match: /openRows is not a function/,
   },
   "groups.listArchived": {
     reason: "Archived group list decrypt path needs contentEncryptionOf.openRows.",
-    match: /contentEncryptionOf|openRows/i,
+    match: /openRows is not a function/,
   },
   "marketplace.catalog": {
-    reason: "Marketplace catalog expects configured plugin text reader URLs.",
-    match: /trim|Cannot read properties/i,
+    // S16: registries are deployment-wide (same public catalog for every tenant), not
+    // user-scoped state. Unit fixtures have no PluginTextReader, so catalog fails before
+    // the outbound fetch; we still exempt that outbound as non-tenant.
+    reason:
+      "Deployment-wide plugin registry (same for every tenant); fixtures lack PluginTextReader so catalog fails on trim before fetch.",
+    match: /reading 'trim'/,
   },
   "memory.budget": {
     reason: "Memory budget documents collection is absent from the recording memory stub.",
-    match: /documents|Cannot read properties/i,
+    match: /reading 'documents'/,
   },
   "threads.get": {
     reason: "Thread computer relation is null under shallow Prisma stubs.",
-    match: /controlRunId|Cannot read properties/i,
+    match: /reading 'controlRunId'/,
   },
   "threads.messages": {
     reason: "Message page expects array fields the stub row omits.",
-    match: /some|Cannot read properties/i,
+    match: /reading 'some'/,
   },
   "usage.summary": {
     reason: "Usage summary expects grouped run arrays; stub returns a scalar.",
-    match: /runGroups|map is not a function/i,
+    match: /runGroups\.map is not a function/,
   },
   // Former /./i catch-alls — narrowed to the exact fixture failures below.
   "messaging.channels.list": {
@@ -211,7 +215,6 @@ const PROVE_TEETH_PATHS = [
   "computer.readFile",
   "computer.files",
   "computer.screenUrl",
-  "computer.terminalUrl",
   "connections.tools",
   "mcp.servers.agents",
   "paymentWallet.status",
@@ -219,6 +222,7 @@ const PROVE_TEETH_PATHS = [
   "skills.snapshot",
   "connections.catalog",
   "voice.voices",
+  "links.favicon",
 ] as const;
 
 type SideEffect =
@@ -714,6 +718,7 @@ const INPUT_FIXTURES: Record<string, unknown> = {
   "connections.catalog": {},
   "connections.tools": { connectorId: "managed-1", provider: "test" },
   "groups.get": { groupId: "group-1" },
+  "links.favicon": { origin: "https://example.test" },
   "marketplace.catalog": {},
   "mcp.assignments.list": { botId: "bot-1" },
   "mcp.servers.agents": { id: "mcp-1", allBots: false, botIds: ["bot-1"] },
@@ -954,6 +959,10 @@ function buildDeps(effects: SideEffect[], fetchMock: ReturnType<typeof vi.fn>): 
         effects.push({ kind: "events", method: "append" });
         return undefined;
       },
+      finalizeComputerControlRelease: async () => {
+        effects.push({ kind: "events", method: "finalizeComputerControlRelease" });
+        return null;
+      },
     },
     boardEvents: { follow: () => doneFollow() },
     ticketChanges: { notify: () => undefined },
@@ -1012,6 +1021,11 @@ function buildDeps(effects: SideEffect[], fetchMock: ReturnType<typeof vi.fn>): 
       resolve: async (origin: string) => {
         effects.push({ kind: "fetch", url: `favicon:${origin}` });
         return null;
+      },
+      // links.favicon calls favicons.favicon(origin), not resolve.
+      favicon: async (origin: string) => {
+        effects.push({ kind: "fetch", url: `favicon:${origin}` });
+        return { icon: null };
       },
     },
     paymentWallet: paymentWallet as never,
@@ -1435,14 +1449,20 @@ describe("impersonation read side-effect audit", () => {
   }, 120_000);
 
   it("computer.status skips expireStaleComputerControl while impersonating", async () => {
+    // Stale lease must sit on bot.computer (what getBot returns). Overriding only
+    // computer.findUnique leaves an active nested lease, so expire never runs.
     const deps = buildDeps(effects, fetchMock);
     const prisma = deps.prisma as unknown as Record<string, Record<string, unknown>>;
     const staleComputer = {
       ...computerFixture(),
-      // Expired lease: expire would write if status did not skip it.
       controlLeaseExpiresAt: new Date(Date.now() - 60_000),
-      controlHolder: "user",
+      controlHolder: "user" as const,
       controlLeaseId: "lease-stale",
+      controlBotId: "bot-1",
+      controlRunId: null,
+      providerRef: "provider-ref-1",
+      spaceId: ACTOR.spaceId,
+      userId: ACTOR.userId,
     };
     const bot = {
       id: "bot-1",
@@ -1451,6 +1471,7 @@ describe("impersonation read side-effect audit", () => {
       userId: ACTOR.userId,
       archivedAt: null,
       screenGeneration: 1,
+      homeRevision: "rev-1",
       thread: { id: "thread-1", spaceId: ACTOR.spaceId, botId: "bot-1" },
       computer: staleComputer,
     };
@@ -1458,26 +1479,35 @@ describe("impersonation read side-effect audit", () => {
     prisma.bot!.findUnique = async () => bot;
     prisma.computer!.findFirst = async () => staleComputer;
     prisma.computer!.findUnique = async () => staleComputer;
+    // Avoid resolveBusyBotName crashing on a stub lease.computer.controlRunId.
+    prisma.computerExecutionLease!.findUnique = async () => null;
+
+    const expireSideEffects = (from: number) =>
+      effects
+        .slice(from)
+        .filter(
+          (effect) =>
+            (effect.kind === "prisma" &&
+              effect.model === "computer" &&
+              (effect.method === "updateMany" || effect.method === "update")) ||
+            (effect.kind === "events" && effect.method === "finalizeComputerControlRelease"),
+        );
 
     const impersonated = createRouterClient(createRouter(deps), {
       context: { actor: ACTOR, sessionId: SESSION_ID, impersonatedBy: "admin-1" },
     });
     const beforeImpersonated = effects.length;
-    await impersonated.computer.status({ botId: "bot-1" }).catch(() => undefined);
-    const impersonatedWrites = effects
-      .slice(beforeImpersonated)
-      .filter((effect) => effect.kind === "prisma" && effect.model === "computer");
-    expect(impersonatedWrites).toEqual([]);
+    await expect(impersonated.computer.status({ botId: "bot-1" })).resolves.toMatchObject({
+      botId: "bot-1",
+    });
+    expect(expireSideEffects(beforeImpersonated)).toEqual([]);
 
     const live = createRouterClient(createRouter(deps), {
       context: { actor: ACTOR, sessionId: SESSION_ID },
     });
     const beforeLive = effects.length;
     await live.computer.status({ botId: "bot-1" }).catch(() => undefined);
-    const liveWrites = effects
-      .slice(beforeLive)
-      .filter((effect) => effect.kind === "prisma" && effect.model === "computer");
-    expect(liveWrites.length).toBeGreaterThan(0);
+    expect(expireSideEffects(beforeLive).length).toBeGreaterThan(0);
   });
 
   it("rejects billing.status referralCode while impersonating", async () => {
