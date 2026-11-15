@@ -93,6 +93,9 @@ model User {
   devices                     UserDevice[]
   sharedKeyBudgetMember       SharedKeyBudgetMember?
   sharedKeyBudgetEnrollmentRequests SharedKeyBudgetEnrollmentRequest[]
+  sharedKeyMemberOverride     SharedKeyMemberOverride?
+  sharedKeySpendAdjustments   SharedKeySpendAdjustment[]   @relation("SharedKeySpendAdjustmentUser")
+  sharedKeySpendAdjustmentsCreated SharedKeySpendAdjustment[] @relation("SharedKeySpendAdjustmentCreatedBy")
   adminGrant                  AdminGrant?                  @relation("AdminGrantUser")
   adminGrantsGiven            AdminGrant[]                 @relation("AdminGrantGrantedBy")
   sharedKeyTransfersFrom      SharedKeyAllotmentTransfer[] @relation("SharedKeyTransferFrom")
@@ -759,6 +762,28 @@ model DeploymentSettings {
   /// Monthly USD cap for the deployment shared API key, split across budget members / 4 weeks.
   /// Null or non-positive disables the weekly hard-stop. Mirrored from SHARED_KEY_MONTHLY_BUDGET_USD.
   sharedKeyMonthlyBudgetUsd       Float?
+  /// "week" or "month". Null keeps Monday weekly resets (today's behaviour).
+  sharedKeyPeriod                 String?
+  /// 0=Sunday .. 6=Saturday. Null = Monday.
+  sharedKeyResetDow               Int?
+  /// Day of month 1–28 for monthly periods. Null = 1.
+  sharedKeyResetDom               Int?
+  /// Minutes after local midnight for the reset. Null = 0.
+  sharedKeyResetMinutes           Int?
+  /// IANA timezone for the reset schedule. Null = America/New_York.
+  sharedKeyTimezone               String?
+  /// Frozen period start until the next boundary (or an audited apply-now).
+  sharedKeyActivePeriodStart      DateTime?
+  /// "off" | "gated" | "open". Null derives from signup posture (today's behaviour).
+  sharedKeyAutoEnrollMode         String?
+  /// Warning percent thresholds, e.g. [80, 95]. Null = [80, 95].
+  sharedKeyWarningThresholds      Json?
+  /// When false, allotment percent is tracked but calls are not hard-stopped. Null = true.
+  sharedKeyHardStopEnabled        Boolean?
+  /// Soft-hold timeout in minutes. Null = 30.
+  sharedKeyHoldStaleMinutes       Int?
+  /// Drop inactive roster members at period rollover. Null = true.
+  sharedKeyPruneInactive          Boolean?
   createdAt                       DateTime @default(now())
   updatedAt                       DateTime @updatedAt
 
@@ -806,6 +831,43 @@ model SharedKeyWeekAllotment {
   @@id([weekStart, userId])
   @@index([userId, weekStart])
   @@map("shared_key_week_allotments")
+}
+
+/// Per-user weekly allotment override. When set, redivide uses this ceiling for the user
+/// instead of the even split; remaining pool is shared among non-overridden members.
+model SharedKeyMemberOverride {
+  userId           String   @id
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Absolute weekly allotment in USD for the current period math.
+  weeklyAllotmentUsd Float
+  updatedAt        DateTime @updatedAt
+  createdAt        DateTime @default(now())
+
+  @@map("shared_key_member_overrides")
+}
+
+/// Append-only tracked-spend adjustments so ops can match the real provider bill.
+/// Never updated or deleted; reverse by inserting an opposite delta with reversesId.
+model SharedKeySpendAdjustment {
+  id                 String   @id @default(cuid())
+  periodStart        DateTime
+  /// Null = team-wide adjustment (ops pool totals). Set = per-user tracked spend.
+  userId             String?
+  user               User?    @relation("SharedKeySpendAdjustmentUser", fields: [userId], references: [id], onDelete: SetNull)
+  deltaUsd           Float
+  reason             String
+  createdById        String?
+  createdBy          User?    @relation("SharedKeySpendAdjustmentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt          DateTime @default(now())
+  previousTrackedUsd Float
+  newTrackedUsd      Float
+  reversesId         String?
+  reverses           SharedKeySpendAdjustment?  @relation("SharedKeySpendAdjustmentReverse", fields: [reversesId], references: [id], onDelete: SetNull)
+  reversedBy         SharedKeySpendAdjustment[] @relation("SharedKeySpendAdjustmentReverse")
+
+  @@index([periodStart, userId])
+  @@index([createdAt])
+  @@map("shared_key_spend_adjustments")
 }
 
 /// Admin move of unused shared-key weekly allotment from one roster member to another.

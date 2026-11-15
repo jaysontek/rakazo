@@ -1,16 +1,23 @@
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_SHARED_KEY_PERIOD_SCHEDULE,
+  effectiveSharedKeyPeriodStart,
   effectiveSharedKeySpendUsd,
   formatSharedKeyBudgetResetAt,
   fullWeekShareUsd,
   midWeekJoinFraction,
   parseSharedKeyMonthlyBudgetInput,
+  parseSharedKeyTimezone,
   redivideWeeklyAllotments,
+  resolveSharedKeyPeriodSchedule,
   SHARED_KEY_BUDGET_TIMEZONE,
   sharedKeyBudgetPercentUsed,
+  sharedKeyPeriodEnd,
+  sharedKeyPeriodStart,
   sharedKeyWeekEnd,
   sharedKeyWeekStart,
   weekFractionRemaining,
+  type SharedKeyPeriodSchedule,
 } from "./shared-key-budget.js";
 
 describe("shared-key weekly budget math", () => {
@@ -380,5 +387,188 @@ describe("shared-key weekly budget math", () => {
     expect(parseSharedKeyMonthlyBudgetInput(50)).toBe(50);
     expect(parseSharedKeyMonthlyBudgetInput(0)).toBeNull();
     expect(parseSharedKeyMonthlyBudgetInput(2_000_000)).toBeNull();
+  });
+});
+
+describe("shared-key period schedule math", () => {
+  it("resolves null/partial input to today's Monday 00:00 America/New_York default", () => {
+    expect(resolveSharedKeyPeriodSchedule(null)).toEqual(DEFAULT_SHARED_KEY_PERIOD_SCHEDULE);
+    expect(resolveSharedKeyPeriodSchedule(undefined)).toEqual(DEFAULT_SHARED_KEY_PERIOD_SCHEDULE);
+    expect(resolveSharedKeyPeriodSchedule({})).toEqual(DEFAULT_SHARED_KEY_PERIOD_SCHEDULE);
+    expect(DEFAULT_SHARED_KEY_PERIOD_SCHEDULE).toEqual({
+      period: "week",
+      resetDow: 1,
+      resetDom: 1,
+      resetMinutes: 0,
+      timezone: SHARED_KEY_BUDGET_TIMEZONE,
+    });
+  });
+
+  it("matches existing Monday 00:00 America/New_York week boundaries via default schedule", () => {
+    const midweek = new Date("2026-11-04T18:00:00.000Z");
+    expect(sharedKeyPeriodStart(DEFAULT_SHARED_KEY_PERIOD_SCHEDULE, midweek).toISOString()).toBe(
+      sharedKeyWeekStart(midweek).toISOString(),
+    );
+    expect(sharedKeyPeriodStart(DEFAULT_SHARED_KEY_PERIOD_SCHEDULE, midweek).toISOString()).toBe(
+      "2026-11-02T05:00:00.000Z",
+    );
+    expect(
+      sharedKeyPeriodEnd(
+        DEFAULT_SHARED_KEY_PERIOD_SCHEDULE,
+        sharedKeyPeriodStart(DEFAULT_SHARED_KEY_PERIOD_SCHEDULE, midweek),
+      ).toISOString(),
+    ).toBe("2026-11-09T05:00:00.000Z");
+
+    const before = new Date("2026-11-09T04:59:59.000Z");
+    const after = new Date("2026-11-09T05:00:00.000Z");
+    expect(sharedKeyPeriodStart(DEFAULT_SHARED_KEY_PERIOD_SCHEDULE, before).toISOString()).toBe(
+      "2026-11-02T05:00:00.000Z",
+    );
+    expect(sharedKeyPeriodStart(DEFAULT_SHARED_KEY_PERIOD_SCHEDULE, after).toISOString()).toBe(
+      "2026-11-09T05:00:00.000Z",
+    );
+  });
+
+  it("supports a custom Tuesday 03:00 Europe/London week", () => {
+    const schedule: SharedKeyPeriodSchedule = {
+      period: "week",
+      resetDow: 2,
+      resetDom: 1,
+      resetMinutes: 3 * 60,
+      timezone: "Europe/London",
+    };
+    // Tuesday 2026-11-03 03:00 GMT = 03:00Z; Monday evening is still prior period.
+    const mondayEvening = new Date("2026-11-02T22:00:00.000Z");
+    const tuesdayAfter = new Date("2026-11-03T03:00:00.000Z");
+    expect(sharedKeyPeriodStart(schedule, mondayEvening).toISOString()).toBe(
+      "2026-10-27T03:00:00.000Z",
+    );
+    expect(sharedKeyPeriodStart(schedule, tuesdayAfter).toISOString()).toBe(
+      "2026-11-03T03:00:00.000Z",
+    );
+    expect(
+      sharedKeyPeriodEnd(schedule, sharedKeyPeriodStart(schedule, tuesdayAfter)).toISOString(),
+    ).toBe("2026-11-10T03:00:00.000Z");
+    expect(formatSharedKeyBudgetResetAt("2026-11-03T03:00:00.000Z", "en-US", "Europe/London")).toBe(
+      "Tue 3:00 AM",
+    );
+  });
+
+  it("keeps week length DST-safe across America/New_York spring-forward", () => {
+    // Spring forward 2026-03-08 02:00 → 03:00; week containing that Monday.
+    const schedule = DEFAULT_SHARED_KEY_PERIOD_SCHEDULE;
+    const mid = new Date("2026-03-11T15:00:00.000Z");
+    const start = sharedKeyPeriodStart(schedule, mid);
+    expect(start.toISOString()).toBe("2026-03-09T04:00:00.000Z"); // EDT
+    const end = sharedKeyPeriodEnd(schedule, start);
+    expect(end.toISOString()).toBe("2026-03-16T04:00:00.000Z");
+    // Fixed 7*24h from the prior EST Monday would land an hour early.
+    const prior = sharedKeyPeriodStart(schedule, new Date("2026-03-04T15:00:00.000Z"));
+    expect(prior.toISOString()).toBe("2026-03-02T05:00:00.000Z"); // EST
+    expect(sharedKeyPeriodEnd(schedule, prior).toISOString()).toBe(start.toISOString());
+    expect(new Date(prior.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()).not.toBe(
+      start.toISOString(),
+    );
+  });
+
+  it("keeps week length DST-safe across America/New_York fall-back", () => {
+    const weekStart = sharedKeyPeriodStart(
+      DEFAULT_SHARED_KEY_PERIOD_SCHEDULE,
+      new Date("2026-10-28T12:00:00.000Z"),
+    );
+    expect(weekStart.toISOString()).toBe("2026-10-26T04:00:00.000Z");
+    expect(sharedKeyPeriodEnd(DEFAULT_SHARED_KEY_PERIOD_SCHEDULE, weekStart).toISOString()).toBe(
+      "2026-11-02T05:00:00.000Z",
+    );
+  });
+
+  it("supports month periods with Dom=28 including February and March edges", () => {
+    const schedule: SharedKeyPeriodSchedule = {
+      period: "month",
+      resetDow: 1,
+      resetDom: 28,
+      resetMinutes: 0,
+      timezone: "America/New_York",
+    };
+    // After Feb 28 00:00 ET → period starts Feb 28; before that → Jan 28.
+    const feb27 = new Date("2026-02-27T12:00:00.000Z");
+    const feb28 = new Date("2026-02-28T05:00:00.000Z"); // 00:00 ET
+    const mar1 = new Date("2026-03-01T12:00:00.000Z");
+    const mar28 = new Date("2026-03-28T04:00:00.000Z"); // 00:00 EDT
+
+    expect(sharedKeyPeriodStart(schedule, feb27).toISOString()).toBe("2026-01-28T05:00:00.000Z");
+    expect(sharedKeyPeriodStart(schedule, feb28).toISOString()).toBe("2026-02-28T05:00:00.000Z");
+    expect(sharedKeyPeriodStart(schedule, mar1).toISOString()).toBe("2026-02-28T05:00:00.000Z");
+    expect(sharedKeyPeriodStart(schedule, mar28).toISOString()).toBe("2026-03-28T04:00:00.000Z");
+
+    const febStart = sharedKeyPeriodStart(schedule, feb28);
+    expect(sharedKeyPeriodEnd(schedule, febStart).toISOString()).toBe("2026-03-28T04:00:00.000Z");
+  });
+
+  it("handles month periods across America/New_York DST", () => {
+    const schedule: SharedKeyPeriodSchedule = {
+      period: "month",
+      resetDow: 1,
+      resetDom: 1,
+      resetMinutes: 0,
+      timezone: "America/New_York",
+    };
+    // March 1 2026 is still EST; April 1 is EDT.
+    const marMid = new Date("2026-03-15T12:00:00.000Z");
+    const start = sharedKeyPeriodStart(schedule, marMid);
+    expect(start.toISOString()).toBe("2026-03-01T05:00:00.000Z");
+    expect(sharedKeyPeriodEnd(schedule, start).toISOString()).toBe("2026-04-01T04:00:00.000Z");
+  });
+
+  it("keeps activePeriodStart until the next schedule boundary", () => {
+    const oldSchedule = DEFAULT_SHARED_KEY_PERIOD_SCHEDULE;
+    const active = sharedKeyPeriodStart(oldSchedule, new Date("2026-11-03T18:00:00.000Z"));
+    expect(active.toISOString()).toBe("2026-11-02T05:00:00.000Z");
+
+    const newSchedule: SharedKeyPeriodSchedule = {
+      period: "week",
+      resetDow: 3, // Wednesday
+      resetDom: 1,
+      resetMinutes: 0,
+      timezone: SHARED_KEY_BUDGET_TIMEZONE,
+    };
+    // From a Monday active start, +8d then recompute lands on the following Wednesday.
+    expect(sharedKeyPeriodEnd(newSchedule, active).toISOString()).toBe("2026-11-04T05:00:00.000Z");
+
+    const beforeBoundary = new Date("2026-11-04T04:59:59.000Z");
+    expect(
+      effectiveSharedKeyPeriodStart({
+        schedule: newSchedule,
+        activePeriodStart: active,
+        now: beforeBoundary,
+      }).toISOString(),
+    ).toBe(active.toISOString());
+
+    const afterBoundary = new Date("2026-11-04T05:00:00.000Z");
+    expect(
+      effectiveSharedKeyPeriodStart({
+        schedule: newSchedule,
+        activePeriodStart: active,
+        now: afterBoundary,
+      }).toISOString(),
+    ).toBe(sharedKeyPeriodStart(newSchedule, afterBoundary).toISOString());
+
+    expect(
+      effectiveSharedKeyPeriodStart({
+        schedule: newSchedule,
+        activePeriodStart: null,
+        now: beforeBoundary,
+      }).toISOString(),
+    ).toBe(sharedKeyPeriodStart(newSchedule, beforeBoundary).toISOString());
+  });
+
+  it("parseSharedKeyTimezone rejects garbage and accepts known zones", () => {
+    expect(parseSharedKeyTimezone(null)).toBeNull();
+    expect(parseSharedKeyTimezone("")).toBeNull();
+    expect(parseSharedKeyTimezone("   ")).toBeNull();
+    expect(parseSharedKeyTimezone("Not/A_Zone")).toBeNull();
+    expect(parseSharedKeyTimezone("America/New_York")).toBe("America/New_York");
+    expect(parseSharedKeyTimezone("UTC")).toBe("UTC");
+    expect(parseSharedKeyTimezone("  UTC  ")).toBe("UTC");
   });
 });

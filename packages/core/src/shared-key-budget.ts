@@ -1,17 +1,193 @@
-import { spendingPeriodStart } from "./spending.js";
+import { wallClock, zonedDateTime } from "./cron.js";
 
 /** Weekly shared-key budgets reset at Monday 00:00 in this zone. */
 export const SHARED_KEY_BUDGET_TIMEZONE = "America/New_York";
 
+export type SharedKeyPeriodKind = "week" | "month";
+
+export type SharedKeyPeriodSchedule = {
+  period: SharedKeyPeriodKind;
+  /** 0=Sunday .. 6=Saturday; default Monday=1 */
+  resetDow: number;
+  /** 1-28; default 1 */
+  resetDom: number;
+  /** minutes after local midnight 0..1439; default 0 */
+  resetMinutes: number;
+  /** IANA timezone name */
+  timezone: string;
+};
+
+export const DEFAULT_SHARED_KEY_PERIOD_SCHEDULE: SharedKeyPeriodSchedule = {
+  period: "week",
+  resetDow: 1,
+  resetDom: 1,
+  resetMinutes: 0,
+  timezone: SHARED_KEY_BUDGET_TIMEZONE,
+};
+
+/** Validate IANA timezone; return null if invalid. */
+export function parseSharedKeyTimezone(raw: string | null | undefined): string | null {
+  if (raw == null) return null;
+  const timezone = raw.trim();
+  if (!timezone) return null;
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: timezone }).format();
+    return timezone;
+  } catch {
+    return null;
+  }
+}
+
+/** Normalize partial/nullable DB fields into a schedule; null fields use defaults so null schedule === today's behavior. */
+export function resolveSharedKeyPeriodSchedule(
+  input?: Partial<SharedKeyPeriodSchedule> | null,
+): SharedKeyPeriodSchedule {
+  const defaults = DEFAULT_SHARED_KEY_PERIOD_SCHEDULE;
+  if (input == null) return { ...defaults };
+
+  const period =
+    input.period === "week" || input.period === "month" ? input.period : defaults.period;
+  const resetDow =
+    typeof input.resetDow === "number" &&
+    Number.isInteger(input.resetDow) &&
+    input.resetDow >= 0 &&
+    input.resetDow <= 6
+      ? input.resetDow
+      : defaults.resetDow;
+  const resetDom =
+    typeof input.resetDom === "number" &&
+    Number.isInteger(input.resetDom) &&
+    input.resetDom >= 1 &&
+    input.resetDom <= 28
+      ? input.resetDom
+      : defaults.resetDom;
+  const resetMinutes =
+    typeof input.resetMinutes === "number" &&
+    Number.isInteger(input.resetMinutes) &&
+    input.resetMinutes >= 0 &&
+    input.resetMinutes <= 1439
+      ? input.resetMinutes
+      : defaults.resetMinutes;
+  const timezone = parseSharedKeyTimezone(input.timezone) ?? defaults.timezone;
+
+  return { period, resetDow, resetDom, resetMinutes, timezone };
+}
+
+function pad2(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+function resetClockParts(resetMinutes: number): { hour: number; minute: number } {
+  const clamped = Math.min(1439, Math.max(0, Math.trunc(resetMinutes)));
+  return { hour: Math.floor(clamped / 60), minute: clamped % 60 };
+}
+
+function localWallParts(
+  now: Date,
+  timezone: string,
+): { year: number; month: number; day: number; localMinutes: number } {
+  const clock = wallClock(now, timezone);
+  const [datePart, timePart = "00:00:00"] = clock.split("T");
+  const [year, month, day] = datePart!.split("-").map(Number) as [number, number, number];
+  const [hour, minute] = timePart.split(":").map(Number) as [number, number];
+  return { year, month, day, localMinutes: hour * 60 + minute };
+}
+
+function instantAtLocal(
+  year: number,
+  month: number,
+  day: number,
+  resetMinutes: number,
+  timezone: string,
+): Date {
+  const { hour, minute } = resetClockParts(resetMinutes);
+  const iso = `${year}-${pad2(month)}-${pad2(day)}T${pad2(hour)}:${pad2(minute)}`;
+  return zonedDateTime(iso, timezone) ?? new Date(Date.UTC(year, month - 1, day, hour, minute));
+}
+
+/** Period start containing `now` for the given schedule (DST-safe via wallClock/zonedDateTime). */
+export function sharedKeyPeriodStart(schedule: SharedKeyPeriodSchedule, now = new Date()): Date {
+  const { year, month, day, localMinutes } = localWallParts(now, schedule.timezone);
+
+  if (schedule.period === "month") {
+    const resetDom = Math.min(28, Math.max(1, Math.trunc(schedule.resetDom) || 1));
+    let y = year;
+    let m = month;
+    const beforeReset =
+      day < resetDom || (day === resetDom && localMinutes < schedule.resetMinutes);
+    if (beforeReset) {
+      m -= 1;
+      if (m < 1) {
+        m = 12;
+        y -= 1;
+      }
+    }
+    return instantAtLocal(y, m, resetDom, schedule.resetMinutes, schedule.timezone);
+  }
+
+  const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+  const resetDow = ((Math.trunc(schedule.resetDow) % 7) + 7) % 7;
+  let daysBack = (weekday - resetDow + 7) % 7;
+  if (daysBack === 0 && localMinutes < schedule.resetMinutes) daysBack = 7;
+  const start = new Date(Date.UTC(year, month - 1, day - daysBack));
+  return instantAtLocal(
+    start.getUTCFullYear(),
+    start.getUTCMonth() + 1,
+    start.getUTCDate(),
+    schedule.resetMinutes,
+    schedule.timezone,
+  );
+}
+
+/** Next period start after `periodStart` (DST-safe). */
+export function sharedKeyPeriodEnd(schedule: SharedKeyPeriodSchedule, periodStart: Date): Date {
+  if (schedule.period === "month") {
+    const { year, month } = localWallParts(periodStart, schedule.timezone);
+    const resetDom = Math.min(28, Math.max(1, Math.trunc(schedule.resetDom) || 1));
+    let nextYear = year;
+    let nextMonth = month + 1;
+    if (nextMonth > 12) {
+      nextMonth = 1;
+      nextYear += 1;
+    }
+    return instantAtLocal(
+      nextYear,
+      nextMonth,
+      resetDom,
+      schedule.resetMinutes,
+      schedule.timezone,
+    );
+  }
+
+  const nextWeekInstant = new Date(periodStart.getTime() + 8 * 24 * 60 * 60 * 1000);
+  return sharedKeyPeriodStart(schedule, nextWeekInstant);
+}
+
+/**
+ * Effective period start: if activePeriodStart is set and now < periodEnd(activePeriodStart),
+ * keep activePeriodStart (schedule change takes effect at next boundary). Otherwise compute from schedule.
+ */
+export function effectiveSharedKeyPeriodStart(args: {
+  schedule: SharedKeyPeriodSchedule;
+  activePeriodStart?: Date | null;
+  now?: Date;
+}): Date {
+  const now = args.now ?? new Date();
+  if (args.activePeriodStart) {
+    const end = sharedKeyPeriodEnd(args.schedule, args.activePeriodStart);
+    if (now.getTime() < end.getTime()) return args.activePeriodStart;
+  }
+  return sharedKeyPeriodStart(args.schedule, now);
+}
+
 /** Monday 00:00 America/New_York for the week that contains `now`. */
 export function sharedKeyWeekStart(now = new Date()): Date {
-  return spendingPeriodStart("week", now, SHARED_KEY_BUDGET_TIMEZONE, now);
+  return sharedKeyPeriodStart(DEFAULT_SHARED_KEY_PERIOD_SCHEDULE, now);
 }
 
 /** Next Monday 00:00 America/New_York after `weekStart` (DST-safe week length). */
 export function sharedKeyWeekEnd(weekStart: Date): Date {
-  const nextWeekInstant = new Date(weekStart.getTime() + 8 * 24 * 60 * 60 * 1000);
-  return sharedKeyWeekStart(nextWeekInstant);
+  return sharedKeyPeriodEnd(DEFAULT_SHARED_KEY_PERIOD_SCHEDULE, weekStart);
 }
 
 /**
@@ -192,16 +368,21 @@ export function sharedKeyBudgetPercentUsed(spentUsd: number, allotmentUsd: numbe
 export const SHARED_KEY_MONTHLY_BUDGET_MAX_USD = 1_000_000;
 
 /**
- * Account-menu reset label, e.g. "Mon 12:00 AM", always in America/New_York.
+ * Account-menu reset label, e.g. "Mon 12:00 AM", in the given timezone (default America/New_York).
  */
-export function formatSharedKeyBudgetResetAt(resetsAt: Date | string, locale = "en-US"): string {
+export function formatSharedKeyBudgetResetAt(
+  resetsAt: Date | string,
+  locale = "en-US",
+  timezone = SHARED_KEY_BUDGET_TIMEZONE,
+): string {
   const date = typeof resetsAt === "string" ? new Date(resetsAt) : resetsAt;
+  const zone = parseSharedKeyTimezone(timezone) ?? SHARED_KEY_BUDGET_TIMEZONE;
   const weekday = new Intl.DateTimeFormat(locale, {
-    timeZone: SHARED_KEY_BUDGET_TIMEZONE,
+    timeZone: zone,
     weekday: "short",
   }).format(date);
   const time = new Intl.DateTimeFormat(locale, {
-    timeZone: SHARED_KEY_BUDGET_TIMEZONE,
+    timeZone: zone,
     hour: "numeric",
     minute: "2-digit",
     hour12: true,

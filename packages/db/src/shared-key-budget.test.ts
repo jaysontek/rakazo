@@ -107,7 +107,35 @@ function fakePrisma(state: {
   const client = {
     deploymentSettings: {
       findUnique: vi.fn(async () =>
-        state.monthly == null ? null : { sharedKeyMonthlyBudgetUsd: state.monthly },
+        state.monthly == null
+          ? {
+              sharedKeyMonthlyBudgetUsd: null,
+              sharedKeyPeriod: null,
+              sharedKeyResetDow: null,
+              sharedKeyResetDom: null,
+              sharedKeyResetMinutes: null,
+              sharedKeyTimezone: null,
+              sharedKeyActivePeriodStart: null,
+              sharedKeyAutoEnrollMode: null,
+              sharedKeyWarningThresholds: null,
+              sharedKeyHardStopEnabled: null,
+              sharedKeyHoldStaleMinutes: null,
+              sharedKeyPruneInactive: null,
+            }
+          : {
+              sharedKeyMonthlyBudgetUsd: state.monthly,
+              sharedKeyPeriod: null,
+              sharedKeyResetDow: null,
+              sharedKeyResetDom: null,
+              sharedKeyResetMinutes: null,
+              sharedKeyTimezone: null,
+              sharedKeyActivePeriodStart: null,
+              sharedKeyAutoEnrollMode: null,
+              sharedKeyWarningThresholds: null,
+              sharedKeyHardStopEnabled: null,
+              sharedKeyHoldStaleMinutes: null,
+              sharedKeyPruneInactive: null,
+            },
       ),
       upsert: vi.fn(
         async ({
@@ -121,6 +149,20 @@ function fakePrisma(state: {
           return { sharedKeyMonthlyBudgetUsd: state.monthly };
         },
       ),
+    },
+    sharedKeyMemberOverride: {
+      findMany: vi.fn(async () => []),
+      findUnique: vi.fn(async () => null),
+      upsert: vi.fn(async () => null),
+      deleteMany: vi.fn(async () => ({ count: 0 })),
+    },
+    sharedKeySpendAdjustment: {
+      aggregate: vi.fn(async () => ({ _sum: { deltaUsd: 0 } })),
+      groupBy: vi.fn(async () => []),
+      findMany: vi.fn(async () => []),
+      findUnique: vi.fn(async () => null),
+      findFirst: vi.fn(async () => null),
+      create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => data),
     },
     userModelCredential: {
       findFirst: vi.fn(async (): Promise<{ id: string } | null> => null),
@@ -366,7 +408,9 @@ function fakePrisma(state: {
         state.members = state.members.filter((m) => m.userId !== where.userId);
       }),
       deleteMany: vi.fn(async ({ where }: { where: { userId: string } }) => {
+        const before = state.members.length;
         state.members = state.members.filter((m) => m.userId !== where.userId);
+        return { count: before - state.members.length };
       }),
     },
     sharedKeyAllotmentTransfer: {
@@ -508,19 +552,27 @@ function fakePrisma(state: {
           where,
         }: {
           where: {
-            userId: string;
+            userId?: string | { in: string[] };
             sharedKey: boolean;
-            createdAt: { gte: Date; lt: Date };
+            createdAt?: { gte?: Date; lt: Date };
           };
         }) => {
           const sum = state.usage
-            .filter(
-              (row) =>
-                row.userId === where.userId &&
-                row.sharedKey === where.sharedKey &&
-                row.createdAt >= where.createdAt.gte &&
-                row.createdAt < where.createdAt.lt,
-            )
+            .filter((row) => {
+              if (row.sharedKey !== where.sharedKey) return false;
+              if (typeof where.userId === "string" && row.userId !== where.userId) return false;
+              if (
+                where.userId &&
+                typeof where.userId === "object" &&
+                "in" in where.userId &&
+                !where.userId.in.includes(row.userId)
+              ) {
+                return false;
+              }
+              if (where.createdAt?.gte && row.createdAt < where.createdAt.gte) return false;
+              if (where.createdAt?.lt && !(row.createdAt < where.createdAt.lt)) return false;
+              return true;
+            })
             .reduce((acc, row) => acc + row.costUsd, 0);
           return { _sum: { costUsd: sum } };
         },
@@ -532,7 +584,7 @@ function fakePrisma(state: {
           where: {
             userId: { in: string[] };
             sharedKey: boolean;
-            createdAt: { gte: Date; lt: Date };
+            createdAt: { gte?: Date; lt: Date };
           };
         }) => {
           const map = new Map<string, number>();
@@ -540,7 +592,7 @@ function fakePrisma(state: {
             if (
               where.userId.in.includes(row.userId) &&
               row.sharedKey === where.sharedKey &&
-              row.createdAt >= where.createdAt.gte &&
+              (!where.createdAt.gte || row.createdAt >= where.createdAt.gte) &&
               row.createdAt < where.createdAt.lt
             ) {
               map.set(row.userId, (map.get(row.userId) ?? 0) + row.costUsd);
