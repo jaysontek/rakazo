@@ -770,3 +770,38 @@ export function parseSharedKeyBudgetUserIds(raw: string | undefined): string[] {
     ),
   ];
 }
+
+/**
+ * Parse SHARED_KEY_BUDGET_EMAIL_DOMAINS as a comma-separated list of domains
+ * (lowercased, trimmed). Empty / unset → no domain grants auto-enroll.
+ */
+export function parseSharedKeyBudgetEmailDomains(raw: string | undefined): string[] {
+  if (!raw?.trim()) return [];
+  return [
+    ...new Set(
+      raw
+        .split(",")
+        .map((part) => part.trim().toLowerCase().replace(/^\.+|\.+$/g, ""))
+        .filter(Boolean),
+    ),
+  ];
+}
+
+/**
+ * Exact domain match on the part after the last `@` (case-insensitive).
+ * No subdomain or suffix tricks: `evil-tekweld.com` and `tekweld.com.evil.io` fail
+ * when only `tekweld.com` is listed. Empty allowlist always denies.
+ */
+export function emailDomainMatchesSharedKeyAllowlist(
+  email: string,
+  domains: readonly string[],
+): boolean {
+  if (domains.length === 0) return false;
+  const at = email.lastIndexOf("@");
+  if (at < 0 || at === email.length - 1) return false;
+  const domain = email.slice(at + 1).trim().toLowerCase();
+  if (!domain) return false;
+  const allowed = new Set(domains.map((entry) => entry.trim().toLowerCase()).filter(Boolean));
+  return allowed.has(domain);
+}
+

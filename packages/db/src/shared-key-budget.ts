@@ -3,6 +3,7 @@ import {
   DEFAULT_SHARED_KEY_PERIOD_SCHEDULE,
   effectiveSharedKeyPeriodStart,
   effectiveSharedKeySpendUsd,
+  emailDomainMatchesSharedKeyAllowlist,
   fullWeekShareUsd,
   isGatedSharedKeyDeployment,
   parseSharedKeyMonthlyBudgetInput,
@@ -10,7 +11,6 @@ import {
   resolveSharedKeyPeriodSchedule,
   sharedKeyBudgetPercentUsed,
   sharedKeyPeriodEnd,
-  sharedKeyPeriodPoolUsd,
   sharedKeyPeriodStart,
 } from "@rakazo/core";
 
@@ -175,35 +175,39 @@ export function resolvePruneInactive(value: boolean | null | undefined): boolean
 }
 
 /**
- * Auto-enroll policy passed from api/worker.
- * Eligibility itself is verified email + any membership (Personal-org OK); open vs gated
- * no longer changes the bar. `gatedDeployment` / `adminEmails` remain for ops settings
- * validation and audit context. `explicitUserIds` (SHARED_KEY_BUDGET_USER_IDS) is an
- * additive hot-path bypass. Always pass this explicitly — never invent a default in workers.
+ * Auto-enroll policy from api/worker.
+ * Fail-closed for open signups: verified + membership is not enough unless the
+ * email domain is listed, the user shares a non-Personal org with an ops admin,
+ * or the deployment is gated. `explicitUserIds` (SHARED_KEY_BUDGET_USER_IDS) is
+ * an additive hot-path bypass. Always pass this explicitly — never invent a
+ * gated default in workers.
  */
 export type SharedKeyBudgetEnrollmentPolicy = {
   gatedDeployment: boolean;
-  /** Lowercased RAKAZO_ADMIN_EMAILS (ops context; not an eligibility gate). */
+  /** Lowercased RAKAZO_ADMIN_EMAILS for the open-signup admin-share bar. */
   adminEmails: string[];
   /** SHARED_KEY_BUDGET_USER_IDS — bypass eligibility on the hot path too. */
   explicitUserIds: string[];
+  /** Lowercased SHARED_KEY_BUDGET_EMAIL_DOMAINS — exact domain match after `@`. */
+  emailDomains: string[];
 };
 
 /**
- * Default when a call site has no deployment posture yet (tests / missing deps).
- * Verified users still auto-enroll; only unverified / no-membership / hidden fail.
+ * Strict open-signup default: no auto-enroll unless domain / admin-share / env list.
  */
 export const STRICT_SHARED_KEY_ENROLLMENT_POLICY: SharedKeyBudgetEnrollmentPolicy = {
   gatedDeployment: false,
   adminEmails: [],
   explicitUserIds: [],
+  emailDomains: [],
 };
 
-/** Unit-test alias: same eligibility bar as production (verified + membership). */
+/** Gated unit-test policy: verified email + any membership is enough. */
 export const GATED_SHARED_KEY_ENROLLMENT_POLICY: SharedKeyBudgetEnrollmentPolicy = {
   gatedDeployment: true,
   adminEmails: [],
   explicitUserIds: [],
+  emailDomains: [],
 };
 
 export type AddSharedKeyBudgetMemberResult =
@@ -222,6 +226,7 @@ export function sharedKeyBudgetEnrollmentPolicyFromEnv(input: {
   directoryProvisioning?: boolean;
   adminEmails: readonly string[];
   explicitUserIds?: readonly string[];
+  emailDomains?: readonly string[];
 }): SharedKeyBudgetEnrollmentPolicy {
   return {
     gatedDeployment: isGatedSharedKeyDeployment({
@@ -232,6 +237,9 @@ export function sharedKeyBudgetEnrollmentPolicyFromEnv(input: {
     }),
     adminEmails: input.adminEmails.map((email) => email.trim().toLowerCase()).filter(Boolean),
     explicitUserIds: [...(input.explicitUserIds ?? [])].map((id) => id.trim()).filter(Boolean),
+    emailDomains: [...(input.emailDomains ?? [])]
+      .map((domain) => domain.trim().toLowerCase())
+      .filter(Boolean),
   };
 }
 
@@ -636,13 +644,13 @@ export async function recomputeSharedKeyWeekAllotmentsTx(
  * Always rejects deactivated / hidden accounts.
  * SHARED_KEY_BUDGET_USER_IDS and explicit admin adds bypass via `bypassEligibilityBar`
  * (or `policy.explicitUserIds` on the hot path) — additive override, including unverified.
- * Otherwise: verified email + any organization membership (Personal-org is fine).
- * Open vs gated signup posture no longer changes this bar; reserve only runs for
- * callers already using the deployment shared key, so verified company-key users enroll
- * on first use without a manual env-list entry or admin Add.
+ * Otherwise requires verified email + membership, and then one of:
+ *   (a) email domain in SHARED_KEY_BUDGET_EMAIL_DOMAINS (exact match; empty = no grant),
+ *   (b) share a non-Personal org with an ops admin, or
+ *   (c) gatedDeployment (verified + any membership, including Personal).
  */
 export async function userEligibleForSharedKeyBudget(
-  tx: Pick<BudgetTx, "user" | "member">,
+  tx: Pick<BudgetTx, "user" | "member" | "adminGrant">,
   userId: string,
   options: {
     policy: SharedKeyBudgetEnrollmentPolicy;
@@ -658,11 +666,90 @@ export async function userEligibleForSharedKeyBudget(
   if (options.bypassEligibilityBar) return true;
   if (options.policy.explicitUserIds.includes(userId)) return true;
   if (!user.emailVerified) return false;
-  const membership = await tx.member.findFirst({
+  const memberships = await tx.member.findMany({
     where: { userId },
     select: { organizationId: true },
   });
-  return membership != null;
+  if (memberships.length === 0) return false;
+  if (options.policy.gatedDeployment) return true;
+  if (emailDomainMatchesSharedKeyAllowlist(user.email, options.policy.emailDomains)) {
+    return true;
+  }
+  return sharesNonPersonalOrgWithOpsAdmin(tx, userId, memberships, options.policy.adminEmails);
+}
+
+/** Orgs with only one member are personal bootstraps; multi-member orgs are team orgs. */
+async function nonPersonalOrgMembership(
+  tx: Pick<BudgetTx, "member">,
+  memberships: Array<{ organizationId: string }>,
+): Promise<{ hasNonPersonal: boolean; byOrg: Map<string, string[]> }> {
+  const orgIds = memberships.map((row) => row.organizationId);
+  const peers = await tx.member.findMany({
+    where: { organizationId: { in: orgIds } },
+    select: { organizationId: true, userId: true },
+  });
+  const byOrg = new Map<string, string[]>();
+  for (const peer of peers) {
+    const list = byOrg.get(peer.organizationId) ?? [];
+    list.push(peer.userId);
+    byOrg.set(peer.organizationId, list);
+  }
+  let hasNonPersonal = false;
+  for (const userIds of byOrg.values()) {
+    if (userIds.length >= 2) {
+      hasNonPersonal = true;
+      break;
+    }
+  }
+  return { hasNonPersonal, byOrg };
+}
+
+async function sharesNonPersonalOrgWithOpsAdmin(
+  tx: Pick<BudgetTx, "user" | "member" | "adminGrant">,
+  userId: string,
+  memberships: Array<{ organizationId: string }>,
+  adminEmails: string[],
+  precomputed?: { hasNonPersonal: boolean; byOrg: Map<string, string[]> },
+): Promise<boolean> {
+  const { byOrg } = precomputed ?? (await nonPersonalOrgMembership(tx, memberships));
+  const candidateAdminIds = new Set<string>();
+  for (const userIds of byOrg.values()) {
+    if (userIds.length < 2) continue;
+    for (const id of userIds) {
+      if (id !== userId) candidateAdminIds.add(id);
+    }
+  }
+  if (candidateAdminIds.size === 0) return false;
+
+  const grantHolders = await tx.adminGrant.findMany({
+    where: { userId: { in: [...candidateAdminIds] } },
+    select: { userId: true },
+  });
+  if (grantHolders.length > 0) {
+    const activeVerified = await tx.user.findFirst({
+      where: {
+        id: { in: grantHolders.map((row) => row.userId) },
+        emailVerified: true,
+        deactivatedAt: null,
+      },
+      select: { id: true },
+    });
+    if (activeVerified) return true;
+  }
+
+  const adminEmailSet = new Set(
+    adminEmails.map((email) => email.trim().toLowerCase()).filter(Boolean),
+  );
+  if (adminEmailSet.size === 0) return false;
+  const candidates = await tx.user.findMany({
+    where: {
+      id: { in: [...candidateAdminIds] },
+      emailVerified: true,
+      deactivatedAt: null,
+    },
+    select: { email: true },
+  });
+  return candidates.some((row) => adminEmailSet.has(row.email.toLowerCase()));
 }
 
 /**
@@ -1026,9 +1113,8 @@ async function ensureMemberAllotment(
  */
 /**
  * Apply DB auto-enroll mode override on top of the signup-derived policy.
- * null = keep policy as-is; "off" disables auto-enroll; "open" forces the open bar.
- * "gated" never forces gatedDeployment:true — it is only valid when the deployment
- * is already gated, and leaves the existing policy flag alone.
+ * null = keep policy as-is; "off" disables auto-enroll; "open" forces the open bar;
+ * "gated" forces gatedDeployment:true so the mode actually differs from open.
  */
 export function applyAutoEnrollMode(
   policy: SharedKeyBudgetEnrollmentPolicy,
@@ -1040,10 +1126,11 @@ export function applyAutoEnrollMode(
       ...policy,
       gatedDeployment: false,
       adminEmails: [],
+      emailDomains: [],
       explicitUserIds: policy.explicitUserIds,
     };
   }
-  if (mode === "gated") return policy;
+  if (mode === "gated") return { ...policy, gatedDeployment: true };
   if (mode === "open") return { ...policy, gatedDeployment: false };
   return policy;
 }
@@ -1084,6 +1171,14 @@ export async function reserveSharedKeyBudget(
         where: { userId },
         select: { userId: true },
       });
+      // Fail closed if a roster member was deactivated after enroll.
+      const activeUser = await tx.user.findUnique({
+        where: { id: userId },
+        select: { deactivatedAt: true },
+      });
+      if (!activeUser || activeUser.deactivatedAt != null) {
+        throw new SharedKeyBudgetNotEnrolledError();
+      }
       if (!alreadyMember) {
         if (autoEnrollOff && !effectivePolicy.explicitUserIds.includes(userId)) {
           throw new SharedKeyBudgetNotEnrolledError();

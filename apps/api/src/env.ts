@@ -23,6 +23,7 @@ import { parseCrispWebsiteId } from "@rakazo/contracts/content-security-policy";
 import {
   attachmentCountFromEnv,
   parseAdminEmails,
+  parseSharedKeyBudgetEmailDomains,
   parseSharedKeyBudgetUserIds,
   parseSharedKeyMonthlyBudgetUsd,
   phoneCallSettings,
@@ -115,6 +116,8 @@ export interface AppEnv {
   sharedKeyMonthlyBudgetUsd: number | null;
   /** User ids that share the deployment key budget (SHARED_KEY_BUDGET_USER_IDS). */
   sharedKeyBudgetUserIds: string[];
+  /** Exact email domains that auto-enroll on the shared key (SHARED_KEY_BUDGET_EMAIL_DOMAINS). */
+  sharedKeyBudgetEmailDomains: string[];
   e2bApiKey: string | undefined;
   novitaApiKey: string | undefined;
   sandboxTemplate: string | undefined;
@@ -305,6 +308,9 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
     deploymentModelHostCredentials: deploymentModel.hostCredentials,
     sharedKeyMonthlyBudgetUsd: parseSharedKeyMonthlyBudgetUsd(source.SHARED_KEY_MONTHLY_BUDGET_USD),
     sharedKeyBudgetUserIds: parseSharedKeyBudgetUserIds(source.SHARED_KEY_BUDGET_USER_IDS),
+    sharedKeyBudgetEmailDomains: parseSharedKeyBudgetEmailDomains(
+      source.SHARED_KEY_BUDGET_EMAIL_DOMAINS,
+    ),
     e2bApiKey: source.E2B_API_KEY,
     novitaApiKey: source.NOVITA_API_KEY,
     sandboxTemplate: source.SANDBOX_TEMPLATE,

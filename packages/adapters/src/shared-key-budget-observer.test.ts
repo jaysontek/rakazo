@@ -26,6 +26,7 @@ vi.mock("@rakazo/db", () => ({
     gatedDeployment: false,
     adminEmails: [],
     explicitUserIds: [],
+    emailDomains: [],
   },
   SharedKeyWeeklyBudgetExceededError: class SharedKeyWeeklyBudgetExceededError extends Error {
     constructor() {
@@ -94,6 +95,7 @@ describe("shared-key budget observer", () => {
       gatedDeployment: false,
       adminEmails: [],
       explicitUserIds: [],
+      emailDomains: [],
     });
     await observer!.afterCall(id, null);
     expect(releaseSharedKeyBudgetHold).toHaveBeenCalledWith({}, "user-1", 0.02);

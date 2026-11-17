@@ -87,6 +87,8 @@ function fakePrisma(state: {
    * team peer so gated eligibility is not accidentally Personal-only.
    */
   personalOnlyUserIds?: string[];
+  /** Optional override emails (default `${id}@example.com`). */
+  userEmails?: Record<string, string>;
   enrollmentRequests?: Array<{ weekStart: Date; userId: string; lastHitAt?: Date }>;
   auditEvents?: Array<Record<string, unknown>>;
   locks?: string[];
@@ -108,6 +110,8 @@ function fakePrisma(state: {
   const personalOnly = new Set(state.personalOnlyUserIds ?? []);
   const adminGrants = new Set(state.adminGrantUserIds ?? []);
   const orgPeers = state.orgPeers ?? {};
+  const userEmails = state.userEmails ?? {};
+  const emailOf = (id: string) => userEmails[id] ?? `${id}@example.com`;
   const peersFor = (ownerId: string): string[] => {
     if (ownerId in orgPeers) return orgPeers[ownerId] ?? [];
     if (personalOnly.has(ownerId)) return [];
@@ -330,7 +334,7 @@ function fakePrisma(state: {
             )
             .map((id) => ({
               id,
-              email: `${id}@example.com`,
+              email: emailOf(id),
               deactivatedAt: deactivated.has(id) ? new Date("2026-01-01T00:00:00.000Z") : null,
               emailVerified: !unverified.has(id),
             })),
@@ -355,7 +359,7 @@ function fakePrisma(state: {
           return hit
             ? {
                 id: hit,
-                email: `${hit}@example.com`,
+                email: emailOf(hit),
                 deactivatedAt: null,
                 emailVerified: !unverified.has(hit),
               }
@@ -368,7 +372,7 @@ function fakePrisma(state: {
         if (ineligible.has(where.id)) {
           return {
             id: where.id,
-            email: `${where.id}@example.com`,
+            email: emailOf(where.id),
             deactivatedAt: new Date("2026-01-01T00:00:00.000Z"),
             emailVerified: false,
           };
@@ -376,7 +380,7 @@ function fakePrisma(state: {
         // Default: verified, active — eligibility also needs a membership row.
         return {
           id: where.id,
-          email: `${where.id}@example.com`,
+          email: emailOf(where.id),
           deactivatedAt: deactivated.has(where.id) ? new Date("2026-01-01T00:00:00.000Z") : null,
           emailVerified: !unverified.has(where.id),
         };
@@ -1372,11 +1376,12 @@ describe("shared-key weekly budget", () => {
     expect(auditEvents[0]).toMatchObject({ action: "shared_key_budget.member.added" });
   });
 
-  it("under open signups, a verified Personal-org-only user is auto-enrolled", async () => {
+  it("under open signups, denies verified Personal-org-only user without company domain", async () => {
     const open: SharedKeyBudgetEnrollmentPolicy = {
       gatedDeployment: false,
       adminEmails: ["admin@example.com"],
       explicitUserIds: [],
+      emailDomains: [],
     };
     const state = {
       monthly: 400,
@@ -1390,26 +1395,119 @@ describe("shared-key weekly budget", () => {
     const { client, auditEvents } = fakePrisma(state);
     await expect(
       reserveSharedKeyBudget(client as never, "solo", 1, midweek, open),
-    ).resolves.toBeUndefined();
-    expect(state.members.map((m) => m.userId)).toEqual(["solo"]);
-    expect(auditEvents.some((row) => row.action === "shared_key_budget.member.auto_enrolled")).toBe(
-      true,
-    );
+    ).rejects.toBeInstanceOf(SharedKeyBudgetNotEnrolledError);
+    expect(state.members).toHaveLength(0);
+    expect(auditEvents).toHaveLength(0);
   });
 
-  it("under open signups, a verified multi-member org user is enrolled without an admin peer", async () => {
+  it("under open signups, enrolls a verified tekweld.com user when domain env is set", async () => {
     const open: SharedKeyBudgetEnrollmentPolicy = {
       gatedDeployment: false,
       adminEmails: [],
       explicitUserIds: [],
+      emailDomains: ["tekweld.com"],
     };
     const state = {
       monthly: 400,
       members: [] as Member[],
       allotments: [] as Allotment[],
       usage: [] as Usage[],
-      knownUserIds: ["teammate", "peer"],
-      orgPeers: { teammate: ["peer"] },
+      knownUserIds: ["tommy"],
+      personalOnlyUserIds: ["tommy"],
+      userEmails: { tommy: "TommyP@Tekweld.com" },
+      auditEvents: [] as Array<Record<string, unknown>>,
+    };
+    const { client, auditEvents } = fakePrisma(state);
+    await expect(
+      reserveSharedKeyBudget(client as never, "tommy", 1, midweek, open),
+    ).resolves.toBeUndefined();
+    expect(state.members.map((m) => m.userId)).toEqual(["tommy"]);
+    expect(auditEvents.some((row) => row.action === "shared_key_budget.member.auto_enrolled")).toBe(
+      true,
+    );
+  });
+
+  it("denies lookalike domains and allows case-insensitive exact domain match", async () => {
+    const open: SharedKeyBudgetEnrollmentPolicy = {
+      gatedDeployment: false,
+      adminEmails: [],
+      explicitUserIds: [],
+      emailDomains: ["Tekweld.COM"],
+    };
+    for (const [id, email] of [
+      ["evil", "user@evil-tekweld.com"],
+      ["suffix", "user@tekweld.com.evil.io"],
+    ] as const) {
+      const state = {
+        monthly: 400,
+        members: [] as Member[],
+        allotments: [] as Allotment[],
+        usage: [] as Usage[],
+        knownUserIds: [id],
+        personalOnlyUserIds: [id],
+        userEmails: { [id]: email },
+        auditEvents: [] as Array<Record<string, unknown>>,
+      };
+      const { client } = fakePrisma(state);
+      await expect(
+        reserveSharedKeyBudget(client as never, id, 1, midweek, open),
+      ).rejects.toBeInstanceOf(SharedKeyBudgetNotEnrolledError);
+      expect(state.members).toHaveLength(0);
+    }
+    const allowed = {
+      monthly: 400,
+      members: [] as Member[],
+      allotments: [] as Allotment[],
+      usage: [] as Usage[],
+      knownUserIds: ["ok"],
+      personalOnlyUserIds: ["ok"],
+      userEmails: { ok: "person@TEKWELD.com" },
+      auditEvents: [] as Array<Record<string, unknown>>,
+    };
+    const { client } = fakePrisma(allowed);
+    await expect(
+      reserveSharedKeyBudget(client as never, "ok", 1, midweek, open),
+    ).resolves.toBeUndefined();
+  });
+
+  it("denies company-looking Personal users when SHARED_KEY_BUDGET_EMAIL_DOMAINS is unset", async () => {
+    const open: SharedKeyBudgetEnrollmentPolicy = {
+      gatedDeployment: false,
+      adminEmails: [],
+      explicitUserIds: [],
+      emailDomains: [],
+    };
+    const state = {
+      monthly: 400,
+      members: [] as Member[],
+      allotments: [] as Allotment[],
+      usage: [] as Usage[],
+      knownUserIds: ["tommy"],
+      personalOnlyUserIds: ["tommy"],
+      userEmails: { tommy: "tommyp@tekweld.com" },
+      auditEvents: [] as Array<Record<string, unknown>>,
+    };
+    const { client } = fakePrisma(state);
+    await expect(
+      reserveSharedKeyBudget(client as never, "tommy", 1, midweek, open),
+    ).rejects.toBeInstanceOf(SharedKeyBudgetNotEnrolledError);
+  });
+
+  it("under open signups, enrolls a user sharing a non-personal org with an admin", async () => {
+    const open: SharedKeyBudgetEnrollmentPolicy = {
+      gatedDeployment: false,
+      adminEmails: [],
+      explicitUserIds: [],
+      emailDomains: [],
+    };
+    const state = {
+      monthly: 400,
+      members: [] as Member[],
+      allotments: [] as Allotment[],
+      usage: [] as Usage[],
+      knownUserIds: ["teammate", "boss"],
+      orgPeers: { teammate: ["boss"] },
+      adminGrantUserIds: ["boss"],
       auditEvents: [] as Array<Record<string, unknown>>,
     };
     const { client, auditEvents } = fakePrisma(state);
@@ -1427,6 +1525,7 @@ describe("shared-key weekly budget", () => {
       gatedDeployment: true,
       adminEmails: [],
       explicitUserIds: [],
+      emailDomains: [],
     };
     const state = {
       monthly: 400,
@@ -1452,6 +1551,7 @@ describe("shared-key weekly budget", () => {
       gatedDeployment: true,
       adminEmails: [],
       explicitUserIds: [],
+      emailDomains: [],
     };
     const state = {
       monthly: 400,
@@ -1469,35 +1569,12 @@ describe("shared-key weekly budget", () => {
     expect(state.members.map((m) => m.userId)).toEqual(["teammate"]);
   });
 
-  it("auto-enrolls verified Personal-org users in every signup posture", async () => {
-    for (const gatedDeployment of [true, false]) {
-      const policy: SharedKeyBudgetEnrollmentPolicy = {
-        gatedDeployment,
-        adminEmails: ["admin@example.com"],
-        explicitUserIds: [],
-      };
-      const state = {
-        monthly: 400,
-        members: [] as Member[],
-        allotments: [] as Allotment[],
-        usage: [] as Usage[],
-        knownUserIds: ["solo"],
-        personalOnlyUserIds: ["solo"],
-        auditEvents: [] as Array<Record<string, unknown>>,
-      };
-      const { client } = fakePrisma(state);
-      await expect(
-        reserveSharedKeyBudget(client as never, "solo", 1, midweek, policy),
-      ).resolves.toBeUndefined();
-      expect(state.members.map((m) => m.userId)).toEqual(["solo"]);
-    }
-  });
-
   it("denies unverified users even when they have membership", async () => {
     const open: SharedKeyBudgetEnrollmentPolicy = {
       gatedDeployment: false,
       adminEmails: [],
       explicitUserIds: [],
+      emailDomains: [],
     };
     const state = {
       monthly: 400,
@@ -1522,6 +1599,7 @@ describe("shared-key weekly budget", () => {
       gatedDeployment: false,
       adminEmails: [],
       explicitUserIds: [],
+      emailDomains: [],
     };
     const state = {
       monthly: 400,
@@ -1550,6 +1628,7 @@ describe("shared-key weekly budget", () => {
       gatedDeployment: false,
       adminEmails: [],
       explicitUserIds: [],
+      emailDomains: [],
     };
     const state = {
       monthly: 400,
@@ -1637,12 +1716,21 @@ describe("shared-key weekly budget", () => {
         signupAllowlist: undefined,
         adminEmails: ["Ops@Example.com"],
         explicitUserIds: [" env-user "],
+        emailDomains: [" Tekweld.COM ", "builddrive.net"],
       }),
     ).toEqual({
       gatedDeployment: false,
       adminEmails: ["ops@example.com"],
       explicitUserIds: ["env-user"],
+      emailDomains: ["tekweld.com", "builddrive.net"],
     });
+    expect(
+      sharedKeyBudgetEnrollmentPolicyFromEnv({
+        signupsEnabled: "true",
+        signupAllowlist: "alice@example.com,@tekweld.com",
+        adminEmails: [],
+      }).gatedDeployment,
+    ).toBe(true);
     expect(STRICT_SHARED_KEY_ENROLLMENT_POLICY.gatedDeployment).toBe(false);
   });
 
@@ -1651,6 +1739,7 @@ describe("shared-key weekly budget", () => {
       gatedDeployment: false,
       adminEmails: [],
       explicitUserIds: ["env-user"],
+      emailDomains: [],
     };
     const state = {
       monthly: 400,
@@ -1667,11 +1756,12 @@ describe("shared-key weekly budget", () => {
     expect(state.members.map((m) => m.userId)).toEqual(["env-user"]);
   });
 
-  it("enrolls a verified teammate even when the only AdminGrant peer is deactivated", async () => {
+  it("refuses auto-enroll when the only AdminGrant peer is deactivated", async () => {
     const open: SharedKeyBudgetEnrollmentPolicy = {
       gatedDeployment: false,
       adminEmails: [],
       explicitUserIds: [],
+      emailDomains: [],
     };
     const state = {
       monthly: 400,
@@ -1687,11 +1777,9 @@ describe("shared-key weekly budget", () => {
     const { client, auditEvents } = fakePrisma(state);
     await expect(
       reserveSharedKeyBudget(client as never, "teammate", 1, midweek, open),
-    ).resolves.toBeUndefined();
-    expect(state.members.map((m) => m.userId)).toEqual(["teammate"]);
-    expect(auditEvents.some((row) => row.action === "shared_key_budget.member.auto_enrolled")).toBe(
-      true,
-    );
+    ).rejects.toBeInstanceOf(SharedKeyBudgetNotEnrolledError);
+    expect(state.members).toHaveLength(0);
+    expect(auditEvents).toHaveLength(0);
   });
 
   it("records a not-enrolled hit when an unverified user is refused", async () => {
@@ -1699,6 +1787,7 @@ describe("shared-key weekly budget", () => {
       gatedDeployment: false,
       adminEmails: [],
       explicitUserIds: [],
+      emailDomains: [],
     };
     const state = {
       monthly: 400,
@@ -1800,6 +1889,7 @@ describe("shared-key weekly budget", () => {
       gatedDeployment: false,
       adminEmails: [],
       explicitUserIds: [],
+      emailDomains: [],
     };
     const state = {
       monthly: 400,
@@ -1820,16 +1910,69 @@ describe("shared-key weekly budget", () => {
     ).rejects.toBeInstanceOf(SharedKeyBudgetNotEnrolledError);
   });
 
-  it("never forces gatedDeployment true from autoEnrollMode=gated", () => {
+  it("autoEnrollMode=gated forces gatedDeployment true (differs from open)", () => {
     const open = {
       gatedDeployment: false,
       adminEmails: ["a@example.com"],
       explicitUserIds: [] as string[],
+      emailDomains: [] as string[],
     };
-    expect(applyAutoEnrollMode(open, "gated").gatedDeployment).toBe(false);
+    expect(applyAutoEnrollMode(open, "gated").gatedDeployment).toBe(true);
     const alreadyGated = { ...open, gatedDeployment: true };
     expect(applyAutoEnrollMode(alreadyGated, "gated").gatedDeployment).toBe(true);
     expect(applyAutoEnrollMode(alreadyGated, "open").gatedDeployment).toBe(false);
+  });
+
+  it("refuses auto-enroll for a deactivated verified company-domain user", async () => {
+    const open: SharedKeyBudgetEnrollmentPolicy = {
+      gatedDeployment: false,
+      adminEmails: [],
+      explicitUserIds: [],
+      emailDomains: ["tekweld.com"],
+    };
+    const state = {
+      monthly: 400,
+      members: [] as Member[],
+      allotments: [] as Allotment[],
+      usage: [] as Usage[],
+      knownUserIds: ["ex"],
+      personalOnlyUserIds: ["ex"],
+      deactivatedUserIds: ["ex"],
+      userEmails: { ex: "ex@tekweld.com" },
+      auditEvents: [] as Array<Record<string, unknown>>,
+    };
+    const { client, auditEvents } = fakePrisma(state);
+    await expect(
+      reserveSharedKeyBudget(client as never, "ex", 1, midweek, open),
+    ).rejects.toBeInstanceOf(SharedKeyBudgetNotEnrolledError);
+    expect(state.members).toHaveLength(0);
+    expect(auditEvents).toHaveLength(0);
+  });
+
+  it("refuses spend for an already-enrolled member who was deactivated", async () => {
+    const open: SharedKeyBudgetEnrollmentPolicy = {
+      gatedDeployment: false,
+      adminEmails: [],
+      explicitUserIds: [],
+      emailDomains: ["tekweld.com"],
+    };
+    const state = {
+      monthly: 400,
+      members: [{ userId: "ex", joinedAt: weekStart }] as Member[],
+      allotments: [
+        allotment({ weekStart, userId: "ex", allotmentUsd: 25, reservedUsd: 0 }),
+      ] as Allotment[],
+      usage: [] as Usage[],
+      knownUserIds: ["ex"],
+      personalOnlyUserIds: ["ex"],
+      deactivatedUserIds: ["ex"],
+      userEmails: { ex: "ex@tekweld.com" },
+      auditEvents: [] as Array<Record<string, unknown>>,
+    };
+    const { client } = fakePrisma(state);
+    await expect(
+      reserveSharedKeyBudget(client as never, "ex", 1, midweek, open),
+    ).rejects.toBeInstanceOf(SharedKeyBudgetNotEnrolledError);
   });
 
   it("excludes pre-join adjustments after joining, including a negative pre-join credit", async () => {

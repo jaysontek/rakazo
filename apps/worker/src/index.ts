@@ -91,6 +91,7 @@ import {
 } from "@rakazo/adapters";
 import {
   parseAdminEmails,
+  parseSharedKeyBudgetEmailDomains,
   parseSharedKeyBudgetUserIds,
   resolveEncryptionKey,
   resolveSupervisorToken,
@@ -104,7 +105,6 @@ import {
   describeRowSecurity,
   installAuditEventStore,
   installSecurityEventStore,
-  sharedKeyBudgetEnrollmentPolicyFromEnv,
   isPoolCheckoutTimeout,
   isTooManyDatabaseConnections,
   parsePositiveInteger,
@@ -112,6 +112,7 @@ import {
   rowSecurityWarning,
   runAsSystem,
   securityEventRetentionDays,
+  sharedKeyBudgetEnrollmentPolicyFromEnv,
   verifyContentKeys,
 } from "@rakazo/db";
 import { SERVICE_NAMES } from "@rakazo/logging";
@@ -300,6 +301,7 @@ async function main() {
     directoryProvisioning: Boolean(process.env.SCIM_BEARER_TOKEN?.trim()),
     adminEmails: parseAdminEmails(process.env.RAKAZO_ADMIN_EMAILS),
     explicitUserIds: parseSharedKeyBudgetUserIds(process.env.SHARED_KEY_BUDGET_USER_IDS),
+    emailDomains: parseSharedKeyBudgetEmailDomains(process.env.SHARED_KEY_BUDGET_EMAIL_DOMAINS),
   });
   const executor = createRunExecutor({
     maxUploadSizeBytes,
