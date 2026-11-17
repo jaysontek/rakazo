@@ -24,6 +24,8 @@ vi.mock("@rakazo/db", () => ({
   releaseSharedKeyBudgetHold: vi.fn(),
   STRICT_SHARED_KEY_ENROLLMENT_POLICY: {
     gatedDeployment: false,
+    gatedReason: null,
+    signupAllowlist: [],
     adminEmails: [],
     explicitUserIds: [],
     emailDomains: [],
@@ -93,6 +95,8 @@ describe("shared-key budget observer", () => {
     const id = await observer!.beforeCall(call);
     expect(reserveSharedKeyBudget).toHaveBeenCalledWith({}, "user-1", 0.02, expect.any(Date), {
       gatedDeployment: false,
+      gatedReason: null,
+      signupAllowlist: [],
       adminEmails: [],
       explicitUserIds: [],
       emailDomains: [],

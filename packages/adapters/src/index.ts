@@ -130,23 +130,6 @@ export * from "./model-connect.js";
 export * from "./model-connect-check.js";
 export { hostedModelCreditObserver } from "./model-credit-observer.js";
 export * from "./model-credit-reconciler.js";
-export {
-  assertSharedKeyWeeklyBudget,
-  composeSharedKeyBudgetObserver,
-  SharedKeyBudgetNotEnrolledRunError,
-  SharedKeyWeeklyBudgetExceededRunError,
-  SharedKeyWeeklyShareExceededRunError,
-  sharedKeyBudgetObserver,
-} from "./shared-key-budget-observer.js";
-export {
-  isDeploymentSharedKeyUsage,
-  modelKeyTypeFromResolution,
-  ownCredentialFromKeyType,
-  resolveModelKeyType,
-  resolveModelKeyTypeSafe,
-  sharedKeyMaterialMatches,
-} from "./shared-key-usage.js";
-export type { ModelKeyType, ModelKeyTypeResult, ResolveModelKeyTypeDeps } from "./shared-key-usage.js";
 export * from "./model-roles.js";
 export * from "./model-selection.js";
 export * from "./model-vision.js";
@@ -208,6 +191,27 @@ export * from "./secret-store-factory.js";
 export * from "./secrets.js";
 export * from "./sendblue-emulator.js";
 export { SerenityMemoryProvider } from "./serenity-memory-provider.js";
+export {
+  assertSharedKeyWeeklyBudget,
+  composeSharedKeyBudgetObserver,
+  SharedKeyBudgetNotEnrolledRunError,
+  SharedKeyWeeklyBudgetExceededRunError,
+  SharedKeyWeeklyShareExceededRunError,
+  sharedKeyBudgetObserver,
+} from "./shared-key-budget-observer.js";
+export type {
+  ModelKeyType,
+  ModelKeyTypeResult,
+  ResolveModelKeyTypeDeps,
+} from "./shared-key-usage.js";
+export {
+  isDeploymentSharedKeyUsage,
+  modelKeyTypeFromResolution,
+  ownCredentialFromKeyType,
+  resolveModelKeyType,
+  resolveModelKeyTypeSafe,
+  sharedKeyMaterialMatches,
+} from "./shared-key-usage.js";
 export * from "./skill-tools.js";
 export * from "./slack-install-provider.js";
 export * from "./smtp-email.js";
