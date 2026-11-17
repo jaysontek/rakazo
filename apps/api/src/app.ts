@@ -744,6 +744,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
     directoryProvisioning: Boolean(directory),
     adminEmails: env.adminEmails,
     explicitUserIds: env.sharedKeyBudgetUserIds,
+    emailDomains: env.sharedKeyBudgetEmailDomains,
   });
   const executor = createRunExecutor({
     billingEnabled: modelCreditsEnabled,

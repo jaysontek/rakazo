@@ -2,6 +2,7 @@ import type { ModelCallObserver } from "@rakazo/adapter-kit";
 import {
   SHARED_KEY_BUDGET_NOT_ENROLLED_ERROR,
   SHARED_KEY_WEEKLY_BUDGET_ERROR,
+  SHARED_KEY_WEEKLY_SHARE_ERROR,
 } from "@rakazo/core";
 import type { PrismaClient, SharedKeyBudgetEnrollmentPolicy } from "@rakazo/db";
 import {
@@ -9,6 +10,7 @@ import {
   reserveSharedKeyBudget,
   SharedKeyBudgetNotEnrolledError,
   SharedKeyWeeklyBudgetExceededError,
+  SharedKeyWeeklyShareExceededError,
   STRICT_SHARED_KEY_ENROLLMENT_POLICY,
   sharedKeyMonthlyBudgetUsd,
 } from "@rakazo/db";
@@ -17,6 +19,13 @@ export class SharedKeyWeeklyBudgetExceededRunError extends Error {
   constructor(message = SHARED_KEY_WEEKLY_BUDGET_ERROR) {
     super(message);
     this.name = "SharedKeyWeeklyBudgetExceededRunError";
+  }
+}
+
+export class SharedKeyWeeklyShareExceededRunError extends Error {
+  constructor(message = SHARED_KEY_WEEKLY_SHARE_ERROR) {
+    super(message);
+    this.name = "SharedKeyWeeklyShareExceededRunError";
   }
 }
 
@@ -41,6 +50,19 @@ function decodeHold(reservationId: string): Hold | null {
   return { userId: match[1]!, maxCostUsd };
 }
 
+function mapReserveError(error: unknown): never {
+  if (error instanceof SharedKeyBudgetNotEnrolledError) {
+    throw new SharedKeyBudgetNotEnrolledRunError();
+  }
+  if (error instanceof SharedKeyWeeklyShareExceededError) {
+    throw new SharedKeyWeeklyShareExceededRunError();
+  }
+  if (error instanceof SharedKeyWeeklyBudgetExceededError) {
+    throw new SharedKeyWeeklyBudgetExceededRunError();
+  }
+  throw error;
+}
+
 /**
  * Hard-stop when the current user has used their weekly share of the deployment shared key.
  * Personal connections never attach this observer. When model fallback is also in play, call
@@ -48,7 +70,8 @@ function decodeHold(reservationId: string): Hold | null {
  * on a backup — the weekly hard-stop wins.
  *
  * `enrollmentPolicy` must come from {@link sharedKeyBudgetEnrollmentPolicyFromEnv} in api/worker.
- * Missing policy falls back to the strict open-signup bar (never the gated fail-open default).
+ * Missing policy falls back to STRICT_SHARED_KEY_ENROLLMENT_POLICY (verified + membership;
+ * explicitUserIds empty — never invent a gated default in workers).
  */
 export async function sharedKeyBudgetObserver(
   prisma: PrismaClient,
@@ -61,15 +84,15 @@ export async function sharedKeyBudgetObserver(
     beforeCall: async (call) => {
       const maxCostUsd = call.maxCostUsd ?? 0;
       try {
-        await reserveSharedKeyBudget(prisma, scope.userId, maxCostUsd, new Date(), enrollmentPolicy);
+        await reserveSharedKeyBudget(
+          prisma,
+          scope.userId,
+          maxCostUsd,
+          new Date(),
+          enrollmentPolicy,
+        );
       } catch (error) {
-        if (error instanceof SharedKeyBudgetNotEnrolledError) {
-          throw new SharedKeyBudgetNotEnrolledRunError();
-        }
-        if (error instanceof SharedKeyWeeklyBudgetExceededError) {
-          throw new SharedKeyWeeklyBudgetExceededRunError();
-        }
-        throw error;
+        mapReserveError(error);
       }
       return encodeHold({ userId: scope.userId, maxCostUsd });
     },
@@ -98,13 +121,7 @@ export async function assertSharedKeyWeeklyBudget(
   try {
     await reserveSharedKeyBudget(prisma, userId, estimateCostUsd, now, enrollmentPolicy);
   } catch (error) {
-    if (error instanceof SharedKeyBudgetNotEnrolledError) {
-      throw new SharedKeyBudgetNotEnrolledRunError();
-    }
-    if (error instanceof SharedKeyWeeklyBudgetExceededError) {
-      throw new SharedKeyWeeklyBudgetExceededRunError();
-    }
-    throw error;
+    mapReserveError(error);
   }
   await releaseSharedKeyBudgetHold(prisma, userId, estimateCostUsd, now);
 }

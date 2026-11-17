@@ -56,9 +56,37 @@ export function signupPolicyFromEnv(input: {
   };
 }
 
+/** Why a deployment counts as gated for shared-key enrollment. */
+export type SharedKeyGatedReason =
+  | "signups_closed"
+  | "signup_allowlist"
+  | "single_account"
+  | "directory";
+
+/**
+ * Which gate (if any) makes this a gated shared-key deployment.
+ * Order matches the fail-closed checks: signups closed, then allowlist, then
+ * single-account / directory. Allowlist-only is a weaker gate: enroll still
+ * requires {@link emailAllowed} or SHARED_KEY_BUDGET_EMAIL_DOMAINS.
+ */
+export function sharedKeyGatedReason(input: {
+  signupsEnabled: string | undefined;
+  signupAllowlist: string | undefined;
+  singleAccount?: boolean;
+  directoryProvisioning?: boolean;
+}): SharedKeyGatedReason | null {
+  if (!signupsOpen(input.signupsEnabled)) return "signups_closed";
+  if (parseAllowlist(input.signupAllowlist).length > 0) return "signup_allowlist";
+  if (input.singleAccount) return "single_account";
+  if (input.directoryProvisioning) return "directory";
+  return null;
+}
+
 /**
  * Deployments that gate who can create accounts. Open signups (the code default)
  * need a stricter shared-key auto-enroll bar; gated deployments keep verified + membership.
+ * A non-empty SIGNUP_ALLOWLIST makes the deployment gated for shared-key enrollment
+ * (with an allowlist/domain check on enroll — see {@link sharedKeyGatedReason}).
  */
 export function isGatedSharedKeyDeployment(input: {
   signupsEnabled: string | undefined;
@@ -66,9 +94,5 @@ export function isGatedSharedKeyDeployment(input: {
   singleAccount?: boolean;
   directoryProvisioning?: boolean;
 }): boolean {
-  if (!signupsOpen(input.signupsEnabled)) return true;
-  if (parseAllowlist(input.signupAllowlist).length > 0) return true;
-  if (input.singleAccount) return true;
-  if (input.directoryProvisioning) return true;
-  return false;
+  return sharedKeyGatedReason(input) != null;
 }

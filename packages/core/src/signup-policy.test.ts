@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { isGatedSharedKeyDeployment, parseAdminEmails, signupsOpen } from "./signup-policy.js";
+import {
+  isGatedSharedKeyDeployment,
+  parseAdminEmails,
+  sharedKeyGatedReason,
+  signupsOpen,
+} from "./signup-policy.js";
 
 describe("parseAdminEmails", () => {
   it("splits on commas or whitespace and lowercases", () => {
@@ -51,5 +56,40 @@ describe("isGatedSharedKeyDeployment", () => {
         directoryProvisioning: true,
       }),
     ).toBe(true);
+  });
+
+  it("exposes which gate applied without guessing", () => {
+    expect(
+      sharedKeyGatedReason({
+        signupsEnabled: undefined,
+        signupAllowlist: undefined,
+      }),
+    ).toBeNull();
+    expect(
+      sharedKeyGatedReason({
+        signupsEnabled: "false",
+        signupAllowlist: "ops@example.com",
+      }),
+    ).toBe("signups_closed");
+    expect(
+      sharedKeyGatedReason({
+        signupsEnabled: "true",
+        signupAllowlist: "ops@example.com",
+      }),
+    ).toBe("signup_allowlist");
+    expect(
+      sharedKeyGatedReason({
+        signupsEnabled: "true",
+        signupAllowlist: "",
+        singleAccount: true,
+      }),
+    ).toBe("single_account");
+    expect(
+      sharedKeyGatedReason({
+        signupsEnabled: "true",
+        signupAllowlist: "",
+        directoryProvisioning: true,
+      }),
+    ).toBe("directory");
   });
 });

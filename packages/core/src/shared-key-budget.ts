@@ -164,13 +164,7 @@ export function sharedKeyPeriodEnd(schedule: SharedKeyPeriodSchedule, periodStar
       nextYear += 1;
     }
     const resetDom = clampResetDom(nextYear, nextMonth, resetDomWanted);
-    return instantAtLocal(
-      nextYear,
-      nextMonth,
-      resetDom,
-      schedule.resetMinutes,
-      schedule.timezone,
-    );
+    return instantAtLocal(nextYear, nextMonth, resetDom, schedule.resetMinutes, schedule.timezone);
   }
 
   const nextWeekInstant = new Date(periodStart.getTime() + 8 * 24 * 60 * 60 * 1000);
@@ -251,11 +245,7 @@ export function weekFractionRemaining(now: Date, weekStart: Date): number {
  * Cap re-bases must reuse this — never `periodFractionRemaining(now)` — or each later save
  * would shrink the same joiner's slice toward zero.
  */
-export function midPeriodJoinFraction(
-  joinedAt: Date,
-  periodStart: Date,
-  periodEnd: Date,
-): number {
+export function midPeriodJoinFraction(joinedAt: Date, periodStart: Date, periodEnd: Date): number {
   if (joinedAt.getTime() <= periodStart.getTime()) return 1;
   return periodFractionRemaining(joinedAt, periodStart, periodEnd);
 }
@@ -277,7 +267,10 @@ export function midWeekJoinFraction(joinedAt: Date, weekStart: Date): number {
  * Pre-join baselines may be negative (a pre-join credit adjustment). Do not clamp the
  * baseline to 0 — that would leave the credit inside mondaySpend and over-charge the member.
  */
-export function effectiveSharedKeySpendUsd(mondaySpendUsd: number, preJoinSpendUsd: number): number {
+export function effectiveSharedKeySpendUsd(
+  mondaySpendUsd: number,
+  preJoinSpendUsd: number,
+): number {
   if (!Number.isFinite(mondaySpendUsd) || !Number.isFinite(preJoinSpendUsd)) return 0;
   return Math.max(0, mondaySpendUsd - preJoinSpendUsd);
 }
@@ -329,7 +322,9 @@ export function maxSharedKeyOverrideAllotmentUsd(args: {
   const usage = sharedKeyPeriodPoolUsageUsd(args.rows);
   const free = Math.max(0, pool - usage);
   const self = args.rows.find((row) => row.userId === args.userId && row.onRoster);
-  const contribution = self ? Math.max(Math.max(0, self.allotmentUsd), Math.max(0, self.floorUsd)) : 0;
+  const contribution = self
+    ? Math.max(Math.max(0, self.allotmentUsd), Math.max(0, self.floorUsd))
+    : 0;
   return contribution + free;
 }
 
@@ -398,7 +393,13 @@ export function clampSharedKeyOverrideRaises(args: {
       floorUsd,
       onRoster: true,
     });
-    pending.push({ ...target, previousAllotmentUsd: previous, floorUsd, requestedUsd: requested, rowIndex });
+    pending.push({
+      ...target,
+      previousAllotmentUsd: previous,
+      floorUsd,
+      requestedUsd: requested,
+      rowIndex,
+    });
   }
 
   for (const target of pending) {
@@ -769,4 +770,46 @@ export function parseSharedKeyBudgetUserIds(raw: string | undefined): string[] {
         .filter(Boolean),
     ),
   ];
+}
+
+/**
+ * Parse SHARED_KEY_BUDGET_EMAIL_DOMAINS as a comma-separated list of domains
+ * (lowercased, trimmed). Empty / unset → no domain grants auto-enroll.
+ */
+export function parseSharedKeyBudgetEmailDomains(raw: string | undefined): string[] {
+  if (!raw?.trim()) return [];
+  return [
+    ...new Set(
+      raw
+        .split(",")
+        .map((part) =>
+          part
+            .trim()
+            .toLowerCase()
+            .replace(/^\.+|\.+$/g, ""),
+        )
+        .filter(Boolean),
+    ),
+  ];
+}
+
+/**
+ * Exact domain match on the part after the last `@` (case-insensitive).
+ * No subdomain or suffix tricks: `evil-tekweld.com` and `tekweld.com.evil.io` fail
+ * when only `tekweld.com` is listed. Empty allowlist always denies.
+ */
+export function emailDomainMatchesSharedKeyAllowlist(
+  email: string,
+  domains: readonly string[],
+): boolean {
+  if (domains.length === 0) return false;
+  const at = email.lastIndexOf("@");
+  if (at < 0 || at === email.length - 1) return false;
+  const domain = email
+    .slice(at + 1)
+    .trim()
+    .toLowerCase();
+  if (!domain) return false;
+  const allowed = new Set(domains.map((entry) => entry.trim().toLowerCase()).filter(Boolean));
+  return allowed.has(domain);
 }
