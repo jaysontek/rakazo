@@ -57,8 +57,9 @@ export function signupPolicyFromEnv(input: {
 }
 
 /**
- * Deployments that gate who can create accounts. Open signups (the code default)
- * need a stricter shared-key auto-enroll bar; gated deployments keep verified + membership.
+ * Deployments that gate who can create accounts. Used for ops settings validation
+ * (e.g. autoEnrollMode=gated). Shared-key auto-enroll itself is verified email +
+ * membership in every posture; this flag no longer tightens that bar.
  */
 export function isGatedSharedKeyDeployment(input: {
   signupsEnabled: string | undefined;

@@ -49,6 +49,13 @@ export const translateRunError: RunErrorTranslator = (message, values) => {
           "This week's shared API key budget is used up. It resets next week, or connect your own key in Models.",
         values,
       });
+    case "Your share of this week's shared API key budget is used up. It resets next week, or connect your own key in Models.":
+      return i18n._({
+        id: "Your share of this week's shared API key budget is used up. It resets next week, or connect your own key in Models.",
+        message:
+          "Your share of this week's shared API key budget is used up. It resets next week, or connect your own key in Models.",
+        values,
+      });
     case "You're not on the shared-key budget yet. Ask an admin.":
       return i18n._({
         id: "You're not on the shared-key budget yet. Ask an admin.",

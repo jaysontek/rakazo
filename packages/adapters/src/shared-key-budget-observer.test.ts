@@ -1,10 +1,11 @@
 import type { ModelCallObserver } from "@rakazo/adapter-kit";
-import { SHARED_KEY_WEEKLY_BUDGET_ERROR } from "@rakazo/core";
+import { SHARED_KEY_WEEKLY_BUDGET_ERROR, SHARED_KEY_WEEKLY_SHARE_ERROR } from "@rakazo/core";
 import {
   releaseSharedKeyBudgetHold,
   reserveSharedKeyBudget,
   SharedKeyBudgetNotEnrolledError,
   SharedKeyWeeklyBudgetExceededError,
+  SharedKeyWeeklyShareExceededError,
   sharedKeyMonthlyBudgetUsd,
 } from "@rakazo/db";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -13,6 +14,7 @@ import {
   composeSharedKeyBudgetObserver,
   SharedKeyBudgetNotEnrolledRunError,
   SharedKeyWeeklyBudgetExceededRunError,
+  SharedKeyWeeklyShareExceededRunError,
   sharedKeyBudgetObserver,
 } from "./shared-key-budget-observer.js";
 
@@ -29,6 +31,12 @@ vi.mock("@rakazo/db", () => ({
     constructor() {
       super("shared key weekly budget exceeded");
       this.name = "SharedKeyWeeklyBudgetExceededError";
+    }
+  },
+  SharedKeyWeeklyShareExceededError: class SharedKeyWeeklyShareExceededError extends Error {
+    constructor() {
+      super("shared key weekly share exceeded");
+      this.name = "SharedKeyWeeklyShareExceededError";
     }
   },
   SharedKeyBudgetNotEnrolledError: class SharedKeyBudgetNotEnrolledError extends Error {
@@ -82,13 +90,11 @@ describe("shared-key budget observer", () => {
     vi.mocked(releaseSharedKeyBudgetHold).mockResolvedValue(undefined);
     const observer = await sharedKeyBudgetObserver({} as never, scope);
     const id = await observer!.beforeCall(call);
-    expect(reserveSharedKeyBudget).toHaveBeenCalledWith(
-      {},
-      "user-1",
-      0.02,
-      expect.any(Date),
-      { gatedDeployment: false, adminEmails: [], explicitUserIds: [] },
-    );
+    expect(reserveSharedKeyBudget).toHaveBeenCalledWith({}, "user-1", 0.02, expect.any(Date), {
+      gatedDeployment: false,
+      adminEmails: [],
+      explicitUserIds: [],
+    });
     await observer!.afterCall(id, null);
     expect(releaseSharedKeyBudgetHold).toHaveBeenCalledWith({}, "user-1", 0.02);
   });
@@ -127,6 +133,19 @@ describe("shared-key budget observer", () => {
     vi.mocked(sharedKeyMonthlyBudgetUsd).mockResolvedValue(400);
     vi.mocked(reserveSharedKeyBudget).mockRejectedValue(new SharedKeyBudgetNotEnrolledError());
     const observer = await sharedKeyBudgetObserver({} as never, scope);
-    await expect(observer!.beforeCall(call)).rejects.toBeInstanceOf(SharedKeyBudgetNotEnrolledRunError);
+    await expect(observer!.beforeCall(call)).rejects.toBeInstanceOf(
+      SharedKeyBudgetNotEnrolledRunError,
+    );
+  });
+
+  it("maps member-share exhausted to a distinct run error from pool exhausted", async () => {
+    vi.mocked(sharedKeyMonthlyBudgetUsd).mockResolvedValue(400);
+    vi.mocked(reserveSharedKeyBudget).mockRejectedValue(new SharedKeyWeeklyShareExceededError());
+    const observer = await sharedKeyBudgetObserver({} as never, scope);
+    await expect(observer!.beforeCall(call)).rejects.toBeInstanceOf(
+      SharedKeyWeeklyShareExceededRunError,
+    );
+    await expect(observer!.beforeCall(call)).rejects.toThrow(SHARED_KEY_WEEKLY_SHARE_ERROR);
+    await expect(observer!.beforeCall(call)).rejects.not.toThrow(SHARED_KEY_WEEKLY_BUDGET_ERROR);
   });
 });

@@ -36,11 +36,21 @@ export const MISSING_MODEL_RUN_ERROR = "Connect a model in Settings before runni
 export const HOSTED_MODEL_CREDITS_REQUIRED_ERROR =
   "Connect your own API key in Models or choose Rakazo credits in Billing.";
 
-/** Shared deployment key spend hit this user's weekly cap (America/New_York week). */
+/**
+ * Shared deployment key company pool is exhausted for new/zero slices this week
+ * (America/New_York week). Distinct from a single member hitting their own share.
+ */
 export const SHARED_KEY_WEEKLY_BUDGET_ERROR =
   "This week's shared API key budget is used up. It resets next week, or connect your own key in Models.";
 
-/** User is not on the shared-key budget roster (open-signup eligibility or pending admin add). */
+/**
+ * This user hit their own weekly shared-key allotment while the company pool may
+ * still have room. Distinct from pool-exhausted and from not-enrolled.
+ */
+export const SHARED_KEY_WEEKLY_SHARE_ERROR =
+  "Your share of this week's shared API key budget is used up. It resets next week, or connect your own key in Models.";
+
+/** User is not on the shared-key budget roster (unverified or auto-enroll disabled). */
 export const SHARED_KEY_BUDGET_NOT_ENROLLED_ERROR =
   "You're not on the shared-key budget yet. Ask an admin.";
 
@@ -117,6 +127,7 @@ const MODEL_CONNECTION_RUN_ERRORS = new Set([
   MISSING_MODEL_RUN_ERROR,
   HOSTED_MODEL_CREDITS_REQUIRED_ERROR,
   SHARED_KEY_WEEKLY_BUDGET_ERROR,
+  SHARED_KEY_WEEKLY_SHARE_ERROR,
   SHARED_KEY_BUDGET_NOT_ENROLLED_ERROR,
 ]);
 const APP_RUN_ERRORS = new Set([

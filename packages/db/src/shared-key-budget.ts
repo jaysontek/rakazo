@@ -1,3 +1,4 @@
+import type { SharedKeyPeriodSchedule } from "@rakazo/core";
 import {
   DEFAULT_SHARED_KEY_PERIOD_SCHEDULE,
   effectiveSharedKeyPeriodStart,
@@ -11,15 +12,12 @@ import {
   sharedKeyPeriodEnd,
   sharedKeyPeriodPoolUsd,
   sharedKeyPeriodStart,
-  type SharedKeyPeriodSchedule,
 } from "@rakazo/core";
 
 export { SHARED_KEY_BUDGET_TIMEZONE, sharedKeyPeriodPoolUsd } from "@rakazo/core";
+
 import { getLogger } from "@rakazo/logging";
-import {
-  appendAuditEventTx,
-  DEPLOYMENT_AUDIT_ORGANIZATION_ID,
-} from "./audit-events.js";
+import { appendAuditEventTx, DEPLOYMENT_AUDIT_ORGANIZATION_ID } from "./audit-events.js";
 import type { PrismaClient } from "./client.js";
 import { Prisma } from "./client.js";
 import { isHiddenOpsEmail } from "./ops-email-filter.js";
@@ -177,22 +175,23 @@ export function resolvePruneInactive(value: boolean | null | undefined): boolean
 }
 
 /**
- * Auto-enroll policy from the deployment's signup posture.
- * Gated deployments (signups off, allowlist, singleAccount, directory): verified + any membership.
- * Open signups: only users who share a non-personal (multi-member) org with an ops admin.
- * Always pass this explicitly — never fail open with a gated default in workers.
+ * Auto-enroll policy passed from api/worker.
+ * Eligibility itself is verified email + any membership (Personal-org OK); open vs gated
+ * no longer changes the bar. `gatedDeployment` / `adminEmails` remain for ops settings
+ * validation and audit context. `explicitUserIds` (SHARED_KEY_BUDGET_USER_IDS) is an
+ * additive hot-path bypass. Always pass this explicitly — never invent a default in workers.
  */
 export type SharedKeyBudgetEnrollmentPolicy = {
   gatedDeployment: boolean;
-  /** Lowercased RAKAZO_ADMIN_EMAILS. */
+  /** Lowercased RAKAZO_ADMIN_EMAILS (ops context; not an eligibility gate). */
   adminEmails: string[];
   /** SHARED_KEY_BUDGET_USER_IDS — bypass eligibility on the hot path too. */
   explicitUserIds: string[];
 };
 
 /**
- * Strict open-signup policy: no auto-enroll unless env list / admin-share / admin add.
- * Use when a call site has no deployment posture yet (tests / missing deps).
+ * Default when a call site has no deployment posture yet (tests / missing deps).
+ * Verified users still auto-enroll; only unverified / no-membership / hidden fail.
  */
 export const STRICT_SHARED_KEY_ENROLLMENT_POLICY: SharedKeyBudgetEnrollmentPolicy = {
   gatedDeployment: false,
@@ -200,7 +199,7 @@ export const STRICT_SHARED_KEY_ENROLLMENT_POLICY: SharedKeyBudgetEnrollmentPolic
   explicitUserIds: [],
 };
 
-/** Gated unit-test policy: verified email + any membership is enough. */
+/** Unit-test alias: same eligibility bar as production (verified + membership). */
 export const GATED_SHARED_KEY_ENROLLMENT_POLICY: SharedKeyBudgetEnrollmentPolicy = {
   gatedDeployment: true,
   adminEmails: [],
@@ -232,9 +231,7 @@ export function sharedKeyBudgetEnrollmentPolicyFromEnv(input: {
       directoryProvisioning: input.directoryProvisioning,
     }),
     adminEmails: input.adminEmails.map((email) => email.trim().toLowerCase()).filter(Boolean),
-    explicitUserIds: [...(input.explicitUserIds ?? [])]
-      .map((id) => id.trim())
-      .filter(Boolean),
+    explicitUserIds: [...(input.explicitUserIds ?? [])].map((id) => id.trim()).filter(Boolean),
   };
 }
 
@@ -471,10 +468,11 @@ export async function recomputeSharedKeyWeekAllotmentsTx(
     select: BUDGET_SETTINGS_SELECT,
   });
   const monthly = settings?.sharedKeyMonthlyBudgetUsd;
-  const { schedule, periodStart: weekStart, periodEnd } = resolveSharedKeyPeriodBounds(
-    settings,
-    now,
-  );
+  const {
+    schedule,
+    periodStart: weekStart,
+    periodEnd,
+  } = resolveSharedKeyPeriodBounds(settings, now);
   await clearStaleSharedKeyBudgetHolds(
     tx,
     weekStart,
@@ -582,7 +580,8 @@ export async function recomputeSharedKeyWeekAllotmentsTx(
 
   for (const [userId, allotmentUsd] of allotments) {
     const existing = priorRows.find((row) => row.userId === userId);
-    const joinedAt = existing?.joinedAt ?? redivideMembers.find((m) => m.userId === userId)!.joinedAt;
+    const joinedAt =
+      existing?.joinedAt ?? redivideMembers.find((m) => m.userId === userId)!.joinedAt;
     const preJoinSpendUsd = existing?.preJoinSpendUsd ?? preJoinSpendByUser.get(userId) ?? 0;
     await tx.sharedKeyWeekAllotment.upsert({
       where: { weekStart_userId: { weekStart, userId } },
@@ -626,21 +625,24 @@ export async function recomputeSharedKeyWeekAllotmentsTx(
   await reapplyActiveTransfersTx(tx, weekStart, effectiveSpent, reservedByUser);
   const refreshed = await previousBudgetRows(tx, weekStart);
   return new Map(
-    refreshed.filter((row) => memberIds.has(row.userId)).map((row) => [row.userId, row.allotmentUsd]),
+    refreshed
+      .filter((row) => memberIds.has(row.userId))
+      .map((row) => [row.userId, row.allotmentUsd]),
   );
 }
 
 /**
- * Auto-enroll bar. Always rejects deactivated / hidden accounts.
+ * Auto-enroll bar for the shared-key budget roster.
+ * Always rejects deactivated / hidden accounts.
  * SHARED_KEY_BUDGET_USER_IDS and explicit admin adds bypass via `bypassEligibilityBar`
- * (or `policy.explicitUserIds` on the hot path).
- * Personal (solo-member) orgs never qualify in any mode.
- * Gated deployments: verified email + membership in a non-personal (multi-member) org.
- * Open signups: verified email + membership in a non-personal org that also includes
- * an ops admin (active verified AdminGrant or env admin email).
+ * (or `policy.explicitUserIds` on the hot path) — additive override, including unverified.
+ * Otherwise: verified email + any organization membership (Personal-org is fine).
+ * Open vs gated signup posture no longer changes this bar; reserve only runs for
+ * callers already using the deployment shared key, so verified company-key users enroll
+ * on first use without a manual env-list entry or admin Add.
  */
 export async function userEligibleForSharedKeyBudget(
-  tx: Pick<BudgetTx, "user" | "member" | "adminGrant">,
+  tx: Pick<BudgetTx, "user" | "member">,
   userId: string,
   options: {
     policy: SharedKeyBudgetEnrollmentPolicy;
@@ -656,98 +658,11 @@ export async function userEligibleForSharedKeyBudget(
   if (options.bypassEligibilityBar) return true;
   if (options.policy.explicitUserIds.includes(userId)) return true;
   if (!user.emailVerified) return false;
-  const memberships = await tx.member.findMany({
+  const membership = await tx.member.findFirst({
     where: { userId },
     select: { organizationId: true },
   });
-  if (memberships.length === 0) return false;
-  const orgMembership = await nonPersonalOrgMembership(tx, memberships);
-  // Personal-org-only memberships are never eligible, including gated deployments.
-  if (!orgMembership.hasNonPersonal) return false;
-  if (options.policy.gatedDeployment) return true;
-  return sharesNonPersonalOrgWithOpsAdmin(
-    tx,
-    userId,
-    memberships,
-    options.policy.adminEmails,
-    orgMembership,
-  );
-}
-
-/** Orgs with only one member are personal bootstraps; multi-member orgs are team orgs. */
-async function nonPersonalOrgMembership(
-  tx: Pick<BudgetTx, "member">,
-  memberships: Array<{ organizationId: string }>,
-): Promise<{ hasNonPersonal: boolean; byOrg: Map<string, string[]> }> {
-  const orgIds = memberships.map((row) => row.organizationId);
-  const peers = await tx.member.findMany({
-    where: { organizationId: { in: orgIds } },
-    select: { organizationId: true, userId: true },
-  });
-  const byOrg = new Map<string, string[]>();
-  for (const peer of peers) {
-    const list = byOrg.get(peer.organizationId) ?? [];
-    list.push(peer.userId);
-    byOrg.set(peer.organizationId, list);
-  }
-  let hasNonPersonal = false;
-  for (const userIds of byOrg.values()) {
-    if (userIds.length >= 2) {
-      hasNonPersonal = true;
-      break;
-    }
-  }
-  return { hasNonPersonal, byOrg };
-}
-
-async function sharesNonPersonalOrgWithOpsAdmin(
-  tx: Pick<BudgetTx, "user" | "member" | "adminGrant">,
-  userId: string,
-  memberships: Array<{ organizationId: string }>,
-  adminEmails: string[],
-  precomputed?: { hasNonPersonal: boolean; byOrg: Map<string, string[]> },
-): Promise<boolean> {
-  const { byOrg } =
-    precomputed ?? (await nonPersonalOrgMembership(tx, memberships));
-  const candidateAdminIds = new Set<string>();
-  for (const userIds of byOrg.values()) {
-    if (userIds.length < 2) continue;
-    for (const id of userIds) {
-      if (id !== userId) candidateAdminIds.add(id);
-    }
-  }
-  if (candidateAdminIds.size === 0) return false;
-
-  // AdminGrant holders must be active + verified, same as isActiveVerified in admin-grants.
-  const grantHolders = await tx.adminGrant.findMany({
-    where: { userId: { in: [...candidateAdminIds] } },
-    select: { userId: true },
-  });
-  if (grantHolders.length > 0) {
-    const activeVerified = await tx.user.findFirst({
-      where: {
-        id: { in: grantHolders.map((row) => row.userId) },
-        emailVerified: true,
-        deactivatedAt: null,
-      },
-      select: { id: true },
-    });
-    if (activeVerified) return true;
-  }
-
-  const adminEmailSet = new Set(
-    adminEmails.map((email) => email.trim().toLowerCase()).filter(Boolean),
-  );
-  if (adminEmailSet.size === 0) return false;
-  const candidates = await tx.user.findMany({
-    where: {
-      id: { in: [...candidateAdminIds] },
-      emailVerified: true,
-      deactivatedAt: null,
-    },
-    select: { email: true },
-  });
-  return candidates.some((row) => adminEmailSet.has(row.email.toLowerCase()));
+  return membership != null;
 }
 
 /**
@@ -893,9 +808,7 @@ export async function removeSharedKeyBudgetMember(
     actorUserId?: string;
   },
 ): Promise<void> {
-  const pinned = new Set(
-    (options?.envPinnedUserIds ?? []).map((id) => id.trim()).filter(Boolean),
-  );
+  const pinned = new Set((options?.envPinnedUserIds ?? []).map((id) => id.trim()).filter(Boolean));
   if (pinned.has(userId)) {
     throw new Error("Cannot remove a member pinned by SHARED_KEY_BUDGET_USER_IDS");
   }
@@ -1123,7 +1036,12 @@ export function applyAutoEnrollMode(
 ): SharedKeyBudgetEnrollmentPolicy {
   if (mode == null || mode === "") return policy;
   if (mode === "off") {
-    return { ...policy, gatedDeployment: false, adminEmails: [], explicitUserIds: policy.explicitUserIds };
+    return {
+      ...policy,
+      gatedDeployment: false,
+      adminEmails: [],
+      explicitUserIds: policy.explicitUserIds,
+    };
   }
   if (mode === "gated") return policy;
   if (mode === "open") return { ...policy, gatedDeployment: false };
@@ -1176,7 +1094,8 @@ export async function reserveSharedKeyBudget(
         await enrollSharedKeyBudgetMemberTx(tx, userId, now, { policy: effectivePolicy });
       }
       const allotment = await ensureMemberAllotment(tx, userId, weekStart, now);
-      // Feature on but user not enrolled (e.g. $0 slice): no shared-key spend allowed.
+      // No allotment row (e.g. mid-week joiner got a $0 slice): company pool has no
+      // remaining headroom for this member — distinct from hitting a personal share.
       if (!allotment) {
         throw new SharedKeyWeeklyBudgetExceededError();
       }
@@ -1185,11 +1104,12 @@ export async function reserveSharedKeyBudget(
       const mondaySpend = await spentSharedKeyUsd(tx, userId, weekStart, now, weekStart);
       const spent = effectiveSharedKeySpendUsd(mondaySpend, allotment.preJoinSpendUsd);
       const hardStop = resolveHardStopEnabled(settings?.sharedKeyHardStopEnabled);
-      // At or over the cap: refuse further shared-key calls when hard-stop is on.
+      // At or over this member's weekly share: refuse when hard-stop is on. Pool may
+      // still have unused dollars belonging to other members.
       const over =
         spent + reserved >= cap || (maxCostUsd > 0 && spent + reserved + maxCostUsd > cap);
       if (hardStop && over) {
-        throw new SharedKeyWeeklyBudgetExceededError();
+        throw new SharedKeyWeeklyShareExceededError();
       }
       await tx.sharedKeyWeekAllotment.update({
         where: { weekStart_userId: { weekStart, userId } },
@@ -1253,10 +1173,11 @@ export async function sharedKeyWeeklyBudgetStatus(
     where: { id: "default" },
     select: BUDGET_SETTINGS_SELECT,
   });
-  const { schedule, periodStart: weekStart, periodEnd: resetsAt } = resolveSharedKeyPeriodBounds(
-    settings,
-    now,
-  );
+  const {
+    schedule,
+    periodStart: weekStart,
+    periodEnd: resetsAt,
+  } = resolveSharedKeyPeriodBounds(settings, now);
   const monthly = await sharedKeyMonthlyBudgetUsd(prisma, envFallback);
   const member = await prisma.sharedKeyBudgetMember.findUnique({ where: { userId } });
   const warningThresholds = resolveWarningThresholds(settings?.sharedKeyWarningThresholds);
@@ -1302,10 +1223,19 @@ export async function sharedKeyWeeklyBudgetStatus(
   };
 }
 
+/** Company shared-key pool has no remaining headroom (zero slice / empty pool). */
 export class SharedKeyWeeklyBudgetExceededError extends Error {
   constructor(message = "shared key weekly budget exceeded") {
     super(message);
     this.name = "SharedKeyWeeklyBudgetExceededError";
+  }
+}
+
+/** This member hit their own weekly allotment; other members may still have room. */
+export class SharedKeyWeeklyShareExceededError extends Error {
+  constructor(message = "shared key weekly share exceeded") {
+    super(message);
+    this.name = "SharedKeyWeeklyShareExceededError";
   }
 }
 
