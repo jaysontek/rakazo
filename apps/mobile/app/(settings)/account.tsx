@@ -860,7 +860,9 @@ function MobileSharedKeyUsageMeter({ limit }: { limit: UsageLimit | null | undef
     );
   }
   // Floor so 99.5% never displays as 100% while still showing 100 when exhausted.
-  const percent = Math.min(100, Math.floor(limit.percentUsed));
+  const usedRaw = limit.usedPercent ?? limit.percentUsed;
+  const percent = Math.min(100, Math.floor(usedRaw));
+  const blocked = limit.status === "blocked";
   const reset = formatSharedKeyBudgetResetAt(limit.resetsAt, dateLocaleForUi(locale));
   return (
     <View
@@ -870,12 +872,23 @@ function MobileSharedKeyUsageMeter({ limit }: { limit: UsageLimit | null | undef
       testID="shared-key-usage-meter"
     >
       <View style={styles.meterHeader}>
-        <Text style={styles.percent}>{percent}%</Text>
+        <Text style={[styles.percent, blocked ? styles.blocked : null]}>{percent}%</Text>
         <Text style={styles.reset}>{t("Resets {date}.", { date: reset })}</Text>
       </View>
       <View style={styles.track}>
-        <View style={[styles.fill, { width: `${Math.min(100, Math.max(0, percent))}%` }]} />
+        <View
+          style={[
+            styles.fill,
+            blocked ? styles.blockedFill : null,
+            { width: `${Math.min(100, Math.max(0, percent))}%` },
+          ]}
+        />
       </View>
+      {blocked ? (
+        <Text testID="shared-key-usage-blocked" style={styles.blocked}>
+          {t("Weekly limit reached for new runs · Resets {date}", { date: reset })}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -898,6 +911,13 @@ function createUsageMeterStyles() {
       color: tokens.foreground,
       fontSize: 13,
       fontVariant: ["tabular-nums"],
+    },
+    blocked: {
+      color: tokens.destructive,
+      fontSize: 13,
+    },
+    blockedFill: {
+      backgroundColor: tokens.destructive,
     },
     reset: {
       color: native.secondaryLabel,

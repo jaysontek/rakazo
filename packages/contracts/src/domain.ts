@@ -1270,11 +1270,24 @@ const UsageTotalsSchema = z.object({
   costUsd: z.number().nullable().optional(),
   modelCalls: z.number().optional(),
 });
+export const SharedKeyBudgetDisplayStatusSchema = z.enum(["ok", "warning", "blocked"]);
+export type SharedKeyBudgetDisplayStatus = z.infer<typeof SharedKeyBudgetDisplayStatusSchema>;
+
 export const SharedKeyWeeklyBudgetSchema = z.object({
-  /** 0–100 of this user's weekly shared-key allotment already spent. */
+  /** 0–100 of this user's weekly shared-key allotment already spent (legacy, spend-only). */
   percentUsed: z.number().min(0).max(100),
+  /** Spent + reserved as percent of cap; prefer over percentUsed for meters. */
+  usedPercent: z.number().min(0).max(100).optional(),
+  /** Reserved (held) as percent of cap. */
+  reservedPercent: z.number().min(0).max(100).optional(),
+  /** Spent-only segment as percent of cap (for segmented bars). */
+  spentPercent: z.number().min(0).max(100).optional(),
+  /** ok / warning / blocked — blocked when hard-stopped or headroom below next-call worst case. */
+  status: SharedKeyBudgetDisplayStatusSchema.optional(),
   /** Absolute spend; omitted for non-admins. */
   spentUsd: z.number().nonnegative().optional(),
+  /** Soft hold currently reserved; omitted for non-admins. */
+  reservedUsd: z.number().nonnegative().optional(),
   /** Weekly allotment in USD; omitted for non-admins. */
   weeklyCapUsd: z.number().nonnegative().optional(),
   /** ISO timestamp when the configured shared-key period resets. */
@@ -1287,7 +1300,15 @@ export type SharedKeyWeeklyBudget = z.infer<typeof SharedKeyWeeklyBudgetSchema>;
 export const UsageLimitSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("shared_weekly"),
+    /** Legacy spend-only percent. */
     percentUsed: z.number().min(0).max(100),
+    /** Spent + reserved as percent of cap. */
+    usedPercent: z.number().min(0).max(100).optional(),
+    /** Reserved (held) as percent of cap. */
+    reservedPercent: z.number().min(0).max(100).optional(),
+    /** Spent-only segment as percent of cap. */
+    spentPercent: z.number().min(0).max(100).optional(),
+    status: SharedKeyBudgetDisplayStatusSchema.optional(),
     resetsAt: z.string(),
     timezone: z.string().min(1),
   }),
@@ -1322,8 +1343,13 @@ export const OpsSharedKeyBudgetSchema = z.object({
   spentUsd: z.number().nonnegative(),
   reservedUsd: z.number().nonnegative(),
   remainingUsd: z.number().nonnegative(),
+  /** Spent + reserved as percent of cap (matches remainingUsd). */
   percentUsed: z.number().min(0).max(100),
+  /** Reserved segment as percent of cap. */
+  reservedPercent: z.number().min(0).max(100).optional(),
   hardStopped: z.boolean(),
+  /** Display status aligned with account usage meter (includes low-headroom blocked). */
+  status: SharedKeyBudgetDisplayStatusSchema.optional(),
   weekStartsAt: z.string(),
   resetsAt: z.string(),
   timezone: z.string().min(1),
@@ -1370,6 +1396,9 @@ export const OpsSharedKeyBudgetSettingsSchema = z.object({
 });
 export type OpsSharedKeyBudgetSettings = z.infer<typeof OpsSharedKeyBudgetSettingsSchema>;
 
+export const OpsAccountModelSourceSchema = z.enum(["last used", "configured", "default"]);
+export type OpsAccountModelSource = z.infer<typeof OpsAccountModelSourceSchema>;
+
 export const OpsAccountSchema = z.object({
   userId: Id,
   email: z.string(),
@@ -1377,6 +1406,8 @@ export const OpsAccountSchema = z.object({
   deactivated: z.boolean(),
   modelProvider: z.string().nullable(),
   modelId: z.string().nullable(),
+  /** Where modelProvider/modelId came from when resolved for ops display. */
+  modelSource: OpsAccountModelSourceSchema.optional(),
   /**
    * Live classification of the key a run would use: company (deployment/shared) or
    * personal. Legacy servers may still send `none`; clients map that to company

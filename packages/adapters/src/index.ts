@@ -126,6 +126,7 @@ export * from "./messaging-delivery.js";
 export * from "./messaging-installations.js";
 export * from "./messaging-platforms.js";
 export * from "./messaging-team-chat-emulator.js";
+export { lookupMinimumWorstCaseCallCostUsd } from "./model-call-cost-display.js";
 export * from "./model-connect.js";
 export * from "./model-connect-check.js";
 export { hostedModelCreditObserver } from "./model-credit-observer.js";
@@ -159,7 +160,12 @@ export { TOOL_RESULT_TEXT_LIMIT } from "./pi-runtime-limits.js";
 export { serializeToolResult } from "./pi-runtime-tools.js";
 export * from "./pi-session.js";
 export { shutdownPiTelemetry } from "./pi-telemetry.js";
-export { estimateCatalogCostUsd, maximumModelCallCost, normalizePiUsage } from "./pi-usage.js";
+export {
+  estimateCatalogCostUsd,
+  maximumModelCallCost,
+  minimumWorstCaseModelCallCostUsd,
+  normalizePiUsage,
+} from "./pi-usage.js";
 export * from "./pipedream-connector.js";
 export * from "./plugin-connectors.js";
 export * from "./plugin-marketplace.js";

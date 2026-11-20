@@ -1,18 +1,19 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import type { OpsTeam, OpsTeamMember } from "@rakazo/contracts";
+import type { ModelCatalogEntry, OpsTeam, OpsTeamMember } from "@rakazo/contracts";
 import {
   Badge,
+  buttonVariants,
   Card,
   CardDescription,
   CardHeader,
   CardTitle,
   Spinner,
-  buttonVariants,
 } from "@rakazo/ui-web";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft } from "lucide-react";
 import { useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
+import { ModelBadge } from "../components/ai/model-badge";
 import { PageLoading } from "../components/PageLoading";
 import { hardSwitchImpersonation } from "../lib/impersonation-switch";
 import { storeImpersonationTeammates } from "../lib/impersonation-teammates";
@@ -38,13 +39,13 @@ function memberLabel(member: Pick<OpsTeamMember, "name" | "email">): string {
 function KeyBadge({ keyType }: { keyType: OpsTeamMember["keyType"] }) {
   if (keyType === "personal") {
     return (
-      <Badge variant="outline">
+      <Badge variant="outline" className="shrink-0">
         <Trans>Personal API</Trans>
       </Badge>
     );
   }
   return (
-    <Badge variant="secondary">
+    <Badge variant="secondary" className="shrink-0">
       <Trans>Company API</Trans>
     </Badge>
   );
@@ -82,8 +83,12 @@ export function AdminOpsTeamPage() {
   );
 }
 
-function TeamDashboard({ organizationId }: { organizationId: string }) {
+export function TeamDashboard({ organizationId }: { organizationId: string }) {
   const { t } = useLingui();
+  const catalogQuery = useQuery({
+    queryKey: ["models", "list"],
+    queryFn: () => rpc.models.list(),
+  });
   const team = useQuery({
     queryKey: ["ops", "team", organizationId],
     queryFn: () => rpc.ops.team({ organizationId }),
@@ -104,10 +109,10 @@ function TeamDashboard({ organizationId }: { organizationId: string }) {
     );
   }
 
-  return <TeamView data={team.data} />;
+  return <TeamView data={team.data} catalog={catalogQuery.data ?? []} />;
 }
 
-export function TeamView({ data }: { data: OpsTeam }) {
+export function TeamView({ data, catalog = [] }: { data: OpsTeam; catalog?: ModelCatalogEntry[] }) {
   const { t } = useLingui();
   const queryClient = useQueryClient();
   const [busyUserId, setBusyUserId] = useState<string | null>(null);
@@ -169,6 +174,9 @@ export function TeamView({ data }: { data: OpsTeam }) {
                   <Trans>Key</Trans>
                 </th>
                 <th className="py-2 pr-3 font-normal">
+                  <Trans>Model</Trans>
+                </th>
+                <th className="py-2 pr-3 font-normal">
                   <Trans>Agents</Trans>
                 </th>
                 <th className="py-2 pr-3 font-normal">
@@ -193,6 +201,14 @@ export function TeamView({ data }: { data: OpsTeam }) {
                   </td>
                   <td className="py-3 pr-3">
                     <KeyBadge keyType={member.keyType} />
+                  </td>
+                  <td className="py-3 pr-3">
+                    <ModelBadge
+                      provider={member.modelProvider}
+                      modelId={member.modelId}
+                      source={member.modelSource}
+                      catalog={catalog}
+                    />
                   </td>
                   <td className="py-3 pr-3 tabular-nums">{member.agentCount}</td>
                   <td className="py-3 pr-3">
@@ -233,18 +249,38 @@ export function TeamView({ data }: { data: OpsTeam }) {
         {data.members.map((member) => (
           <li key={member.userId}>
             <Card size="sm">
-              <CardHeader className="gap-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <CardTitle className="truncate">{memberLabel(member)}</CardTitle>
+              <CardHeader className="min-w-0 gap-2">
+                <div className="flex w-full min-w-0 items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <CardTitle className="min-w-0 truncate">{memberLabel(member)}</CardTitle>
                     <CardDescription className="break-all">{member.email}</CardDescription>
                   </div>
                   <KeyBadge keyType={member.keyType} />
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <ModelBadge
+                    provider={member.modelProvider}
+                    modelId={member.modelId}
+                    source={member.modelSource}
+                    catalog={catalog}
+                  />
                 </div>
                 <div className="text-xs text-muted-foreground">
                   {member.agentCount} <Trans>agents</Trans>
                   {" · "}
                   {money(member.totalCostUsd)}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  <Trans>Shared {money(member.sharedKeyCostUsd)}</Trans>
+                  {" · "}
+                  <Trans>Personal {money(member.personalKeyCostUsd)}</Trans>
+                </div>
+                <div className="text-xs tabular-nums text-muted-foreground">
+                  <Trans>Shared week</Trans>
+                  {": "}
+                  {member.sharedKeyBudget?.member
+                    ? money(member.sharedKeyBudget.remainingUsd)
+                    : "—"}
                 </div>
                 <button
                   type="button"

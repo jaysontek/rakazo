@@ -6,6 +6,7 @@ import type {
   OpsChatLog,
   OpsOverview,
   OpsRequestLogRow,
+  SharedKeyBudgetDisplayStatus,
 } from "@rakazo/contracts";
 import {
   AlertDialog,
@@ -42,6 +43,8 @@ import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, MoreHorizontal } from "lu
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
+import { ModelBadge } from "../components/ai/model-badge";
+import { resolveModelDisplay } from "../components/ai/model-label";
 import { PageLoading } from "../components/PageLoading";
 import { hardSwitchImpersonation } from "../lib/impersonation-switch";
 import { useSpaceQueries } from "../lib/query";
@@ -74,7 +77,8 @@ function ms(value: number | null | undefined): string {
 
 function pct(value: number | null | undefined): string {
   if (value == null || !Number.isFinite(value)) return "—";
-  return `${Math.round(value)}%`;
+  // Floor so display matches UsageBar / SharedKeyUsageMeter (never round 99.5 → 100).
+  return `${Math.min(100, Math.max(0, Math.floor(value)))}%`;
 }
 
 function accountLabel(account: Pick<OpsAccount, "name" | "email">): string {
@@ -144,19 +148,27 @@ function UsageBar({
   percent,
   label,
   hardStopped,
+  status,
 }: {
   percent: number;
   label: string;
   hardStopped?: boolean;
+  status?: SharedKeyBudgetDisplayStatus;
 }) {
   const value = Math.min(100, Math.max(0, Math.floor(percent)));
+  const blocked = hardStopped || status === "blocked";
+  const warning = !blocked && status === "warning";
   return (
     <div className="space-y-1">
       <div className="flex items-baseline justify-between gap-2 text-xs">
-        <span className={cn("tabular-nums", hardStopped && "text-destructive")}>{pct(value)}</span>
-        {hardStopped ? (
+        <span
+          className={cn("tabular-nums", blocked && "text-destructive", warning && "text-warning")}
+        >
+          {pct(value)}
+        </span>
+        {blocked ? (
           <span className="text-destructive">
-            <Trans>Hard-stopped</Trans>
+            {hardStopped ? <Trans>Hard-stopped</Trans> : <Trans>Limit reached</Trans>}
           </span>
         ) : null}
       </div>
@@ -172,7 +184,7 @@ function UsageBar({
         <div
           className={cn(
             "h-full rounded-full transition-[width]",
-            hardStopped ? "bg-destructive" : "bg-foreground",
+            blocked ? "bg-destructive" : warning ? "bg-warning" : "bg-foreground",
           )}
           style={{ width: `${value}%` }}
         />
@@ -252,6 +264,7 @@ export function OpsDashboardView({
   onSelect,
   interactive = true,
   fixtureAgents,
+  fixtureRequestLogRows,
 }: {
   data: OpsOverview;
   onChanged: () => void;
@@ -261,6 +274,8 @@ export function OpsDashboardView({
   interactive?: boolean;
   /** Agents roster for non-interactive fixtures (e2e / unit). */
   fixtureAgents?: OpsAgent[];
+  /** Request-log rows for non-interactive fixtures (e2e screenshots). */
+  fixtureRequestLogRows?: OpsRequestLogRow[];
 }) {
   return (
     <div data-testid="ops-dashboard" className="space-y-6">
@@ -310,7 +325,7 @@ export function OpsDashboardView({
             selected={selected}
             onSelect={onSelect}
             interactive={interactive}
-            fixtureRows={interactive ? undefined : []}
+            fixtureRows={interactive ? undefined : (fixtureRequestLogRows ?? [])}
           />
           {selected?.runId || selected?.threadId ? (
             <ChatLogSection
@@ -504,6 +519,12 @@ function AccountsSection({
 }) {
   const { t } = useLingui();
   const queryClient = useQueryClient();
+  const catalogQuery = useQuery({
+    queryKey: ["models", "list"],
+    queryFn: () => rpc.models.list(),
+    enabled: interactive,
+  });
+  const catalog = catalogQuery.data ?? [];
   const roster = accounts.filter((account) => account.sharedKeyBudget?.member);
   const [impersonate, setImpersonate] = useState<OpsAccount | null>(null);
   const [transferFrom, setTransferFrom] = useState<OpsAccount | null>(null);
@@ -666,9 +687,15 @@ function AccountsSection({
           percent={budget.percentUsed}
           label={t`Shared week usage for ${accountLabel(account)}`}
           hardStopped={budget.hardStopped}
+          status={budget.status}
         />
         <div className="text-xs text-muted-foreground tabular-nums">
           {money(budget.remainingUsd)} left
+          {budget.reservedUsd > 0 ? (
+            <span className="ms-1">
+              <Trans>+{money(budget.reservedUsd)} held</Trans>
+            </span>
+          ) : null}
         </div>
         <div className="flex flex-wrap gap-1">
           {account.envPinned ? (
@@ -683,6 +710,17 @@ function AccountsSection({
           ) : null}
         </div>
       </div>
+    );
+  }
+
+  function AccountModelBadge({ account }: { account: OpsAccount }) {
+    return (
+      <ModelBadge
+        provider={account.modelProvider}
+        modelId={account.modelId}
+        source={account.modelSource}
+        catalog={catalog}
+      />
     );
   }
 
@@ -856,13 +894,7 @@ function AccountsSection({
                     />
                   </td>
                   <td className="py-3 pr-3">
-                    {account.modelProvider && account.modelId ? (
-                      <Badge variant="outline" className="max-w-[12rem] truncate font-normal">
-                        {account.modelProvider}/{account.modelId}
-                      </Badge>
-                    ) : (
-                      "—"
-                    )}
+                    <AccountModelBadge account={account} />
                   </td>
                   <td className="py-3 pr-3 tabular-nums">{tokens(account.totalTokens)}</td>
                   <td className="py-3 pr-3">
@@ -891,11 +923,15 @@ function AccountsSection({
           <li key={account.userId}>
             <Card size="sm">
               <CardHeader className="flex-row items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <CardTitle className="truncate">{account.name || account.email}</CardTitle>
+                <div className="min-w-0 w-full">
+                  <CardTitle className="min-w-0 w-full truncate">
+                    {account.name || account.email}
+                  </CardTitle>
                   <CardDescription className="break-all">{account.email}</CardDescription>
                 </div>
-                <AccountActions {...accountActionProps(account)} />
+                <div className="shrink-0">
+                  <AccountActions {...accountActionProps(account)} />
+                </div>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex flex-wrap items-center gap-2">
@@ -904,11 +940,7 @@ function AccountsSection({
                     pendingSharedBudget={pendingSharedBudgetApproval(account)}
                     needsReconnect={account.needsReconnect}
                   />
-                  {account.modelProvider && account.modelId ? (
-                    <Badge variant="outline" className="font-normal">
-                      {account.modelProvider}/{account.modelId}
-                    </Badge>
-                  ) : null}
+                  <AccountModelBadge account={account} />
                 </div>
                 <dl className="grid grid-cols-2 gap-2 text-sm">
                   <div>
@@ -1763,6 +1795,12 @@ function RequestLogSection({
     queryFn: () => rpc.ops.requestLog({ limit: 40 }),
     enabled: interactive,
   });
+  const catalogQuery = useQuery({
+    queryKey: ["models", "list"],
+    queryFn: () => rpc.models.list(),
+    enabled: interactive,
+  });
+  const catalog = catalogQuery.data ?? [];
   const rows = interactive ? log.data : (fixtureRows ?? []);
 
   return (
@@ -1781,55 +1819,145 @@ function RequestLogSection({
           <Trans>No recent requests.</Trans>
         </p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-0 text-left text-sm">
-            <thead className="text-muted-foreground">
-              <tr className="border-b">
-                <th className="py-2 pr-3 font-normal">
-                  <Trans>When</Trans>
-                </th>
-                <th className="py-2 pr-3 font-normal">
-                  <Trans>Kind</Trans>
-                </th>
-                <th className="py-2 pr-3 font-normal">
-                  <Trans>Model</Trans>
-                </th>
-                <th className="py-2 pr-3 font-normal">
-                  <Trans>Cost</Trans>
-                </th>
-                <th className="py-2 font-normal">
-                  <Trans>Status</Trans>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => {
-                const active = selected?.id === row.id;
-                return (
-                  <tr
-                    key={row.id}
-                    className={`border-b border-border/60 ${row.runId || row.threadId ? "cursor-pointer" : ""} ${active ? "bg-muted/40" : ""}`}
-                    onClick={() => {
-                      if (row.runId || row.threadId) onSelect(row);
-                    }}
-                  >
-                    <td className="py-2 pr-3">{new Date(row.createdAt).toLocaleString()}</td>
-                    <td className="py-2 pr-3">
-                      {row.kind}
-                      {row.sharedKey === true ? " · shared" : null}
-                      {row.sharedKey === false ? " · personal" : null}
-                    </td>
-                    <td className="py-2 pr-3">
-                      {row.provider && row.model ? `${row.provider}/${row.model}` : "—"}
-                    </td>
-                    <td className="py-2 pr-3 tabular-nums">{money(row.costUsd)}</td>
-                    <td className="py-2">{row.status ?? row.error ?? "—"}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <div className="hidden overflow-x-auto md:block">
+            <table className="w-full min-w-0 text-left text-sm">
+              <thead className="text-muted-foreground">
+                <tr className="border-b">
+                  <th className="py-2 pr-3 font-normal">
+                    <Trans>When</Trans>
+                  </th>
+                  <th className="py-2 pr-3 font-normal">
+                    <Trans>Kind</Trans>
+                  </th>
+                  <th className="py-2 pr-3 font-normal">
+                    <Trans>Model</Trans>
+                  </th>
+                  <th className="py-2 pr-3 font-normal">
+                    <Trans>Cost</Trans>
+                  </th>
+                  <th className="py-2 font-normal">
+                    <Trans>Status</Trans>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => {
+                  const active = selected?.id === row.id;
+                  const clickable = Boolean(row.runId || row.threadId);
+                  const model = resolveModelDisplay(row.provider, row.model, catalog);
+                  return (
+                    <tr
+                      key={row.id}
+                      tabIndex={clickable ? 0 : undefined}
+                      role={clickable ? "button" : undefined}
+                      aria-selected={active || undefined}
+                      className={`border-b border-border/60 outline-none ${clickable ? "cursor-pointer focus-visible:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring/50" : ""} ${active ? "bg-muted/40" : ""}`}
+                      onClick={() => {
+                        if (clickable) onSelect(row);
+                      }}
+                      onKeyDown={(event) => {
+                        if (!clickable) return;
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          onSelect(row);
+                        }
+                      }}
+                    >
+                      <td className="py-2 pr-3">{new Date(row.createdAt).toLocaleString()}</td>
+                      <td className="py-2 pr-3">
+                        {row.kind}
+                        {row.sharedKey === true ? " · shared" : null}
+                        {row.sharedKey === false ? " · personal" : null}
+                      </td>
+                      <td className="py-2 pr-3">
+                        {model ? (
+                          <span
+                            className="inline-flex min-w-0 max-w-[12rem] items-baseline gap-1.5"
+                            title={model.raw}
+                          >
+                            <span className="min-w-0 truncate font-medium">{model.name}</span>
+                            <span className="min-w-0 truncate text-muted-foreground">
+                              {model.providerName}
+                            </span>
+                          </span>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="py-2 pr-3 tabular-nums">{money(row.costUsd)}</td>
+                      <td className="py-2">{row.status ?? row.error ?? "—"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <ul className="grid gap-3 md:hidden">
+            {rows.map((row) => {
+              const active = selected?.id === row.id;
+              const clickable = Boolean(row.runId || row.threadId);
+              return (
+                <li key={row.id}>
+                  <Card size="sm" className={cn(active && "ring-1 ring-border")}>
+                    <CardHeader className="gap-1">
+                      {clickable ? (
+                        <button
+                          type="button"
+                          className="min-w-0 rounded-md text-start outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                          onClick={() => onSelect(row)}
+                        >
+                          <CardTitle className="text-sm font-medium">
+                            {new Date(row.createdAt).toLocaleString()}
+                          </CardTitle>
+                          <CardDescription>
+                            {row.kind}
+                            {row.sharedKey === true ? " · shared" : null}
+                            {row.sharedKey === false ? " · personal" : null}
+                          </CardDescription>
+                        </button>
+                      ) : (
+                        <>
+                          <CardTitle className="text-sm font-medium">
+                            {new Date(row.createdAt).toLocaleString()}
+                          </CardTitle>
+                          <CardDescription>
+                            {row.kind}
+                            {row.sharedKey === true ? " · shared" : null}
+                            {row.sharedKey === false ? " · personal" : null}
+                          </CardDescription>
+                        </>
+                      )}
+                    </CardHeader>
+                    <CardContent className="space-y-1 text-sm">
+                      <div className="min-w-0">
+                        {(() => {
+                          const model = resolveModelDisplay(row.provider, row.model, catalog);
+                          if (!model) return "—";
+                          return (
+                            <span
+                              className="inline-flex min-w-0 max-w-full items-baseline gap-1.5"
+                              title={model.raw}
+                            >
+                              <span className="min-w-0 truncate font-medium">{model.name}</span>
+                              <span className="min-w-0 truncate text-muted-foreground">
+                                {model.providerName}
+                              </span>
+                            </span>
+                          );
+                        })()}
+                      </div>
+                      <div className="flex justify-between gap-2 tabular-nums text-muted-foreground">
+                        <span>{money(row.costUsd)}</span>
+                        <span>{row.status ?? row.error ?? "—"}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </li>
+              );
+            })}
+          </ul>
+        </>
       )}
     </section>
   );

@@ -126,6 +126,20 @@ function makeDeps(): RouterDeps {
     },
     userModelCredential: {
       findFirst: async () => null,
+      findMany: async () => [],
+    },
+    userModelRoleChoice: {
+      findMany: async () => [],
+    },
+    spaceModelRoleChoice: {
+      findMany: async () => [],
+    },
+    spaceSettingOverride: {
+      findUnique: async () => null,
+    },
+    userModelPreference: {
+      findFirst: async () => null,
+      findMany: async () => [],
     },
     $queryRaw: async () => [{ "?column?": 1 }],
     $transaction: async (fn: (tx: unknown) => unknown) => fn(prisma),

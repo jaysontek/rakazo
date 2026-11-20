@@ -460,6 +460,13 @@ msgstr "@{0}"
 msgid "/ month"
 msgstr "/ 월"
 
+#. placeholder {0}: money(budget.reservedUsd)
+#. placeholder {0}: money(reserved)
+#: src/pages/AdminOpsBudget.tsx
+#: src/pages/AdminOpsPage.tsx
+msgid "+{0} held"
+msgstr ""
+
 #: src/components/integrations/space-availability.tsx
 msgid "1 space"
 msgstr ""
@@ -1772,6 +1779,7 @@ msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
 #: src/pages/AdminOpsTeamPage.tsx
+#: src/pages/ModelRoleSettings.tsx
 msgid "Company API"
 msgstr "회사 API"
 
@@ -2347,6 +2355,14 @@ msgstr "로그인 옵션을 불러올 수 없습니다"
 #: src/pages/KnowledgeSection.tsx
 msgid "Could not load skill"
 msgstr "스킬을 불러오지 못했습니다"
+
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "Could not load team"
+msgstr "팀을 불러올 수 없습니다"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not load teams"
+msgstr "팀 목록을 불러올 수 없습니다"
 
 #: src/pages/Artifacts.tsx
 msgid "Could not load this artifact."
@@ -3758,6 +3774,10 @@ msgstr ""
 msgid "Hear a sample"
 msgstr "샘플 듣기"
 
+#: src/components/ai/context.tsx
+msgid "Held"
+msgstr ""
+
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Hi, this is how I'll sound when I read replies out loud."
 msgstr "안녕하세요. 답변을 소리 내어 읽을 때 이런 목소리로 들립니다."
@@ -4132,6 +4152,10 @@ msgstr "MEMORY.md와 함께 봇이 의미를 기준으로 사실을 저장하고
 msgid "Light"
 msgstr "라이트"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Limit reached"
+msgstr ""
+
 #: src/pages/SpaceSearch.tsx
 msgid "Link"
 msgstr ""
@@ -4503,6 +4527,7 @@ msgstr "모드"
 
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/RoutineEditor.tsx
@@ -5979,6 +6004,10 @@ msgstr "초기화"
 msgid "Resets {reset}"
 msgstr ""
 
+#: src/components/ai/context.tsx
+msgid "Resets {resetLabel}"
+msgstr ""
+
 #. placeholder {0}: resetCountdown(budget.resetsAt)
 #: src/pages/AdminOpsBudget.tsx
 msgid "Resets in {0}"
@@ -6759,6 +6788,10 @@ msgstr "스페이스"
 msgid "Space default"
 msgstr "스페이스 기본값"
 
+#: src/pages/shell/bot-panel.tsx
+msgid "Space default ({spaceDefaultName})"
+msgstr ""
+
 #: src/pages/SettingsOverlay.tsx
 msgid "Spaces"
 msgstr "스페이스"
@@ -6800,6 +6833,10 @@ msgstr "지출 금액"
 #: src/components/SpendingLimitSettings.tsx
 msgid "Spending limit"
 msgstr "지출 한도"
+
+#: src/components/ai/context.tsx
+msgid "Spent"
+msgstr ""
 
 #: src/components/AccountAccess.tsx
 msgid "SSO"
@@ -7856,6 +7893,10 @@ msgstr "매주"
 msgid "Weekly allotment override"
 msgstr "주간 배정 재정의"
 
+#: src/components/ai/context.tsx
+msgid "Weekly limit reached for new runs · Resets {resetLabel}"
+msgstr ""
+
 #: src/pages/AdminOpsBudget.tsx
 msgid "Weekly shared-key pool used"
 msgstr "주간 공유 키 풀 사용량"
@@ -8068,6 +8109,11 @@ msgstr "체험 기간이 끝나면 요금제가 연 {annualPrice}로 바뀝니�
 msgid "Your plan becomes {tierTargetLabel} when your trial ends."
 msgstr "체험이 끝나면 요금제가 {tierTargetLabel}(으)로 바뀝니다."
 
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "Your share of this week's shared API key budget is used up. It resets next week, or connect your own key in Models."
+msgstr ""
+
 #: src/components/integrations/skills-dialog.tsx
 msgid "Your skills"
 msgstr ""
@@ -8095,9 +8141,3 @@ msgstr "음성 서비스에서 키를 거부했습니다."
 #: src/components/vault/VaultItemEditor.tsx
 msgid "ZIP or postal code"
 msgstr ""
-
-msgid "Could not load team"
-msgstr "팀을 불러올 수 없습니다"
-
-msgid "Could not load teams"
-msgstr "팀 목록을 불러올 수 없습니다"

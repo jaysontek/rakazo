@@ -8,6 +8,7 @@ import {
   fullWeekShareUsd,
   parseAllowlist,
   parseSharedKeyMonthlyBudgetInput,
+  projectSharedKeyBudgetDisplay,
   redivideWeeklyAllotments,
   resolveSharedKeyPeriodSchedule,
   sharedKeyBudgetPercentUsed,
@@ -336,6 +337,10 @@ export type UsageLimitView =
   | {
       kind: "shared_weekly";
       percentUsed: number;
+      usedPercent?: number;
+      reservedPercent?: number;
+      spentPercent?: number;
+      status?: "ok" | "warning" | "blocked";
       resetsAt: string;
       timezone: string;
     }
@@ -345,20 +350,34 @@ export type UsageLimitView =
 /**
  * Account-menu usage meter: personal-key when the API has classified the effective key,
  * otherwise shared weekly % when on the roster with a cap.
+ * Pass `maxCallCostUsd` (from maximumModelCallCost for the effective model) so low headroom
+ * can surface as blocked without changing enforcement.
  */
 export async function resolveUsageLimitView(
   prisma: BudgetPrisma,
   userId: string,
   now = new Date(),
   envFallback: number | null = null,
-  options?: { personalKey?: boolean },
+  options?: { personalKey?: boolean; maxCallCostUsd?: number | null },
 ): Promise<UsageLimitView> {
   if (options?.personalKey) return { kind: "personal_key" };
   const status = await sharedKeyWeeklyBudgetStatus(prisma, userId, now, envFallback);
   if (status.enabled && status.member) {
+    const projection = projectSharedKeyBudgetDisplay({
+      spentUsd: status.spentUsd,
+      reservedUsd: status.reservedUsd,
+      weeklyCapUsd: status.weeklyCapUsd,
+      hardStopEnabled: status.hardStopEnabled,
+      maxCallCostUsd: options?.maxCallCostUsd,
+      warningThresholds: status.warningThresholds,
+    });
     return {
       kind: "shared_weekly",
       percentUsed: status.percentUsed,
+      usedPercent: projection.usedPercent,
+      reservedPercent: projection.reservedPercent,
+      spentPercent: projection.spentPercent,
+      status: projection.status,
       resetsAt: status.resetsAt,
       timezone: status.timezone,
     };

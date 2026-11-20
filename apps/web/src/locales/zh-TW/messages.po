@@ -461,6 +461,13 @@ msgstr "@{0}"
 msgid "/ month"
 msgstr "/ 月"
 
+#. placeholder {0}: money(budget.reservedUsd)
+#. placeholder {0}: money(reserved)
+#: src/pages/AdminOpsBudget.tsx
+#: src/pages/AdminOpsPage.tsx
+msgid "+{0} held"
+msgstr ""
+
 #: src/components/integrations/space-availability.tsx
 msgid "1 space"
 msgstr ""
@@ -1773,6 +1780,7 @@ msgstr "緊湊"
 
 #: src/pages/AdminOpsPage.tsx
 #: src/pages/AdminOpsTeamPage.tsx
+#: src/pages/ModelRoleSettings.tsx
 msgid "Company API"
 msgstr "公司 API"
 
@@ -2348,6 +2356,14 @@ msgstr "無法載入登入選項"
 #: src/pages/KnowledgeSection.tsx
 msgid "Could not load skill"
 msgstr "無法載入技能"
+
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "Could not load team"
+msgstr "無法載入團隊"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not load teams"
+msgstr "無法載入團隊列表"
 
 #: src/pages/Artifacts.tsx
 msgid "Could not load this artifact."
@@ -3759,6 +3775,10 @@ msgstr ""
 msgid "Hear a sample"
 msgstr "試聽"
 
+#: src/components/ai/context.tsx
+msgid "Held"
+msgstr ""
+
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Hi, this is how I'll sound when I read replies out loud."
 msgstr "你好，這是我朗讀回覆時的聲音。"
@@ -4133,6 +4153,10 @@ msgstr "讓機器人在 MEMORY.md 之外，依語意儲存和回想事實。"
 msgid "Light"
 msgstr "淺色"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Limit reached"
+msgstr ""
+
 #: src/pages/SpaceSearch.tsx
 msgid "Link"
 msgstr ""
@@ -4504,6 +4528,7 @@ msgstr "模式"
 
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/RoutineEditor.tsx
@@ -5980,6 +6005,10 @@ msgstr "重設"
 msgid "Resets {reset}"
 msgstr ""
 
+#: src/components/ai/context.tsx
+msgid "Resets {resetLabel}"
+msgstr ""
+
 #. placeholder {0}: resetCountdown(budget.resetsAt)
 #: src/pages/AdminOpsBudget.tsx
 msgid "Resets in {0}"
@@ -6760,6 +6789,10 @@ msgstr "空間"
 msgid "Space default"
 msgstr "空間預設"
 
+#: src/pages/shell/bot-panel.tsx
+msgid "Space default ({spaceDefaultName})"
+msgstr ""
+
 #: src/pages/SettingsOverlay.tsx
 msgid "Spaces"
 msgstr "空間"
@@ -6801,6 +6834,10 @@ msgstr "支出金額"
 #: src/components/SpendingLimitSettings.tsx
 msgid "Spending limit"
 msgstr "支出上限"
+
+#: src/components/ai/context.tsx
+msgid "Spent"
+msgstr ""
 
 #: src/components/AccountAccess.tsx
 msgid "SSO"
@@ -7857,6 +7894,10 @@ msgstr "每週"
 msgid "Weekly allotment override"
 msgstr "每週額度覆寫"
 
+#: src/components/ai/context.tsx
+msgid "Weekly limit reached for new runs · Resets {resetLabel}"
+msgstr ""
+
 #: src/pages/AdminOpsBudget.tsx
 msgid "Weekly shared-key pool used"
 msgstr "本週共用金鑰池用量"
@@ -8069,6 +8110,11 @@ msgstr "試用結束後，你的方案將變為每年 {annualPrice}。"
 msgid "Your plan becomes {tierTargetLabel} when your trial ends."
 msgstr "試用結束後，你的方案將變為 {tierTargetLabel}。"
 
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "Your share of this week's shared API key budget is used up. It resets next week, or connect your own key in Models."
+msgstr ""
+
 #: src/components/integrations/skills-dialog.tsx
 msgid "Your skills"
 msgstr ""
@@ -8096,9 +8142,3 @@ msgstr "你的語音供應商拒絕了該金鑰。"
 #: src/components/vault/VaultItemEditor.tsx
 msgid "ZIP or postal code"
 msgstr ""
-
-msgid "Could not load team"
-msgstr "無法載入團隊"
-
-msgid "Could not load teams"
-msgstr "無法載入團隊列表"

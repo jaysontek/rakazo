@@ -1,9 +1,15 @@
 import { ORPCError } from "@orpc/server";
 import type { UsageOperationKind } from "@rakazo/adapter-kit";
-import { resolveBotWorkspacePath, resolveModelKeyTypeSafe } from "@rakazo/adapters";
+import {
+  lookupMinimumWorstCaseCallCostUsd,
+  resolveBotWorkspacePath,
+  resolveDeploymentModel,
+  resolveMemberMainModel,
+  resolveModelKeyTypeSafe,
+} from "@rakazo/adapters";
 import type { ExportManifest } from "@rakazo/contracts";
 import { attachmentMaxBytes, resolveBotAvatarSet } from "@rakazo/contracts";
-import { AttachmentValidationError } from "@rakazo/core";
+import { AttachmentValidationError, projectSharedKeyBudgetDisplay } from "@rakazo/core";
 import {
   completeUsageSums,
   IsolationError,
@@ -177,7 +183,23 @@ export function contentRoutes(ctx: RouterContext) {
           },
           { userId: context.actor.userId, spaceId: context.actor.spaceId },
         );
-        const [result, modelGroups, runGroups, budget, usageLimit] = await Promise.all([
+        const effectiveModel = (async () => {
+          try {
+            const main = await resolveMemberMainModel(
+              { prisma: deps.prisma, secretStore: deps.secrets },
+              { userId: context.actor.userId, spaceId: context.actor.spaceId },
+            );
+            if (main) return { provider: main.provider, modelId: main.modelId };
+          } catch {
+            // Display-only worst-case cost: never fail the usage summary if model lookup is incomplete.
+          }
+          const deployment = resolveDeploymentModel();
+          return { provider: deployment.provider, modelId: deployment.model };
+        })();
+        const maxCallCostUsd = effectiveModel.then((model) =>
+          lookupMinimumWorstCaseCallCostUsd(model.provider, model.modelId),
+        );
+        const [result, modelGroups, runGroups, budget, usageLimit, callCost] = await Promise.all([
           deps.prisma.usageRecord.aggregate({ where, _sum: sums, _count: counts }),
           deps.prisma.usageRecord.groupBy({
             by: ["provider", "model"],
@@ -187,11 +209,13 @@ export function contentRoutes(ctx: RouterContext) {
           }),
           deps.prisma.usageRecord.groupBy({ by: ["runId", "parentRunId"], where }),
           sharedKeyWeeklyBudgetStatus(deps.prisma, context.actor.userId, undefined, envBudget),
-          keyType.then((resolution) =>
+          Promise.all([keyType, maxCallCostUsd]).then(([resolution, maxCost]) =>
             resolveUsageLimitView(deps.prisma, context.actor.userId, undefined, envBudget, {
               personalKey: resolution.keyType === "personal",
+              maxCallCostUsd: maxCost,
             }),
           ),
+          maxCallCostUsd,
         ]);
         const runs = new Set(runGroups.map((row) => row.parentRunId ?? row.runId).filter(Boolean))
           .size;
@@ -207,13 +231,34 @@ export function contentRoutes(ctx: RouterContext) {
           .sort(
             (a, b) => (b.totalTokens ?? 0) - (a.totalTokens ?? 0) || b.modelCalls - a.modelCalls,
           );
-        const sharedKeyWeeklyBudget =
+        const projection =
           budget.enabled && budget.member
+            ? projectSharedKeyBudgetDisplay({
+                spentUsd: budget.spentUsd,
+                reservedUsd: budget.reservedUsd,
+                weeklyCapUsd: budget.weeklyCapUsd,
+                hardStopEnabled: budget.hardStopEnabled,
+                maxCallCostUsd: callCost,
+                warningThresholds: budget.warningThresholds,
+              })
+            : null;
+        const sharedKeyWeeklyBudget =
+          budget.enabled && budget.member && projection
             ? {
                 percentUsed: budget.percentUsed,
+                usedPercent: projection.usedPercent,
+                reservedPercent: projection.reservedPercent,
+                spentPercent: projection.spentPercent,
+                status: projection.status,
                 resetsAt: budget.resetsAt,
                 timezone: budget.timezone,
-                ...(admin ? { spentUsd: budget.spentUsd, weeklyCapUsd: budget.weeklyCapUsd } : {}),
+                ...(admin
+                  ? {
+                      spentUsd: budget.spentUsd,
+                      reservedUsd: budget.reservedUsd,
+                      weeklyCapUsd: budget.weeklyCapUsd,
+                    }
+                  : {}),
               }
             : null;
         if (admin) {

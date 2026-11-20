@@ -26,6 +26,7 @@ const fixtureOverview: OpsOverview = {
       deactivated: false,
       modelProvider: "google",
       modelId: "gemini-2.5-pro",
+      modelSource: "last used",
       keyType: "company",
       needsReconnect: false,
       totalTokens: 1_240_000,
@@ -37,10 +38,12 @@ const fixtureOverview: OpsOverview = {
         member: true,
         weeklyCapUsd: 25,
         spentUsd: 12.5,
-        reservedUsd: 0,
-        remainingUsd: 12.5,
-        percentUsed: 50,
+        reservedUsd: 0.5,
+        remainingUsd: 12,
+        percentUsed: 52,
+        reservedPercent: 2,
         hardStopped: false,
+        status: "ok",
         weekStartsAt: weekStart,
         resetsAt,
         timezone: "America/New_York",
@@ -58,6 +61,7 @@ const fixtureOverview: OpsOverview = {
       deactivated: false,
       modelProvider: "google",
       modelId: "gemini-2.5-flash",
+      modelSource: "last used",
       keyType: "company",
       needsReconnect: false,
       totalTokens: 880_000,
@@ -72,7 +76,9 @@ const fixtureOverview: OpsOverview = {
         reservedUsd: 0,
         remainingUsd: 3,
         percentUsed: 88,
+        reservedPercent: 0,
         hardStopped: false,
+        status: "warning",
         weekStartsAt: weekStart,
         resetsAt,
         timezone: "America/New_York",
@@ -90,6 +96,7 @@ const fixtureOverview: OpsOverview = {
       deactivated: false,
       modelProvider: "openai",
       modelId: "gpt-4.1",
+      modelSource: "configured",
       keyType: "personal",
       needsReconnect: false,
       totalTokens: 420_000,
@@ -108,6 +115,7 @@ const fixtureOverview: OpsOverview = {
       deactivated: false,
       modelProvider: "google",
       modelId: "gemini-2.5-pro",
+      modelSource: "last used",
       keyType: "company",
       needsReconnect: false,
       totalTokens: 2_100_000,
@@ -122,7 +130,9 @@ const fixtureOverview: OpsOverview = {
         reservedUsd: 0,
         remainingUsd: 0,
         percentUsed: 100,
+        reservedPercent: 0,
         hardStopped: true,
+        status: "blocked",
         weekStartsAt: weekStart,
         resetsAt,
         timezone: "America/New_York",
@@ -139,7 +149,8 @@ const fixtureOverview: OpsOverview = {
       name: "Riley Ortiz",
       deactivated: false,
       modelProvider: "google",
-      modelId: "gemini-2.5-flash",
+      modelId: "gemini-3.8-flash",
+      modelSource: "default",
       // Typical shared-key user: no stored personal key (deployment default), not enrolled.
       keyType: "company",
       needsReconnect: false,
@@ -155,7 +166,9 @@ const fixtureOverview: OpsOverview = {
         reservedUsd: 0,
         remainingUsd: 0,
         percentUsed: 0,
+        reservedPercent: 0,
         hardStopped: false,
+        status: "ok",
         weekStartsAt: weekStart,
         resetsAt,
         timezone: "America/New_York",
@@ -294,6 +307,72 @@ const fixtureOverview: OpsOverview = {
   ],
 };
 
+const fixtureRequestLogRows: OpsRequestLogRow[] = [
+  {
+    id: "req_1",
+    kind: "usage",
+    userId: "user_alex",
+    botId: "bot_1",
+    botName: "Ops helper",
+    runId: "run_1",
+    threadId: "thread_1",
+    provider: "google",
+    model: "gemini-2.5-pro",
+    sharedKey: true,
+    inputTokens: 12_400,
+    outputTokens: 3_200,
+    totalTokens: 15_600,
+    costUsd: 0.42,
+    status: "ok",
+    error: null,
+    firstResponseMs: 640,
+    totalMs: 3_100,
+    createdAt: "2026-11-12T18:04:00.000Z",
+  },
+  {
+    id: "req_2",
+    kind: "run",
+    userId: "user_sam",
+    botId: "bot_2",
+    botName: "Inbox triage",
+    runId: "run_2",
+    threadId: "thread_2",
+    provider: "google",
+    model: "gemini-2.5-flash",
+    sharedKey: true,
+    inputTokens: 4_800,
+    outputTokens: 1_100,
+    totalTokens: 5_900,
+    costUsd: 0.08,
+    status: "ok",
+    error: null,
+    firstResponseMs: 410,
+    totalMs: 1_800,
+    createdAt: "2026-11-12T17:51:00.000Z",
+  },
+  {
+    id: "req_3",
+    kind: "usage",
+    userId: "user_jordan",
+    botId: "bot_3",
+    botName: "Research",
+    runId: null,
+    threadId: null,
+    provider: "openai",
+    model: "gpt-4.1",
+    sharedKey: false,
+    inputTokens: 22_000,
+    outputTokens: 6_400,
+    totalTokens: 28_400,
+    costUsd: 1.15,
+    status: "error",
+    error: "rate_limited",
+    firstResponseMs: null,
+    totalMs: null,
+    createdAt: "2026-11-12T16:20:00.000Z",
+  },
+];
+
 const fixtureAgents: OpsAgent[] = [
   {
     id: "bot_1",
@@ -384,6 +463,7 @@ function Fixture() {
             onSelect={setSelected}
             interactive={false}
             fixtureAgents={fixtureAgents}
+            fixtureRequestLogRows={fixtureRequestLogRows}
           />
         </div>
       </main>
@@ -391,9 +471,34 @@ function Fixture() {
   );
 }
 
+const fixtureCatalog = [
+  {
+    provider: "google",
+    id: "gemini-2.5-pro",
+    label: "Gemini 2.5 Pro",
+    providerName: "Google",
+    billing: "pay-as-you-go",
+  },
+  {
+    provider: "google",
+    id: "gemini-2.5-flash",
+    label: "Gemini 2.5 Flash",
+    providerName: "Google",
+    billing: "pay-as-you-go",
+  },
+  {
+    provider: "openai",
+    id: "gpt-4.1",
+    label: "GPT-4.1",
+    providerName: "OpenAI",
+    billing: "pay-as-you-go",
+  },
+] as const;
+
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
 });
+queryClient.setQueryData(["models", "list"], fixtureCatalog);
 
 void bootstrapI18n("en").then(() => {
   createRoot(document.getElementById("root")!).render(

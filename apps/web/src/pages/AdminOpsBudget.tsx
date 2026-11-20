@@ -217,8 +217,12 @@ function KpiRow({
   const [editing, setEditing] = useState(false);
   const pool = budget.weekPoolUsd;
   const spent = budget.weekSpentUsd;
+  const reserved = data.accounts.reduce(
+    (sum, account) => sum + (account.sharedKeyBudget?.reservedUsd ?? 0),
+    0,
+  );
   const poolPct =
-    pool != null && pool > 0 ? Math.min(100, Math.max(0, (spent / pool) * 100)) : 0;
+    pool != null && pool > 0 ? Math.min(100, Math.max(0, ((spent + reserved) / pool) * 100)) : 0;
   const monthlyCapSource = budget.settings?.monthlyCapSource;
 
   useEffect(() => {
@@ -344,6 +348,11 @@ function KpiRow({
         </CardHeader>
         <CardContent className="space-y-2">
           <UsageBar percent={poolPct} label={t`Weekly shared-key pool used`} />
+          {reserved > 0 ? (
+            <p className="text-xs text-muted-foreground tabular-nums">
+              <Trans>+{money(reserved)} held</Trans>
+            </p>
+          ) : null}
           <p className="text-xs text-muted-foreground" data-testid="ops-budget-reset">
             <Trans>Resets in {resetCountdown(budget.resetsAt)}</Trans>
             {" · "}

@@ -124,8 +124,14 @@ function opsPrisma(
       ),
     },
     userModelPreference: {
-      findMany: vi.fn(async ({ where }: { where: { userId: string } }) => []),
+      findMany: vi.fn(async () => []),
       findFirst: vi.fn(async () => null),
+    },
+    userModelRoleChoice: {
+      findMany: vi.fn(async () => []),
+    },
+    spaceModelRoleChoice: {
+      findMany: vi.fn(async () => []),
     },
     userModelCredential: {
       findMany: vi.fn(async ({ where }: { where: { userId: string; provider?: unknown } }) =>
@@ -192,7 +198,17 @@ function opsPrisma(
       findUniqueOrThrow: vi.fn(async () => ({ mode: "credits", balanceMicros: 1_000_000n })),
       upsert: vi.fn(async () => ({ mode: "credits", balanceMicros: 1_000_000n })),
     },
-    $queryRaw: vi.fn(async () => [{ "?column?": 1 }]),
+    usageLatestByUser: [] as Array<{ userId: string; provider: string; model: string }>,
+    $queryRaw: vi.fn(async (query: { strings?: readonly string[] } | unknown) => {
+      const text =
+        query && typeof query === "object" && "strings" in query && Array.isArray(query.strings)
+          ? query.strings.join(" ")
+          : String(query ?? "");
+      if (text.includes("usage_records") && text.includes("DISTINCT ON")) {
+        return prisma.usageLatestByUser;
+      }
+      return [{ "?column?": 1 }];
+    }),
     $executeRaw: vi.fn(async () => 0),
     $transaction: vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma)),
     secretsLoad: async (ciphertext: string) => {
@@ -214,6 +230,47 @@ function apiKeyPlaintext(key: string) {
 }
 
 describe("loadOpsOverview", () => {
+  it("resolves a model for every account: latest usage, configured, or deployment default", async () => {
+    const prisma = opsPrisma([
+      { id: "user-a", email: "a@example.test", name: "Heavy", deactivatedAt: null },
+      { id: "user-b", email: "b@example.test", name: "Old", deactivatedAt: null },
+      { id: "user-c", email: "c@example.test", name: "Fresh", deactivatedAt: null },
+    ]);
+    // User A would have filled a global take:2000 window; DISTINCT ON still returns one row.
+    prisma.usageLatestByUser = [
+      { userId: "user-a", provider: "google", model: "gemini-3.8-flash" },
+      { userId: "user-b", provider: "openai", model: "gpt-4.1" },
+    ];
+    // User C has no usage — fall through to deployment default via resolveDeploymentModel.
+    prisma.userModelRoleChoice.findMany = vi.fn(async () => []);
+    prisma.userModelPreference.findMany = vi.fn(async () => []);
+    prisma.spaceModelRoleChoice.findMany = vi.fn(async () => []);
+
+    const overview = await loadOpsOverview(
+      prisma as never,
+      {},
+      new Date("2026-11-05T17:00:00.000Z"),
+      null,
+      { deploymentModelKey: "deployment-key" },
+    );
+
+    const byId = new Map(overview.accounts.map((row) => [row.userId, row]));
+    expect(byId.get("user-a")).toMatchObject({
+      modelProvider: "google",
+      modelId: "gemini-3.8-flash",
+      modelSource: "last used",
+    });
+    expect(byId.get("user-b")).toMatchObject({
+      modelProvider: "openai",
+      modelId: "gpt-4.1",
+      modelSource: "last used",
+    });
+    const fresh = byId.get("user-c");
+    expect(fresh?.modelProvider).toBeTruthy();
+    expect(fresh?.modelId).toBeTruthy();
+    expect(fresh?.modelSource).toBe("default");
+  });
+
   it("filters builddrive.net accounts out of the overview", async () => {
     const prisma = opsPrisma([
       { id: "visible", email: "user@tekweld.com", name: "User", deactivatedAt: null },

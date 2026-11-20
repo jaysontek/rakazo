@@ -460,6 +460,13 @@ msgstr "@{0}"
 msgid "/ month"
 msgstr "/ месяц"
 
+#. placeholder {0}: money(budget.reservedUsd)
+#. placeholder {0}: money(reserved)
+#: src/pages/AdminOpsBudget.tsx
+#: src/pages/AdminOpsPage.tsx
+msgid "+{0} held"
+msgstr ""
+
 #: src/components/integrations/space-availability.tsx
 msgid "1 space"
 msgstr ""
@@ -1772,6 +1779,7 @@ msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
 #: src/pages/AdminOpsTeamPage.tsx
+#: src/pages/ModelRoleSettings.tsx
 msgid "Company API"
 msgstr "Корпоративный API"
 
@@ -2347,6 +2355,14 @@ msgstr "Не удалось загрузить способы входа"
 #: src/pages/KnowledgeSection.tsx
 msgid "Could not load skill"
 msgstr "Не удалось загрузить навык"
+
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "Could not load team"
+msgstr "Не удалось загрузить команду"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not load teams"
+msgstr "Не удалось загрузить команды"
 
 #: src/pages/Artifacts.tsx
 msgid "Could not load this artifact."
@@ -3758,6 +3774,10 @@ msgstr ""
 msgid "Hear a sample"
 msgstr "Прослушать образец"
 
+#: src/components/ai/context.tsx
+msgid "Held"
+msgstr ""
+
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Hi, this is how I'll sound when I read replies out loud."
 msgstr "Привет, вот как я буду звучать, когда буду читать ответы вслух."
@@ -4132,6 +4152,10 @@ msgstr "Позволяет ботам сохранять и находить ф�
 msgid "Light"
 msgstr "Светлая"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Limit reached"
+msgstr ""
+
 #: src/pages/SpaceSearch.tsx
 msgid "Link"
 msgstr ""
@@ -4503,6 +4527,7 @@ msgstr "Режим"
 
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/RoutineEditor.tsx
@@ -5979,6 +6004,10 @@ msgstr "Сброс"
 msgid "Resets {reset}"
 msgstr ""
 
+#: src/components/ai/context.tsx
+msgid "Resets {resetLabel}"
+msgstr ""
+
 #. placeholder {0}: resetCountdown(budget.resetsAt)
 #: src/pages/AdminOpsBudget.tsx
 msgid "Resets in {0}"
@@ -6759,6 +6788,10 @@ msgstr "Пространство"
 msgid "Space default"
 msgstr "Пространство по умолчанию"
 
+#: src/pages/shell/bot-panel.tsx
+msgid "Space default ({spaceDefaultName})"
+msgstr ""
+
 #: src/pages/SettingsOverlay.tsx
 msgid "Spaces"
 msgstr "Пространства"
@@ -6800,6 +6833,10 @@ msgstr "Сумма трат"
 #: src/components/SpendingLimitSettings.tsx
 msgid "Spending limit"
 msgstr "Лимит расходов"
+
+#: src/components/ai/context.tsx
+msgid "Spent"
+msgstr ""
 
 #: src/components/AccountAccess.tsx
 msgid "SSO"
@@ -7856,6 +7893,10 @@ msgstr "Еженедельно"
 msgid "Weekly allotment override"
 msgstr "Переопределение недельного лимита"
 
+#: src/components/ai/context.tsx
+msgid "Weekly limit reached for new runs · Resets {resetLabel}"
+msgstr ""
+
 #: src/pages/AdminOpsBudget.tsx
 msgid "Weekly shared-key pool used"
 msgstr "Использовано недельного пула общего ключа"
@@ -8068,6 +8109,11 @@ msgstr "После пробного периода план будет стои�
 msgid "Your plan becomes {tierTargetLabel} when your trial ends."
 msgstr "После пробного периода тариф будет стоить {tierTargetLabel}."
 
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "Your share of this week's shared API key budget is used up. It resets next week, or connect your own key in Models."
+msgstr ""
+
 #: src/components/integrations/skills-dialog.tsx
 msgid "Your skills"
 msgstr ""
@@ -8095,9 +8141,3 @@ msgstr "Ваш голосовой провайдер отклонил ключ."
 #: src/components/vault/VaultItemEditor.tsx
 msgid "ZIP or postal code"
 msgstr ""
-
-msgid "Could not load team"
-msgstr "Не удалось загрузить команду"
-
-msgid "Could not load teams"
-msgstr "Не удалось загрузить команды"
