@@ -43,7 +43,9 @@ for (const viewport of viewports) {
     }
 
     // Percent includes reserved for Alex (12.5 + 0.5 of 25 → 52%).
-    await expect(page.getByText("52%", { exact: true }).locator("visible=true").first()).toBeVisible();
+    await expect(
+      page.getByText("52%", { exact: true }).locator("visible=true").first(),
+    ).toBeVisible();
     await expect(page.getByText("+$0.50 held").locator("visible=true").first()).toBeVisible();
 
     await captureScreenshot(page, testInfo, `admin-ops-${viewport.name}`);

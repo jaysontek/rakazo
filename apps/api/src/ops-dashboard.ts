@@ -197,7 +197,7 @@ export async function resolveOpsAccountModels(
     SELECT DISTINCT ON ("userId") "userId", provider, model
     FROM usage_records
     WHERE "userId" IN (${Prisma.join(userIds)})
-    ORDER BY "userId", "createdAt" DESC
+    ORDER BY "userId", "createdAt" DESC, id DESC
   `);
   for (const row of latestUsage) {
     result.set(row.userId, {

@@ -460,6 +460,13 @@ msgstr "@{0}"
 msgid "/ month"
 msgstr "/ mes"
 
+#. placeholder {0}: money(budget.reservedUsd)
+#. placeholder {0}: money(reserved)
+#: src/pages/AdminOpsBudget.tsx
+#: src/pages/AdminOpsPage.tsx
+msgid "+{0} held"
+msgstr ""
+
 #: src/components/integrations/space-availability.tsx
 msgid "1 space"
 msgstr "1 espacio"
@@ -1772,6 +1779,7 @@ msgstr "Compacta"
 
 #: src/pages/AdminOpsPage.tsx
 #: src/pages/AdminOpsTeamPage.tsx
+#: src/pages/ModelRoleSettings.tsx
 msgid "Company API"
 msgstr "API de empresa"
 
@@ -2347,6 +2355,14 @@ msgstr "No se pudieron cargar las opciones de inicio de sesión"
 #: src/pages/KnowledgeSection.tsx
 msgid "Could not load skill"
 msgstr "No se pudo cargar la habilidad"
+
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "Could not load team"
+msgstr "No se pudo cargar el equipo"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not load teams"
+msgstr "No se pudieron cargar los equipos"
 
 #: src/pages/Artifacts.tsx
 msgid "Could not load this artifact."
@@ -4132,6 +4148,10 @@ msgstr "Permite a los bots guardar y recordar datos por significado, además de 
 msgid "Light"
 msgstr "Claro"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Limit reached"
+msgstr ""
+
 #: src/pages/SpaceSearch.tsx
 msgid "Link"
 msgstr "Enlace"
@@ -4503,6 +4523,7 @@ msgstr "Modo"
 
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/RoutineEditor.tsx
@@ -6759,6 +6780,10 @@ msgstr "Espacio"
 msgid "Space default"
 msgstr "Predeterminado del Space"
 
+#: src/pages/shell/bot-panel.tsx
+msgid "Space default ({spaceDefaultName})"
+msgstr ""
+
 #: src/pages/SettingsOverlay.tsx
 msgid "Spaces"
 msgstr "Espacios"
@@ -7856,6 +7881,10 @@ msgstr "Semanal"
 msgid "Weekly allotment override"
 msgstr "Anulación de asignación semanal"
 
+#: src/components/SharedKeyUsageMeter.tsx
+msgid "Weekly limit reached for new runs · Resets {reset}"
+msgstr ""
+
 #: src/pages/AdminOpsBudget.tsx
 msgid "Weekly shared-key pool used"
 msgstr "Pool semanal de clave compartida usado"
@@ -8068,6 +8097,11 @@ msgstr "Cuando termine tu prueba, tu plan pasará a {annualPrice} / año."
 msgid "Your plan becomes {tierTargetLabel} when your trial ends."
 msgstr "Tu plan pasa a costar {tierTargetLabel} cuando termine tu prueba."
 
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "Your share of this week's shared API key budget is used up. It resets next week, or connect your own key in Models."
+msgstr ""
+
 #: src/components/integrations/skills-dialog.tsx
 msgid "Your skills"
 msgstr "Tus habilidades"
@@ -8095,9 +8129,3 @@ msgstr "Tu proveedor de voz rechazó la clave."
 #: src/components/vault/VaultItemEditor.tsx
 msgid "ZIP or postal code"
 msgstr ""
-
-msgid "Could not load team"
-msgstr "No se pudo cargar el equipo"
-
-msgid "Could not load teams"
-msgstr "No se pudieron cargar los equipos"

@@ -460,6 +460,13 @@ msgstr "@{0}"
 msgid "/ month"
 msgstr "/ maand"
 
+#. placeholder {0}: money(budget.reservedUsd)
+#. placeholder {0}: money(reserved)
+#: src/pages/AdminOpsBudget.tsx
+#: src/pages/AdminOpsPage.tsx
+msgid "+{0} held"
+msgstr ""
+
 #: src/components/integrations/space-availability.tsx
 msgid "1 space"
 msgstr ""
@@ -1772,6 +1779,7 @@ msgstr "Compact"
 
 #: src/pages/AdminOpsPage.tsx
 #: src/pages/AdminOpsTeamPage.tsx
+#: src/pages/ModelRoleSettings.tsx
 msgid "Company API"
 msgstr "Bedrijfs-API"
 
@@ -2347,6 +2355,14 @@ msgstr "Aanmeldopties laden mislukt"
 #: src/pages/KnowledgeSection.tsx
 msgid "Could not load skill"
 msgstr "Skill laden mislukt"
+
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "Could not load team"
+msgstr "Kon team niet laden"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not load teams"
+msgstr "Kon teams niet laden"
 
 #: src/pages/Artifacts.tsx
 msgid "Could not load this artifact."
@@ -4132,6 +4148,10 @@ msgstr "Laat bots feiten op betekenis opslaan en terugvinden, naast MEMORY.md."
 msgid "Light"
 msgstr "Licht"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Limit reached"
+msgstr ""
+
 #: src/pages/SpaceSearch.tsx
 msgid "Link"
 msgstr ""
@@ -4503,6 +4523,7 @@ msgstr "Modus"
 
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/RoutineEditor.tsx
@@ -6759,6 +6780,10 @@ msgstr "Space"
 msgid "Space default"
 msgstr "Spacestandaard"
 
+#: src/pages/shell/bot-panel.tsx
+msgid "Space default ({spaceDefaultName})"
+msgstr ""
+
 #: src/pages/SettingsOverlay.tsx
 msgid "Spaces"
 msgstr "Spaces"
@@ -7856,6 +7881,10 @@ msgstr "Wekelijks"
 msgid "Weekly allotment override"
 msgstr "Wekelijkse toewijzingsoverride"
 
+#: src/components/SharedKeyUsageMeter.tsx
+msgid "Weekly limit reached for new runs · Resets {reset}"
+msgstr ""
+
 #: src/pages/AdminOpsBudget.tsx
 msgid "Weekly shared-key pool used"
 msgstr "Wekelijkse gedeelde-sleutelpool gebruikt"
@@ -8068,6 +8097,11 @@ msgstr "Na je proefperiode kost je plan {annualPrice} per jaar."
 msgid "Your plan becomes {tierTargetLabel} when your trial ends."
 msgstr "Je abonnement wordt {tierTargetLabel} wanneer je proefperiode eindigt."
 
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "Your share of this week's shared API key budget is used up. It resets next week, or connect your own key in Models."
+msgstr ""
+
 #: src/components/integrations/skills-dialog.tsx
 msgid "Your skills"
 msgstr ""
@@ -8095,9 +8129,3 @@ msgstr "Je spraakaanbieder heeft de sleutel geweigerd."
 #: src/components/vault/VaultItemEditor.tsx
 msgid "ZIP or postal code"
 msgstr ""
-
-msgid "Could not load team"
-msgstr "Kon team niet laden"
-
-msgid "Could not load teams"
-msgstr "Kon teams niet laden"

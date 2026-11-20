@@ -460,6 +460,13 @@ msgstr "@{0}"
 msgid "/ month"
 msgstr "/ 月"
 
+#. placeholder {0}: money(budget.reservedUsd)
+#. placeholder {0}: money(reserved)
+#: src/pages/AdminOpsBudget.tsx
+#: src/pages/AdminOpsPage.tsx
+msgid "+{0} held"
+msgstr ""
+
 #: src/components/integrations/space-availability.tsx
 msgid "1 space"
 msgstr "1 个工作区"
@@ -1772,6 +1779,7 @@ msgstr "紧凑"
 
 #: src/pages/AdminOpsPage.tsx
 #: src/pages/AdminOpsTeamPage.tsx
+#: src/pages/ModelRoleSettings.tsx
 msgid "Company API"
 msgstr "公司 API"
 
@@ -2347,6 +2355,14 @@ msgstr "无法加载登录选项"
 #: src/pages/KnowledgeSection.tsx
 msgid "Could not load skill"
 msgstr "无法加载技能"
+
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "Could not load team"
+msgstr "无法加载团队"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not load teams"
+msgstr "无法加载团队列表"
 
 #: src/pages/Artifacts.tsx
 msgid "Could not load this artifact."
@@ -4132,6 +4148,10 @@ msgstr "让机器人在 MEMORY.md 之外，按语义保存和回忆事实。"
 msgid "Light"
 msgstr "浅色"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Limit reached"
+msgstr ""
+
 #: src/pages/SpaceSearch.tsx
 msgid "Link"
 msgstr ""
@@ -4503,6 +4523,7 @@ msgstr "模式"
 
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/RoutineEditor.tsx
@@ -6759,6 +6780,10 @@ msgstr "工作区"
 msgid "Space default"
 msgstr "工作区默认"
 
+#: src/pages/shell/bot-panel.tsx
+msgid "Space default ({spaceDefaultName})"
+msgstr ""
+
 #: src/pages/SettingsOverlay.tsx
 msgid "Spaces"
 msgstr "工作区"
@@ -7856,6 +7881,10 @@ msgstr "每周"
 msgid "Weekly allotment override"
 msgstr "每周额度覆盖"
 
+#: src/components/SharedKeyUsageMeter.tsx
+msgid "Weekly limit reached for new runs · Resets {reset}"
+msgstr ""
+
 #: src/pages/AdminOpsBudget.tsx
 msgid "Weekly shared-key pool used"
 msgstr "本周共享密钥池用量"
@@ -8068,6 +8097,11 @@ msgstr "试用结束后，你的套餐将变为每年 {annualPrice}。"
 msgid "Your plan becomes {tierTargetLabel} when your trial ends."
 msgstr "试用结束后，你的方案将变为 {tierTargetLabel}。"
 
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "Your share of this week's shared API key budget is used up. It resets next week, or connect your own key in Models."
+msgstr ""
+
 #: src/components/integrations/skills-dialog.tsx
 msgid "Your skills"
 msgstr "你的技能"
@@ -8095,9 +8129,3 @@ msgstr "你的语音提供方拒绝了该密钥。"
 #: src/components/vault/VaultItemEditor.tsx
 msgid "ZIP or postal code"
 msgstr ""
-
-msgid "Could not load team"
-msgstr "无法加载团队"
-
-msgid "Could not load teams"
-msgstr "无法加载团队列表"

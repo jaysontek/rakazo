@@ -460,6 +460,13 @@ msgstr "@{0}"
 msgid "/ month"
 msgstr "/ महीना"
 
+#. placeholder {0}: money(budget.reservedUsd)
+#. placeholder {0}: money(reserved)
+#: src/pages/AdminOpsBudget.tsx
+#: src/pages/AdminOpsPage.tsx
+msgid "+{0} held"
+msgstr ""
+
 #: src/components/integrations/space-availability.tsx
 msgid "1 space"
 msgstr ""
@@ -1772,6 +1779,7 @@ msgstr ""
 
 #: src/pages/AdminOpsPage.tsx
 #: src/pages/AdminOpsTeamPage.tsx
+#: src/pages/ModelRoleSettings.tsx
 msgid "Company API"
 msgstr "कंपनी API"
 
@@ -2347,6 +2355,14 @@ msgstr "साइन इन के विकल्प लोड नहीं ह
 #: src/pages/KnowledgeSection.tsx
 msgid "Could not load skill"
 msgstr "स्किल लोड नहीं हो सकी"
+
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "Could not load team"
+msgstr "टीम लोड नहीं हो सकी"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not load teams"
+msgstr "टीमें लोड नहीं हो सकीं"
 
 #: src/pages/Artifacts.tsx
 msgid "Could not load this artifact."
@@ -4132,6 +4148,10 @@ msgstr "बॉट्स को MEMORY.md के साथ-साथ अर्थ
 msgid "Light"
 msgstr "लाइट"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Limit reached"
+msgstr ""
+
 #: src/pages/SpaceSearch.tsx
 msgid "Link"
 msgstr ""
@@ -4503,6 +4523,7 @@ msgstr "मोड"
 
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/RoutineEditor.tsx
@@ -6759,6 +6780,10 @@ msgstr "कार्यस्थान"
 msgid "Space default"
 msgstr "स्पेस डिफ़ॉल्ट"
 
+#: src/pages/shell/bot-panel.tsx
+msgid "Space default ({spaceDefaultName})"
+msgstr ""
+
 #: src/pages/SettingsOverlay.tsx
 msgid "Spaces"
 msgstr "कार्यस्थान"
@@ -7856,6 +7881,10 @@ msgstr "हर हफ़्ते"
 msgid "Weekly allotment override"
 msgstr "साप्ताहिक आवंटन ओवरराइड"
 
+#: src/components/SharedKeyUsageMeter.tsx
+msgid "Weekly limit reached for new runs · Resets {reset}"
+msgstr ""
+
 #: src/pages/AdminOpsBudget.tsx
 msgid "Weekly shared-key pool used"
 msgstr "साप्ताहिक साझा-कुंजी पूल उपयोग"
@@ -8068,6 +8097,11 @@ msgstr "ट्रायल खत्म होने पर आपका प्�
 msgid "Your plan becomes {tierTargetLabel} when your trial ends."
 msgstr "ट्रायल खत्म होने पर आपका प्लान {tierTargetLabel} हो जाएगा।"
 
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "Your share of this week's shared API key budget is used up. It resets next week, or connect your own key in Models."
+msgstr ""
+
 #: src/components/integrations/skills-dialog.tsx
 msgid "Your skills"
 msgstr ""
@@ -8095,9 +8129,3 @@ msgstr "आपके आवाज़ प्रोवाइडर ने कु�
 #: src/components/vault/VaultItemEditor.tsx
 msgid "ZIP or postal code"
 msgstr ""
-
-msgid "Could not load team"
-msgstr "टीम लोड नहीं हो सकी"
-
-msgid "Could not load teams"
-msgstr "टीमें लोड नहीं हो सकीं"

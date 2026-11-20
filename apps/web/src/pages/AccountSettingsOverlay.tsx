@@ -584,8 +584,12 @@ export function UsageSettingsPanel({
           <ul className="divide-y divide-border sm:hidden" data-testid="usage-models-compact">
             {models.map((row) => (
               <li key={`${row.provider}:${row.model}`} className="px-2 py-3">
-                <div className="text-[13.5px] text-foreground">{row.model}</div>
-                <div className="text-[12px] text-muted-foreground">{row.provider}</div>
+                <div className="truncate text-[13.5px] text-foreground" title={row.model}>
+                  {row.model}
+                </div>
+                <div className="truncate text-[12px] text-muted-foreground" title={row.provider}>
+                  {row.provider}
+                </div>
                 <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[12.5px] tabular-nums">
                   <div className="flex justify-between gap-2">
                     <dt className="text-muted-foreground">

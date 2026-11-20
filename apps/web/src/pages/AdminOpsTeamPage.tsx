@@ -263,7 +263,15 @@ export function TeamView({ data }: { data: OpsTeam }) {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   {member.modelProvider && member.modelId ? (
-                    <Badge variant="outline" className="font-normal">
+                    <Badge
+                      variant="outline"
+                      className="max-w-[12rem] truncate font-normal"
+                      title={
+                        member.modelSource
+                          ? `${member.modelProvider}/${member.modelId} · ${member.modelSource}`
+                          : undefined
+                      }
+                    >
                       {member.modelProvider}/{member.modelId}
                     </Badge>
                   ) : (

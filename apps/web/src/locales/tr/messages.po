@@ -460,6 +460,13 @@ msgstr "@{0}"
 msgid "/ month"
 msgstr "/ ay"
 
+#. placeholder {0}: money(budget.reservedUsd)
+#. placeholder {0}: money(reserved)
+#: src/pages/AdminOpsBudget.tsx
+#: src/pages/AdminOpsPage.tsx
+msgid "+{0} held"
+msgstr ""
+
 #: src/components/integrations/space-availability.tsx
 msgid "1 space"
 msgstr "1 alan"
@@ -1772,6 +1779,7 @@ msgstr "Sıkı"
 
 #: src/pages/AdminOpsPage.tsx
 #: src/pages/AdminOpsTeamPage.tsx
+#: src/pages/ModelRoleSettings.tsx
 msgid "Company API"
 msgstr "Şirket API'si"
 
@@ -2347,6 +2355,14 @@ msgstr "Giriş seçenekleri yüklenemedi"
 #: src/pages/KnowledgeSection.tsx
 msgid "Could not load skill"
 msgstr "Beceri yüklenemedi"
+
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "Could not load team"
+msgstr "Ekip yüklenemedi"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not load teams"
+msgstr "Ekipler yüklenemedi"
 
 #: src/pages/Artifacts.tsx
 msgid "Could not load this artifact."
@@ -4132,6 +4148,10 @@ msgstr "Botların MEMORY.md'ye ek olarak bilgileri anlamına göre kaydedip hat�
 msgid "Light"
 msgstr "Açık"
 
+#: src/pages/AdminOpsPage.tsx
+msgid "Limit reached"
+msgstr ""
+
 #: src/pages/SpaceSearch.tsx
 msgid "Link"
 msgstr "Bağlantı"
@@ -4503,6 +4523,7 @@ msgstr "Mod"
 
 #: src/pages/AccountSettingsOverlay.tsx
 #: src/pages/AdminOpsPage.tsx
+#: src/pages/AdminOpsTeamPage.tsx
 #: src/pages/model-settings/compatible-model-fields.tsx
 #: src/pages/Onboarding.tsx
 #: src/pages/RoutineEditor.tsx
@@ -6759,6 +6780,10 @@ msgstr "Alan"
 msgid "Space default"
 msgstr "Alan varsayılanı"
 
+#: src/pages/shell/bot-panel.tsx
+msgid "Space default ({spaceDefaultName})"
+msgstr ""
+
 #: src/pages/SettingsOverlay.tsx
 msgid "Spaces"
 msgstr "Alanlar"
@@ -7856,6 +7881,10 @@ msgstr "Haftalık"
 msgid "Weekly allotment override"
 msgstr "Haftalık pay aşımı"
 
+#: src/components/SharedKeyUsageMeter.tsx
+msgid "Weekly limit reached for new runs · Resets {reset}"
+msgstr ""
+
 #: src/pages/AdminOpsBudget.tsx
 msgid "Weekly shared-key pool used"
 msgstr "Haftalık paylaşılan anahtar havuzu kullanımı"
@@ -8068,6 +8097,11 @@ msgstr "Deneme süren bitince planın yıllık {annualPrice} olur."
 msgid "Your plan becomes {tierTargetLabel} when your trial ends."
 msgstr "Deneme süreniz bittiğinde planınız {tierTargetLabel} olur."
 
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "Your share of this week's shared API key budget is used up. It resets next week, or connect your own key in Models."
+msgstr ""
+
 #: src/components/integrations/skills-dialog.tsx
 msgid "Your skills"
 msgstr "Becerilerin"
@@ -8095,9 +8129,3 @@ msgstr "Ses sağlayıcınız anahtarı reddetti."
 #: src/components/vault/VaultItemEditor.tsx
 msgid "ZIP or postal code"
 msgstr "Posta kodu"
-
-msgid "Could not load team"
-msgstr "Ekip yüklenemedi"
-
-msgid "Could not load teams"
-msgstr "Ekipler yüklenemedi"

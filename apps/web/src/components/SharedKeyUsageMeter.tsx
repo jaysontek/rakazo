@@ -29,8 +29,8 @@ export function SharedKeyUsageMeter({
   const reservedRaw = limit.reservedPercent ?? 0;
   const spentRaw = limit.spentPercent ?? Math.max(0, usedRaw - reservedRaw);
   // Floor so 99.5% never displays as 100% while still showing 100 when exhausted.
-  const usedPercent = Math.min(100, Math.floor(usedRaw));
-  const spentPercent = Math.min(100, Math.floor(spentRaw));
+  const usedPercent = Math.min(100, Math.max(0, Math.floor(usedRaw)));
+  const spentPercent = Math.min(100, Math.max(0, Math.floor(spentRaw)));
   const reservedPercent = Math.min(100, Math.max(0, Math.floor(reservedRaw)));
   const status = limit.status ?? "ok";
   const blocked = status === "blocked";
