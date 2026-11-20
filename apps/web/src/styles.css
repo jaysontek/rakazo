@@ -30,17 +30,20 @@
   top: calc(var(--impersonation-banner-height, 0px) + 4rem);
 }
 
-/* Settings dialog: top-pin below the banner (at 1rem when the var is 0).
+/* Settings dialog: only while impersonating, top-pin below the banner.
    Use the CSS `translate` property (not `transform`) so it replaces Tailwind v4's
-   separate translate from -translate-x/y-1/2 instead of stacking with it. */
-[data-slot="dialog-content"][data-testid="user-settings"] {
+   separate translate from -translate-x/y-1/2 instead of stacking with it.
+   When not impersonating, leave DialogContent's top-1/2 / -translate-*-1/2 alone. */
+html:has([data-testid="impersonation-banner"])
+  [data-slot="dialog-content"][data-testid="user-settings"] {
   top: calc(var(--impersonation-banner-height, 0px) + 1rem);
   max-height: calc(100dvh - var(--impersonation-banner-height, 0px) - 2rem);
   height: min(760px, calc(100dvh - var(--impersonation-banner-height, 0px) - 2rem));
   translate: -50% 0;
 }
 @media (min-width: 640px) {
-  [data-slot="dialog-content"][data-testid="user-settings"] {
+  html:has([data-testid="impersonation-banner"])
+    [data-slot="dialog-content"][data-testid="user-settings"] {
     max-height: calc(100dvh - var(--impersonation-banner-height, 0px) - 5rem);
     height: min(760px, calc(100dvh - var(--impersonation-banner-height, 0px) - 5rem));
   }
