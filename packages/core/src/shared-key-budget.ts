@@ -729,7 +729,7 @@ export type SharedKeyBudgetDisplayProjection = {
   spentPercent: number;
   /** Reserved (held) segment as percent of cap (0–100). */
   reservedPercent: number;
-  /** Spent + reserved as percent of cap (0–100). */
+  /** Spent + reserved as percent of cap (0–100); forced to 100 when status is blocked. */
   usedPercent: number;
   remainingUsd: number;
   /** True when hard-stop is on and spent+reserved already meets/exceeds the cap. */
