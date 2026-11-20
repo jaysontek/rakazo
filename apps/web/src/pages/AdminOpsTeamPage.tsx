@@ -249,10 +249,10 @@ export function TeamView({ data, catalog = [] }: { data: OpsTeam; catalog?: Mode
         {data.members.map((member) => (
           <li key={member.userId}>
             <Card size="sm">
-              <CardHeader className="gap-2">
-                <div className="flex items-start justify-between gap-2">
+              <CardHeader className="min-w-0 gap-2">
+                <div className="flex w-full min-w-0 items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <CardTitle className="truncate">{memberLabel(member)}</CardTitle>
+                    <CardTitle className="min-w-0 truncate">{memberLabel(member)}</CardTitle>
                     <CardDescription className="break-all">{member.email}</CardDescription>
                   </div>
                   <KeyBadge keyType={member.keyType} />

@@ -88,3 +88,41 @@ for (const viewport of viewports) {
     await captureScreenshot(page, testInfo, `usage-popover-${viewport.name}`);
   });
 }
+
+test("team mobile card truncates name and keeps Company API badge inside @ mobile-390x844", async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/e2e/fixtures/admin-ops-team.html?theme=light");
+  await expect(page.getByTestId("ops-team")).toBeVisible();
+
+  const card = page.locator('ul.grid li [data-slot="card"]').first();
+  await expect(card).toBeVisible();
+  const badge = card.getByText("Company API", { exact: true });
+  await expect(badge).toBeVisible();
+
+  const layout = await page.evaluate(() => {
+    const cardEl = document.querySelector('ul.grid li [data-slot="card"]') as HTMLElement | null;
+    const titleEl = cardEl?.querySelector('[data-slot="card-title"]') as HTMLElement | null;
+    const badgeEl = [...(cardEl?.querySelectorAll("span") ?? [])].find((node) =>
+      (node.textContent ?? "").includes("Company API"),
+    ) as HTMLElement | undefined;
+    if (!cardEl || !titleEl || !badgeEl) return null;
+    const cardBox = cardEl.getBoundingClientRect();
+    const badgeBox = badgeEl.getBoundingClientRect();
+    return {
+      titleScrollWidth: titleEl.scrollWidth,
+      titleClientWidth: titleEl.clientWidth,
+      titleText: titleEl.textContent ?? "",
+      badgeText: badgeEl.textContent ?? "",
+      badgeRight: badgeBox.right,
+      cardRight: cardBox.right,
+    };
+  });
+  expect(layout).toBeTruthy();
+  expect(layout!.badgeText).toBe("Company API");
+  expect(layout!.badgeRight).toBeLessThanOrEqual(layout!.cardRight + 0.5);
+  expect(layout!.titleScrollWidth).toBeGreaterThan(layout!.titleClientWidth);
+
+  await captureScreenshot(page, testInfo, "admin-ops-team-mobile-390x844");
+});
