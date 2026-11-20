@@ -296,6 +296,7 @@ export function ShellSidebar({
           openIntegrations={openIntegrations}
           openSkills={openSkills}
           openSpaceChat={openSpaceChat}
+          readOnly={readOnly}
         />
       </Sidebar>
     </>
@@ -314,6 +315,7 @@ function ShellSidebarFooter({
   openIntegrations,
   openSkills,
   openSpaceChat,
+  readOnly = false,
 }: {
   mini: boolean;
   logos: Array<{ name: string; logo?: string | null }>;
@@ -326,6 +328,7 @@ function ShellSidebarFooter({
   openIntegrations: () => void;
   openSkills: () => void;
   openSpaceChat: (spaceId: string, path: string) => void;
+  readOnly?: boolean;
 }) {
   const { t, i18n } = useLingui();
   const userId = useQueryUserId();
@@ -391,14 +394,23 @@ function ShellSidebarFooter({
           closeMobileSidebar();
           navigate("/admin/ops");
         }}
-        onIntegrations={() => {
-          setMenuOpen(false);
-          openIntegrations();
-        }}
-        onSkills={() => {
-          setMenuOpen(false);
-          openSkills();
-        }}
+        readOnly={readOnly}
+        onIntegrations={
+          readOnly
+            ? undefined
+            : () => {
+                setMenuOpen(false);
+                openIntegrations();
+              }
+        }
+        onSkills={
+          readOnly
+            ? undefined
+            : () => {
+                setMenuOpen(false);
+                openSkills();
+              }
+        }
         onBoard={
           ticketBoardEnabled
             ? () => {
@@ -424,28 +436,36 @@ function ShellSidebarFooter({
           openSettings("general");
         }}
         onInvite={
-          referral
+          !readOnly && referral
             ? () => {
                 setMenuOpen(false);
                 setInviteOpen(true);
               }
             : undefined
         }
-        onLogOut={() => {
-          setLogOutError(null);
-          void logOut();
-        }}
+        onLogOut={
+          readOnly
+            ? undefined
+            : () => {
+                setLogOutError(null);
+                void logOut();
+              }
+        }
         signingOut={signingOut}
         logOutError={logOutError}
         organizations={organizations}
         activeOrganizationId={activeOrganizationId}
-        onSwitchOrganization={(organization) => {
-          setMenuOpen(false);
-          if (organization.id !== activeOrganizationId)
-            void switchOrganization(userId, organization, openSpaceChat);
-        }}
+        onSwitchOrganization={
+          readOnly
+            ? undefined
+            : (organization) => {
+                setMenuOpen(false);
+                if (organization.id !== activeOrganizationId)
+                  void switchOrganization(userId, organization, openSpaceChat);
+              }
+        }
       />
-      {referral ? (
+      {!readOnly && referral ? (
         <InviteDialog referral={referral} open={inviteOpen} onOpenChange={setInviteOpen} />
       ) : null}
     </>

@@ -19,6 +19,7 @@ export function ArchivedChats({
   refreshBots,
   setDeleteTarget,
   setDeleteGroupTarget,
+  readOnly = false,
 }: {
   archivedBots: Bot[];
   archivedGroups: Group[];
@@ -27,6 +28,8 @@ export function ArchivedChats({
   refreshBots: (includeArchived?: boolean) => Promise<void>;
   setDeleteTarget: (bot: Bot) => void;
   setDeleteGroupTarget: (group: Group) => void;
+  /** Hide restore/delete while impersonating; list stays viewable. */
+  readOnly?: boolean;
 }) {
   const { t } = useLingui();
   const [archivedOpen, setArchivedOpen] = useState(false);
@@ -55,22 +58,28 @@ export function ArchivedChats({
             <span className="min-w-0 flex-1 truncate text-[14px] text-foreground/75" dir="auto">
               {bot.name}
             </span>
-            <Button
-              variant="ghost"
-              size="xs"
-              onClick={() => void rpc.bots.restore({ botId: bot.id }).then(() => refreshBots(true))}
-            >
-              <Trans>Restore</Trans>
-            </Button>
-            <Button
-              variant="ghost"
-              size="xs"
-              className="text-destructive hover:text-destructive"
-              aria-label={t`Delete ${bot.name}`}
-              onClick={() => setDeleteTarget(bot)}
-            >
-              <Trans>Delete</Trans>
-            </Button>
+            {readOnly ? null : (
+              <>
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  onClick={() =>
+                    void rpc.bots.restore({ botId: bot.id }).then(() => refreshBots(true))
+                  }
+                >
+                  <Trans>Restore</Trans>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  className="text-destructive hover:text-destructive"
+                  aria-label={t`Delete ${bot.name}`}
+                  onClick={() => setDeleteTarget(bot)}
+                >
+                  <Trans>Delete</Trans>
+                </Button>
+              </>
+            )}
           </div>
         ))}
         {archivedGroups.map((group) => (
@@ -79,24 +88,28 @@ export function ArchivedChats({
             <span className="min-w-0 flex-1 truncate text-[14px] text-foreground/75" dir="auto">
               {group.name}
             </span>
-            <Button
-              variant="ghost"
-              size="xs"
-              onClick={() =>
-                void rpc.groups.restore({ groupId: group.id }).then(() => refreshBots(true))
-              }
-            >
-              <Trans>Restore</Trans>
-            </Button>
-            <Button
-              variant="ghost"
-              size="xs"
-              className="text-destructive hover:text-destructive"
-              aria-label={t`Delete ${group.name}`}
-              onClick={() => setDeleteGroupTarget(group)}
-            >
-              <Trans>Delete</Trans>
-            </Button>
+            {readOnly ? null : (
+              <>
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  onClick={() =>
+                    void rpc.groups.restore({ groupId: group.id }).then(() => refreshBots(true))
+                  }
+                >
+                  <Trans>Restore</Trans>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  className="text-destructive hover:text-destructive"
+                  aria-label={t`Delete ${group.name}`}
+                  onClick={() => setDeleteGroupTarget(group)}
+                >
+                  <Trans>Delete</Trans>
+                </Button>
+              </>
+            )}
           </div>
         ))}
       </CollapsibleContent>
