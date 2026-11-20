@@ -26,11 +26,13 @@ import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import { Link } from "react-router-dom";
+import { ImpersonationReadOnlyNotice } from "../components/ImpersonationReadOnlyNotice";
 import { useSpaceQueries } from "../lib/query";
 import { formatRelativeTime } from "../lib/relative-time";
 import { rpc } from "../lib/rpc";
 import { useTicketPriorityLabels } from "../lib/ticket-priority";
 import { useTicketStatusLabels } from "../lib/ticket-status";
+import { useIsImpersonating } from "../lib/use-impersonating";
 import { errorText } from "../lib/user-error";
 import { WindowChrome } from "./WindowChrome";
 
@@ -39,6 +41,7 @@ export function BoardPage() {
   const statuses = useTicketStatusLabels();
   const queries = useSpaceQueries();
   const queryClient = useQueryClient();
+  const impersonating = useIsImpersonating();
   const ticketsOptions = queries.tickets.list.queryOptions({ input: {} });
   const ticketsQuery = useQuery(ticketsOptions);
   const botsQuery = useQuery(queries.bots.list.queryOptions());
@@ -119,9 +122,11 @@ export function BoardPage() {
         <h1 className="flex-1 font-medium">
           <Trans>Board</Trans>
         </h1>
-        <Button onClick={() => setSelected("new")} disabled={bots.length === 0}>
-          <Trans>New ticket</Trans>
-        </Button>
+        {impersonating ? null : (
+          <Button onClick={() => setSelected("new")} disabled={bots.length === 0}>
+            <Trans>New ticket</Trans>
+          </Button>
+        )}
       </header>
       {error ? (
         <p role="alert" className="px-4 py-2 text-sm text-destructive">
@@ -203,8 +208,10 @@ function TicketDialog({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const shownError = error || (commentsQuery.error ? errorText(commentsQuery.error) : "");
+  const readOnly = useIsImpersonating();
 
   async function save() {
+    if (readOnly) return;
     setBusy(true);
     setError("");
     try {
@@ -235,7 +242,7 @@ function TicketDialog({
     }
   }
   async function comment() {
-    if (!ticket) return;
+    if (!ticket || readOnly) return;
     setBusy(true);
     setError("");
     try {
@@ -268,97 +275,102 @@ function TicketDialog({
         <DialogHeader>
           <DialogTitle>{ticket?.title ?? t`New ticket`}</DialogTitle>
         </DialogHeader>
-        <form
-          className="space-y-3"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void save();
-          }}
-        >
-          <label htmlFor={`${formId}-title`} className="block space-y-1 text-sm">
-            <span>
-              <Trans>Title</Trans>
-            </span>
-            <Input
-              id={`${formId}-title`}
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              maxLength={TICKET_TITLE_MAX_LENGTH}
-              required
-            />
-          </label>
-          <label htmlFor={`${formId}-description`} className="block space-y-1 text-sm">
-            <span>
-              <Trans>Description</Trans>
-            </span>
-            <Textarea
-              id={`${formId}-description`}
-              data-testid="ticket-description"
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              maxLength={TICKET_DESCRIPTION_MAX_LENGTH}
-            />
-          </label>
-          <label htmlFor={`${formId}-owner`} className="block space-y-1 text-sm">
-            <span>
-              <Trans>Owner</Trans>
-            </span>
-            <NativeSelect
-              className="w-full"
-              id={`${formId}-owner`}
-              value={owner}
-              onChange={(event) => setOwner(event.target.value)}
-              required
-            >
-              {bots.map((bot) => (
-                <NativeSelectOption key={bot.id} value={bot.id}>
-                  {bot.name}
-                </NativeSelectOption>
-              ))}
-            </NativeSelect>
-          </label>
-          {ticket ? (
-            <label htmlFor={`${formId}-status`} className="block space-y-1 text-sm">
+        {readOnly ? <ImpersonationReadOnlyNotice /> : null}
+        <fieldset disabled={readOnly} className="min-w-0 disabled:opacity-80">
+          <form
+            className="space-y-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void save();
+            }}
+          >
+            <label htmlFor={`${formId}-title`} className="block space-y-1 text-sm">
               <span>
-                <Trans>Status</Trans>
+                <Trans>Title</Trans>
+              </span>
+              <Input
+                id={`${formId}-title`}
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                maxLength={TICKET_TITLE_MAX_LENGTH}
+                required
+              />
+            </label>
+            <label htmlFor={`${formId}-description`} className="block space-y-1 text-sm">
+              <span>
+                <Trans>Description</Trans>
+              </span>
+              <Textarea
+                id={`${formId}-description`}
+                data-testid="ticket-description"
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                maxLength={TICKET_DESCRIPTION_MAX_LENGTH}
+              />
+            </label>
+            <label htmlFor={`${formId}-owner`} className="block space-y-1 text-sm">
+              <span>
+                <Trans>Owner</Trans>
               </span>
               <NativeSelect
                 className="w-full"
-                id={`${formId}-status`}
-                value={status}
-                onChange={(event) => setStatus(event.target.value as TicketStatus)}
+                id={`${formId}-owner`}
+                value={owner}
+                onChange={(event) => setOwner(event.target.value)}
+                required
               >
-                {TICKET_STATUSES.map((value) => (
-                  <NativeSelectOption key={value} value={value}>
-                    {statuses[value]}
+                {bots.map((bot) => (
+                  <NativeSelectOption key={bot.id} value={bot.id}>
+                    {bot.name}
                   </NativeSelectOption>
                 ))}
               </NativeSelect>
             </label>
-          ) : null}
-          <label htmlFor={`${formId}-priority`} className="block space-y-1 text-sm">
-            <span>
-              <Trans>Priority</Trans>
-            </span>
-            <NativeSelect
-              className="w-full"
-              id={`${formId}-priority`}
-              value={priority}
-              onChange={(event) => setPriority(event.target.value as TicketPriority)}
-            >
-              {TICKET_PRIORITIES.map((value) => (
-                <NativeSelectOption key={value} value={value}>
-                  {priorities[value]}
-                </NativeSelectOption>
-              ))}
-            </NativeSelect>
-          </label>
-          <div className="flex justify-end">
-            <Button type="submit" disabled={busy || !title.trim() || !owner}>
-              {ticket ? t`Save` : t`Create`}
-            </Button>
-          </div>
-        </form>
+            {ticket ? (
+              <label htmlFor={`${formId}-status`} className="block space-y-1 text-sm">
+                <span>
+                  <Trans>Status</Trans>
+                </span>
+                <NativeSelect
+                  className="w-full"
+                  id={`${formId}-status`}
+                  value={status}
+                  onChange={(event) => setStatus(event.target.value as TicketStatus)}
+                >
+                  {TICKET_STATUSES.map((value) => (
+                    <NativeSelectOption key={value} value={value}>
+                      {statuses[value]}
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelect>
+              </label>
+            ) : null}
+            <label htmlFor={`${formId}-priority`} className="block space-y-1 text-sm">
+              <span>
+                <Trans>Priority</Trans>
+              </span>
+              <NativeSelect
+                className="w-full"
+                id={`${formId}-priority`}
+                value={priority}
+                onChange={(event) => setPriority(event.target.value as TicketPriority)}
+              >
+                {TICKET_PRIORITIES.map((value) => (
+                  <NativeSelectOption key={value} value={value}>
+                    {priorities[value]}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
+            </label>
+            {readOnly ? null : (
+              <div className="flex justify-end">
+                <Button type="submit" disabled={busy || !title.trim() || !owner}>
+                  {ticket ? t`Save` : t`Create`}
+                </Button>
+              </div>
+            )}
+          </form>
+        </fieldset>
         {ticket ? (
           <div data-testid="ticket-comments" className="space-y-3 border-t pt-3">
             {comments.map((row) => (
@@ -370,25 +382,27 @@ function TicketDialog({
                 <ChatMarkdown>{row.body}</ChatMarkdown>
               </div>
             ))}
-            <form
-              className="space-y-2"
-              onSubmit={(event) => {
-                event.preventDefault();
-                void comment();
-              }}
-            >
-              <Textarea
-                aria-label={t`Comment`}
-                value={body}
-                onChange={(event) => setBody(event.target.value)}
-                maxLength={TICKET_COMMENT_MAX_LENGTH}
-              />
-              <div className="flex justify-end">
-                <Button type="submit" disabled={busy || !body.trim()}>
-                  <Trans>Comment</Trans>
-                </Button>
-              </div>
-            </form>
+            {readOnly ? null : (
+              <form
+                className="space-y-2"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void comment();
+                }}
+              >
+                <Textarea
+                  aria-label={t`Comment`}
+                  value={body}
+                  onChange={(event) => setBody(event.target.value)}
+                  maxLength={TICKET_COMMENT_MAX_LENGTH}
+                />
+                <div className="flex justify-end">
+                  <Button type="submit" disabled={busy || !body.trim()}>
+                    <Trans>Comment</Trans>
+                  </Button>
+                </div>
+              </form>
+            )}
           </div>
         ) : null}
         {shownError ? (

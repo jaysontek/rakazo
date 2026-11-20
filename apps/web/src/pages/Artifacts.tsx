@@ -49,6 +49,7 @@ import { desktopBridge } from "../lib/desktop";
 import { useSpaceQueries } from "../lib/query";
 import { formatRelativeTime } from "../lib/relative-time";
 import { rpc } from "../lib/rpc";
+import { useIsImpersonating } from "../lib/use-impersonating";
 import { useObjectUrl } from "../lib/use-object-url";
 import { errorText } from "../lib/user-error";
 import { WindowChrome } from "./WindowChrome";
@@ -95,6 +96,7 @@ export function ArtifactsPage() {
   const { artifactId } = useParams<{ artifactId?: string }>();
   const navigate = useNavigate();
   const { t } = useLingui();
+  const impersonating = useIsImpersonating();
   const [activeBotId, setActiveBotId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>(readViewMode);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -185,7 +187,7 @@ export function ArtifactsPage() {
   }
 
   async function confirmDelete() {
-    if (!pendingDelete) return;
+    if (!pendingDelete || impersonating) return;
     setDeleteBusy(true);
     setDeleteError(null);
     try {
@@ -329,7 +331,7 @@ export function ArtifactsPage() {
                 loadError={loadError}
                 botsById={botsById}
                 selectedId={artifactId}
-                onRequestDelete={setPendingDelete}
+                onRequestDelete={impersonating ? undefined : setPendingDelete}
                 nextCursor={nextCursor}
                 loadingMore={loadingMore}
                 onLoadMore={loadMore}
@@ -348,7 +350,7 @@ export function ArtifactsPage() {
             loadError={loadError}
             viewMode={viewMode}
             botsById={botsById}
-            onRequestDelete={setPendingDelete}
+            onRequestDelete={impersonating ? undefined : setPendingDelete}
             nextCursor={nextCursor}
             loadingMore={loadingMore}
             onLoadMore={loadMore}
@@ -413,7 +415,7 @@ function BrowsingPane({
   loadError: string | null;
   viewMode: ViewMode;
   botsById: Map<string, Bot>;
-  onRequestDelete: (artifact: ArtifactSummary) => void;
+  onRequestDelete?: (artifact: ArtifactSummary) => void;
   nextCursor: string | null;
   loadingMore: boolean;
   onLoadMore: () => void;
@@ -530,7 +532,7 @@ function IndexPane({
   loadError: string | null;
   botsById: Map<string, Bot>;
   selectedId: string;
-  onRequestDelete: (artifact: ArtifactSummary) => void;
+  onRequestDelete?: (artifact: ArtifactSummary) => void;
   nextCursor: string | null;
   loadingMore: boolean;
   onLoadMore: () => void;
@@ -637,7 +639,7 @@ function ArtifactCard({
 }: {
   artifact: ArtifactSummary;
   bot: Bot | undefined;
-  onRequestDelete: (artifact: ArtifactSummary) => void;
+  onRequestDelete?: (artifact: ArtifactSummary) => void;
 }) {
   const { t } = useLingui();
   return (
@@ -687,21 +689,23 @@ function ArtifactCard({
           <span className="shrink-0">{formatRelativeTime(artifact.createdAt)}</span>
         </div>
       </Link>
-      <IconTooltip label={t`Delete ${artifact.name}`}>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={t`Delete ${artifact.name}`}
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            onRequestDelete(artifact);
-          }}
-          className="absolute bottom-3 end-3 bg-card text-muted-foreground opacity-0 hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100 group-focus-within:opacity-100"
-        >
-          <Trash2 strokeWidth={1.9} />
-        </Button>
-      </IconTooltip>
+      {onRequestDelete ? (
+        <IconTooltip label={t`Delete ${artifact.name}`}>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={t`Delete ${artifact.name}`}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onRequestDelete(artifact);
+            }}
+            className="absolute bottom-3 end-3 bg-card text-muted-foreground opacity-0 hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100 group-focus-within:opacity-100"
+          >
+            <Trash2 strokeWidth={1.9} />
+          </Button>
+        </IconTooltip>
+      ) : null}
     </div>
   );
 }
@@ -715,12 +719,15 @@ function ArtifactRow({
   artifact: ArtifactSummary;
   bot: Bot | undefined;
   active?: boolean;
-  onRequestDelete: (artifact: ArtifactSummary) => void;
+  onRequestDelete?: (artifact: ArtifactSummary) => void;
 }) {
   const { t } = useLingui();
   return (
     <div className={`group relative ${active ? "bg-accent/60" : "hover:bg-accent/40"}`}>
-      <Link to={`/app/artifacts/${artifact.id}`} className="flex flex-col gap-1 px-4 py-3 pe-10">
+      <Link
+        to={`/app/artifacts/${artifact.id}`}
+        className={`flex flex-col gap-1 px-4 py-3 ${onRequestDelete ? "pe-10" : ""}`}
+      >
         <div className="flex items-center gap-2">
           <span className="grid h-6 w-6 shrink-0 place-items-center rounded-[7px] bg-accent text-accent-foreground">
             <ArtifactMimeIcon mimeType={artifact.mimeType} small />
@@ -753,21 +760,23 @@ function ArtifactRow({
           <span>{formatRelativeTime(artifact.createdAt)}</span>
         </div>
       </Link>
-      <IconTooltip label={t`Delete ${artifact.name}`}>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={t`Delete ${artifact.name}`}
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            onRequestDelete(artifact);
-          }}
-          className="absolute inset-y-0 end-2 my-auto text-muted-foreground opacity-0 hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100 group-focus-within:opacity-100"
-        >
-          <Trash2 strokeWidth={1.9} />
-        </Button>
-      </IconTooltip>
+      {onRequestDelete ? (
+        <IconTooltip label={t`Delete ${artifact.name}`}>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={t`Delete ${artifact.name}`}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onRequestDelete(artifact);
+            }}
+            className="absolute inset-y-0 end-2 my-auto text-muted-foreground opacity-0 hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100 group-focus-within:opacity-100"
+          >
+            <Trash2 strokeWidth={1.9} />
+          </Button>
+        </IconTooltip>
+      ) : null}
     </div>
   );
 }
