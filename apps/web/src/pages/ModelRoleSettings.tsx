@@ -33,6 +33,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { GripVertical, MoreHorizontal, Plus } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { providerDisplayName } from "../lib/localized-provider-hint";
 import { thinkingLevelLabel } from "../lib/model-catalog";
 import { spaceQueries } from "../lib/query";
 import { useSpaceRpc } from "../lib/space-rpc";
@@ -180,14 +181,40 @@ export function ModelRoleSettings({
           (entry) =>
             canonicalPiProviderId(entry.provider) === canonicalPiProviderId(choice.provider),
         );
-  const providerName = (choice: ModelRoleChoice) =>
-    (choice.credentialId &&
-      options.find((option) => option.credentialId === choice.credentialId)?.providerName) ||
-    providerLabel(choice.provider);
+  const providerName = (choice: ModelRoleChoice) => {
+    const fromCredential =
+      choice.credentialId &&
+      options.find((option) => option.credentialId === choice.credentialId)?.providerName;
+    if (fromCredential) return fromCredential;
+    const connection = connectionFor(choice);
+    if (connection) {
+      return providerDisplayName(
+        connection.provider,
+        connection.label || providerLabel(choice.provider),
+        connection.authKind,
+      );
+    }
+    const entry = entryFor(choice);
+    if (entry) {
+      return providerDisplayName(
+        entry.provider,
+        entry.providerName || providerLabel(choice.provider),
+        entry.auth,
+      );
+    }
+    return providerDisplayName(choice.provider, providerLabel(choice.provider));
+  };
   // What runs when the member chose no first model; named in the empty row and offered to
   // return to from the picker.
   const deployment = settings?.deploymentPrimary ?? null;
   const modelLabel = (choice: ModelBackupChoice) => entryFor(choice)?.label ?? choice.modelId;
+  // Shared-key / deployment-default rows: show Company API when no personal connection runs it.
+  const deploymentSubLabel = (() => {
+    if (!deployment) return undefined;
+    const name = providerName(deployment);
+    const onCompanyKey = credentials.length === 0 || !connectionFor(deployment);
+    return onCompanyKey ? `${name} · ${t`Company API`}` : name;
+  })();
   const busy = state.busy || state.stale || !settings;
   // Picks build their change from the settings loaded when they save, so a reload in flight
   // does not lock them; moves and removals use the rows on screen and wait for it.
@@ -277,7 +304,7 @@ export function ModelRoleSettings({
             <RoleModelPicker
               trigger={pickerTrigger(
                 deployment ? modelLabel(deployment) : defaultLabel,
-                deployment ? providerName(deployment) : undefined,
+                deployment ? deploymentSubLabel : undefined,
               )}
               label={t`Change ${title}`}
               options={options}

@@ -16,6 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   Badge,
+  buttonVariants,
   Card,
   CardContent,
   CardDescription,
@@ -25,13 +26,12 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
+  cn,
   Input,
   NativeSelect,
   NativeSelectOption,
   Spinner,
   Switch,
-  buttonVariants,
-  cn,
 } from "@rakazo/ui-web";
 import { ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
@@ -97,13 +97,7 @@ function SettingLabel({
   );
 }
 
-function UsageBar({
-  percent,
-  label,
-}: {
-  percent: number;
-  label: string;
-}) {
+function UsageBar({ percent, label }: { percent: number; label: string }) {
   const value = Math.min(100, Math.max(0, Math.floor(percent)));
   return (
     <div className="space-y-1">
@@ -119,7 +113,10 @@ function UsageBar({
         aria-valuetext={`${value}%`}
         aria-label={label}
       >
-        <div className="h-full rounded-full bg-foreground transition-[width]" style={{ width: `${value}%` }} />
+        <div
+          className="h-full rounded-full bg-foreground transition-[width]"
+          style={{ width: `${value}%` }}
+        />
       </div>
     </div>
   );
@@ -217,8 +214,12 @@ function KpiRow({
   const [editing, setEditing] = useState(false);
   const pool = budget.weekPoolUsd;
   const spent = budget.weekSpentUsd;
+  const reserved = data.accounts.reduce(
+    (sum, account) => sum + (account.sharedKeyBudget?.reservedUsd ?? 0),
+    0,
+  );
   const poolPct =
-    pool != null && pool > 0 ? Math.min(100, Math.max(0, (spent / pool) * 100)) : 0;
+    pool != null && pool > 0 ? Math.min(100, Math.max(0, ((spent + reserved) / pool) * 100)) : 0;
   const monthlyCapSource = budget.settings?.monthlyCapSource;
 
   useEffect(() => {
@@ -344,6 +345,11 @@ function KpiRow({
         </CardHeader>
         <CardContent className="space-y-2">
           <UsageBar percent={poolPct} label={t`Weekly shared-key pool used`} />
+          {reserved > 0 ? (
+            <p className="text-xs text-muted-foreground tabular-nums">
+              <Trans>+{money(reserved)} held</Trans>
+            </p>
+          ) : null}
           <p className="text-xs text-muted-foreground" data-testid="ops-budget-reset">
             <Trans>Resets in {resetCountdown(budget.resetsAt)}</Trans>
             {" · "}
@@ -371,7 +377,9 @@ function KpiRow({
         <CardContent className="space-y-1 text-xs text-muted-foreground">
           <div className="flex justify-between gap-2">
             <Trans>Shared</Trans>
-            <span className="tabular-nums text-foreground">{money(data.spend.sharedKeyCostUsd)}</span>
+            <span className="tabular-nums text-foreground">
+              {money(data.spend.sharedKeyCostUsd)}
+            </span>
           </div>
           <div className="flex justify-between gap-2">
             <Trans>Personal</Trans>
@@ -945,7 +953,7 @@ function SpendAdjustmentsPanel({
     if (row.scope === "team" || (!row.userId && !row.userIdSnapshot)) return t`Team`;
     const scopedId = row.userId ?? row.userIdSnapshot;
     const account = scopedId ? accountsById.get(scopedId) : undefined;
-    return account ? accountLabel(account) : scopedId ?? t`Team`;
+    return account ? accountLabel(account) : (scopedId ?? t`Team`);
   }
 
   const reversedIds = useMemo(() => {
@@ -1075,8 +1083,7 @@ function SpendAdjustmentsPanel({
                       <div className="tabular-nums">
                         {money(row.previousTrackedUsd)} → {money(row.newTrackedUsd)}
                         <span className="ms-2 text-muted-foreground">
-                          (
-                          {row.deltaUsd > 0 ? "+" : row.deltaUsd < 0 ? "−" : ""}
+                          ({row.deltaUsd > 0 ? "+" : row.deltaUsd < 0 ? "−" : ""}
                           {money(Math.abs(row.deltaUsd))})
                         </span>
                       </div>
@@ -1117,9 +1124,7 @@ function SpendAdjustmentsPanel({
               <Trans>Reverse this adjustment?</Trans>
             </AlertDialogTitle>
             <AlertDialogDescription>
-              <Trans>
-                Appends an opposite delta for {money(reverseTarget?.deltaUsd ?? 0)}.
-              </Trans>
+              <Trans>Appends an opposite delta for {money(reverseTarget?.deltaUsd ?? 0)}.</Trans>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <label className="space-y-1.5">
@@ -1216,9 +1221,7 @@ export function MemberOverrideDialog({
           <AlertDialogTitle>
             <Trans>Weekly allotment override</Trans>
           </AlertDialogTitle>
-          <AlertDialogDescription>
-            {account ? accountLabel(account) : null}
-          </AlertDialogDescription>
+          <AlertDialogDescription>{account ? accountLabel(account) : null}</AlertDialogDescription>
         </AlertDialogHeader>
         <label className="flex items-center gap-1 text-sm">
           <span className="text-muted-foreground" aria-hidden="true">
@@ -1303,9 +1306,7 @@ export function RemoveMemberDialog({
             <Trans>Remove from shared budget?</Trans>
           </AlertDialogTitle>
           <AlertDialogDescription>
-            {account ? (
-              <Trans>Remove {accountLabel(account)} from the roster.</Trans>
-            ) : null}
+            {account ? <Trans>Remove {accountLabel(account)} from the roster.</Trans> : null}
           </AlertDialogDescription>
         </AlertDialogHeader>
         {error ? (
@@ -1400,9 +1401,7 @@ export function UserSpendAdjustDialog({
           <AlertDialogTitle>
             <Trans>Adjust tracked spend</Trans>
           </AlertDialogTitle>
-          <AlertDialogDescription>
-            {account ? accountLabel(account) : null}
-          </AlertDialogDescription>
+          <AlertDialogDescription>{account ? accountLabel(account) : null}</AlertDialogDescription>
         </AlertDialogHeader>
         <div className="space-y-3">
           <label className="space-y-1.5">

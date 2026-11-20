@@ -1,5 +1,11 @@
 import type { SecretStore } from "@rakazo/adapter-kit";
-import { resolveModelKeyTypeSafe } from "@rakazo/adapters";
+import {
+  lookupMinimumWorstCaseCallCostUsd,
+  resolveDeploymentModel,
+  resolveModelKeyTypeSafe,
+} from "@rakazo/adapters";
+import type { OpsAccountModelSource } from "@rakazo/contracts";
+import { projectSharedKeyBudgetDisplay } from "@rakazo/core";
 import type {
   AdminGrantRow,
   AllotmentTransferRow,
@@ -15,6 +21,7 @@ import {
   listSharedKeyBudgetNotEnrolledHits,
   listSharedKeySpendAdjustments,
   loadSharedKeyBudgetSettingsView,
+  Prisma,
   resolveSharedKeyPeriodBounds,
   runAsSystem,
   sharedKeyMonthlyBudgetUsd,
@@ -137,6 +144,7 @@ export type OpsAccountRow = {
   deactivated: boolean;
   modelProvider: string | null;
   modelId: string | null;
+  modelSource?: OpsAccountModelSource;
   keyType: "company" | "personal";
   needsReconnect: boolean;
   totalTokens: number | null;
@@ -151,7 +159,9 @@ export type OpsAccountRow = {
     reservedUsd: number;
     remainingUsd: number;
     percentUsed: number;
+    reservedPercent?: number;
     hardStopped: boolean;
+    status?: "ok" | "warning" | "blocked";
     weekStartsAt: string;
     resetsAt: string;
     timezone: string;
@@ -162,6 +172,118 @@ export type OpsAccountRow = {
   envPinned: boolean;
   allotmentOverrideUsd: number | null;
 };
+
+type OpsResolvedModel = {
+  provider: string;
+  model: string;
+  source: OpsAccountModelSource;
+};
+
+/**
+ * Per-user latest usage model (DISTINCT ON), then configured role/preference/space
+ * choices, then the deployment default. Bounded — no N+1 and no global take window.
+ */
+export async function resolveOpsAccountModels(
+  prisma: OpsDashboardPrisma,
+  users: Array<{ userId: string; spaceId: string }>,
+): Promise<Map<string, OpsResolvedModel>> {
+  const result = new Map<string, OpsResolvedModel>();
+  if (users.length === 0) return result;
+  const userIds = users.map((user) => user.userId);
+
+  const latestUsage = await prisma.$queryRaw<
+    Array<{ userId: string; provider: string; model: string }>
+  >(Prisma.sql`
+    SELECT DISTINCT ON ("userId") "userId", provider, model
+    FROM usage_records
+    WHERE "userId" IN (${Prisma.join(userIds)})
+    ORDER BY "userId", "createdAt" DESC
+  `);
+  for (const row of latestUsage) {
+    result.set(row.userId, {
+      provider: row.provider,
+      model: row.model,
+      source: "last used",
+    });
+  }
+
+  const missingAfterUsage = userIds.filter((id) => !result.has(id));
+  if (missingAfterUsage.length === 0) return result;
+
+  const missingSet = new Set(missingAfterUsage);
+  const spaceTargets = users.filter((user) => missingSet.has(user.userId));
+  const [roleChoices, preferences, spaceChoices] = await Promise.all([
+    prisma.userModelRoleChoice.findMany({
+      where: { userId: { in: missingAfterUsage }, role: "main", position: 0 },
+      select: { userId: true, provider: true, modelId: true },
+    }),
+    prisma.userModelPreference.findMany({
+      where: {
+        userId: { in: missingAfterUsage },
+        modelId: { not: null },
+      },
+      select: {
+        userId: true,
+        modelId: true,
+        updatedAt: true,
+        credential: { select: { provider: true } },
+      },
+      orderBy: { updatedAt: "desc" },
+    }),
+    spaceTargets.length === 0
+      ? Promise.resolve([] as Array<{ userId: string; provider: string; modelId: string }>)
+      : prisma.spaceModelRoleChoice.findMany({
+          where: {
+            role: "main",
+            position: 0,
+            OR: spaceTargets.map((user) => ({
+              userId: user.userId,
+              spaceId: user.spaceId,
+            })),
+          },
+          select: { userId: true, provider: true, modelId: true },
+        }),
+  ]);
+
+  for (const row of roleChoices) {
+    if (result.has(row.userId)) continue;
+    result.set(row.userId, {
+      provider: row.provider,
+      model: row.modelId,
+      source: "configured",
+    });
+  }
+
+  for (const row of preferences) {
+    if (result.has(row.userId) || !row.modelId) continue;
+    result.set(row.userId, {
+      provider: row.credential.provider,
+      model: row.modelId,
+      source: "configured",
+    });
+  }
+
+  for (const row of spaceChoices) {
+    if (result.has(row.userId)) continue;
+    result.set(row.userId, {
+      provider: row.provider,
+      model: row.modelId,
+      source: "configured",
+    });
+  }
+
+  const deployment = resolveDeploymentModel();
+  for (const userId of missingAfterUsage) {
+    if (result.has(userId)) continue;
+    result.set(userId, {
+      provider: deployment.provider,
+      model: deployment.model,
+      source: "default",
+    });
+  }
+
+  return result;
+}
 
 export type OpsAgentOwner = {
   id: string;
@@ -362,7 +484,6 @@ export async function loadOpsOverview(
       users,
       usageGroups,
       personalUsageGroups,
-      recentModels,
       bots,
       recentRuns,
       monthlyCap,
@@ -388,11 +509,6 @@ export async function loadOpsOverview(
         by: ["userId"],
         where: { sharedKey: false },
         _sum: { costUsd: true },
-      }),
-      prisma.usageRecord.findMany({
-        select: { userId: true, provider: true, model: true, createdAt: true },
-        orderBy: { createdAt: "desc" },
-        take: 2_000,
       }),
       prisma.bot.findMany({
         select: {
@@ -472,12 +588,6 @@ export async function loadOpsOverview(
     const personalByUser = new Map(
       personalUsageGroups.map((row) => [row.userId, row._sum.costUsd ?? 0]),
     );
-    const latestModel = new Map<string, { provider: string; model: string }>();
-    for (const row of recentModels) {
-      if (!latestModel.has(row.userId)) {
-        latestModel.set(row.userId, { provider: row.provider, model: row.model });
-      }
-    }
 
     const memberIds = new Set(members.map((member) => member.userId));
     const visibleUsers = users.filter((user) => !isHiddenOpsEmail(user.email));
@@ -488,17 +598,17 @@ export async function loadOpsOverview(
       prisma,
       visibleUsers.map((user) => user.id),
     );
-    const keyByUser = await resolveOpsModelKeyTypes(
-      prisma,
-      visibleUsers.map((user) => ({
-        userId: user.id,
-        spaceId: spaceByUser.get(user.id) ?? user.id,
-      })),
-      {
+    const scopedUsers = visibleUsers.map((user) => ({
+      userId: user.id,
+      spaceId: spaceByUser.get(user.id) ?? user.id,
+    }));
+    const [keyByUser, latestModel] = await Promise.all([
+      resolveOpsModelKeyTypes(prisma, scopedUsers, {
         secrets: options.secrets,
         deploymentModelKey: options.deploymentModelKey,
-      },
-    );
+      }),
+      resolveOpsAccountModels(prisma, scopedUsers),
+    ]);
     const accounts: OpsAccountRow[] = [];
     for (const user of visibleUsers) {
       const usage = usageByUser.get(user.id);
@@ -511,25 +621,26 @@ export async function loadOpsOverview(
           now,
           envSharedKeyMonthlyBudgetUsd,
         );
-        const remainingUsd = Math.max(
-          0,
-          status.weeklyCapUsd - status.spentUsd - status.reservedUsd,
-        );
-        const hardStopped =
-          status.hardStopEnabled &&
-          status.enabled &&
-          status.member &&
-          status.weeklyCapUsd > 0 &&
-          status.spentUsd + status.reservedUsd >= status.weeklyCapUsd;
+        const maxCallCostUsd = lookupMinimumWorstCaseCallCostUsd(model?.provider, model?.model);
+        const projection = projectSharedKeyBudgetDisplay({
+          spentUsd: status.spentUsd,
+          reservedUsd: status.reservedUsd,
+          weeklyCapUsd: status.weeklyCapUsd,
+          hardStopEnabled: status.hardStopEnabled && status.enabled && status.member,
+          maxCallCostUsd,
+          warningThresholds: status.warningThresholds,
+        });
         budget = {
           configured: status.enabled,
           member: status.member,
           weeklyCapUsd: status.weeklyCapUsd,
           spentUsd: status.spentUsd,
           reservedUsd: status.reservedUsd,
-          remainingUsd,
-          percentUsed: status.percentUsed,
-          hardStopped,
+          remainingUsd: projection.remainingUsd,
+          percentUsed: projection.usedPercent,
+          reservedPercent: projection.reservedPercent,
+          hardStopped: projection.hardStopped,
+          status: projection.status,
           weekStartsAt: status.weekStartsAt,
           resetsAt: status.resetsAt,
           timezone: status.timezone,
@@ -557,6 +668,7 @@ export async function loadOpsOverview(
         deactivated,
         modelProvider: model?.provider ?? null,
         modelId: model?.model ?? null,
+        modelSource: model?.source,
         keyType,
         needsReconnect: keyResolution.needsReconnect,
         totalTokens: usage?.totalTokens ?? null,

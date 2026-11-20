@@ -304,10 +304,14 @@ export function BotSettings({
   const defaultEntry = me?.defaultModel
     ? catalogEntry(catalog, me.defaultProvider, me.defaultModel)
     : undefined;
+  const spaceDefaultName = defaultEntry?.label ?? me?.defaultModel;
+  const spaceDefaultLabel = spaceDefaultName
+    ? t`Space default (${spaceDefaultName})`
+    : t`Space default`;
   const modelChoices = chatModelChoices(
     connectedOptions,
     selectedModelKey,
-    t`Space default`,
+    spaceDefaultLabel,
     defaultEntry?.images,
   );
 

@@ -1,5 +1,6 @@
 import * as fc from "fast-check";
 import { describe, expect, it } from "vitest";
+import type { SharedKeyPeriodKind, SharedKeyPeriodSchedule } from "./shared-key-budget.js";
 import {
   clampSharedKeyOverrideRaises,
   DEFAULT_SHARED_KEY_PERIOD_SCHEDULE,
@@ -11,6 +12,7 @@ import {
   midWeekJoinFraction,
   parseSharedKeyMonthlyBudgetInput,
   parseSharedKeyTimezone,
+  projectSharedKeyBudgetDisplay,
   redivideWeeklyAllotments,
   resolveSharedKeyPeriodSchedule,
   SHARED_KEY_BUDGET_TIMEZONE,
@@ -21,8 +23,6 @@ import {
   sharedKeyWeekEnd,
   sharedKeyWeekStart,
   weekFractionRemaining,
-  type SharedKeyPeriodKind,
-  type SharedKeyPeriodSchedule,
 } from "./shared-key-budget.js";
 
 describe("shared-key weekly budget math", () => {
@@ -390,6 +390,42 @@ describe("shared-key weekly budget math", () => {
     expect(sharedKeyBudgetPercentUsed(1, 0)).toBe(100);
   });
 
+  it("projects display percent including reserved and blocked headroom", () => {
+    // Real-shaped case: 85% spend-only, but headroom below worst-case → blocked for new runs.
+    const blocked = projectSharedKeyBudgetDisplay({
+      spentUsd: 0.9565,
+      reservedUsd: 0,
+      weeklyCapUsd: 1.1215,
+      hardStopEnabled: true,
+      maxCallCostUsd: 0.2,
+    });
+    expect(blocked.status).toBe("blocked");
+    expect(blocked.hardStopped).toBe(false);
+    expect(blocked.usedPercent).toBeCloseTo((0.9565 / 1.1215) * 100, 5);
+    expect(blocked.remainingUsd).toBeCloseTo(0.165, 3);
+
+    const held = projectSharedKeyBudgetDisplay({
+      spentUsd: 0.5,
+      reservedUsd: 0.25,
+      weeklyCapUsd: 1,
+      hardStopEnabled: true,
+    });
+    expect(held.usedPercent).toBe(75);
+    expect(held.reservedPercent).toBe(25);
+    expect(held.spentPercent).toBe(50);
+    expect(held.status).toBe("ok");
+
+    const hardStopped = projectSharedKeyBudgetDisplay({
+      spentUsd: 1,
+      reservedUsd: 0,
+      weeklyCapUsd: 1,
+      hardStopEnabled: true,
+    });
+    expect(hardStopped.hardStopped).toBe(true);
+    expect(hardStopped.status).toBe("blocked");
+    expect(hardStopped.usedPercent).toBe(100);
+  });
+
   it("formats the America/New_York reset label for the account menu", () => {
     // Monday 00:00 America/New_York on 2026-11-09 is 05:00 UTC.
     expect(formatSharedKeyBudgetResetAt("2026-11-09T05:00:00.000Z", "en-US")).toBe("Mon 12:00 AM");
@@ -588,9 +624,9 @@ describe("shared-key period schedule math", () => {
     expect(sharedKeyPeriodStart(fromNull, midweek).toISOString()).toBe(
       sharedKeyWeekStart(midweek).toISOString(),
     );
-    expect(sharedKeyPeriodEnd(fromNull, sharedKeyPeriodStart(fromNull, midweek)).toISOString()).toBe(
-      sharedKeyWeekEnd(sharedKeyWeekStart(midweek)).toISOString(),
-    );
+    expect(
+      sharedKeyPeriodEnd(fromNull, sharedKeyPeriodStart(fromNull, midweek)).toISOString(),
+    ).toBe(sharedKeyWeekEnd(sharedKeyWeekStart(midweek)).toISOString());
   });
 
   it("month periods use the full monthly pool and clamp resetDom 31 to month length", () => {

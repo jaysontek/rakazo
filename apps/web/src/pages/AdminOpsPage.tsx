@@ -6,6 +6,7 @@ import type {
   OpsChatLog,
   OpsOverview,
   OpsRequestLogRow,
+  SharedKeyBudgetDisplayStatus,
 } from "@rakazo/contracts";
 import {
   AlertDialog,
@@ -74,7 +75,13 @@ function ms(value: number | null | undefined): string {
 
 function pct(value: number | null | undefined): string {
   if (value == null || !Number.isFinite(value)) return "—";
-  return `${Math.round(value)}%`;
+  // Floor so display matches UsageBar / SharedKeyUsageMeter (never round 99.5 → 100).
+  return `${Math.min(100, Math.max(0, Math.floor(value)))}%`;
+}
+
+function accountModelLabel(account: Pick<OpsAccount, "modelProvider" | "modelId">): string | null {
+  if (!account.modelProvider || !account.modelId) return null;
+  return `${account.modelProvider}/${account.modelId}`;
 }
 
 function accountLabel(account: Pick<OpsAccount, "name" | "email">): string {
@@ -144,19 +151,27 @@ function UsageBar({
   percent,
   label,
   hardStopped,
+  status,
 }: {
   percent: number;
   label: string;
   hardStopped?: boolean;
+  status?: SharedKeyBudgetDisplayStatus;
 }) {
   const value = Math.min(100, Math.max(0, Math.floor(percent)));
+  const blocked = hardStopped || status === "blocked";
+  const warning = !blocked && status === "warning";
   return (
     <div className="space-y-1">
       <div className="flex items-baseline justify-between gap-2 text-xs">
-        <span className={cn("tabular-nums", hardStopped && "text-destructive")}>{pct(value)}</span>
-        {hardStopped ? (
+        <span
+          className={cn("tabular-nums", blocked && "text-destructive", warning && "text-warning")}
+        >
+          {pct(value)}
+        </span>
+        {blocked ? (
           <span className="text-destructive">
-            <Trans>Hard-stopped</Trans>
+            {hardStopped ? <Trans>Hard-stopped</Trans> : <Trans>Limit reached</Trans>}
           </span>
         ) : null}
       </div>
@@ -172,7 +187,7 @@ function UsageBar({
         <div
           className={cn(
             "h-full rounded-full transition-[width]",
-            hardStopped ? "bg-destructive" : "bg-foreground",
+            blocked ? "bg-destructive" : warning ? "bg-warning" : "bg-foreground",
           )}
           style={{ width: `${value}%` }}
         />
@@ -666,9 +681,15 @@ function AccountsSection({
           percent={budget.percentUsed}
           label={t`Shared week usage for ${accountLabel(account)}`}
           hardStopped={budget.hardStopped}
+          status={budget.status}
         />
         <div className="text-xs text-muted-foreground tabular-nums">
           {money(budget.remainingUsd)} left
+          {budget.reservedUsd > 0 ? (
+            <span className="ms-1">
+              <Trans>+{money(budget.reservedUsd)} held</Trans>
+            </span>
+          ) : null}
         </div>
         <div className="flex flex-wrap gap-1">
           {account.envPinned ? (
@@ -683,6 +704,22 @@ function AccountsSection({
           ) : null}
         </div>
       </div>
+    );
+  }
+
+  function ModelBadge({ account }: { account: OpsAccount }) {
+    const label = accountModelLabel(account);
+    if (!label) {
+      return <span className="text-muted-foreground">—</span>;
+    }
+    return (
+      <Badge
+        variant="outline"
+        className="max-w-[12rem] truncate font-normal"
+        title={account.modelSource ? `${label} · ${account.modelSource}` : label}
+      >
+        {label}
+      </Badge>
     );
   }
 
@@ -856,13 +893,7 @@ function AccountsSection({
                     />
                   </td>
                   <td className="py-3 pr-3">
-                    {account.modelProvider && account.modelId ? (
-                      <Badge variant="outline" className="max-w-[12rem] truncate font-normal">
-                        {account.modelProvider}/{account.modelId}
-                      </Badge>
-                    ) : (
-                      "—"
-                    )}
+                    <ModelBadge account={account} />
                   </td>
                   <td className="py-3 pr-3 tabular-nums">{tokens(account.totalTokens)}</td>
                   <td className="py-3 pr-3">
@@ -904,11 +935,7 @@ function AccountsSection({
                     pendingSharedBudget={pendingSharedBudgetApproval(account)}
                     needsReconnect={account.needsReconnect}
                   />
-                  {account.modelProvider && account.modelId ? (
-                    <Badge variant="outline" className="font-normal">
-                      {account.modelProvider}/{account.modelId}
-                    </Badge>
-                  ) : null}
+                  <ModelBadge account={account} />
                 </div>
                 <dl className="grid grid-cols-2 gap-2 text-sm">
                   <div>
@@ -1781,55 +1808,105 @@ function RequestLogSection({
           <Trans>No recent requests.</Trans>
         </p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-0 text-left text-sm">
-            <thead className="text-muted-foreground">
-              <tr className="border-b">
-                <th className="py-2 pr-3 font-normal">
-                  <Trans>When</Trans>
-                </th>
-                <th className="py-2 pr-3 font-normal">
-                  <Trans>Kind</Trans>
-                </th>
-                <th className="py-2 pr-3 font-normal">
-                  <Trans>Model</Trans>
-                </th>
-                <th className="py-2 pr-3 font-normal">
-                  <Trans>Cost</Trans>
-                </th>
-                <th className="py-2 font-normal">
-                  <Trans>Status</Trans>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => {
-                const active = selected?.id === row.id;
-                return (
-                  <tr
-                    key={row.id}
-                    className={`border-b border-border/60 ${row.runId || row.threadId ? "cursor-pointer" : ""} ${active ? "bg-muted/40" : ""}`}
-                    onClick={() => {
-                      if (row.runId || row.threadId) onSelect(row);
-                    }}
-                  >
-                    <td className="py-2 pr-3">{new Date(row.createdAt).toLocaleString()}</td>
-                    <td className="py-2 pr-3">
-                      {row.kind}
-                      {row.sharedKey === true ? " · shared" : null}
-                      {row.sharedKey === false ? " · personal" : null}
-                    </td>
-                    <td className="py-2 pr-3">
-                      {row.provider && row.model ? `${row.provider}/${row.model}` : "—"}
-                    </td>
-                    <td className="py-2 pr-3 tabular-nums">{money(row.costUsd)}</td>
-                    <td className="py-2">{row.status ?? row.error ?? "—"}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <div className="hidden overflow-x-auto md:block">
+            <table className="w-full min-w-0 text-left text-sm">
+              <thead className="text-muted-foreground">
+                <tr className="border-b">
+                  <th className="py-2 pr-3 font-normal">
+                    <Trans>When</Trans>
+                  </th>
+                  <th className="py-2 pr-3 font-normal">
+                    <Trans>Kind</Trans>
+                  </th>
+                  <th className="py-2 pr-3 font-normal">
+                    <Trans>Model</Trans>
+                  </th>
+                  <th className="py-2 pr-3 font-normal">
+                    <Trans>Cost</Trans>
+                  </th>
+                  <th className="py-2 font-normal">
+                    <Trans>Status</Trans>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => {
+                  const active = selected?.id === row.id;
+                  return (
+                    <tr
+                      key={row.id}
+                      className={`border-b border-border/60 ${row.runId || row.threadId ? "cursor-pointer" : ""} ${active ? "bg-muted/40" : ""}`}
+                      onClick={() => {
+                        if (row.runId || row.threadId) onSelect(row);
+                      }}
+                    >
+                      <td className="py-2 pr-3">{new Date(row.createdAt).toLocaleString()}</td>
+                      <td className="py-2 pr-3">
+                        {row.kind}
+                        {row.sharedKey === true ? " · shared" : null}
+                        {row.sharedKey === false ? " · personal" : null}
+                      </td>
+                      <td className="py-2 pr-3">
+                        {row.provider && row.model ? `${row.provider}/${row.model}` : "—"}
+                      </td>
+                      <td className="py-2 pr-3 tabular-nums">{money(row.costUsd)}</td>
+                      <td className="py-2">{row.status ?? row.error ?? "—"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <ul className="grid gap-3 md:hidden">
+            {rows.map((row) => {
+              const active = selected?.id === row.id;
+              const clickable = Boolean(row.runId || row.threadId);
+              return (
+                <li key={row.id}>
+                  <Card size="sm" className={cn(active && "ring-1 ring-border")}>
+                    <CardHeader className="gap-1">
+                      {clickable ? (
+                        <button
+                          type="button"
+                          className="min-w-0 rounded-md text-start outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                          onClick={() => onSelect(row)}
+                        >
+                          <CardTitle className="text-sm font-medium">
+                            {new Date(row.createdAt).toLocaleString()}
+                          </CardTitle>
+                          <CardDescription>
+                            {row.kind}
+                            {row.sharedKey === true ? " · shared" : null}
+                            {row.sharedKey === false ? " · personal" : null}
+                          </CardDescription>
+                        </button>
+                      ) : (
+                        <>
+                          <CardTitle className="text-sm font-medium">
+                            {new Date(row.createdAt).toLocaleString()}
+                          </CardTitle>
+                          <CardDescription>
+                            {row.kind}
+                            {row.sharedKey === true ? " · shared" : null}
+                            {row.sharedKey === false ? " · personal" : null}
+                          </CardDescription>
+                        </>
+                      )}
+                    </CardHeader>
+                    <CardContent className="space-y-1 text-sm">
+                      <div>{row.provider && row.model ? `${row.provider}/${row.model}` : "—"}</div>
+                      <div className="flex justify-between gap-2 tabular-nums text-muted-foreground">
+                        <span>{money(row.costUsd)}</span>
+                        <span>{row.status ?? row.error ?? "—"}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </li>
+              );
+            })}
+          </ul>
+        </>
       )}
     </section>
   );

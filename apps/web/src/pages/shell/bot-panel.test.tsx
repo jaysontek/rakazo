@@ -306,6 +306,35 @@ it("shows the profile and the Advanced tab's controls", async () => {
 });
 
 describe("BotSettings model choices", () => {
+  it("shows the resolved space default model name on the empty choice", async () => {
+    vi.mocked(rpc.me).mockResolvedValueOnce({
+      defaultProvider: "google",
+      defaultModel: "gemini-3.8-flash",
+    } as never);
+    vi.mocked(rpc.models.list).mockResolvedValueOnce([
+      {
+        provider: "google",
+        providerName: "Google",
+        id: "gemini-3.8-flash",
+        label: "Gemini 3.8 Flash",
+        billing: "",
+      },
+    ]);
+    await render("Billing", { modelProvider: null, modelId: null });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    await act(async () =>
+      container
+        .querySelector<HTMLButtonElement>('[data-testid="bot-settings-advanced"] button')!
+        .click(),
+    );
+    const model = container.querySelector('[id$="-model"]');
+    if (!(model instanceof HTMLSelectElement)) throw new Error("Missing model select");
+    const spaceDefault = [...model.options].find((option) => option.value === "");
+    expect(spaceDefault?.textContent).toBe("Space default (Gemini 3.8 Flash)");
+  });
+
   it("submits DeepSeek API ids and does not offer a display label", async () => {
     vi.mocked(rpc.models.credentials).mockResolvedValueOnce([
       {

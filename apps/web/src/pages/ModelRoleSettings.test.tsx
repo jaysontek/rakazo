@@ -242,6 +242,29 @@ describe("shared role editor", () => {
       "1ChatOpenRouter",
     );
   });
+
+  it("uses catalog provider names and a Company API sublabel when credentials are empty", async () => {
+    saved = {
+      primary: null,
+      backups: [],
+      deploymentPrimary: { provider: "google", modelId: "gemini-3.8-flash" },
+    };
+    api.forRole.mockResolvedValue([
+      {
+        provider: "google",
+        id: "gemini-3.8-flash",
+        label: "Gemini 3.8 Flash",
+        providerName: "Google",
+        billing: "",
+      },
+    ]);
+    await render({ credentials: [] });
+    const row = container.querySelector('[data-testid="model-role-default"]');
+    expect(row?.textContent).toContain("Gemini 3.8 Flash");
+    expect(row?.textContent).toContain("Google");
+    expect(row?.textContent).toContain("Company API");
+    expect(row?.textContent).not.toMatch(/\bgoogle\b/);
+  });
   it("leaves a model where the loaded list has it when it is picked again", async () => {
     saved = { primary: chat, backups: [jev] };
     await render();

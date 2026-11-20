@@ -38,11 +38,11 @@ import {
   ComputersUnavailableHint,
   computersAreUnavailable,
 } from "../components/ComputersUnavailableHint";
-import { SharedKeyUsageMeter } from "../components/SharedKeyUsageMeter";
 import { DesktopUpdateSection } from "../components/DesktopUpdates";
 import { InstallAppSettings } from "../components/InstallAppSettings";
 import { PasskeySettings } from "../components/PasskeySettings";
 import { SettingsGroup, SettingsRow } from "../components/SettingsRows";
+import { SharedKeyUsageMeter } from "../components/SharedKeyUsageMeter";
 import { TrustedLinkSitesSettings } from "../components/TrustedLinkSitesSettings";
 import { WebPushSettings } from "../components/WebPushSettings";
 import { authClient } from "../lib/auth";
@@ -581,51 +581,89 @@ export function UsageSettingsPanel({
       ) : null}
       {models.length > 0 ? (
         <div className="mt-4 rounded-xl border border-border px-2">
-          <Table className="text-[13.5px]">
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="text-muted-foreground">
-                  <Trans>Model</Trans>
-                </TableHead>
-                <TableHead className="text-right text-muted-foreground">
-                  <Trans>Calls</Trans>
-                </TableHead>
-                <TableHead className="text-right text-muted-foreground">
-                  <Trans>Input</Trans>
-                </TableHead>
-                <TableHead className="text-right text-muted-foreground">
-                  <Trans>Output</Trans>
-                </TableHead>
-                {showCost ? (
-                  <TableHead className="text-right text-muted-foreground">
-                    <Trans>Cost</Trans>
-                  </TableHead>
-                ) : null}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {models.map((row) => (
-                <TableRow key={`${row.provider}:${row.model}`} className="hover:bg-transparent">
-                  <TableCell>
-                    <div className="text-foreground">{row.model}</div>
-                    <div className="text-[12px] text-muted-foreground">{row.provider}</div>
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {number(row.modelCalls)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {number(row.inputTokens)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {number(row.outputTokens)}
-                  </TableCell>
+          <ul className="divide-y divide-border sm:hidden" data-testid="usage-models-compact">
+            {models.map((row) => (
+              <li key={`${row.provider}:${row.model}`} className="px-2 py-3">
+                <div className="text-[13.5px] text-foreground">{row.model}</div>
+                <div className="text-[12px] text-muted-foreground">{row.provider}</div>
+                <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[12.5px] tabular-nums">
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-muted-foreground">
+                      <Trans>Calls</Trans>
+                    </dt>
+                    <dd>{number(row.modelCalls)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-muted-foreground">
+                      <Trans>Input</Trans>
+                    </dt>
+                    <dd>{number(row.inputTokens)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-muted-foreground">
+                      <Trans>Output</Trans>
+                    </dt>
+                    <dd>{number(row.outputTokens)}</dd>
+                  </div>
                   {showCost ? (
-                    <TableCell className="text-right tabular-nums">{cost(row.costUsd)}</TableCell>
+                    <div className="flex justify-between gap-2">
+                      <dt className="text-muted-foreground">
+                        <Trans>Cost</Trans>
+                      </dt>
+                      <dd>{cost(row.costUsd)}</dd>
+                    </div>
+                  ) : null}
+                </dl>
+              </li>
+            ))}
+          </ul>
+          <div className="hidden sm:block">
+            <Table className="text-[13.5px]">
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="text-muted-foreground">
+                    <Trans>Model</Trans>
+                  </TableHead>
+                  <TableHead className="text-right text-muted-foreground">
+                    <Trans>Calls</Trans>
+                  </TableHead>
+                  <TableHead className="text-right text-muted-foreground">
+                    <Trans>Input</Trans>
+                  </TableHead>
+                  <TableHead className="text-right text-muted-foreground">
+                    <Trans>Output</Trans>
+                  </TableHead>
+                  {showCost ? (
+                    <TableHead className="text-right text-muted-foreground">
+                      <Trans>Cost</Trans>
+                    </TableHead>
                   ) : null}
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {models.map((row) => (
+                  <TableRow key={`${row.provider}:${row.model}`} className="hover:bg-transparent">
+                    <TableCell>
+                      <div className="text-foreground">{row.model}</div>
+                      <div className="text-[12px] text-muted-foreground">{row.provider}</div>
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {number(row.modelCalls)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {number(row.inputTokens)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {number(row.outputTokens)}
+                    </TableCell>
+                    {showCost ? (
+                      <TableCell className="text-right tabular-nums">{cost(row.costUsd)}</TableCell>
+                    ) : null}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       ) : null}
     </div>

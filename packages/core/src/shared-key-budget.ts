@@ -719,6 +719,78 @@ export function sharedKeyBudgetPercentUsed(spentUsd: number, allotmentUsd: numbe
   return Math.min(100, Math.max(0, (spentUsd / allotmentUsd) * 100));
 }
 
+/** Display status for shared-key weekly usage (projection only — not enforcement). */
+export type SharedKeyBudgetDisplayStatus = "ok" | "warning" | "blocked";
+
+export type SharedKeyBudgetDisplayProjection = {
+  /** Legacy spent-only percent (0–100). */
+  percentUsed: number;
+  /** Spent segment as percent of cap (0–100). */
+  spentPercent: number;
+  /** Reserved (held) segment as percent of cap (0–100). */
+  reservedPercent: number;
+  /** Spent + reserved as percent of cap (0–100). */
+  usedPercent: number;
+  remainingUsd: number;
+  /** True when hard-stop is on and spent+reserved already meets/exceeds the cap. */
+  hardStopped: boolean;
+  status: SharedKeyBudgetDisplayStatus;
+};
+
+/**
+ * Pure display projection for shared-key weekly usage.
+ * Does not change enforcement — call sites pass `maxCallCostUsd` from
+ * `maximumModelCallCost` (e.g. empty context + model maxTokens) when known.
+ */
+export function projectSharedKeyBudgetDisplay(input: {
+  spentUsd: number;
+  reservedUsd: number;
+  weeklyCapUsd: number;
+  hardStopEnabled?: boolean;
+  /** Minimum worst-case cost a next call would try to reserve; when remaining is below this, status is blocked. */
+  maxCallCostUsd?: number | null;
+  warningThresholds?: readonly number[];
+}): SharedKeyBudgetDisplayProjection {
+  const spentUsd = Number.isFinite(input.spentUsd) ? Math.max(0, input.spentUsd) : 0;
+  const reservedUsd = Number.isFinite(input.reservedUsd) ? Math.max(0, input.reservedUsd) : 0;
+  const weeklyCapUsd = Number.isFinite(input.weeklyCapUsd) ? Math.max(0, input.weeklyCapUsd) : 0;
+  const hardStopEnabled = input.hardStopEnabled !== false;
+  const committed = spentUsd + reservedUsd;
+  const remainingUsd = Math.max(0, weeklyCapUsd - committed);
+  const percentUsed = sharedKeyBudgetPercentUsed(spentUsd, weeklyCapUsd);
+  const spentPercent = sharedKeyBudgetPercentUsed(spentUsd, weeklyCapUsd);
+  const reservedPercent = sharedKeyBudgetPercentUsed(reservedUsd, weeklyCapUsd);
+  const usedPercent = sharedKeyBudgetPercentUsed(committed, weeklyCapUsd);
+  const hardStopped = hardStopEnabled && weeklyCapUsd > 0 && committed >= weeklyCapUsd;
+  const maxCall =
+    input.maxCallCostUsd != null && Number.isFinite(input.maxCallCostUsd)
+      ? Math.max(0, input.maxCallCostUsd)
+      : null;
+  const lowHeadroom =
+    hardStopEnabled && weeklyCapUsd > 0 && maxCall != null && maxCall > 0 && remainingUsd < maxCall;
+  const blocked = hardStopped || lowHeadroom;
+  let status: SharedKeyBudgetDisplayStatus = "ok";
+  if (blocked) {
+    status = "blocked";
+  } else {
+    const thresholds =
+      input.warningThresholds && input.warningThresholds.length > 0
+        ? input.warningThresholds
+        : [80, 95];
+    const warnAt = Math.min(...thresholds.filter((value) => Number.isFinite(value)));
+    if (Number.isFinite(warnAt) && usedPercent >= warnAt) status = "warning";
+  }
+  return {
+    percentUsed,
+    spentPercent,
+    reservedPercent,
+    usedPercent,
+    remainingUsd,
+    hardStopped,
+    status,
+  };
+}
+
 /** Upper bound for the admin-editable monthly shared-key cap (USD). */
 export const SHARED_KEY_MONTHLY_BUDGET_MAX_USD = 1_000_000;
 

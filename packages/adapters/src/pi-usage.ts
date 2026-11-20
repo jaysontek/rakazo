@@ -667,3 +667,15 @@ export function maximumModelCallCost(
   const outputRate = Math.max(...tiers.map((tier) => tier.output));
   return (inputTokens * inputRate + outputTokens * outputRate) / 1_000_000;
 }
+
+/**
+ * Lower-bound worst-case reservation for a catalog model: empty prompt + full maxTokens.
+ * Used only for usage display (blocked when remaining headroom is below this).
+ */
+export function minimumWorstCaseModelCallCostUsd(
+  cost: Model<Api>["cost"] | null | undefined,
+  maxTokens: number | null | undefined,
+): number | undefined {
+  if (!cost || maxTokens == null || !(maxTokens > 0)) return undefined;
+  return maximumModelCallCost(cost, 0, maxTokens);
+}

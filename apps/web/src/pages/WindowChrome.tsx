@@ -1,9 +1,14 @@
 import { useLingui } from "@lingui/react/macro";
 import { desktopBridge, windowChromeKind } from "../lib/desktop";
 
+/**
+ * Desktop traffic-light / titlebar spacer. Returns null in the browser so admin
+ * and board pages do not leave a dead 12px strip above the header.
+ */
 export function WindowChrome() {
   const { t } = useLingui();
   const desktop = desktopBridge();
+  if (!desktop) return null;
   const kind = windowChromeKind(desktop);
   if (kind === "spacer") {
     return <div className="h-3 w-[72px] shrink-0" aria-hidden="true" />;

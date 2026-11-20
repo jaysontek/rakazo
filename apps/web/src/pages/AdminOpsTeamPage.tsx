@@ -2,12 +2,12 @@ import { Trans, useLingui } from "@lingui/react/macro";
 import type { OpsTeam, OpsTeamMember } from "@rakazo/contracts";
 import {
   Badge,
+  buttonVariants,
   Card,
   CardDescription,
   CardHeader,
   CardTitle,
   Spinner,
-  buttonVariants,
 } from "@rakazo/ui-web";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft } from "lucide-react";
@@ -169,6 +169,9 @@ export function TeamView({ data }: { data: OpsTeam }) {
                   <Trans>Key</Trans>
                 </th>
                 <th className="py-2 pr-3 font-normal">
+                  <Trans>Model</Trans>
+                </th>
+                <th className="py-2 pr-3 font-normal">
                   <Trans>Agents</Trans>
                 </th>
                 <th className="py-2 pr-3 font-normal">
@@ -193,6 +196,23 @@ export function TeamView({ data }: { data: OpsTeam }) {
                   </td>
                   <td className="py-3 pr-3">
                     <KeyBadge keyType={member.keyType} />
+                  </td>
+                  <td className="py-3 pr-3">
+                    {member.modelProvider && member.modelId ? (
+                      <Badge
+                        variant="outline"
+                        className="max-w-[12rem] truncate font-normal"
+                        title={
+                          member.modelSource
+                            ? `${member.modelProvider}/${member.modelId} · ${member.modelSource}`
+                            : undefined
+                        }
+                      >
+                        {member.modelProvider}/{member.modelId}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
                   </td>
                   <td className="py-3 pr-3 tabular-nums">{member.agentCount}</td>
                   <td className="py-3 pr-3">
@@ -241,10 +261,31 @@ export function TeamView({ data }: { data: OpsTeam }) {
                   </div>
                   <KeyBadge keyType={member.keyType} />
                 </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {member.modelProvider && member.modelId ? (
+                    <Badge variant="outline" className="font-normal">
+                      {member.modelProvider}/{member.modelId}
+                    </Badge>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  )}
+                </div>
                 <div className="text-xs text-muted-foreground">
                   {member.agentCount} <Trans>agents</Trans>
                   {" · "}
                   {money(member.totalCostUsd)}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  <Trans>Shared {money(member.sharedKeyCostUsd)}</Trans>
+                  {" · "}
+                  <Trans>Personal {money(member.personalKeyCostUsd)}</Trans>
+                </div>
+                <div className="text-xs tabular-nums text-muted-foreground">
+                  <Trans>Shared week</Trans>
+                  {": "}
+                  {member.sharedKeyBudget?.member
+                    ? money(member.sharedKeyBudget.remainingUsd)
+                    : "—"}
                 </div>
                 <button
                   type="button"
