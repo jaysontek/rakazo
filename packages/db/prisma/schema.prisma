@@ -51,6 +51,19 @@ model User {
   byokTrialCheckoutExpiresAt      DateTime?
   /// Set while the account may not sign in or run work; its content stays. Cleared to reactivate.
   deactivatedAt               DateTime?
+  /// When an admin requested soft deletion. Null while the account is active. Directory
+  /// reactivation must not clear this without verified-email restore.
+  deletionRequestedAt         DateTime?
+  /// After this instant the purge worker may permanently delete the account.
+  purgeAfter                  DateTime?
+  /// Admin who requested soft deletion, if any.
+  deletedByUserId             String?
+  deletedBy                   User?                        @relation("UserDeletedBy", fields: [deletedByUserId], references: [id], onDelete: SetNull)
+  accountsDeleted             User[]                       @relation("UserDeletedBy")
+  /// Whether the user was on the shared-key roster when soft-deleted (restored on restore).
+  priorSharedKeyBudgetMember  Boolean                      @default(false)
+  /// Set when the purge worker claims the account; restore refuses once claimed.
+  purgeClaimedAt              DateTime?
   sessions                    Session[]
   accounts                    Account[]
   scimSubject                 ScimSubject?
@@ -103,6 +116,7 @@ model User {
   sharedKeyTransfersCreated   SharedKeyAllotmentTransfer[] @relation("SharedKeyTransferCreatedBy")
 
   @@unique([email])
+  @@index([purgeAfter])
   @@map("user")
   messagingInstallations MessagingInstallation[]
   messagingInstallSessions MessagingInstallSession[]

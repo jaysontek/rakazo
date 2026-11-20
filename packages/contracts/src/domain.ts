@@ -1436,6 +1436,10 @@ export const OpsAccountSchema = z.object({
   envPinned: z.boolean().default(false),
   /** Absolute weekly allotment override when set; null when using the even-split share. */
   allotmentOverrideUsd: z.number().nullable().optional(),
+  /** Soft-deleted: pending purge. Null when the account is active. */
+  deletionRequestedAt: z.string().nullable().optional(),
+  /** ISO timestamp after which the purge worker may permanently delete the account. */
+  purgeAfter: z.string().nullable().optional(),
 });
 export type OpsAccount = z.infer<typeof OpsAccountSchema>;
 

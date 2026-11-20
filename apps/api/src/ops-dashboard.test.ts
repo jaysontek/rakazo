@@ -6,7 +6,14 @@ import {
   loadOpsTeam,
 } from "./ops-dashboard.js";
 
-type UserRow = { id: string; email: string; name: string; deactivatedAt: Date | null };
+type UserRow = {
+  id: string;
+  email: string;
+  name: string;
+  deactivatedAt: Date | null;
+  deletionRequestedAt?: Date | null;
+  purgeAfter?: Date | null;
+};
 
 type CredSpec = {
   userId: string;

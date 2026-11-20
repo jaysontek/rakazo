@@ -11,7 +11,16 @@ import {
   signupPolicyFromEnv,
 } from "@rakazo/core";
 import type { PrismaClient, SecurityEventType } from "@rakazo/db";
-import { bootstrapUserSpace, personalOrganizationIds, recordSecurityEvent } from "@rakazo/db";
+import {
+  ACCOUNT_RESTORE_RATE_LIMIT,
+  accountRestorable,
+  bootstrapUserSpace,
+  countRecentRestoreAttempts,
+  findSoftDeletedUserByEmail,
+  personalOrganizationIds,
+  recordSecurityEvent,
+  restoreAccountSoftDelete,
+} from "@rakazo/db";
 import type { BetterAuthOptions, BetterAuthPlugin } from "better-auth";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
@@ -107,10 +116,7 @@ function requestCarriesSessionCredential(ctx: {
   const authorization = get("authorization");
   if (authorization && /^bearer\s+\S+/i.test(authorization)) return true;
   const cookie = get("cookie");
-  if (
-    cookie &&
-    /(?:^|;\s*)(?:__Secure-)?better-auth\.session_token=/.test(cookie)
-  ) {
+  if (cookie && /(?:^|;\s*)(?:__Secure-)?better-auth\.session_token=/.test(cookie)) {
     return true;
   }
   return false;
@@ -732,7 +738,11 @@ export function createAuth(prisma: PrismaClient, env: AuthEnv) {
               },
             });
             if (!current?.impersonatedBy) return;
-            const { expiresAt: _ignored, impersonationExpiresAt: _cap, ...rest } = session as {
+            const {
+              expiresAt: _ignored,
+              impersonationExpiresAt: _cap,
+              ...rest
+            } = session as {
               expiresAt?: Date;
               impersonationExpiresAt?: Date | null;
               id?: string;
@@ -742,10 +752,7 @@ export function createAuth(prisma: PrismaClient, env: AuthEnv) {
             const capped =
               current.impersonationExpiresAt != null
                 ? new Date(
-                    Math.min(
-                      current.expiresAt.getTime(),
-                      current.impersonationExpiresAt.getTime(),
-                    ),
+                    Math.min(current.expiresAt.getTime(), current.impersonationExpiresAt.getTime()),
                   )
                 : current.expiresAt;
             return {
@@ -770,11 +777,82 @@ export function createAuth(prisma: PrismaClient, env: AuthEnv) {
                 message: "Email verification required",
               });
             }
-            if (deactivated(user)) {
-              throw new APIError("FORBIDDEN", {
-                code: "ACCOUNT_DEACTIVATED",
-                message: "This account is deactivated",
-              });
+            if (deactivated(user) || softDeleted(user)) {
+              const otpVerified =
+                ctx?.path === CODE_SIGN_IN_PATH &&
+                (user.emailVerified === true || softDeleted(user));
+              if (otpVerified) {
+                const pending = await findSoftDeletedUserByEmail(prisma, user.email);
+                if (pending && accountRestorable(pending)) {
+                  const attempts = await countRecentRestoreAttempts(prisma, pending.id);
+                  await recordSecurityEvent({
+                    type: "auth.account.restore.attempted",
+                    userId: pending.id,
+                    metadata: { via: "otp", attempts },
+                  });
+                  if (attempts >= ACCOUNT_RESTORE_RATE_LIMIT) {
+                    await recordSecurityEvent({
+                      type: "auth.account.restore.failed",
+                      userId: pending.id,
+                      metadata: { via: "otp", reason: "rate_limited" },
+                    });
+                    throw new APIError("FORBIDDEN", {
+                      code: "ACCOUNT_RESTORE_RATE_LIMITED",
+                      message: "Too many restore attempts",
+                    });
+                  }
+                  const restored = await restoreAccountSoftDelete(prisma, {
+                    userId: pending.id,
+                    actorUserId: pending.id,
+                    via: "otp",
+                  });
+                  if (restored.restored) {
+                    await recordSecurityEvent({
+                      type: "auth.account.restored",
+                      userId: pending.id,
+                      metadata: { via: "otp" },
+                    });
+                  } else {
+                    await recordSecurityEvent({
+                      type: "auth.account.restore.failed",
+                      userId: pending.id,
+                      metadata: { via: "otp", reason: restored.reason },
+                    });
+                    throw new APIError("FORBIDDEN", {
+                      code:
+                        restored.reason === "purge_due" || restored.reason === "purge_claimed"
+                          ? "ACCOUNT_PENDING_PURGE"
+                          : "ACCOUNT_DEACTIVATED",
+                      message:
+                        restored.reason === "purge_due" || restored.reason === "purge_claimed"
+                          ? "This account is past its restore window"
+                          : "This account is deactivated",
+                    });
+                  }
+                } else if (pending) {
+                  await recordSecurityEvent({
+                    type: "auth.account.restore.failed",
+                    userId: pending.id,
+                    metadata: { via: "otp", reason: "purge_due" },
+                  });
+                  throw new APIError("FORBIDDEN", {
+                    code: "ACCOUNT_PENDING_PURGE",
+                    message: "This account is past its restore window",
+                  });
+                } else {
+                  throw new APIError("FORBIDDEN", {
+                    code: "ACCOUNT_DEACTIVATED",
+                    message: "This account is deactivated",
+                  });
+                }
+              } else {
+                throw new APIError("FORBIDDEN", {
+                  code: softDeleted(user) ? "ACCOUNT_PENDING_DELETION" : "ACCOUNT_DEACTIVATED",
+                  message: softDeleted(user)
+                    ? "This account is pending deletion"
+                    : "This account is deactivated",
+                });
+              }
             }
             if (!user.emailVerified && policy.allowlist.length > 0 && !bypassAllowlist) {
               throw new APIError("FORBIDDEN", {
@@ -859,7 +937,9 @@ export function createAuth(prisma: PrismaClient, env: AuthEnv) {
             const now = new Date();
             await Promise.all([
               // Push registered while viewing as the target is keyed by the target.
-              prisma.pushToken.deleteMany({ where: { userId: targetUserId, sessionId: session.id } }),
+              prisma.pushToken.deleteMany({
+                where: { userId: targetUserId, sessionId: session.id },
+              }),
               prisma.webPushSubscription.deleteMany({
                 where: { userId: targetUserId, sessionId: session.id },
               }),
@@ -915,6 +995,21 @@ export function createAuth(prisma: PrismaClient, env: AuthEnv) {
           before: async (user) => {
             if (isMessagingEmail(user.email)) {
               throw new APIError("BAD_REQUEST", { message: "Email is not available" });
+            }
+            // Soft-deleted rows keep their email (unique). Never create a parallel account:
+            // OTP sign-in restores; unverified signup must not take over.
+            const pending = await findSoftDeletedUserByEmail(prisma, String(user.email ?? ""));
+            if (pending) {
+              if (accountRestorable(pending)) {
+                throw new APIError("FORBIDDEN", {
+                  code: "ACCOUNT_PENDING_DELETION",
+                  message: "Sign in with a verified email code to restore this account",
+                });
+              }
+              throw new APIError("FORBIDDEN", {
+                code: "ACCOUNT_PENDING_PURGE",
+                message: "This email is reserved until purge completes",
+              });
             }
             return {
               data: {
@@ -1084,6 +1179,11 @@ export function isBlockedAuthPath(path: string): boolean {
 /** Set while the directory has turned the account off. */
 function deactivated(user: object): boolean {
   return "deactivatedAt" in user && Boolean(user.deactivatedAt);
+}
+
+/** Soft-deleted by an admin; restore only via verified email OTP or admin restore. */
+function softDeleted(user: object): boolean {
+  return "deletionRequestedAt" in user && Boolean(user.deletionRequestedAt);
 }
 
 function isOidcCallback(

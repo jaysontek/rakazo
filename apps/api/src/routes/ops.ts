@@ -1,16 +1,22 @@
 import { ORPCError } from "@orpc/server";
 import { parseSharedKeyMonthlyBudgetInput } from "@rakazo/core";
 import {
+  ACCOUNT_RESTORE_RATE_LIMIT,
   addAdminGrant,
   addSharedKeyBudgetMember,
   adjustSharedKeyTrackedSpend,
+  cancelDeactivatedAccountRuns,
+  countRecentRestoreAttempts,
   listAdminGrants,
   listSharedKeySpendAdjustments,
   loadSharedKeyBudgetSettingsView,
+  normalizeAccountEmail,
   recordSecurityEvent,
   removeAdminGrant,
   removeSharedKeyBudgetMember,
+  requestAccountSoftDelete,
   requireMembership,
+  restoreAccountSoftDelete,
   reverseSharedKeyAllotmentTransfer,
   reverseSharedKeySpendAdjustment,
   runAsSystemInTransaction,
@@ -498,6 +504,132 @@ export function opsRoutes(ctx: RouterContext) {
           }
         },
       ),
+      softDeleteAccount: authed.ops.softDeleteAccount.handler(async ({ context, input }) => {
+        await gate(context);
+        try {
+          const result = await requestAccountSoftDelete(deps.prisma, {
+            userId: input.userId,
+            actorUserId: context.actor.userId,
+            envPinnedUserIds: envPinnedSharedKeyUserIds(),
+          });
+          if (deps.events) {
+            await cancelDeactivatedAccountRuns(deps.prisma, deps.events, input.userId).catch(
+              () => undefined,
+            );
+          }
+          await recordSecurityEvent({
+            type: "ops.account.soft_deleted",
+            userId: context.actor.userId,
+            spaceId: context.actor.spaceId,
+            metadata: {
+              procedure: "ops.softDeleteAccount",
+              targetUserId: input.userId,
+              priorSharedKeyBudgetMember: result.priorSharedKeyBudgetMember,
+            },
+          });
+          return {
+            ok: true as const,
+            purgeAfter: result.purgeAfter.toISOString(),
+            priorSharedKeyBudgetMember: result.priorSharedKeyBudgetMember,
+          };
+        } catch (error) {
+          badRequest(error);
+        }
+      }),
+      restoreAccount: authed.ops.restoreAccount.handler(async ({ context, input }) => {
+        await gate(context);
+        const target = await deps.prisma.user.findUnique({
+          where: { id: input.userId },
+          select: {
+            id: true,
+            email: true,
+            deletionRequestedAt: true,
+            purgeAfter: true,
+            purgeClaimedAt: true,
+          },
+        });
+        if (!target || target.deletionRequestedAt == null) {
+          throw new ORPCError("BAD_REQUEST", { message: "Account is not pending deletion" });
+        }
+        if (
+          normalizeAccountEmail(input.emailConfirmation) !== normalizeAccountEmail(target.email)
+        ) {
+          await recordSecurityEvent({
+            type: "ops.account.restore.failed",
+            userId: context.actor.userId,
+            spaceId: context.actor.spaceId,
+            metadata: {
+              procedure: "ops.restoreAccount",
+              targetUserId: input.userId,
+              reason: "email_mismatch",
+            },
+          });
+          throw new ORPCError("BAD_REQUEST", { message: "Email confirmation does not match" });
+        }
+        const attempts = await countRecentRestoreAttempts(deps.prisma, input.userId);
+        await recordSecurityEvent({
+          type: "auth.account.restore.attempted",
+          userId: context.actor.userId,
+          spaceId: context.actor.spaceId,
+          metadata: {
+            procedure: "ops.restoreAccount",
+            targetUserId: input.userId,
+            attempts,
+          },
+        });
+        if (attempts >= ACCOUNT_RESTORE_RATE_LIMIT) {
+          await recordSecurityEvent({
+            type: "ops.account.restore.failed",
+            userId: context.actor.userId,
+            spaceId: context.actor.spaceId,
+            metadata: {
+              procedure: "ops.restoreAccount",
+              targetUserId: input.userId,
+              reason: "rate_limited",
+            },
+          });
+          throw new ORPCError("TOO_MANY_REQUESTS", { message: "Too many restore attempts" });
+        }
+        try {
+          const outcome = await restoreAccountSoftDelete(deps.prisma, {
+            userId: input.userId,
+            actorUserId: context.actor.userId,
+            via: "admin",
+          });
+          if (!outcome.restored) {
+            await recordSecurityEvent({
+              type: "ops.account.restore.failed",
+              userId: context.actor.userId,
+              spaceId: context.actor.spaceId,
+              metadata: {
+                procedure: "ops.restoreAccount",
+                targetUserId: input.userId,
+                reason: outcome.reason,
+              },
+            });
+            throw new ORPCError("BAD_REQUEST", {
+              message:
+                outcome.reason === "purge_due" || outcome.reason === "purge_claimed"
+                  ? "Account is past its restore window"
+                  : "Could not restore account",
+            });
+          }
+          await recordSecurityEvent({
+            type: "ops.account.restored",
+            userId: context.actor.userId,
+            spaceId: context.actor.spaceId,
+            metadata: {
+              procedure: "ops.restoreAccount",
+              targetUserId: input.userId,
+              priorSharedKeyBudgetMember: outcome.priorSharedKeyBudgetMember,
+            },
+          });
+          return { ok: true as const };
+        } catch (error) {
+          if (error instanceof ORPCError) throw error;
+          badRequest(error);
+        }
+      }),
       setSharedKeyTrackedSpend: authed.ops.setSharedKeyTrackedSpend.handler(
         async ({ context, input }) => {
           await gate(context);

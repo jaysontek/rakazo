@@ -52,6 +52,12 @@ const NOT_AUDITED = new Set<SecurityEventType>([...FAILURE_TYPES, "deployment.se
 const DONE_TO_ACCOUNT = new Set<SecurityEventType>([
   "auth.account.deactivated",
   "auth.account.reactivated",
+  "auth.account.soft_deleted",
+  "auth.account.restored",
+  "auth.account.purged",
+  "ops.account.soft_deleted",
+  "ops.account.restored",
+  "ops.account.purged",
 ]);
 const MAX_METADATA_KEYS = 16;
 const MAX_METADATA_STRING = 200;

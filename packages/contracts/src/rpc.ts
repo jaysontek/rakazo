@@ -1417,10 +1417,10 @@ export const appContract = {
       .input(z.strictObject({ monthlyCapUsd: z.number().positive().max(1_000_000) }))
       .output(z.strictObject({ monthlyCapUsd: z.number().positive() })),
     listAdminGrants: oc.output(z.array(OpsAdminGrantSchema)),
-    addAdminGrant: oc
+    addAdminGrant: oc.input(z.strictObject({ userId: Id })).output(OpsAdminGrantSchema),
+    removeAdminGrant: oc
       .input(z.strictObject({ userId: Id }))
-      .output(OpsAdminGrantSchema),
-    removeAdminGrant: oc.input(z.strictObject({ userId: Id })).output(z.object({ ok: z.literal(true) })),
+      .output(z.object({ ok: z.literal(true) })),
     startImpersonation: oc
       .input(
         z.strictObject({
@@ -1446,27 +1446,23 @@ export const appContract = {
     transferSharedKeyAllotment: oc
       .input(z.strictObject({ fromUserId: Id, toUserId: Id }))
       .output(OpsAllotmentTransferSchema),
-    reverseSharedKeyAllotmentTransfer: oc
-      .input(z.strictObject({ transferId: Id }))
-      .output(
-        z.object({
-          transfer: OpsAllotmentTransferSchema,
-          clamped: z.boolean(),
-        }),
-      ),
+    reverseSharedKeyAllotmentTransfer: oc.input(z.strictObject({ transferId: Id })).output(
+      z.object({
+        transfer: OpsAllotmentTransferSchema,
+        clamped: z.boolean(),
+      }),
+    ),
     /**
      * Explicit admin enroll onto the shared-key weekly budget roster. Bypasses the
      * open-signup eligibility bar; still rejects deactivated / hidden accounts.
      */
-    addSharedKeyBudgetMember: oc
-      .input(z.strictObject({ userId: Id }))
-      .output(
-        z.object({
-          ok: z.literal(true),
-          enrolled: z.boolean(),
-          reason: z.enum(["already_member", "ineligible", "zero_slice"]).optional(),
-        }),
-      ),
+    addSharedKeyBudgetMember: oc.input(z.strictObject({ userId: Id })).output(
+      z.object({
+        ok: z.literal(true),
+        enrolled: z.boolean(),
+        reason: z.enum(["already_member", "ineligible", "zero_slice"]).optional(),
+      }),
+    ),
     /** Patch shared-key budget settings (schedule, enroll mode, hard-stop, warnings). */
     updateSharedKeyBudgetSettings: oc
       .input(
@@ -1478,11 +1474,7 @@ export const appContract = {
           resetMinutes: z.number().int().min(0).max(1439).nullable().optional(),
           timezone: z.string().min(1).nullable().optional(),
           autoEnrollMode: z.enum(["off", "gated", "open", "signup"]).nullable().optional(),
-          warningThresholds: z
-            .array(z.number().min(0).max(100))
-            .max(10)
-            .nullable()
-            .optional(),
+          warningThresholds: z.array(z.number().min(0).max(100)).max(10).nullable().optional(),
           hardStopEnabled: z.boolean().nullable().optional(),
           holdStaleMinutes: z.number().int().positive().max(1440).nullable().optional(),
           pruneInactive: z.boolean().nullable().optional(),
@@ -1499,9 +1491,27 @@ export const appContract = {
         }),
       )
       .output(z.object({ ok: z.literal(true) })),
-    /** Remove a roster member (env-pinned ids are rejected). */
+    /**
+     * Remove a roster member (env-pinned ids are rejected).
+     * Kept API-only for scripts; the Ops UI uses soft-delete instead.
+     */
     removeSharedKeyBudgetMember: oc
       .input(z.strictObject({ userId: Id }))
+      .output(z.object({ ok: z.literal(true) })),
+    /** Soft-delete an account: 30-day retention, then purge. Env-pinned ids are rejected. */
+    softDeleteAccount: oc.input(z.strictObject({ userId: Id })).output(
+      z.object({
+        ok: z.literal(true),
+        purgeAfter: z.string(),
+        priorSharedKeyBudgetMember: z.boolean(),
+      }),
+    ),
+    /**
+     * Admin restore of a soft-deleted account within the retention window.
+     * Confirm by typing the account email exactly.
+     */
+    restoreAccount: oc
+      .input(z.strictObject({ userId: Id, emailConfirmation: z.string().min(1).max(320) }))
       .output(z.object({ ok: z.literal(true) })),
     /** Set tracked shared-key spend to an absolute USD value (stored as a delta). */
     setSharedKeyTrackedSpend: oc

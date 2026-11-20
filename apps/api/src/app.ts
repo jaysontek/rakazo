@@ -164,6 +164,7 @@ import { cors } from "hono/cors";
 import { deleteAccountContent, finishStalledOrganizationDeletions } from "./account-deletion.js";
 import { mountAccountExportRoute } from "./account-export.js";
 import { mountAccountImportRoute } from "./account-import.js";
+import { accountPurgeSweep } from "./account-purge.js";
 import { settleDirectoryChange } from "./account-status.js";
 import { mountAppAssociation, nativePasskeys } from "./app-association.js";
 import { storeInboundAttachment } from "./artifacts.js";
@@ -899,6 +900,25 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
       billing,
     }),
     (error) => getLogger().error("stalled organization deletion failed", error),
+  );
+
+  const stopAccountPurge = startHourlySweep(
+    accountPurgeSweep(
+      {
+        prisma,
+        sandbox,
+        home,
+        jobs,
+        artifacts,
+        dataDir: env.dataDir,
+        messagingInstallations,
+        secrets,
+        billing,
+        pushTokens,
+      },
+      { enabled: env.accountPurgeEnabled },
+    ),
+    (error) => getLogger().error("account purge failed", error),
   );
 
   const router = createRouter({
@@ -1709,6 +1729,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
       await stopReferralEmails?.();
       await stopHomeRetention?.();
       await stopOrganizationDeletions();
+      await stopAccountPurge();
       await reconciler?.stop();
       await oauthTokenUpgrade;
       await mcpArgsMove;

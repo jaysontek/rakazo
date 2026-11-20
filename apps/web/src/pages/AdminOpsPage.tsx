@@ -54,7 +54,8 @@ import { errorText } from "../lib/user-error";
 import {
   BudgetSection,
   MemberOverrideDialog,
-  RemoveMemberDialog,
+  RestoreAccountDialog,
+  SoftDeleteAccountDialog,
   UserSpendAdjustDialog,
 } from "./AdminOpsBudget";
 import { WindowChrome } from "./WindowChrome";
@@ -375,7 +376,7 @@ function AccountActions({
   canTransfer,
   transferDisabled,
   canAddToSharedBudget,
-  canRemoveFromSharedBudget,
+  canDeleteAccount,
   canEditAllotment,
   canAdjustSpend,
   envPinned,
@@ -383,7 +384,7 @@ function AccountActions({
   onImpersonate,
   onTransfer,
   onAddToSharedBudget,
-  onRemoveFromSharedBudget,
+  onDeleteAccount,
   onEditAllotment,
   onAdjustSpend,
 }: {
@@ -391,7 +392,7 @@ function AccountActions({
   canTransfer: boolean;
   transferDisabled: boolean;
   canAddToSharedBudget: boolean;
-  canRemoveFromSharedBudget: boolean;
+  canDeleteAccount: boolean;
   canEditAllotment: boolean;
   canAdjustSpend: boolean;
   envPinned: boolean;
@@ -399,7 +400,7 @@ function AccountActions({
   onImpersonate: (account: OpsAccount) => void;
   onTransfer: (account: OpsAccount) => void;
   onAddToSharedBudget: (account: OpsAccount) => void;
-  onRemoveFromSharedBudget: (account: OpsAccount) => void;
+  onDeleteAccount: (account: OpsAccount) => void;
   onEditAllotment: (account: OpsAccount) => void;
   onAdjustSpend: (account: OpsAccount) => void;
 }) {
@@ -441,13 +442,42 @@ function AccountActions({
             <Trans>Pinned</Trans>
           </DropdownMenuItem>
         ) : null}
-        {canRemoveFromSharedBudget ? (
-          <DropdownMenuItem variant="destructive" onClick={() => onRemoveFromSharedBudget(account)}>
-            <Trans>Remove from budget</Trans>
+        {canDeleteAccount ? (
+          <DropdownMenuItem variant="destructive" onClick={() => onDeleteAccount(account)}>
+            <Trans>Delete account</Trans>
           </DropdownMenuItem>
         ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+function PendingDeletionBadge({
+  account,
+  onRestore,
+}: {
+  account: OpsAccount;
+  onRestore: (account: OpsAccount) => void;
+}) {
+  if (!account.deletionRequestedAt || !account.purgeAfter) return null;
+  const purgeDate = new Date(account.purgeAfter).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-2">
+      <Badge variant="destructive" className="font-normal tabular-nums">
+        <Trans>Pending deletion · purges on {purgeDate}</Trans>
+      </Badge>
+      <button
+        type="button"
+        className={buttonVariants({ variant: "outline", size: "sm" })}
+        onClick={() => onRestore(account)}
+      >
+        <Trans>Restore</Trans>
+      </button>
+    </div>
   );
 }
 
@@ -529,7 +559,8 @@ function AccountsSection({
   const [impersonate, setImpersonate] = useState<OpsAccount | null>(null);
   const [transferFrom, setTransferFrom] = useState<OpsAccount | null>(null);
   const [transferToId, setTransferToId] = useState("");
-  const [removeMember, setRemoveMember] = useState<OpsAccount | null>(null);
+  const [deleteAccount, setDeleteAccount] = useState<OpsAccount | null>(null);
+  const [restoreAccount, setRestoreAccount] = useState<OpsAccount | null>(null);
   const [overrideMember, setOverrideMember] = useState<OpsAccount | null>(null);
   const [spendMember, setSpendMember] = useState<OpsAccount | null>(null);
   const [busy, setBusy] = useState(false);
@@ -727,12 +758,13 @@ function AccountsSection({
   function accountActionProps(account: OpsAccount) {
     const member = Boolean(account.sharedKeyBudget?.member);
     const envPinned = account.envPinned === true;
+    const pendingDeletion = Boolean(account.deletionRequestedAt);
     return {
       account,
       canTransfer: member,
       transferDisabled: roster.length < 2,
       canAddToSharedBudget: pendingSharedBudgetApproval(account),
-      canRemoveFromSharedBudget: member && !envPinned,
+      canDeleteAccount: !envPinned && !pendingDeletion,
       canEditAllotment: member,
       canAdjustSpend: member,
       envPinned,
@@ -748,9 +780,9 @@ function AccountsSection({
       onAddToSharedBudget: (next: OpsAccount) => {
         void addToSharedBudget(next);
       },
-      onRemoveFromSharedBudget: (next: OpsAccount) => {
+      onDeleteAccount: (next: OpsAccount) => {
         setError(null);
-        setRemoveMember(next);
+        setDeleteAccount(next);
       },
       onEditAllotment: (next: OpsAccount) => {
         setError(null);
@@ -885,6 +917,13 @@ function AccountsSection({
                   <td className="py-3 pr-3">
                     <div className="font-medium">{account.name || account.email}</div>
                     <div className="text-muted-foreground break-all">{account.email}</div>
+                    <PendingDeletionBadge
+                      account={account}
+                      onRestore={(next) => {
+                        setError(null);
+                        setRestoreAccount(next);
+                      }}
+                    />
                   </td>
                   <td className="py-3 pr-3">
                     <KeyBadge
@@ -928,6 +967,13 @@ function AccountsSection({
                     {account.name || account.email}
                   </CardTitle>
                   <CardDescription className="break-all">{account.email}</CardDescription>
+                  <PendingDeletionBadge
+                    account={account}
+                    onRestore={(next) => {
+                      setError(null);
+                      setRestoreAccount(next);
+                    }}
+                  />
                 </div>
                 <div className="shrink-0">
                   <AccountActions {...accountActionProps(account)} />
@@ -1060,11 +1106,20 @@ function AccountsSection({
         </AlertDialog>
       ) : null}
 
-      <RemoveMemberDialog
-        account={removeMember}
-        open={Boolean(removeMember)}
+      <SoftDeleteAccountDialog
+        account={deleteAccount}
+        open={Boolean(deleteAccount)}
         onOpenChange={(next) => {
-          if (!next) setRemoveMember(null);
+          if (!next) setDeleteAccount(null);
+        }}
+        interactive={interactive}
+        onChanged={onChanged}
+      />
+      <RestoreAccountDialog
+        account={restoreAccount}
+        open={Boolean(restoreAccount)}
+        onOpenChange={(next) => {
+          if (!next) setRestoreAccount(null);
         }}
         interactive={interactive}
         onChanged={onChanged}

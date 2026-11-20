@@ -197,6 +197,8 @@ vi.mock("../lib/rpc", () => ({
       updateSharedKeyBudgetSettings: vi.fn(),
       setSharedKeyMemberOverride: vi.fn(),
       removeSharedKeyBudgetMember: vi.fn(),
+      softDeleteAccount: vi.fn(),
+      restoreAccount: vi.fn(),
       setSharedKeyTrackedSpend: vi.fn(),
       adjustSharedKeyTrackedSpend: vi.fn(),
       reverseSharedKeySpendAdjustment: vi.fn(),
@@ -778,7 +780,8 @@ it("shows pinned roster lock and remove action for non-pinned members", async ()
     (node) => node.textContent ?? "",
   );
   expect(menuItems.some((text) => text.includes("Pinned"))).toBe(true);
-  expect(menuItems.some((text) => text.includes("Remove from budget"))).toBe(true);
+  expect(menuItems.some((text) => text.includes("Delete account"))).toBe(true);
+  expect(menuItems.some((text) => text.includes("Remove from budget"))).toBe(false);
   expect(menuItems.some((text) => text.includes("Edit allotment"))).toBe(true);
   expect(menuItems.some((text) => text.includes("Adjust tracked spend"))).toBe(true);
 });
