@@ -3774,6 +3774,10 @@ msgstr ""
 msgid "Hear a sample"
 msgstr "샘플 듣기"
 
+#: src/components/ai/context.tsx
+msgid "Held"
+msgstr ""
+
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Hi, this is how I'll sound when I read replies out loud."
 msgstr "안녕하세요. 답변을 소리 내어 읽을 때 이런 목소리로 들립니다."
@@ -6000,6 +6004,10 @@ msgstr "초기화"
 msgid "Resets {reset}"
 msgstr ""
 
+#: src/components/ai/context.tsx
+msgid "Resets {resetLabel}"
+msgstr ""
+
 #. placeholder {0}: resetCountdown(budget.resetsAt)
 #: src/pages/AdminOpsBudget.tsx
 msgid "Resets in {0}"
@@ -6825,6 +6833,10 @@ msgstr "지출 금액"
 #: src/components/SpendingLimitSettings.tsx
 msgid "Spending limit"
 msgstr "지출 한도"
+
+#: src/components/ai/context.tsx
+msgid "Spent"
+msgstr ""
 
 #: src/components/AccountAccess.tsx
 msgid "SSO"
@@ -7881,8 +7893,8 @@ msgstr "매주"
 msgid "Weekly allotment override"
 msgstr "주간 배정 재정의"
 
-#: src/components/SharedKeyUsageMeter.tsx
-msgid "Weekly limit reached for new runs · Resets {reset}"
+#: src/components/ai/context.tsx
+msgid "Weekly limit reached for new runs · Resets {resetLabel}"
 msgstr ""
 
 #: src/pages/AdminOpsBudget.tsx

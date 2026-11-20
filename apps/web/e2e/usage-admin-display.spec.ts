@@ -49,6 +49,21 @@ for (const viewport of viewports) {
     await expect(page.getByText("+$0.50 held").locator("visible=true").first()).toBeVisible();
 
     await captureScreenshot(page, testInfo, `admin-ops-${viewport.name}`);
+
+    // Request log table with real fixture rows (Audit tab).
+    await page.getByRole("tab", { name: "Audit" }).click();
+    const requestLog = page.locator("section").filter({ hasText: "Request log" });
+    await expect(requestLog.getByRole("heading", { name: "Request log" })).toBeVisible();
+    if (viewport.width >= 768) {
+      const logRows = requestLog.locator("table tbody tr");
+      await expect(logRows.first()).toBeVisible();
+      expect(await logRows.count()).toBeGreaterThanOrEqual(2);
+      await logRows.first().focus();
+      await page.keyboard.press("Enter");
+    } else {
+      await expect(requestLog.locator("ul li").first()).toBeVisible();
+    }
+    await captureScreenshot(page, testInfo, `admin-ops-audit-${viewport.name}`);
   });
 
   test(`usage settings + popover @ ${viewport.name}`, async ({ page }, testInfo) => {

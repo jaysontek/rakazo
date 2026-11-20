@@ -43,6 +43,8 @@ import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, MoreHorizontal } from "lu
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
+import { ModelBadge } from "../components/ai/model-badge";
+import { resolveModelDisplay } from "../components/ai/model-label";
 import { PageLoading } from "../components/PageLoading";
 import { hardSwitchImpersonation } from "../lib/impersonation-switch";
 import { useSpaceQueries } from "../lib/query";
@@ -77,11 +79,6 @@ function pct(value: number | null | undefined): string {
   if (value == null || !Number.isFinite(value)) return "—";
   // Floor so display matches UsageBar / SharedKeyUsageMeter (never round 99.5 → 100).
   return `${Math.min(100, Math.max(0, Math.floor(value)))}%`;
-}
-
-function accountModelLabel(account: Pick<OpsAccount, "modelProvider" | "modelId">): string | null {
-  if (!account.modelProvider || !account.modelId) return null;
-  return `${account.modelProvider}/${account.modelId}`;
 }
 
 function accountLabel(account: Pick<OpsAccount, "name" | "email">): string {
@@ -267,6 +264,7 @@ export function OpsDashboardView({
   onSelect,
   interactive = true,
   fixtureAgents,
+  fixtureRequestLogRows,
 }: {
   data: OpsOverview;
   onChanged: () => void;
@@ -276,6 +274,8 @@ export function OpsDashboardView({
   interactive?: boolean;
   /** Agents roster for non-interactive fixtures (e2e / unit). */
   fixtureAgents?: OpsAgent[];
+  /** Request-log rows for non-interactive fixtures (e2e screenshots). */
+  fixtureRequestLogRows?: OpsRequestLogRow[];
 }) {
   return (
     <div data-testid="ops-dashboard" className="space-y-6">
@@ -325,7 +325,7 @@ export function OpsDashboardView({
             selected={selected}
             onSelect={onSelect}
             interactive={interactive}
-            fixtureRows={interactive ? undefined : []}
+            fixtureRows={interactive ? undefined : (fixtureRequestLogRows ?? [])}
           />
           {selected?.runId || selected?.threadId ? (
             <ChatLogSection
@@ -519,6 +519,12 @@ function AccountsSection({
 }) {
   const { t } = useLingui();
   const queryClient = useQueryClient();
+  const catalogQuery = useQuery({
+    queryKey: ["models", "list"],
+    queryFn: () => rpc.models.list(),
+    enabled: interactive,
+  });
+  const catalog = catalogQuery.data ?? [];
   const roster = accounts.filter((account) => account.sharedKeyBudget?.member);
   const [impersonate, setImpersonate] = useState<OpsAccount | null>(null);
   const [transferFrom, setTransferFrom] = useState<OpsAccount | null>(null);
@@ -707,19 +713,14 @@ function AccountsSection({
     );
   }
 
-  function ModelBadge({ account }: { account: OpsAccount }) {
-    const label = accountModelLabel(account);
-    if (!label) {
-      return <span className="text-muted-foreground">—</span>;
-    }
+  function AccountModelBadge({ account }: { account: OpsAccount }) {
     return (
-      <Badge
-        variant="outline"
-        className="max-w-[12rem] truncate font-normal"
-        title={account.modelSource ? `${label} · ${account.modelSource}` : label}
-      >
-        {label}
-      </Badge>
+      <ModelBadge
+        provider={account.modelProvider}
+        modelId={account.modelId}
+        source={account.modelSource}
+        catalog={catalog}
+      />
     );
   }
 
@@ -893,7 +894,7 @@ function AccountsSection({
                     />
                   </td>
                   <td className="py-3 pr-3">
-                    <ModelBadge account={account} />
+                    <AccountModelBadge account={account} />
                   </td>
                   <td className="py-3 pr-3 tabular-nums">{tokens(account.totalTokens)}</td>
                   <td className="py-3 pr-3">
@@ -922,11 +923,15 @@ function AccountsSection({
           <li key={account.userId}>
             <Card size="sm">
               <CardHeader className="flex-row items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <CardTitle className="truncate">{account.name || account.email}</CardTitle>
+                <div className="min-w-0 w-full">
+                  <CardTitle className="min-w-0 w-full truncate">
+                    {account.name || account.email}
+                  </CardTitle>
                   <CardDescription className="break-all">{account.email}</CardDescription>
                 </div>
-                <AccountActions {...accountActionProps(account)} />
+                <div className="shrink-0">
+                  <AccountActions {...accountActionProps(account)} />
+                </div>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex flex-wrap items-center gap-2">
@@ -935,7 +940,7 @@ function AccountsSection({
                     pendingSharedBudget={pendingSharedBudgetApproval(account)}
                     needsReconnect={account.needsReconnect}
                   />
-                  <ModelBadge account={account} />
+                  <AccountModelBadge account={account} />
                 </div>
                 <dl className="grid grid-cols-2 gap-2 text-sm">
                   <div>
@@ -1833,12 +1838,23 @@ function RequestLogSection({
               <tbody>
                 {rows.map((row) => {
                   const active = selected?.id === row.id;
+                  const clickable = Boolean(row.runId || row.threadId);
+                  const model = resolveModelDisplay(row.provider, row.model);
                   return (
                     <tr
                       key={row.id}
-                      className={`border-b border-border/60 ${row.runId || row.threadId ? "cursor-pointer" : ""} ${active ? "bg-muted/40" : ""}`}
+                      tabIndex={clickable ? 0 : undefined}
+                      aria-selected={active || undefined}
+                      className={`border-b border-border/60 outline-none ${clickable ? "cursor-pointer focus-visible:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring/50" : ""} ${active ? "bg-muted/40" : ""}`}
                       onClick={() => {
-                        if (row.runId || row.threadId) onSelect(row);
+                        if (clickable) onSelect(row);
+                      }}
+                      onKeyDown={(event) => {
+                        if (!clickable) return;
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          onSelect(row);
+                        }
                       }}
                     >
                       <td className="py-2 pr-3">{new Date(row.createdAt).toLocaleString()}</td>
@@ -1848,7 +1864,19 @@ function RequestLogSection({
                         {row.sharedKey === false ? " · personal" : null}
                       </td>
                       <td className="py-2 pr-3">
-                        {row.provider && row.model ? `${row.provider}/${row.model}` : "—"}
+                        {model ? (
+                          <span
+                            className="inline-flex min-w-0 max-w-[12rem] items-baseline gap-1.5"
+                            title={model.raw}
+                          >
+                            <span className="min-w-0 truncate font-medium">{model.name}</span>
+                            <span className="min-w-0 truncate text-muted-foreground">
+                              {model.providerName}
+                            </span>
+                          </span>
+                        ) : (
+                          "—"
+                        )}
                       </td>
                       <td className="py-2 pr-3 tabular-nums">{money(row.costUsd)}</td>
                       <td className="py-2">{row.status ?? row.error ?? "—"}</td>
@@ -1895,7 +1923,23 @@ function RequestLogSection({
                       )}
                     </CardHeader>
                     <CardContent className="space-y-1 text-sm">
-                      <div>{row.provider && row.model ? `${row.provider}/${row.model}` : "—"}</div>
+                      <div className="min-w-0">
+                        {(() => {
+                          const model = resolveModelDisplay(row.provider, row.model);
+                          if (!model) return "—";
+                          return (
+                            <span
+                              className="inline-flex min-w-0 max-w-full items-baseline gap-1.5"
+                              title={model.raw}
+                            >
+                              <span className="min-w-0 truncate font-medium">{model.name}</span>
+                              <span className="min-w-0 truncate text-muted-foreground">
+                                {model.providerName}
+                              </span>
+                            </span>
+                          );
+                        })()}
+                      </div>
                       <div className="flex justify-between gap-2 tabular-nums text-muted-foreground">
                         <span>{money(row.costUsd)}</span>
                         <span>{row.status ?? row.error ?? "—"}</span>

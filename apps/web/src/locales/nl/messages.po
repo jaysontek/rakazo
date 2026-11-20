@@ -3774,6 +3774,10 @@ msgstr ""
 msgid "Hear a sample"
 msgstr "Luister naar een voorbeeld"
 
+#: src/components/ai/context.tsx
+msgid "Held"
+msgstr ""
+
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Hi, this is how I'll sound when I read replies out loud."
 msgstr "Hoi, zo klink ik als ik antwoorden hardop voorlees."
@@ -6000,6 +6004,10 @@ msgstr "Reset"
 msgid "Resets {reset}"
 msgstr ""
 
+#: src/components/ai/context.tsx
+msgid "Resets {resetLabel}"
+msgstr ""
+
 #. placeholder {0}: resetCountdown(budget.resetsAt)
 #: src/pages/AdminOpsBudget.tsx
 msgid "Resets in {0}"
@@ -6825,6 +6833,10 @@ msgstr "Uitgavenbedrag"
 #: src/components/SpendingLimitSettings.tsx
 msgid "Spending limit"
 msgstr "Bestedingslimiet"
+
+#: src/components/ai/context.tsx
+msgid "Spent"
+msgstr ""
 
 #: src/components/AccountAccess.tsx
 msgid "SSO"
@@ -7881,8 +7893,8 @@ msgstr "Wekelijks"
 msgid "Weekly allotment override"
 msgstr "Wekelijkse toewijzingsoverride"
 
-#: src/components/SharedKeyUsageMeter.tsx
-msgid "Weekly limit reached for new runs · Resets {reset}"
+#: src/components/ai/context.tsx
+msgid "Weekly limit reached for new runs · Resets {resetLabel}"
 msgstr ""
 
 #: src/pages/AdminOpsBudget.tsx

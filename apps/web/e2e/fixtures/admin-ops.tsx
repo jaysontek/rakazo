@@ -307,6 +307,72 @@ const fixtureOverview: OpsOverview = {
   ],
 };
 
+const fixtureRequestLogRows: OpsRequestLogRow[] = [
+  {
+    id: "req_1",
+    kind: "usage",
+    userId: "user_alex",
+    botId: "bot_1",
+    botName: "Ops helper",
+    runId: "run_1",
+    threadId: "thread_1",
+    provider: "google",
+    model: "gemini-2.5-pro",
+    sharedKey: true,
+    inputTokens: 12_400,
+    outputTokens: 3_200,
+    totalTokens: 15_600,
+    costUsd: 0.42,
+    status: "ok",
+    error: null,
+    firstResponseMs: 640,
+    totalMs: 3_100,
+    createdAt: "2026-11-12T18:04:00.000Z",
+  },
+  {
+    id: "req_2",
+    kind: "run",
+    userId: "user_sam",
+    botId: "bot_2",
+    botName: "Inbox triage",
+    runId: "run_2",
+    threadId: "thread_2",
+    provider: "google",
+    model: "gemini-2.5-flash",
+    sharedKey: true,
+    inputTokens: 4_800,
+    outputTokens: 1_100,
+    totalTokens: 5_900,
+    costUsd: 0.08,
+    status: "ok",
+    error: null,
+    firstResponseMs: 410,
+    totalMs: 1_800,
+    createdAt: "2026-11-12T17:51:00.000Z",
+  },
+  {
+    id: "req_3",
+    kind: "usage",
+    userId: "user_jordan",
+    botId: "bot_3",
+    botName: "Research",
+    runId: null,
+    threadId: null,
+    provider: "openai",
+    model: "gpt-4.1",
+    sharedKey: false,
+    inputTokens: 22_000,
+    outputTokens: 6_400,
+    totalTokens: 28_400,
+    costUsd: 1.15,
+    status: "error",
+    error: "rate_limited",
+    firstResponseMs: null,
+    totalMs: null,
+    createdAt: "2026-11-12T16:20:00.000Z",
+  },
+];
+
 const fixtureAgents: OpsAgent[] = [
   {
     id: "bot_1",
@@ -397,6 +463,7 @@ function Fixture() {
             onSelect={setSelected}
             interactive={false}
             fixtureAgents={fixtureAgents}
+            fixtureRequestLogRows={fixtureRequestLogRows}
           />
         </div>
       </main>
@@ -404,9 +471,34 @@ function Fixture() {
   );
 }
 
+const fixtureCatalog = [
+  {
+    provider: "google",
+    id: "gemini-2.5-pro",
+    label: "Gemini 2.5 Pro",
+    providerName: "Google",
+    billing: "pay-as-you-go",
+  },
+  {
+    provider: "google",
+    id: "gemini-2.5-flash",
+    label: "Gemini 2.5 Flash",
+    providerName: "Google",
+    billing: "pay-as-you-go",
+  },
+  {
+    provider: "openai",
+    id: "gpt-4.1",
+    label: "GPT-4.1",
+    providerName: "OpenAI",
+    billing: "pay-as-you-go",
+  },
+] as const;
+
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
 });
+queryClient.setQueryData(["models", "list"], fixtureCatalog);
 
 void bootstrapI18n("en").then(() => {
   createRoot(document.getElementById("root")!).render(

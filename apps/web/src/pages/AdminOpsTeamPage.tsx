@@ -13,6 +13,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft } from "lucide-react";
 import { useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
+import { ModelBadge } from "../components/ai/model-badge";
 import { PageLoading } from "../components/PageLoading";
 import { hardSwitchImpersonation } from "../lib/impersonation-switch";
 import { storeImpersonationTeammates } from "../lib/impersonation-teammates";
@@ -38,13 +39,13 @@ function memberLabel(member: Pick<OpsTeamMember, "name" | "email">): string {
 function KeyBadge({ keyType }: { keyType: OpsTeamMember["keyType"] }) {
   if (keyType === "personal") {
     return (
-      <Badge variant="outline">
+      <Badge variant="outline" className="shrink-0">
         <Trans>Personal API</Trans>
       </Badge>
     );
   }
   return (
-    <Badge variant="secondary">
+    <Badge variant="secondary" className="shrink-0">
       <Trans>Company API</Trans>
     </Badge>
   );
@@ -84,6 +85,11 @@ export function AdminOpsTeamPage() {
 
 function TeamDashboard({ organizationId }: { organizationId: string }) {
   const { t } = useLingui();
+  const catalogQuery = useQuery({
+    queryKey: ["models", "list"],
+    queryFn: () => rpc.models.list(),
+  });
+  const catalog = catalogQuery.data ?? [];
   const team = useQuery({
     queryKey: ["ops", "team", organizationId],
     queryFn: () => rpc.ops.team({ organizationId }),
@@ -198,21 +204,12 @@ export function TeamView({ data }: { data: OpsTeam }) {
                     <KeyBadge keyType={member.keyType} />
                   </td>
                   <td className="py-3 pr-3">
-                    {member.modelProvider && member.modelId ? (
-                      <Badge
-                        variant="outline"
-                        className="max-w-[12rem] truncate font-normal"
-                        title={
-                          member.modelSource
-                            ? `${member.modelProvider}/${member.modelId} · ${member.modelSource}`
-                            : undefined
-                        }
-                      >
-                        {member.modelProvider}/{member.modelId}
-                      </Badge>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
+                    <ModelBadge
+                      provider={member.modelProvider}
+                      modelId={member.modelId}
+                      source={member.modelSource}
+                      catalog={catalog}
+                    />
                   </td>
                   <td className="py-3 pr-3 tabular-nums">{member.agentCount}</td>
                   <td className="py-3 pr-3">
@@ -255,28 +252,19 @@ export function TeamView({ data }: { data: OpsTeam }) {
             <Card size="sm">
               <CardHeader className="gap-2">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <CardTitle className="truncate">{memberLabel(member)}</CardTitle>
+                  <div className="min-w-0 w-full">
+                    <CardTitle className="min-w-0 w-full truncate">{memberLabel(member)}</CardTitle>
                     <CardDescription className="break-all">{member.email}</CardDescription>
                   </div>
                   <KeyBadge keyType={member.keyType} />
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  {member.modelProvider && member.modelId ? (
-                    <Badge
-                      variant="outline"
-                      className="max-w-[12rem] truncate font-normal"
-                      title={
-                        member.modelSource
-                          ? `${member.modelProvider}/${member.modelId} · ${member.modelSource}`
-                          : undefined
-                      }
-                    >
-                      {member.modelProvider}/{member.modelId}
-                    </Badge>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">—</span>
-                  )}
+                  <ModelBadge
+                    provider={member.modelProvider}
+                    modelId={member.modelId}
+                    source={member.modelSource}
+                    catalog={catalog}
+                  />
                 </div>
                 <div className="text-xs text-muted-foreground">
                   {member.agentCount} <Trans>agents</Trans>

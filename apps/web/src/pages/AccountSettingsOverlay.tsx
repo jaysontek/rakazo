@@ -583,11 +583,14 @@ export function UsageSettingsPanel({
         <div className="mt-4 rounded-xl border border-border px-2">
           <ul className="divide-y divide-border sm:hidden" data-testid="usage-models-compact">
             {models.map((row) => (
-              <li key={`${row.provider}:${row.model}`} className="px-2 py-3">
-                <div className="truncate text-[13.5px] text-foreground" title={row.model}>
+              <li key={`${row.provider}:${row.model}`} className="min-w-0 px-2 py-3">
+                <div className="min-w-0 truncate text-[13.5px] text-foreground" title={row.model}>
                   {row.model}
                 </div>
-                <div className="truncate text-[12px] text-muted-foreground" title={row.provider}>
+                <div
+                  className="min-w-0 truncate text-[12px] text-muted-foreground"
+                  title={row.provider}
+                >
                   {row.provider}
                 </div>
                 <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[12.5px] tabular-nums">

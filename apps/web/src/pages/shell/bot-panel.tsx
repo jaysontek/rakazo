@@ -41,6 +41,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Download, Settings, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { Suspense, useEffect, useId, useRef, useState } from "react";
+import { resolveModelDisplay } from "../../components/ai/model-label";
 import { ErrorBoundary, SectionLoadFailed } from "../../components/ErrorBoundary";
 import { InstructionSettings } from "../../components/InstructionSettings";
 import { PagesList } from "../../components/pages/PagesList";
@@ -304,7 +305,8 @@ export function BotSettings({
   const defaultEntry = me?.defaultModel
     ? catalogEntry(catalog, me.defaultProvider, me.defaultModel)
     : undefined;
-  const spaceDefaultName = defaultEntry?.label ?? me?.defaultModel;
+  const spaceDefaultDisplay = resolveModelDisplay(me?.defaultProvider, me?.defaultModel, catalog);
+  const spaceDefaultName = spaceDefaultDisplay?.name ?? defaultEntry?.label ?? me?.defaultModel;
   const spaceDefaultLabel = spaceDefaultName
     ? t`Space default (${spaceDefaultName})`
     : t`Space default`;

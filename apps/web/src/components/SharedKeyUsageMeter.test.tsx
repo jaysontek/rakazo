@@ -23,6 +23,27 @@ vi.mock("@rakazo/core", async (importOriginal) => {
   };
 });
 
+// HoverCard/Progress pull Base UI hooks that disagree with this suite's React copies.
+vi.mock("@rakazo/ui-web", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@rakazo/ui-web")>();
+  return {
+    ...actual,
+    HoverCard: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+    HoverCardTrigger: ({ children }: { children?: ReactNode }) => (
+      <button type="button">{children}</button>
+    ),
+    HoverCardContent: () => null,
+    Progress: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+    ProgressTrack: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+    ProgressIndicator: () => null,
+    Button: ({ children, ...props }: { children?: ReactNode }) => (
+      <button type="button" {...props}>
+        {children}
+      </button>
+    ),
+  };
+});
+
 import { SharedKeyUsageMeter } from "./SharedKeyUsageMeter";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
