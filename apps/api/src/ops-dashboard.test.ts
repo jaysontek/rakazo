@@ -144,7 +144,7 @@ function opsPrisma(
       findMany: vi.fn(async ({ where }: { where: { userId: string; provider?: unknown } }) =>
         credentials
           .filter((cred) => cred.userId === where.userId)
-          .filter((cred) => {
+          .filter((_cred) => {
             // provider filter is an object from modelCredentialProviderFilter; match google loosely.
             return true;
           })

@@ -157,5 +157,4 @@ describe("impersonation auth hooks", () => {
     );
     expect(link.status).toBe(403);
   });
-
 });
