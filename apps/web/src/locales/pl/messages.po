@@ -8097,7 +8097,7 @@ msgstr "Po zakończeniu okresu próbnego plan zmieni się na {tierTargetLabel}."
 #. js-lingui-explicit-id
 #: src/lib/run-error.ts
 msgid "Your share of this week's shared API key budget is used up. It resets next week, or connect your own key in Models."
-msgstr "Twój udział w tygodniowym budżecie wspólnego klucza API się wyczerpał. Odnowi się w przyszłym tygodniu, albo podłącz własny klucz w Modelach."
+msgstr "Twój udział w tygodniowym budżecie wspólnego klucza API jest wyczerpany. Limit odnawia się w przyszłym tygodniu albo podłącz własny klucz w Modelach."
 
 #: src/components/integrations/skills-dialog.tsx
 msgid "Your skills"
