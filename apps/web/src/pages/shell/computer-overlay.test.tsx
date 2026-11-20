@@ -22,11 +22,11 @@ vi.mock("@rakazo/ui-web", () => ({
   ),
 }));
 vi.mock("../../components/ComputerMaintenanceActions", () => ({
-  ComputerMaintenanceActions: () => null,
+  ComputerMaintenanceActions: () => <div data-testid="computer-maintenance" />,
 }));
 vi.mock("../../components/teach/TeachCaptureOverlay", () => ({ TeachCaptureOverlay: () => null }));
 vi.mock("../../components/teach/TeachComputerOverlay", () => ({
-  TeachComputerOverlayControl: () => null,
+  TeachComputerOverlayControl: () => <div data-testid="computer-teach" />,
 }));
 vi.mock("../../components/teach/TeachRecordingChrome", () => ({
   TeachRecordingChrome: () => null,
@@ -59,7 +59,20 @@ function computer(state: ComputerStatus["state"]): ComputerStatus {
   };
 }
 
-async function render(state: ComputerStatus["state"], onStart = vi.fn()) {
+async function render(
+  state: ComputerStatus["state"],
+  {
+    onStart = vi.fn() as () => void,
+    readOnly = false,
+    composerRunning = false,
+    hasControl = false,
+  }: {
+    onStart?: () => void;
+    readOnly?: boolean;
+    composerRunning?: boolean;
+    hasControl?: boolean;
+  } = {},
+) {
   await act(async () => {
     root.render(
       <ComputerOverlay
@@ -68,8 +81,8 @@ async function render(state: ComputerStatus["state"], onStart = vi.fn()) {
         computerViewport={null}
         recordingSkill={null}
         teachBusy={false}
-        hasControl={false}
-        composerRunning={false}
+        hasControl={hasControl}
+        composerRunning={composerRunning}
         sending={false}
         booting={false}
         sendError={null}
@@ -85,6 +98,7 @@ async function render(state: ComputerStatus["state"], onStart = vi.fn()) {
         onRefreshTeaching={async () => undefined}
         onRefreshComputer={async () => undefined}
         onClose={() => undefined}
+        readOnly={readOnly}
       />,
     );
   });
@@ -121,4 +135,16 @@ it("offers Start for an asleep computer", async () => {
   await render("suspended");
   expect(container.textContent).toContain("Computer is asleep");
   expect(startButton()).toBeDefined();
+});
+
+it("hides Start, Stop, Teach and Maintenance while read-only", async () => {
+  await render("stopped", { readOnly: true, composerRunning: true });
+  expect(startButton()).toBeUndefined();
+  expect(container.querySelector('[data-testid="computer-overlay-stop"]')).toBeNull();
+  expect(container.querySelector('[data-testid="computer-teach"]')).toBeNull();
+  expect(container.querySelector('[data-testid="computer-maintenance"]')).toBeNull();
+  expect(container.querySelector('[data-testid="computer-overlay-close"]')).not.toBeNull();
+  expect(container.querySelector('[data-testid="computer-viewport"]')?.className).toContain(
+    "top-impersonation-banner",
+  );
 });

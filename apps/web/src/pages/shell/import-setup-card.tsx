@@ -38,10 +38,12 @@ export function ImportSetupCard({
   botId,
   block,
   onOpen,
+  readOnly = false,
 }: {
   botId?: string;
   block: Extract<MessageBlock, { kind: "import_setup" }>;
   onOpen?: (target: ImportSetupTarget) => void;
+  readOnly?: boolean;
 }) {
   const { t } = useLingui();
   const text = useImportStatusText();
@@ -135,7 +137,7 @@ export function ImportSetupCard({
                   strokeWidth={2}
                   className="shrink-0 text-success"
                 />
-              ) : target && onOpen ? (
+              ) : !readOnly && target && onOpen ? (
                 <Button
                   size="sm"
                   variant="outline"

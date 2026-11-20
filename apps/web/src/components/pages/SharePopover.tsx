@@ -56,6 +56,7 @@ export function SharePopover({
   open,
   onOpenChange,
   compact = false,
+  readOnly = false,
 }: {
   title: string;
   owner: { name: string; image: string | null };
@@ -69,6 +70,8 @@ export function SharePopover({
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   compact?: boolean;
+  /** Disable visibility changes while impersonating; copy/open link stay available. */
+  readOnly?: boolean;
 }) {
   const { t } = useLingui();
   const shownOwner = accountDisplay(owner, t`You`);
@@ -142,7 +145,7 @@ export function SharePopover({
           <RadioGroup
             aria-label={t`Who can open this page`}
             value={visibility}
-            disabled={pending}
+            disabled={pending || readOnly}
             onValueChange={(value) => onVisibilityChange(value as PageVisibility)}
             className="-mx-1.5 gap-0.5"
           >

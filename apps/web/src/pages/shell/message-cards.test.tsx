@@ -143,6 +143,54 @@ it("authorizes a card in a normal chat and marks its thread connected", async ()
   }
 });
 
+it("keeps app connect and MCP approval cards visible without action buttons when read-only", async () => {
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  try {
+    await act(async () =>
+      root.render(
+        <>
+          <AppConnectCard
+            botId="bot"
+            threadId="normal-chat"
+            readOnly
+            block={{
+              kind: "app_connect",
+              connectorId: "fake",
+              provider: "gmail",
+              name: "Gmail",
+              description: "Mail",
+              logo: null,
+              status: "pending",
+            }}
+          />
+          <McpApprovalCard
+            botId="bot"
+            threadId="thread"
+            readOnly
+            block={{
+              kind: "mcp_approval",
+              name: "Example",
+              serverId: "server",
+              transport: "streamable_http",
+              endpoint: "https://example.test/mcp",
+              needsOAuth: true,
+              status: "pending",
+            }}
+          />
+        </>,
+      ),
+    );
+    expect(host.textContent).toContain("Gmail");
+    expect(host.textContent).toContain("Connect MCP server “Example”");
+    expect(host.querySelector("button")).toBeNull();
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
+});
+
 it("links OAuth failures in chat to the shared recovery guide without approving the server", async () => {
   calls.oauthBegin.mockRejectedValueOnce(
     Object.assign(new Error("Sign-in configuration mismatch"), {

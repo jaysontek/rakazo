@@ -4,21 +4,25 @@ import { buttonVariants } from "@rakazo/ui-web";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft } from "lucide-react";
 import { Link, Navigate, useParams } from "react-router-dom";
+import { ImpersonationBlockedPage } from "../components/ImpersonationBlockedPage";
 import { PageLoading } from "../components/PageLoading";
 import { desktopBridge } from "../lib/desktop";
 import { rpc } from "../lib/rpc";
+import { useIsImpersonating } from "../lib/use-impersonating";
 import { WindowChrome } from "./WindowChrome";
 
 export function NavLinkPage() {
   const { t } = useLingui();
+  const impersonating = useIsImpersonating();
   const { linkId } = useParams();
   // The desktop renderer is not served from the deployment's origin, so the path would miss.
   const desktop = Boolean(desktopBridge());
   const me = useQuery({
     queryKey: ["me", "nav-links"],
     queryFn: () => rpc.me(),
-    enabled: !desktop,
+    enabled: !desktop && !impersonating,
   });
+  if (impersonating) return <ImpersonationBlockedPage />;
   if (desktop) return <Navigate to="/app" replace />;
   if (me.isPending) return <PageLoading />;
   // An API older than this field omits it, and replies are not parsed through MeSchema.

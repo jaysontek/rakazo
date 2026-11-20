@@ -23,6 +23,7 @@ export function MessageHoverActions({
   onMarkUnread,
   markedUnread = false,
   onReact,
+  readOnly = false,
 }: {
   message: ThreadMessage;
   side: "start" | "end";
@@ -30,6 +31,8 @@ export function MessageHoverActions({
   onMarkUnread: (message: ThreadMessage) => void;
   markedUnread?: boolean;
   onReact: (message: ThreadMessage, reaction: MessageReaction) => Promise<void>;
+  /** Keep copy; hide reply/react/unread while impersonating. */
+  readOnly?: boolean;
 }) {
   const { t } = useLingui();
   const [moreOpen, setMoreOpen] = useState(false);
@@ -50,10 +53,10 @@ export function MessageHoverActions({
   return (
     <MessageHoverMetadata pinned={moreOpen || reactionsOpen} side={side}>
       <div data-testid="message-hover-actions" className="flex items-center gap-0.5">
-        {canReactToThreadMessage(message) ? (
+        {!readOnly && canReactToThreadMessage(message) ? (
           <Popover open={reactionsOpen} onOpenChange={setReactionsOpen}>
             <PopoverTrigger aria-label={t`React`} className={iconButtonClass}>
-              <Smile size={15} strokeWidth={1.7} />
+              <Smile size={15} strokeWidth={1.7} aria-hidden="true" />
             </PopoverTrigger>
             <PopoverContent
               align={side === "end" ? "start" : "end"}
@@ -77,41 +80,45 @@ export function MessageHoverActions({
             </PopoverContent>
           </Popover>
         ) : null}
-        <button
-          type="button"
-          aria-label={t`Reply`}
-          onClick={() => onReply(message)}
-          className={iconButtonClass}
-        >
-          <Reply size={15} strokeWidth={1.7} />
-        </button>
+        {readOnly ? null : (
+          <button
+            type="button"
+            aria-label={t`Reply`}
+            onClick={() => onReply(message)}
+            className={iconButtonClass}
+          >
+            <Reply size={15} strokeWidth={1.7} aria-hidden="true" />
+          </button>
+        )}
         <DropdownMenu open={moreOpen} onOpenChange={setMoreOpen}>
           <DropdownMenuTrigger aria-label={t`More`} className={iconButtonClass}>
-            <MoreHorizontal size={15} strokeWidth={1.7} />
+            <MoreHorizontal size={15} strokeWidth={1.7} aria-hidden="true" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align={side === "end" ? "start" : "end"} className="w-auto">
-            <DropdownMenuItem
-              onClick={() => {
-                setMoreOpen(false);
-                onReply(message);
-              }}
-            >
-              <Reply size={14} strokeWidth={1.7} />
-              <Trans>Reply</Trans>
-            </DropdownMenuItem>
-            {canMarkMessageUnread(message) && !markedUnread ? (
+            {readOnly ? null : (
+              <DropdownMenuItem
+                onClick={() => {
+                  setMoreOpen(false);
+                  onReply(message);
+                }}
+              >
+                <Reply size={14} strokeWidth={1.7} aria-hidden="true" />
+                <Trans>Reply</Trans>
+              </DropdownMenuItem>
+            )}
+            {!readOnly && canMarkMessageUnread(message) && !markedUnread ? (
               <DropdownMenuItem
                 onClick={() => {
                   setMoreOpen(false);
                   onMarkUnread(message);
                 }}
               >
-                <MessageSquareDot size={14} strokeWidth={1.7} />
+                <MessageSquareDot size={14} strokeWidth={1.7} aria-hidden="true" />
                 <Trans>Mark as unread</Trans>
               </DropdownMenuItem>
             ) : null}
             <DropdownMenuItem onClick={copyMessage}>
-              <Copy size={14} strokeWidth={1.7} />
+              <Copy size={14} strokeWidth={1.7} aria-hidden="true" />
               <Trans>Copy</Trans>
             </DropdownMenuItem>
           </DropdownMenuContent>

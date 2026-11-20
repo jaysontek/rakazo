@@ -45,6 +45,8 @@ type ComputerOverlayProps = {
   onRefreshTeaching: () => Promise<void>;
   onRefreshComputer: () => Promise<void>;
   onClose: () => void;
+  /** Hide mutation controls while impersonating; the screen stays viewable. */
+  readOnly?: boolean;
 };
 
 export function ComputerOverlay({
@@ -72,16 +74,22 @@ export function ComputerOverlay({
   onRefreshTeaching,
   onRefreshComputer,
   onClose,
+  readOnly = false,
 }: ComputerOverlayProps) {
   return (
-    <div className="fixed inset-0 z-30 bg-background">
+    <div className="fixed inset-x-0 bottom-0 top-impersonation-banner z-30 bg-background">
       <div
         data-testid="computer-viewport"
-        className="fixed inset-x-0 top-0 flex flex-col bg-background pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)]"
-        style={{
-          height: computerViewport ? `${computerViewport.height}px` : "100dvh",
-          top: computerViewport ? `${computerViewport.offsetTop}px` : undefined,
-        }}
+        className="fixed inset-x-0 top-impersonation-banner flex h-impersonation-rest-dvh flex-col bg-background pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)]"
+        style={
+          computerViewport
+            ? {
+                // visualViewport is relative to the layout viewport; keep chrome below the banner.
+                top: `calc(var(--impersonation-banner-height, 0px) + ${computerViewport.offsetTop}px)`,
+                height: `calc(${computerViewport.height}px - var(--impersonation-banner-height, 0px))`,
+              }
+            : undefined
+        }
       >
         <div
           data-testid="computer-chrome"
@@ -121,7 +129,7 @@ export function ComputerOverlay({
             ) : null}
           </div>
           <div className="flex items-center gap-3">
-            {composerRunning ? (
+            {!readOnly && composerRunning ? (
               <Button
                 type="button"
                 variant="outline"
@@ -134,7 +142,7 @@ export function ComputerOverlay({
                 <Trans>Stop</Trans>
               </Button>
             ) : null}
-            {recordingSkill ? (
+            {readOnly ? null : recordingSkill ? (
               <TeachStopButton busy={teachBusy} onStop={onStopTeaching} />
             ) : hasControl ? (
               <ComputerReleaseActions
@@ -152,7 +160,7 @@ export function ComputerOverlay({
                 <Trans>Take control</Trans>
               </Button>
             ) : null}
-            {!recordingSkill ? (
+            {!readOnly && !recordingSkill ? (
               <TeachComputerOverlayControl
                 key={bot.id}
                 botId={bot.id}
@@ -161,7 +169,7 @@ export function ComputerOverlay({
                 onRefresh={onRefreshTeaching}
               />
             ) : null}
-            {!recordingSkill ? (
+            {!readOnly && !recordingSkill ? (
               <ComputerMaintenanceActions
                 botId={bot.id}
                 computer={computer}
@@ -175,6 +183,7 @@ export function ComputerOverlay({
               size="icon-sm"
               className="text-muted-foreground"
               aria-label={t`Close computer`}
+              data-testid="computer-overlay-close"
               onClick={() => onClose()}
             >
               <X size={16} strokeWidth={1.8} />
@@ -227,9 +236,11 @@ export function ComputerOverlay({
                         ? t`Computer is asleep`
                         : t`Computer is stopped`}
                     </p>
-                    <Button variant="outline" size="sm" onClick={onStart}>
-                      <Trans>Start</Trans>
-                    </Button>
+                    {readOnly ? null : (
+                      <Button variant="outline" size="sm" onClick={onStart}>
+                        <Trans>Start</Trans>
+                      </Button>
+                    )}
                   </div>
                 ) : (
                   computerLabel(computer?.mode, bot.name)

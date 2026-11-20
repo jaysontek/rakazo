@@ -25,6 +25,7 @@ vi.mock("@rakazo/ui-web", () => ({
   ),
 }));
 vi.mock("../../lib/space-rpc", () => ({
+  useBoundSpaceId: () => null,
   useSpaceRpc: () => ({
     voice: {
       status: vi.fn(async () => ({ voiceId: "", provider: null })),
@@ -32,6 +33,9 @@ vi.mock("../../lib/space-rpc", () => ({
       setVoice: vi.fn(),
     },
   }),
+}));
+vi.mock("../../lib/use-impersonating", () => ({
+  useIsImpersonating: () => false,
 }));
 
 let session: CallState | null = null;

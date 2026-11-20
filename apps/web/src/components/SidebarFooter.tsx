@@ -40,15 +40,15 @@ type Props = {
   email?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onIntegrations: () => void;
-  onSkills: () => void;
+  onIntegrations?: () => void;
+  onSkills?: () => void;
   onBoard?: () => void;
   links?: NavLink[];
   onLink?: (link: NavLink) => void;
   onArtifacts: () => void;
   onSettings: () => void;
   onInvite?: () => void;
-  onLogOut: () => void;
+  onLogOut?: () => void;
   signingOut: boolean;
   logOutError: string | null;
   organizations?: Organization[];
@@ -59,6 +59,8 @@ type Props = {
   /** Server-derived effective admin (env bootstrap or DB grant). Hidden while impersonating. */
   showAdminDashboard?: boolean;
   onAdminDashboard?: () => void;
+  /** Hide org switcher, log out, connect apps, skills, and invite while impersonating. */
+  readOnly?: boolean;
 };
 
 // Marks are 24px wide, overlap by 2px, and need 2px for the outer ring.
@@ -92,6 +94,7 @@ export function SidebarFooter({
   usageLimit = null,
   showAdminDashboard = false,
   onAdminDashboard,
+  readOnly = false,
 }: Props) {
   const { t } = useLingui();
   const update = useSidebarUpdate();
@@ -165,7 +168,7 @@ export function SidebarFooter({
                 <div className="my-1 border-t border-border" />
               </>
             ) : null}
-            {organizations.length > 1 ? (
+            {!readOnly && organizations.length > 1 ? (
               <>
                 {organizations.map((organization) => {
                   const active = organization.id === activeOrganizationId;
@@ -185,7 +188,7 @@ export function SidebarFooter({
                 <div className="my-1 border-t border-border" />
               </>
             ) : null}
-            {mini ? (
+            {mini && !readOnly && onIntegrations ? (
               <Button
                 variant="ghost"
                 className="h-9 w-full justify-start gap-2.5 font-normal"
@@ -215,14 +218,16 @@ export function SidebarFooter({
               <Settings className="text-muted-foreground" strokeWidth={1.75} />
               <Trans>Settings</Trans>
             </Button>
-            <Button
-              variant="ghost"
-              className="h-9 w-full justify-start gap-2.5 font-normal"
-              onClick={onSkills}
-            >
-              <ScrollText className="text-muted-foreground" strokeWidth={1.75} />
-              <Trans>Skills</Trans>
-            </Button>
+            {!readOnly && onSkills ? (
+              <Button
+                variant="ghost"
+                className="h-9 w-full justify-start gap-2.5 font-normal"
+                onClick={onSkills}
+              >
+                <ScrollText className="text-muted-foreground" strokeWidth={1.75} />
+                <Trans>Skills</Trans>
+              </Button>
+            ) : null}
             <Button
               variant="ghost"
               className="h-9 w-full justify-start gap-2.5 font-normal"
@@ -264,7 +269,7 @@ export function SidebarFooter({
               <Smartphone className="text-muted-foreground" strokeWidth={1.75} />
               <Trans>Get the mobile app</Trans>
             </a>
-            {onInvite ? (
+            {!readOnly && onInvite ? (
               <Button
                 variant="ghost"
                 className="h-9 w-full justify-start gap-2.5 font-normal"
@@ -283,25 +288,29 @@ export function SidebarFooter({
               <BookOpen className="text-muted-foreground" strokeWidth={1.75} />
               <Trans>Docs</Trans>
             </a>
-            <div className="my-1 border-t border-border" />
-            <Button
-              variant="ghost"
-              className="h-9 w-full justify-start gap-2.5 font-normal"
-              disabled={signingOut}
-              onClick={onLogOut}
-            >
-              <LogOut className="text-muted-foreground" strokeWidth={1.75} />
-              <Trans>Log out</Trans>
-            </Button>
-            {logOutError ? (
-              <p role="alert" className="px-2.5 pt-1 pb-2 text-[13px] text-destructive">
-                {logOutError}
-              </p>
+            {!readOnly && onLogOut ? (
+              <>
+                <div className="my-1 border-t border-border" />
+                <Button
+                  variant="ghost"
+                  className="h-9 w-full justify-start gap-2.5 font-normal"
+                  disabled={signingOut}
+                  onClick={onLogOut}
+                >
+                  <LogOut className="text-muted-foreground" strokeWidth={1.75} />
+                  <Trans>Log out</Trans>
+                </Button>
+                {logOutError ? (
+                  <p role="alert" className="px-2.5 pt-1 pb-2 text-[13px] text-destructive">
+                    {logOutError}
+                  </p>
+                ) : null}
+              </>
             ) : null}
           </PopoverContent>
         ) : null}
       </Popover>
-      {!mini ? (
+      {!mini && !readOnly && onIntegrations ? (
         <Button
           variant="outline"
           ref={pillRef}

@@ -91,22 +91,33 @@ vi.mock("../components/AccountAccess", () => ({
         }),
       [onSecurity],
     );
-    return null;
+    return <div data-testid="account-access-delete">Delete account</div>;
   },
+  LinkSsoRow: () => <div data-testid="link-sso-row">Link SSO</div>,
 }));
 
-vi.mock("../components/AccountDataSettings", () => ({ AccountDataSettings: () => null }));
+vi.mock("../components/AccountDataSettings", () => ({
+  AccountDataSettings: () => <div data-testid="account-data-settings">Export Import</div>,
+}));
 vi.mock("../components/ApprovalRulesSettings", () => ({ ApprovalRulesSettings: () => null }));
 vi.mock("../components/TrustedLinkSitesSettings", () => ({
-  TrustedLinkSitesSettings: () => null,
+  TrustedLinkSitesSettings: () => <div data-testid="trusted-link-sites">Trusted sites</div>,
+}));
+vi.mock("../components/PasskeySettings", () => ({
+  PasskeySettings: () => <div data-testid="passkey-settings">Passkeys</div>,
 }));
 vi.mock("../components/ai/primitives", () => ({ SuccessPop: () => null }));
 vi.mock("../components/ComputersUnavailableHint", () => ({
   ComputersUnavailableHint: () => null,
 }));
-vi.mock("../components/ComputerDeviceSettings", () => ({ ComputerDeviceSettings: () => null }));
-vi.mock("../components/DesktopUpdates", () => ({ DesktopUpdateSection: () => null }));
+vi.mock("../components/ComputerDeviceSettings", () => ({
+  ComputerDeviceSettings: () => <div data-testid="computer-devices">Computers</div>,
+}));
+vi.mock("../components/DesktopUpdates", () => ({
+  DesktopUpdateSection: () => <div data-testid="desktop-update-settings">Check for updates</div>,
+}));
 vi.mock("../lib/auth", () => ({ authClient: { changePassword: vi.fn(), updateUser: vi.fn() } }));
+vi.mock("../lib/passkeys", () => ({ usePasskeysSupported: () => true }));
 vi.mock("../lib/i18n", () => ({
   getActiveUiLocale: () => "en",
   setUiLocale: (locale: string) => Promise.resolve(locale),
@@ -124,10 +135,76 @@ import {
 } from "../lib/composer-enter-to-send-pref";
 import { getRemoteImagesEnabled } from "../lib/remote-images-preference";
 import { TOOL_ACTIVITY_STORAGE_KEY } from "../lib/tool-activity-preference";
-import { GeneralSettingsPanels, UsageSettingsPanel } from "./AccountSettingsOverlay";
+import {
+  GeneralSettingsPanels,
+  UpdatesSettingsPanel,
+  UsageSettingsPanel,
+} from "./AccountSettingsOverlay";
 
 afterEach(() => {
   localStorage.clear();
+});
+
+it("hides security, data, trusted sites and computer device controls while readOnly", async () => {
+  accountPolicy.passwordChangeEnabled = true;
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const container = document.createElement("div");
+  document.body.append(container);
+  const root = createRoot(container);
+  try {
+    await act(async () => {
+      root.render(
+        <MemoryRouter>
+          <GeneralSettingsPanels name="Jamie" readOnly />
+        </MemoryRouter>,
+      );
+    });
+    expect(container.querySelector('[data-testid="trusted-link-sites"]')).toBeNull();
+    expect(container.querySelector('[data-testid="computer-devices"]')).toBeNull();
+    expect(container.querySelector('[data-testid="account-data"]')).toBeNull();
+    expect(container.querySelector('[data-testid="account-access-delete"]')).toBeNull();
+    expect(container.querySelector('[data-testid="account-data-settings"]')).toBeNull();
+    expect(container.querySelector('[data-testid="passkey-settings"]')).toBeNull();
+    expect(container.textContent?.includes("Change password")).toBe(false);
+    expect(container.textContent?.includes("Security")).toBe(false);
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter>
+          <GeneralSettingsPanels name="Jamie" />
+        </MemoryRouter>,
+      );
+    });
+    expect(container.querySelector('[data-testid="trusted-link-sites"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="computer-devices"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="account-data"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="account-access-delete"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="account-data-settings"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="passkey-settings"]')).not.toBeNull();
+    expect(container.textContent?.includes("Change password")).toBe(true);
+  } finally {
+    await act(async () => root.unmount());
+    container.remove();
+    accountPolicy.passwordChangeEnabled = undefined;
+    vi.unstubAllGlobals();
+  }
+});
+
+it("hides the updates panel while readOnly", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const container = document.createElement("div");
+  document.body.append(container);
+  const root = createRoot(container);
+  try {
+    await act(async () => root.render(<UpdatesSettingsPanel readOnly />));
+    expect(container.querySelector('[data-testid="desktop-update-settings"]')).toBeNull();
+    await act(async () => root.render(<UpdatesSettingsPanel />));
+    expect(container.querySelector('[data-testid="desktop-update-settings"]')).not.toBeNull();
+  } finally {
+    await act(async () => root.unmount());
+    container.remove();
+    vi.unstubAllGlobals();
+  }
 });
 
 it("flips the stored tool activity preference from the settings toggle", async () => {

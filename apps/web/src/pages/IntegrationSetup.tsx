@@ -3,17 +3,21 @@ import type { Bot } from "@rakazo/contracts";
 import { NativeSelect, NativeSelectOption, Spinner } from "@rakazo/ui-web";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ImpersonationBlockedPage } from "../components/ImpersonationBlockedPage";
 import { IntegrationSetup } from "../components/integrations/IntegrationSetup";
 import { rpc } from "../lib/rpc";
+import { useIsImpersonating } from "../lib/use-impersonating";
 
 export function IntegrationSetupPage() {
   const navigate = useNavigate();
   const { t } = useLingui();
+  const impersonating = useIsImpersonating();
   const [bots, setBots] = useState<Bot[]>([]);
   const [botId, setBotId] = useState("");
   const [ready, setReady] = useState(false);
   const [error, setError] = useState(false);
   useEffect(() => {
+    if (impersonating) return;
     setReady(false);
     setError(false);
     let cancelled = false;
@@ -35,7 +39,8 @@ export function IntegrationSetupPage() {
     return () => {
       cancelled = true;
     };
-  }, [navigate]);
+  }, [impersonating, navigate]);
+  if (impersonating) return <ImpersonationBlockedPage />;
   return (
     <div className="min-h-full bg-background px-6 py-12">
       <div className="mx-auto max-w-[560px]">

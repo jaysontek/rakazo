@@ -4,6 +4,51 @@
 @source "../../packages/ui-web/src/**/*.{ts,tsx}";
 @source "./src/**/*.{ts,tsx}";
 
+:root {
+  /* Viewport offset below the banner (banner bottom); 0px when not impersonating. */
+  --impersonation-banner-height: 0px;
+}
+
+/* Fixed chrome sits below the impersonation banner. @utility so variant prefixes
+   (md:, data-[side=…]:) generate real rules — plain classes do not. */
+@utility top-impersonation-banner {
+  top: var(--impersonation-banner-height, 0px);
+}
+@utility h-impersonation-rest {
+  height: calc(100svh - var(--impersonation-banner-height, 0px));
+}
+@utility h-impersonation-rest-dvh {
+  height: calc(100dvh - var(--impersonation-banner-height, 0px));
+}
+@utility top-impersonation-banner-3 {
+  top: calc(var(--impersonation-banner-height, 0px) + 0.75rem);
+}
+@utility top-impersonation-banner-4 {
+  top: calc(var(--impersonation-banner-height, 0px) + 1rem);
+}
+@utility top-impersonation-banner-16 {
+  top: calc(var(--impersonation-banner-height, 0px) + 4rem);
+}
+
+/* Settings dialog: only while impersonating, top-pin below the banner.
+   Use the CSS `translate` property (not `transform`) so it replaces Tailwind v4's
+   separate translate from -translate-x/y-1/2 instead of stacking with it.
+   When not impersonating, leave DialogContent's top-1/2 / -translate-*-1/2 alone. */
+html:has([data-testid="impersonation-banner"])
+  [data-slot="dialog-content"][data-testid="user-settings"] {
+  top: calc(var(--impersonation-banner-height, 0px) + 1rem);
+  max-height: calc(100dvh - var(--impersonation-banner-height, 0px) - 2rem);
+  height: min(760px, calc(100dvh - var(--impersonation-banner-height, 0px) - 2rem));
+  translate: -50% 0;
+}
+@media (min-width: 640px) {
+  html:has([data-testid="impersonation-banner"])
+    [data-slot="dialog-content"][data-testid="user-settings"] {
+    max-height: calc(100dvh - var(--impersonation-banner-height, 0px) - 5rem);
+    height: min(760px, calc(100dvh - var(--impersonation-banner-height, 0px) - 5rem));
+  }
+}
+
 html,
 body,
 #root {

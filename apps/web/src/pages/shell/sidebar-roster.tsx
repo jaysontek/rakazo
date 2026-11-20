@@ -58,6 +58,7 @@ export function SidebarRoster({
   activeSnapshot,
   botMenuContent,
   mini = false,
+  readOnly = false,
 }: {
   sidebarGroups: ReturnType<
     typeof sidebarGroupsForSpaces<Space["bots"][number], Space["groups"][number]>
@@ -90,6 +91,8 @@ export function SidebarRoster({
   activeSnapshot: ThreadSnapshot | null;
   botMenuContent: ReactNode;
   mini?: boolean;
+  /** Disable drag, section/bot menus, and roster mutations while impersonating. */
+  readOnly?: boolean;
 }) {
   useRedrawAtMidnight();
   const { t } = useLingui();
@@ -124,58 +127,71 @@ export function SidebarRoster({
             data-sidebar-group={group.key}
             className={`flex flex-col gap-0.5 ${mini && groupIndex > 0 ? "mt-2 border-t border-sidebar-border pt-2" : ""}`}
           >
-            {!mini && (group.title || hasSpaceActions) ? (
+            {!mini && (group.title || (hasSpaceActions && !readOnly)) ? (
               // biome-ignore lint/a11y/useSemanticElements: groups sidebar controls, not form fields; Move to remains the keyboard alternative.
               <div
                 role="group"
-                data-roster-drop={rosterDropKey === headerDropKey ? "true" : undefined}
+                data-roster-drop={!readOnly && rosterDropKey === headerDropKey ? "true" : undefined}
                 className={`${
-                  group.title && hasSpaceActions
+                  group.title && hasSpaceActions && !readOnly
                     ? "grid pt-3 pb-0.5"
                     : `flex items-center pt-3 pb-0.5${group.title ? "" : " justify-end"}`
-                } rounded-lg ${rosterDropKey === headerDropKey ? "bg-sidebar-accent" : ""}`}
-                onDragOver={(event) => {
-                  if (!headerDropTarget || !rosterDropAction(headerDropTarget, false)) return;
-                  event.preventDefault();
-                  event.dataTransfer.dropEffect = "move";
-                  if (rosterDropKey !== headerDropKey) setRosterDropKey(headerDropKey);
-                }}
-                onDragLeave={() => {
-                  if (rosterDropKey === headerDropKey) setRosterDropKey(null);
-                }}
-                onDrop={(event) => {
-                  if (!headerDropTarget) return;
-                  event.preventDefault();
-                  applyRosterDrop(headerDropTarget, false, groupBotIds);
-                }}
+                } rounded-lg ${!readOnly && rosterDropKey === headerDropKey ? "bg-sidebar-accent" : ""}`}
+                onDragOver={
+                  readOnly
+                    ? undefined
+                    : (event) => {
+                        if (!headerDropTarget || !rosterDropAction(headerDropTarget, false)) return;
+                        event.preventDefault();
+                        event.dataTransfer.dropEffect = "move";
+                        if (rosterDropKey !== headerDropKey) setRosterDropKey(headerDropKey);
+                      }
+                }
+                onDragLeave={
+                  readOnly
+                    ? undefined
+                    : () => {
+                        if (rosterDropKey === headerDropKey) setRosterDropKey(null);
+                      }
+                }
+                onDrop={
+                  readOnly
+                    ? undefined
+                    : (event) => {
+                        if (!headerDropTarget) return;
+                        event.preventDefault();
+                        applyRosterDrop(headerDropTarget, false, groupBotIds);
+                      }
+                }
               >
                 {group.title ? (
                   // Prefer the section menu over the space menu when both apply;
                   // the dedicated space-actions button still opens the space menu.
-                  <ContextMenu disabled={!section}>
+                  <ContextMenu disabled={readOnly || !section}>
                     <ContextMenuTrigger
                       render={
                         group.emptySpaceId ? <button type="button" /> : <CollapsibleTrigger />
                       }
-                      className={`flex min-w-0 items-center justify-between gap-2 rounded-lg px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring ${hasSpaceActions ? "col-start-1 row-start-1 w-full" : "flex-1"}`}
+                      className={`flex min-w-0 items-center justify-between gap-2 rounded-lg px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring ${hasSpaceActions && !readOnly ? "col-start-1 row-start-1 w-full" : "flex-1"}`}
                       onClick={() => {
-                        if (group.emptySpaceId) {
-                          openSpaceChat(group.emptySpaceId, "/onboarding");
-                        }
+                        if (readOnly || !group.emptySpaceId) return;
+                        openSpaceChat(group.emptySpaceId, "/onboarding");
                       }}
                       onContextMenu={
-                        section
-                          ? (event) => event.currentTarget.focus()
-                          : hasSpaceActions
-                            ? (event) => {
-                                event.preventDefault();
-                                spaceMenuAnchor.current = event.currentTarget;
-                                setSpaceMenu({
-                                  id: group.spaceId,
-                                  position: { x: event.clientX, y: event.clientY },
-                                });
-                              }
-                            : undefined
+                        readOnly
+                          ? undefined
+                          : section
+                            ? (event) => event.currentTarget.focus()
+                            : hasSpaceActions
+                              ? (event) => {
+                                  event.preventDefault();
+                                  spaceMenuAnchor.current = event.currentTarget;
+                                  setSpaceMenu({
+                                    id: group.spaceId,
+                                    position: { x: event.clientX, y: event.clientY },
+                                  });
+                                }
+                              : undefined
                       }
                       aria-label={
                         group.emptySpaceId
@@ -186,7 +202,7 @@ export function SidebarRoster({
                       }
                     >
                       <span
-                        className={`flex min-w-0 items-center gap-1.5 truncate ${hasSpaceActions ? "pe-7" : ""}`}
+                        className={`flex min-w-0 items-center gap-1.5 truncate ${hasSpaceActions && !readOnly ? "pe-7" : ""}`}
                       >
                         {group.showLock ? (
                           <Lock size={11} strokeWidth={2} aria-hidden="true" />
@@ -235,7 +251,7 @@ export function SidebarRoster({
                     ) : null}
                   </ContextMenu>
                 ) : null}
-                {hasSpaceActions ? (
+                {hasSpaceActions && !readOnly ? (
                   <Button
                     variant="ghost"
                     size="icon-sm"
@@ -321,7 +337,7 @@ export function SidebarRoster({
                 const chatTrigger = (
                   <ContextMenuTrigger
                     render={<button type="button" />}
-                    draggable={item.kind === "bot"}
+                    draggable={!readOnly && item.kind === "bot"}
                     data-roster-bot-id={item.kind === "bot" ? item.chat.id : undefined}
                     data-roster-unread={item.chat.unread ? "true" : undefined}
                     data-roster-error={rowError && (compact || mini) ? "true" : undefined}
@@ -340,47 +356,74 @@ export function SidebarRoster({
                         : undefined
                     }
                     aria-keyshortcuts={
-                      item.kind === "bot" ? "Alt+ArrowUp Alt+ArrowDown" : undefined
+                      !readOnly && item.kind === "bot" ? "Alt+ArrowUp Alt+ArrowDown" : undefined
                     }
-                    onDragStart={(event) => {
-                      if (item.kind !== "bot") return;
-                      setDraggedBotId(item.chat.id);
-                      event.dataTransfer.effectAllowed = "move";
-                      event.dataTransfer.setData("text/plain", item.chat.id);
-                    }}
-                    onDragOver={(event) => {
-                      if (!rowDropTarget || !rosterDropAction(rowDropTarget, rowSameList)) return;
-                      event.preventDefault();
-                      event.dataTransfer.dropEffect = "move";
-                      if (rosterDropKey !== rowDropKey) setRosterDropKey(rowDropKey);
-                    }}
-                    onDragLeave={() => {
-                      if (rosterDropKey === rowDropKey) setRosterDropKey(null);
-                    }}
-                    onDrop={(event) => {
-                      if (!rowDropTarget) return;
-                      event.preventDefault();
-                      applyRosterDrop(rowDropTarget, rowSameList, groupBotIds);
-                    }}
-                    onDragEnd={() => {
-                      setDraggedBotId(null);
-                      setRosterDropKey(null);
-                    }}
-                    data-roster-drop={rosterDropKey === rowDropKey ? "true" : undefined}
-                    onKeyDown={(event) => {
-                      if (
-                        item.kind !== "bot" ||
-                        !event.altKey ||
-                        (event.key !== "ArrowUp" && event.key !== "ArrowDown")
-                      )
-                        return;
-                      const siblings = groupBotIds;
-                      const index = siblings.indexOf(item.chat.id);
-                      const target = siblings[index + (event.key === "ArrowUp" ? -1 : 1)];
-                      if (!target) return;
-                      event.preventDefault();
-                      reorderRosterBot(item.chat.id, target, groupBotIds);
-                    }}
+                    onDragStart={
+                      readOnly
+                        ? undefined
+                        : (event) => {
+                            if (item.kind !== "bot") return;
+                            setDraggedBotId(item.chat.id);
+                            event.dataTransfer.effectAllowed = "move";
+                            event.dataTransfer.setData("text/plain", item.chat.id);
+                          }
+                    }
+                    onDragOver={
+                      readOnly
+                        ? undefined
+                        : (event) => {
+                            if (!rowDropTarget || !rosterDropAction(rowDropTarget, rowSameList))
+                              return;
+                            event.preventDefault();
+                            event.dataTransfer.dropEffect = "move";
+                            if (rosterDropKey !== rowDropKey) setRosterDropKey(rowDropKey);
+                          }
+                    }
+                    onDragLeave={
+                      readOnly
+                        ? undefined
+                        : () => {
+                            if (rosterDropKey === rowDropKey) setRosterDropKey(null);
+                          }
+                    }
+                    onDrop={
+                      readOnly
+                        ? undefined
+                        : (event) => {
+                            if (!rowDropTarget) return;
+                            event.preventDefault();
+                            applyRosterDrop(rowDropTarget, rowSameList, groupBotIds);
+                          }
+                    }
+                    onDragEnd={
+                      readOnly
+                        ? undefined
+                        : () => {
+                            setDraggedBotId(null);
+                            setRosterDropKey(null);
+                          }
+                    }
+                    data-roster-drop={
+                      !readOnly && rosterDropKey === rowDropKey ? "true" : undefined
+                    }
+                    onKeyDown={
+                      readOnly
+                        ? undefined
+                        : (event) => {
+                            if (
+                              item.kind !== "bot" ||
+                              !event.altKey ||
+                              (event.key !== "ArrowUp" && event.key !== "ArrowDown")
+                            )
+                              return;
+                            const siblings = groupBotIds;
+                            const index = siblings.indexOf(item.chat.id);
+                            const target = siblings[index + (event.key === "ArrowUp" ? -1 : 1)];
+                            if (!target) return;
+                            event.preventDefault();
+                            reorderRosterBot(item.chat.id, target, groupBotIds);
+                          }
+                    }
                     onClick={() => {
                       openSpaceChat(
                         item.chat.spaceId,
@@ -388,7 +431,7 @@ export function SidebarRoster({
                       );
                     }}
                     // Focus the row so closing the menu returns focus here.
-                    onContextMenu={(event) => event.currentTarget.focus()}
+                    onContextMenu={readOnly ? undefined : (event) => event.currentTarget.focus()}
                     className={`flex items-center ${
                       mini
                         ? "mx-auto size-12 justify-center rounded-xl"
@@ -396,9 +439,9 @@ export function SidebarRoster({
                           ? "w-full min-h-11 gap-2 rounded-xl px-2.5 py-1.5"
                           : "w-full gap-3 rounded-xl px-2.5 py-[10px]"
                     } text-start ${
-                      item.kind === "bot" ? "cursor-grab active:cursor-grabbing" : ""
+                      !readOnly && item.kind === "bot" ? "cursor-grab active:cursor-grabbing" : ""
                     } ${
-                      selected || rosterDropKey === rowDropKey
+                      selected || (!readOnly && rosterDropKey === rowDropKey)
                         ? "bg-sidebar-accent"
                         : "group-hover/row:bg-accent"
                     }`}
@@ -527,18 +570,19 @@ export function SidebarRoster({
                     }}
                   >
                     <ContextMenu
-                      disabled={item.chat.spaceId !== bootstrapMe?.spaceId}
-                      open={botMenu?.kind === item.kind && botMenu.id === item.chat.id}
+                      disabled={readOnly || item.chat.spaceId !== bootstrapMe?.spaceId}
+                      open={!readOnly && botMenu?.kind === item.kind && botMenu.id === item.chat.id}
                       // A sibling row's menu may already own the state; only clear our own.
-                      onOpenChange={(open) =>
+                      onOpenChange={(open) => {
+                        if (readOnly) return;
                         setBotMenu((current) =>
                           open
                             ? { kind: item.kind, id: item.chat.id }
                             : current?.kind === item.kind && current.id === item.chat.id
                               ? null
                               : current,
-                        )
-                      }
+                        );
+                      }}
                     >
                       {mini ? (
                         <IconTooltip

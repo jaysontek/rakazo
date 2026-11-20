@@ -52,13 +52,22 @@ export function AppOverlays({
   activeBotId,
   stdioEnabled,
   onConnectedAppsChange,
+  readOnly = false,
 }: {
   overlay: ShellOverlay;
   setOverlay: (next: ShellOverlay) => void;
   activeBotId: string | undefined;
   stdioEnabled: boolean;
   onConnectedAppsChange: (apps: ReturnType<typeof connectedAppMarks>) => void;
+  /** Skip mutation overlays while impersonating. */
+  readOnly?: boolean;
 }) {
+  if (
+    readOnly &&
+    (overlay?.kind === "integrations" || overlay?.kind === "skills" || overlay?.kind === "mcp")
+  ) {
+    return null;
+  }
   return (
     <>
       {overlay?.kind === "integrations" ? (

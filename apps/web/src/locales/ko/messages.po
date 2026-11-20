@@ -5607,13 +5607,31 @@ msgstr "반응"
 msgid "Read replies aloud"
 msgstr "답변을 자동으로 읽기"
 
-#: src/components/ImpersonationBanner.tsx
-msgid "Read-only · Viewing as {targetEmail} · Ends {endsAt}"
-msgstr "읽기 전용 · {targetEmail}(으)로 보는 중 · {endsAt}에 종료"
+#: src/pages/Board.tsx
+#: src/pages/SettingsOverlay.tsx
+#: src/pages/shell/side-panel.tsx
+msgid "Read-only"
+msgstr ""
 
 #: src/components/ImpersonationBanner.tsx
-msgid "Read-only · Viewing as {targetName} ({targetEmail}) · Ends {endsAt}"
-msgstr "읽기 전용 · {targetName}({targetEmail})(으)로 보는 중 · {endsAt}에 종료"
+msgid "Read-only · Viewing as <0>{targetEmail}</0>"
+msgstr ""
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Read-only · Viewing as <0>{targetEmail}</0> · Ends {endsAt}"
+msgstr ""
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Read-only · Viewing as <0>{targetName}</0>"
+msgstr ""
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Read-only · Viewing as <0>{targetName}</0> (<1>{targetEmail}</1>) · Ends {endsAt}"
+msgstr ""
+
+#: src/components/ImpersonationReadOnlyNotice.tsx
+msgid "Read-only while viewing as <0>{name}</0>"
+msgstr ""
 
 #: src/pages/shell/import-status.ts
 msgid "Ready"
@@ -6947,7 +6965,6 @@ msgid "Stopped."
 msgstr "중지되었습니다."
 
 #: src/components/ComputerMaintenanceActions.tsx
-#: src/components/ImpersonationBanner.tsx
 msgid "Stopping…"
 msgstr ""
 
@@ -7991,6 +8008,7 @@ msgstr "작업 중"
 msgid "Working instructions"
 msgstr "작업 지침"
 
+#: src/components/ImpersonationBanner.tsx
 #: src/components/ToolActivityDisclosure.tsx
 #: src/lib/roster-status.ts
 #: src/pages/Auth.tsx

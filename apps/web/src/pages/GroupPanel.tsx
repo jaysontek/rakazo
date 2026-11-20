@@ -5,6 +5,7 @@ import { BotAvatar, Button, Checkbox, Input, SectionHeading } from "@rakazo/ui-w
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { ImpersonationReadOnlyNotice } from "../components/ImpersonationReadOnlyNotice";
 import { errorText } from "../lib/user-error";
 import { DeleteItemDialog } from "./shell/dialogs";
 
@@ -28,12 +29,14 @@ function MemberPicker({
   onChange,
   onOpenBot,
   initiallyExpanded = false,
+  readOnly = false,
 }: {
   bots: Bot[];
   selected: string[];
   onChange: (selected: string[]) => void;
   onOpenBot?: (botId: string) => void;
   initiallyExpanded?: boolean;
+  readOnly?: boolean;
 }) {
   const { t } = useLingui();
   const listId = useId();
@@ -53,6 +56,7 @@ function MemberPicker({
   }, [expanded, selectable, everPicked, needle]);
 
   function toggle(botId: string) {
+    if (readOnly) return;
     if (selected.includes(botId)) {
       onChange(selected.filter((id) => id !== botId));
     } else if (selected.length < GROUP_MEMBER_MAX) {
@@ -121,6 +125,7 @@ function MemberPicker({
               </button>
               <Checkbox
                 checked={checked}
+                disabled={readOnly}
                 aria-label={
                   checked ? t`Remove ${bot.name} from the group` : t`Add ${bot.name} to the group`
                 }
@@ -229,6 +234,7 @@ export function GroupSettings({
   onOpenBot,
   covered = false,
   pages,
+  readOnly = false,
 }: {
   group: Group;
   bots: Bot[];
@@ -239,6 +245,8 @@ export function GroupSettings({
   /** A full-screen overlay is on top, so Escape belongs to it. */
   covered?: boolean;
   pages?: ReactNode;
+  /** Disable name/member edits and Save/Delete while impersonating. */
+  readOnly?: boolean;
 }) {
   const { t } = useLingui();
   const nameId = useId();
@@ -288,7 +296,7 @@ export function GroupSettings({
   }, [saving, confirmingDelete, covered, onClose]);
 
   async function save() {
-    if (saving) return;
+    if (readOnly || saving) return;
     setSaving(true);
     setError(null);
     try {
@@ -328,6 +336,7 @@ export function GroupSettings({
           <X size={16} strokeWidth={1.8} />
         </Button>
       </div>
+      {readOnly ? <ImpersonationReadOnlyNotice /> : null}
       {error ? (
         <p role="alert" className="mb-3 text-sm text-destructive">
           {error}
@@ -340,13 +349,20 @@ export function GroupSettings({
           value={name}
           onChange={(e) => setName(e.target.value)}
           maxLength={GROUP_NAME_MAX_LENGTH}
+          disabled={readOnly}
           className="mt-2"
         />
       </label>
-      <MemberPicker bots={bots} selected={selected} onChange={setSelected} onOpenBot={onOpenBot} />
+      <MemberPicker
+        bots={bots}
+        selected={selected}
+        onChange={setSelected}
+        onOpenBot={onOpenBot}
+        readOnly={readOnly}
+      />
       <Button
         className="mt-5 w-full"
-        disabled={saving || !validSelection(name, selected)}
+        disabled={readOnly || saving || !validSelection(name, selected)}
         onClick={() => void save()}
       >
         {saving ? <Trans>Saving…</Trans> : <Trans>Save</Trans>}
@@ -362,7 +378,7 @@ export function GroupSettings({
       <Button
         variant="destructive"
         className="mt-4 w-full"
-        disabled={saving}
+        disabled={readOnly || saving}
         onClick={() => setConfirmingDelete(true)}
       >
         <Trans>Delete group</Trans>

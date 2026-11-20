@@ -5607,13 +5607,31 @@ msgstr "Reakcje"
 msgid "Read replies aloud"
 msgstr "Czytaj odpowiedzi na głos"
 
-#: src/components/ImpersonationBanner.tsx
-msgid "Read-only · Viewing as {targetEmail} · Ends {endsAt}"
-msgstr "Tylko odczyt · Widok jako {targetEmail} · Kończy się {endsAt}"
+#: src/pages/Board.tsx
+#: src/pages/SettingsOverlay.tsx
+#: src/pages/shell/side-panel.tsx
+msgid "Read-only"
+msgstr "Tylko do odczytu"
 
 #: src/components/ImpersonationBanner.tsx
-msgid "Read-only · Viewing as {targetName} ({targetEmail}) · Ends {endsAt}"
-msgstr "Tylko odczyt · Widok jako {targetName} ({targetEmail}) · Kończy się {endsAt}"
+msgid "Read-only · Viewing as <0>{targetEmail}</0>"
+msgstr "Tylko do odczytu · Wyświetlasz jako <0>{targetEmail}</0>"
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Read-only · Viewing as <0>{targetEmail}</0> · Ends {endsAt}"
+msgstr "Tylko do odczytu · Wyświetlasz jako <0>{targetEmail}</0> · Kończy się {endsAt}"
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Read-only · Viewing as <0>{targetName}</0>"
+msgstr "Tylko do odczytu · Wyświetlasz jako <0>{targetName}</0>"
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Read-only · Viewing as <0>{targetName}</0> (<1>{targetEmail}</1>) · Ends {endsAt}"
+msgstr "Tylko do odczytu · Wyświetlasz jako <0>{targetName}</0> (<1>{targetEmail}</1>) · Kończy się {endsAt}"
+
+#: src/components/ImpersonationReadOnlyNotice.tsx
+msgid "Read-only while viewing as <0>{name}</0>"
+msgstr "Tylko do odczytu podczas wyświetlania jako <0>{name}</0>"
 
 #: src/pages/shell/import-status.ts
 msgid "Ready"
@@ -6947,7 +6965,6 @@ msgid "Stopped."
 msgstr "Zatrzymano."
 
 #: src/components/ComputerMaintenanceActions.tsx
-#: src/components/ImpersonationBanner.tsx
 msgid "Stopping…"
 msgstr "Zatrzymywanie…"
 
@@ -7991,6 +8008,7 @@ msgstr "Pracuje"
 msgid "Working instructions"
 msgstr "Instrukcje pracy"
 
+#: src/components/ImpersonationBanner.tsx
 #: src/components/ToolActivityDisclosure.tsx
 #: src/lib/roster-status.ts
 #: src/pages/Auth.tsx

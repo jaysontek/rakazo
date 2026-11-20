@@ -102,7 +102,7 @@ it("shows a compact top dock when away from the called bot", () => {
   render({});
   const dock = container.querySelector('[data-testid="call-view"]')?.parentElement;
   expect(dock).not.toBeNull();
-  expect(dock?.className).toContain("top-0");
+  expect(dock?.className).toContain("top-impersonation-banner");
   expect(dock?.className).not.toContain("bottom-0");
 });
 

@@ -82,6 +82,7 @@ export const MessageView = memo(function MessageView({
   onMarkUnread,
   markedUnread = false,
   onReact,
+  readOnly = false,
 }: {
   artifactTarget: ArtifactTarget;
   canAnswer: boolean;
@@ -116,7 +117,7 @@ export const MessageView = memo(function MessageView({
   onAddRoutine: (name: string, prompt: string) => void;
   voiceReady: boolean;
   speaking: boolean;
-  onSpeak: (message: ThreadMessage) => void;
+  onSpeak?: (message: ThreadMessage) => void;
   onOpenComputer: (botId?: string) => void;
   /** Opens where an imported item's setup is finished. */
   onOpenImportSetup?: (target: ImportSetupTarget) => void;
@@ -126,6 +127,8 @@ export const MessageView = memo(function MessageView({
   onMarkUnread: (message: ThreadMessage) => void;
   markedUnread?: boolean;
   onReact: (message: ThreadMessage, reaction: MessageReaction) => Promise<void>;
+  /** Hide reply/react/unread while impersonating; copy stays available. */
+  readOnly?: boolean;
 }) {
   const { t } = useLingui();
   const isNarration =
@@ -175,7 +178,7 @@ export const MessageView = memo(function MessageView({
     },
     [mentions, onOpenBot, peerBot],
   );
-  const speak = () => onSpeak(message);
+  const speak = () => onSpeak?.(message);
   const replyBotId = message.replyPreview?.botId ?? replyParent?.botId;
   const speakerBot = message.botId ? peerBot?.(message.botId) : undefined;
   const speakerColorDef = useMemo(
@@ -230,6 +233,7 @@ export const MessageView = memo(function MessageView({
       onMarkUnread={onMarkUnread}
       markedUnread={markedUnread}
       onReact={onReact}
+      readOnly={readOnly}
     />
   );
   if (isNarration) {
@@ -290,7 +294,10 @@ export const MessageView = memo(function MessageView({
                 }
                 return null;
               })}
-              {!isLive && voiceReady && message.blocks.some((block) => block.kind === "text") ? (
+              {!isLive &&
+              onSpeak &&
+              voiceReady &&
+              message.blocks.some((block) => block.kind === "text") ? (
                 <Button
                   variant="text"
                   size="xs"
@@ -443,7 +450,15 @@ export const MessageView = memo(function MessageView({
           if (block.kind === "choice") {
             const botId = "botId" in artifactTarget ? artifactTarget.botId : message.botId;
             if (!botId) return null;
-            return <ChoiceCard key={i} botId={botId} block={block} onBotChanged={onBotChanged} />;
+            return (
+              <ChoiceCard
+                key={i}
+                botId={botId}
+                block={block}
+                onBotChanged={onBotChanged}
+                readOnly={readOnly}
+              />
+            );
           }
           if (block.kind === "app_connect") {
             const botId = "botId" in artifactTarget ? artifactTarget.botId : message.botId;
@@ -455,6 +470,7 @@ export const MessageView = memo(function MessageView({
                   threadId={message.threadId}
                   messageId={message.id}
                   block={block}
+                  readOnly={readOnly}
                 />
               </div>
             );
@@ -489,6 +505,7 @@ export const MessageView = memo(function MessageView({
                   botId={"botId" in artifactTarget ? artifactTarget.botId : message.botId}
                   block={block}
                   onOpen={onOpenImportSetup}
+                  readOnly={readOnly}
                 />
               </div>
             );
@@ -498,7 +515,12 @@ export const MessageView = memo(function MessageView({
             if (!botId) return null;
             return (
               <div key={i} className="flex justify-start">
-                <McpApprovalCard botId={botId} threadId={message.threadId} block={block} />
+                <McpApprovalCard
+                  botId={botId}
+                  threadId={message.threadId}
+                  block={block}
+                  readOnly={readOnly}
+                />
               </div>
             );
           }
@@ -569,7 +591,7 @@ export const MessageView = memo(function MessageView({
                       {block.text}
                     </ChatMarkdown>
                   </div>
-                  {voiceReady ? (
+                  {onSpeak && voiceReady ? (
                     <Button
                       variant="text"
                       size="xs"
@@ -622,7 +644,12 @@ export const MessageView = memo(function MessageView({
           if (block.kind === "skill_draft") {
             return (
               <div key={i} className="flex justify-start">
-                <SkillDraftCard block={block} onRefresh={onRefresh} onAddRoutine={onAddRoutine} />
+                <SkillDraftCard
+                  block={block}
+                  onRefresh={onRefresh}
+                  onAddRoutine={onAddRoutine}
+                  readOnly={readOnly}
+                />
               </div>
             );
           }

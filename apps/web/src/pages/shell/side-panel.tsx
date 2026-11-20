@@ -10,6 +10,7 @@ import { Button } from "@rakazo/ui-web";
 import { X } from "lucide-react";
 import type { ComponentProps, Dispatch, ReactNode, SetStateAction } from "react";
 import { ComputerMaintenanceActions } from "../../components/ComputerMaintenanceActions";
+import { ImpersonationReadOnlyNotice } from "../../components/ImpersonationReadOnlyNotice";
 import { PagesList } from "../../components/pages/PagesList";
 import type { Panel } from "../../lib/right-panel-state";
 import type { createSpaceRpc } from "../../lib/rpc";
@@ -52,6 +53,7 @@ export function ShellSidePanel({
   setAgentSkills,
   onClearBot,
   discardChatAttachments,
+  readOnly = false,
 }: {
   rpc: ReturnType<typeof createSpaceRpc>;
   panel: Panel;
@@ -81,6 +83,8 @@ export function ShellSidePanel({
   onClearBot: (bot: Bot) => void;
   /** Drops a deleted chat's pending attachments with their previews. */
   discardChatAttachments: (threadKey: string) => void;
+  /** Disable bot/group/routine mutation controls while impersonating. */
+  readOnly?: boolean;
 }) {
   const { t } = useLingui();
   const open = Boolean(panel && (active || activeGroup || panel === "import-agent"));
@@ -90,6 +94,7 @@ export function ShellSidePanel({
       : null;
 
   async function createGroup(input: { name: string; botIds: string[] }) {
+    if (readOnly) return;
     const group = await rpc.groups.create(input);
     setGroups((current) =>
       current.some((item) => item.id === group.id) ? current : [group, ...current],
@@ -98,6 +103,131 @@ export function ShellSidePanel({
     setPanel(null);
     await refreshBots().catch(() => undefined);
   }
+
+  const mutationBody = (
+    <>
+      {panel === "create-group" ? (
+        readOnly ? (
+          <ImpersonationReadOnlyNotice />
+        ) : (
+          <CreateGroupForm
+            bots={bots}
+            onCancel={() => setPanel(null)}
+            onCreate={(input) => createGroup(input)}
+            onOpenBot={(botId) => {
+              setPanel(null);
+              openBot(botId);
+            }}
+          />
+        )
+      ) : null}
+      {panel === "group-settings" && activeGroup ? (
+        <GroupSettings
+          key={activeGroup.id}
+          group={activeGroup}
+          bots={bots}
+          readOnly={readOnly}
+          pages={<PagesList groupId={activeGroup.id} readOnly={readOnly} />}
+          onSave={async (input) => {
+            if (readOnly) return;
+            const updated = await rpc.groups.update({ groupId: activeGroup.id, ...input });
+            setGroups((current) =>
+              current.map((group) => (group.id === updated.id ? updated : group)),
+            );
+            void Promise.all([refreshBots(), refreshGroupThread(activeGroup.id)]).catch(
+              () => undefined,
+            );
+          }}
+          onRemove={async () => {
+            if (readOnly) return;
+            await rpc.groups.remove({ groupId: activeGroup.id });
+            discardChatAttachments(activeGroup.id);
+            const remainingGroups = groups.filter((group) => group.id !== activeGroup.id);
+            setGroups(remainingGroups);
+            setPanel(null);
+            navigate(firstThreadRoute(bots, remainingGroups), { replace: true });
+            await refreshBots().catch(() => undefined);
+          }}
+          onClose={() => setPanel(null)}
+          onOpenBot={openBot}
+          covered={computerOpen}
+        />
+      ) : null}
+      {panel === "import-agent" ? (
+        readOnly ? (
+          <ImpersonationReadOnlyNotice />
+        ) : (
+          <AgentImportForm
+            onClose={() => setPanel(null)}
+            onCreated={(bot) => {
+              openCreatedBot(bot);
+              void refreshBots().catch(() => undefined);
+            }}
+          />
+        )
+      ) : null}
+      {botTab && active ? (
+        <BotSettings
+          key={active.id}
+          bot={active}
+          tab={botTab}
+          readOnly={readOnly}
+          onTabChange={(tab: BotPanelTab) => {
+            setPanel(tab);
+            if (tab === "computer") void refreshThread(active.id).catch(() => undefined);
+          }}
+          computer={computerPanel}
+          routines={routinesPanel}
+          focusModel={modelFocusRequest}
+          onOpenConnections={() => openSettings("models")}
+          memoryProviderConfigured={memoryProviderConfigured}
+          onSkillsChange={setAgentSkills}
+          onSave={async ({ computerMode, ...patch }) => {
+            if (readOnly) return;
+            if (computerMode !== undefined && computerMode !== active.computerMode) {
+              await rpc.bots.setComputer({
+                botId: active.id,
+                mode: computerMode,
+              });
+            }
+            const updated = await rpc.bots.update({ botId: active.id, ...patch });
+            setBots((current) => current.map((bot) => (bot.id === updated.id ? updated : bot)));
+            // Persistence succeeded; a failed navigation refresh must not undo the tool edit.
+            await refreshBots().catch(() => undefined);
+          }}
+          onExport={async () => {
+            if (readOnly) return;
+            const manifest = await rpc.export.bot({ botId: active.id });
+            const blob = new Blob([JSON.stringify(manifest, null, 2)], {
+              type: "application/json",
+            });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `${active.name.toLowerCase().replace(/\s+/g, "-")}-export.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+          }}
+          onClear={() => {
+            if (!readOnly) onClearBot(active);
+          }}
+        />
+      ) : null}
+      {panel === "routine" && routineEditorProps ? (
+        <fieldset disabled={readOnly} className="min-w-0 disabled:opacity-80">
+          {readOnly ? (
+            <>
+              <legend className="sr-only">
+                <Trans>Read-only</Trans>
+              </legend>
+              <ImpersonationReadOnlyNotice />
+            </>
+          ) : null}
+          <RoutineEditor {...routineEditorProps} />
+        </fieldset>
+      ) : null}
+    </>
+  );
 
   return (
     <ResizableSidePanel open={open} panel={panel ?? "closed"}>
@@ -117,6 +247,7 @@ export function ShellSidePanel({
                 {active &&
                 panel === "computer" &&
                 !computerOpen &&
+                !readOnly &&
                 computerPanelNeedsMaintenance(computer?.state, booting) ? (
                   <ComputerMaintenanceActions
                     botId={active.id}
@@ -137,100 +268,7 @@ export function ShellSidePanel({
               </div>
             </div>
           ) : null}
-          {panel === "create-group" ? (
-            <CreateGroupForm
-              bots={bots}
-              onCancel={() => setPanel(null)}
-              onCreate={(input) => createGroup(input)}
-              onOpenBot={(botId) => {
-                setPanel(null);
-                openBot(botId);
-              }}
-            />
-          ) : null}
-          {panel === "group-settings" && activeGroup ? (
-            <GroupSettings
-              key={activeGroup.id}
-              group={activeGroup}
-              bots={bots}
-              pages={<PagesList groupId={activeGroup.id} />}
-              onSave={async (input) => {
-                const updated = await rpc.groups.update({ groupId: activeGroup.id, ...input });
-                setGroups((current) =>
-                  current.map((group) => (group.id === updated.id ? updated : group)),
-                );
-                void Promise.all([refreshBots(), refreshGroupThread(activeGroup.id)]).catch(
-                  () => undefined,
-                );
-              }}
-              onRemove={async () => {
-                await rpc.groups.remove({ groupId: activeGroup.id });
-                discardChatAttachments(activeGroup.id);
-                const remainingGroups = groups.filter((group) => group.id !== activeGroup.id);
-                setGroups(remainingGroups);
-                setPanel(null);
-                navigate(firstThreadRoute(bots, remainingGroups), { replace: true });
-                await refreshBots().catch(() => undefined);
-              }}
-              onClose={() => setPanel(null)}
-              onOpenBot={openBot}
-              covered={computerOpen}
-            />
-          ) : null}
-          {panel === "import-agent" ? (
-            <AgentImportForm
-              onClose={() => setPanel(null)}
-              onCreated={(bot) => {
-                openCreatedBot(bot);
-                void refreshBots().catch(() => undefined);
-              }}
-            />
-          ) : null}
-          {botTab && active ? (
-            <BotSettings
-              key={active.id}
-              bot={active}
-              tab={botTab}
-              onTabChange={(tab: BotPanelTab) => {
-                setPanel(tab);
-                if (tab === "computer") void refreshThread(active.id).catch(() => undefined);
-              }}
-              computer={computerPanel}
-              routines={routinesPanel}
-              focusModel={modelFocusRequest}
-              onOpenConnections={() => openSettings("models")}
-              memoryProviderConfigured={memoryProviderConfigured}
-              onSkillsChange={setAgentSkills}
-              onSave={async ({ computerMode, ...patch }) => {
-                if (computerMode !== undefined && computerMode !== active.computerMode) {
-                  await rpc.bots.setComputer({
-                    botId: active.id,
-                    mode: computerMode,
-                  });
-                }
-                const updated = await rpc.bots.update({ botId: active.id, ...patch });
-                setBots((current) => current.map((bot) => (bot.id === updated.id ? updated : bot)));
-                // Persistence succeeded; a failed navigation refresh must not undo the tool edit.
-                await refreshBots().catch(() => undefined);
-              }}
-              onExport={async () => {
-                const manifest = await rpc.export.bot({ botId: active.id });
-                const blob = new Blob([JSON.stringify(manifest, null, 2)], {
-                  type: "application/json",
-                });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `${active.name.toLowerCase().replace(/\s+/g, "-")}-export.json`;
-                a.click();
-                URL.revokeObjectURL(url);
-              }}
-              onClear={() => onClearBot(active)}
-            />
-          ) : null}
-          {panel === "routine" && routineEditorProps ? (
-            <RoutineEditor {...routineEditorProps} />
-          ) : null}
+          {mutationBody}
         </div>
       ) : null}
     </ResizableSidePanel>

@@ -2,8 +2,10 @@ import { Trans, useLingui } from "@lingui/react/macro";
 import { Button } from "@rakazo/ui-web";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { ImpersonationBlockedPage } from "../components/ImpersonationBlockedPage";
 import { MCP_OAUTH_CHANNEL } from "../lib/mcp-connect";
 import { rpc } from "../lib/rpc";
+import { useIsImpersonating } from "../lib/use-impersonating";
 import { errorText } from "../lib/user-error";
 
 // The window.open name set by the OAuth popup flow. Providers whose login
@@ -13,12 +15,14 @@ const POPUP_NAME = MCP_OAUTH_CHANNEL;
 
 export function McpOAuthCallbackPage() {
   const { t } = useLingui();
+  const impersonating = useIsImpersonating();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const handledState = useRef<string | null>(null);
   useEffect(() => {
+    if (impersonating) return;
     const code = params.get("code");
     const state = params.get("state");
     if (!code || !state) {
@@ -41,7 +45,8 @@ export function McpOAuthCallbackPage() {
         navigate("/app?mcp_oauth=connected", { replace: true });
       })
       .catch((err: unknown) => setError(errorText(err, t`Could not complete OAuth`)));
-  }, [navigate, params, t]);
+  }, [impersonating, navigate, params, t]);
+  if (impersonating) return <ImpersonationBlockedPage />;
   const showReturn = Boolean(error) && window.name !== POPUP_NAME;
   return (
     <div className="grid min-h-screen place-items-center bg-background p-6 text-center">

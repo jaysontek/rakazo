@@ -70,3 +70,31 @@ it("says under a choice only what its title does not", async () => {
   ]);
   await act(async () => root.unmount());
 });
+
+it("disables visibility controls while read-only", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const onVisibilityChange = vi.fn();
+  const root = createRoot(document.body.appendChild(document.createElement("div")));
+  await act(async () =>
+    root.render(
+      <SharePopover
+        title="Plan"
+        owner={{ name: "RJ", image: null }}
+        visibility="private"
+        shareUrl={null}
+        open
+        onOpenChange={() => {}}
+        onVisibilityChange={onVisibilityChange}
+        readOnly
+      />,
+    ),
+  );
+  const group = document.querySelector<HTMLElement>('[role="radiogroup"]');
+  expect(group).not.toBeNull();
+  expect(
+    group!.getAttribute("aria-disabled") === "true" ||
+      group!.hasAttribute("disabled") ||
+      group!.dataset.disabled !== undefined,
+  ).toBe(true);
+  await act(async () => root.unmount());
+});

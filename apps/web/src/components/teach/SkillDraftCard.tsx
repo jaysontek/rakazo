@@ -36,10 +36,12 @@ export function SkillDraftCard({
   block,
   onRefresh,
   onAddRoutine,
+  readOnly = false,
 }: {
   block: SkillDraftBlock;
   onRefresh: () => Promise<void>;
   onAddRoutine: (name: string, prompt: string) => void;
+  readOnly?: boolean;
 }) {
   const { t } = useLingui();
   const id = useId();
@@ -108,13 +110,13 @@ export function SkillDraftCard({
       {fieldLabel(`${id}-name`, <Trans>Name</Trans>)}
       <Input
         id={`${id}-name`}
-        disabled={busy}
+        disabled={readOnly || busy}
         value={name}
         onChange={(event) => setName(event.target.value)}
       />
       {fieldLabel(`${id}-when`, <Trans>When to use</Trans>)}
       <Textarea
-        disabled={busy}
+        disabled={readOnly || busy}
         id={`${id}-when`}
         value={playbook.whenToUse}
         onChange={(event) => setPlaybook({ ...playbook, whenToUse: event.target.value })}
@@ -122,7 +124,7 @@ export function SkillDraftCard({
       />
       {fieldLabel(`${id}-inputs`, <Trans>Inputs</Trans>)}
       <Textarea
-        disabled={busy}
+        disabled={readOnly || busy}
         id={`${id}-inputs`}
         value={playbook.inputs.join("\n")}
         onChange={(event) =>
@@ -135,7 +137,7 @@ export function SkillDraftCard({
       />
       {fieldLabel(`${id}-steps`, <Trans>Steps</Trans>)}
       <Textarea
-        disabled={busy}
+        disabled={readOnly || busy}
         id={`${id}-steps`}
         value={playbook.steps.join("\n")}
         onChange={(event) =>
@@ -148,7 +150,7 @@ export function SkillDraftCard({
       />
       {fieldLabel(`${id}-check`, <Trans>How to check</Trans>)}
       <Textarea
-        disabled={busy}
+        disabled={readOnly || busy}
         id={`${id}-check`}
         value={playbook.howToCheck}
         onChange={(event) => setPlaybook({ ...playbook, howToCheck: event.target.value })}
@@ -156,7 +158,7 @@ export function SkillDraftCard({
       />
       {fieldLabel(`${id}-return`, <Trans>What to return</Trans>)}
       <Textarea
-        disabled={busy}
+        disabled={readOnly || busy}
         id={`${id}-return`}
         value={playbook.whatToReturn}
         onChange={(event) => setPlaybook({ ...playbook, whatToReturn: event.target.value })}
@@ -164,7 +166,7 @@ export function SkillDraftCard({
       />
       {fieldLabel(`${id}-approval`, <Trans>Approval boundaries</Trans>)}
       <Textarea
-        disabled={busy}
+        disabled={readOnly || busy}
         id={`${id}-approval`}
         value={playbook.approvalBoundaries}
         onChange={(event) => setPlaybook({ ...playbook, approvalBoundaries: event.target.value })}
@@ -172,27 +174,29 @@ export function SkillDraftCard({
       />
       {fieldLabel(`${id}-failure`, <Trans>Failure handling</Trans>)}
       <Textarea
-        disabled={busy}
+        disabled={readOnly || busy}
         id={`${id}-failure`}
         value={playbook.failureHandling}
         onChange={(event) => setPlaybook({ ...playbook, failureHandling: event.target.value })}
         rows={2}
       />
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Button disabled={busy} onClick={() => void saveDraft()}>
-          {saved ? <Trans>Saved</Trans> : busy ? <Trans>Saving…</Trans> : <Trans>Save</Trans>}
-        </Button>
-        <Button variant="outline" disabled={busy} onClick={() => void testDraft()}>
-          <Trans>Test</Trans>
-        </Button>
-        <Button
-          variant="outline"
-          disabled={busy}
-          onClick={() => onAddRoutine(skillName, formatSkillRunPrompt(skillName, playbook))}
-        >
-          <Trans>Add to routine</Trans>
-        </Button>
-      </div>
+      {readOnly ? null : (
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button disabled={busy} onClick={() => void saveDraft()}>
+            {saved ? <Trans>Saved</Trans> : busy ? <Trans>Saving…</Trans> : <Trans>Save</Trans>}
+          </Button>
+          <Button variant="outline" disabled={busy} onClick={() => void testDraft()}>
+            <Trans>Test</Trans>
+          </Button>
+          <Button
+            variant="outline"
+            disabled={busy}
+            onClick={() => onAddRoutine(skillName, formatSkillRunPrompt(skillName, playbook))}
+          >
+            <Trans>Add to routine</Trans>
+          </Button>
+        </div>
+      )}
       {error ? <p className="mt-2 text-xs text-destructive">{error}</p> : null}
     </BuiCard>
   );

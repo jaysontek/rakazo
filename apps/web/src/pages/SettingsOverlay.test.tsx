@@ -103,6 +103,11 @@ vi.mock("../components/VaultSettings", () => ({ VaultSettings: recordScope("vaul
 vi.mock("../components/ComputersUnavailableHint", () => ({
   computersAreUnavailable: () => false,
 }));
+vi.mock("../components/ImpersonationReadOnlyNotice", () => ({
+  ImpersonationReadOnlyNotice: () => (
+    <p data-testid="impersonation-read-only-notice">Read-only while viewing as Ada</p>
+  ),
+}));
 
 import { SettingsOverlay } from "./SettingsOverlay";
 
@@ -304,6 +309,19 @@ it("shows Updates in the desktop app", async () => {
   }
 });
 
+it("hides Updates while readOnly even in the desktop app", async () => {
+  vi.stubGlobal("rakazoDesktop", { update: {} });
+  const { container, cleanup } = await render({ readOnly: true, section: "updates" });
+  try {
+    expect(updatesNav(container)).toBeNull();
+    expect(
+      container.querySelector("[data-settings-section]")?.getAttribute("data-settings-section"),
+    ).not.toBe("updates");
+  } finally {
+    await cleanup();
+  }
+});
+
 it("offers Wallet only when the deployment has a wallet provider", async () => {
   const { container, rerender, cleanup } = await render({ section: "wallet" });
   const shown = () =>
@@ -314,6 +332,42 @@ it("offers Wallet only when the deployment has a wallet provider", async () => {
     await rerender({ section: "wallet", paymentWalletProvider: { id: "link", name: "Link" } });
     expect(container.querySelector('[data-testid="settings-nav-wallet"]')).not.toBeNull();
     expect(shown()).toBe("wallet");
+  } finally {
+    await cleanup();
+  }
+});
+
+it("wraps mutation panels in a read-only fieldset while impersonating", async () => {
+  const { container, rerender, cleanup } = await render({
+    readOnly: true,
+    section: "vault",
+    space: acme,
+    spaces,
+  });
+  try {
+    expect(container.querySelector('[data-testid="settings-read-only-section"]')).not.toBeNull();
+    expect(container.querySelector("fieldset[disabled]")).not.toBeNull();
+    await rerender({ readOnly: true, section: "models", space: acme, spaces });
+    expect(container.querySelector('[data-testid="settings-read-only-section"]')).not.toBeNull();
+    await rerender({ readOnly: false, section: "vault", space: acme, spaces });
+    expect(container.querySelector('[data-testid="settings-read-only-section"]')).toBeNull();
+  } finally {
+    await cleanup();
+  }
+});
+
+it("hides Manage space controls while readOnly but still lists spaces", async () => {
+  const onOpenSpace = vi.fn();
+  const { container, cleanup } = await render({ spaces, onOpenSpace, readOnly: true });
+  try {
+    expect(container.querySelector('[data-testid="settings-spaces"]')?.textContent).toContain(
+      "Acme",
+    );
+    expect(
+      [...container.querySelectorAll("button")].some((b) =>
+        /Manage/.test(b.getAttribute("aria-label") ?? ""),
+      ),
+    ).toBe(false);
   } finally {
     await cleanup();
   }

@@ -11,6 +11,10 @@ const account = vi.hoisted(() => ({ load: (_me: unknown) => {} }));
 vi.mock("../components/AccountMenu", () => ({
   AccountMenu: () => null,
 }));
+vi.mock("../lib/use-impersonating", () => ({
+  useIsImpersonating: () => false,
+  useImpersonating: () => null,
+}));
 vi.mock("../lib/rpc", () => ({
   selectedSpaceId: () => null,
   createSpaceRpc: () => ({

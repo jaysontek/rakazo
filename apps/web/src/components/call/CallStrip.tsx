@@ -1,17 +1,12 @@
 import { useLingui } from "@lingui/react/macro";
 import type { VoiceInfo } from "@rakazo/contracts";
-import {
-  BotAvatar,
-  Button,
-  cn,
-  NativeSelect,
-  NativeSelectOption,
-} from "@rakazo/ui-web";
+import { BotAvatar, Button, cn, NativeSelect, NativeSelectOption } from "@rakazo/ui-web";
 import { Mic, MicOff, PhoneOff, Settings } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import type { CallState } from "../../lib/call-session";
 import { endCall, toggleMute, useCallSession } from "../../lib/call-session";
 import { useSpaceRpc } from "../../lib/space-rpc";
+import { useIsImpersonating } from "../../lib/use-impersonating";
 
 function callClock(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
@@ -105,6 +100,7 @@ export function CallStrip({
 }) {
   const { t } = useLingui();
   const call = useCallSession();
+  const impersonating = useIsImpersonating();
   const elapsed = useCallElapsed(call);
   if (!call) return null;
   const ringing = call.phase === "ringing";
@@ -157,7 +153,7 @@ export function CallStrip({
           <span className="truncate">{activity}</span>
         </div>
       </div>
-      <CallVoicePicker />
+      {impersonating ? null : <CallVoicePicker />}
       <Button
         variant="ghost"
         size="icon"

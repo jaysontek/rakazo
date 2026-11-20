@@ -62,9 +62,13 @@ export function useSpaceRoster({
   const [initialLoadFailed, setInitialLoadFailed] = useState(false);
   const [bootstrapMe, setBootstrapMe] = useState<Me | null | undefined>(seed?.me);
   const callsEnabledRef = useRef(false);
+  const impersonatingRef = useRef(Boolean(seed?.me?.impersonating));
   useEffect(() => {
     callsEnabledRef.current = bootstrapMe?.phoneCallsEnabled === true;
   }, [bootstrapMe?.phoneCallsEnabled]);
+  useEffect(() => {
+    impersonatingRef.current = Boolean(bootstrapMe?.impersonating);
+  }, [bootstrapMe?.impersonating]);
   const botsRefreshEpoch = useRef(0);
   const botsRefreshApplied = useRef(0);
   const archivedBotsRefreshEpoch = useRef(0);
@@ -125,7 +129,8 @@ export function useSpaceRoster({
           // Only the very first bot everywhere needs onboarding. An empty
           // current space with content elsewhere stays in the app so the
           // space can be switched to or deleted instead of trapping the user.
-          navigate("/onboarding", { replace: true });
+          // Impersonation stays in the shell on a read-only empty state.
+          if (!impersonatingRef.current) navigate("/onboarding", { replace: true });
           return;
         }
         const currentGroupId = routeGroupId.current;
@@ -407,7 +412,8 @@ export function useSpaceBootstrap({
           bootstrap.archivedGroups.length === 0 &&
           !bootstrap.spaces.some((space) => space.hasContent)
         ) {
-          navigate("/onboarding", { replace: true });
+          // Impersonation stays in the shell on a read-only empty state.
+          if (!bootstrap.me.impersonating) navigate("/onboarding", { replace: true });
           return;
         }
         if (groupId) {
