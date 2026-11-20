@@ -12,6 +12,7 @@ vi.mock("better-auth/adapters/prisma", async () => {
 });
 vi.mock("@rakazo/db", () => ({
   bootstrapUserSpace: vi.fn(async () => ({ spaceId: "space-1" })),
+  findSoftDeletedUserByEmail: vi.fn(async () => null),
   recordSecurityEvent: vi.fn(async () => undefined),
 }));
 
@@ -36,6 +37,11 @@ function fixture({ breachedPasswordCheck = false } = {}) {
       })),
     },
     spaceMember: { findFirst: vi.fn(async () => ({ spaceId: "space-1" })) },
+    user: {
+      findUnique: vi.fn(async () => null),
+    },
+    $queryRaw: vi.fn(async () => []),
+    securityEvent: { count: vi.fn(async () => 0), create: vi.fn(async () => ({})) },
   };
   const log = vi.fn();
   const auth = createAuth(prisma as never, {

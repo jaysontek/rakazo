@@ -91,6 +91,7 @@ describe("impersonation auth hooks", () => {
       },
       spaceMember: { findFirst: vi.fn(async () => ({ spaceId: "space-1", userId: "target" })) },
       $executeRaw: vi.fn(async () => 0),
+      $queryRaw: vi.fn(async () => []),
       $transaction: vi.fn(async (run: (tx: unknown) => Promise<unknown>) => run(prisma)),
     };
 
@@ -121,6 +122,7 @@ describe("impersonation auth hooks", () => {
       user: { findUnique: vi.fn(async () => ({ locale: null })) },
       spaceMember: { findFirst: vi.fn(async () => null) },
       $executeRaw: vi.fn(async () => 0),
+      $queryRaw: vi.fn(async () => []),
       $transaction: vi.fn(async (run: (tx: unknown) => Promise<unknown>) => run(prisma)),
     };
     const auth = createAuth(prisma as never, {

@@ -1,22 +1,34 @@
 import type * as Db from "@rakazo/db";
 import {
   claimOrganizationForDeletion,
+  claimSpacesLeavingWithAccount,
   deleteClaimedSpace,
+  deletePageShareSecrets,
   recordAuditEvent,
   setOrganizationDeletionLease,
 } from "@rakazo/db";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { deleteOrganization } from "./account-deletion.js";
+import { deleteAccountContent, deleteOrganization } from "./account-deletion.js";
 
 vi.mock("@rakazo/db", async (importOriginal) => ({
   ...(await importOriginal<typeof Db>()),
   claimOrganizationForDeletion: vi.fn(),
+  claimSpacesLeavingWithAccount: vi.fn(),
   keepOrganizationTrialUse: vi.fn(async () => undefined),
   setOrganizationDeletionLease: vi.fn(),
   deleteClaimedSpace: vi.fn(),
   deleteEmptyOrganization: vi.fn(async () => undefined),
+  deletePageShareSecrets: vi.fn(async () => []),
   releaseOrganizationDeletionClaim: vi.fn(async () => undefined),
   recordAuditEvent: vi.fn(async () => undefined),
+}));
+
+vi.mock("@rakazo/adapters", () => ({
+  destroyBot: vi.fn(async () => undefined),
+  forgetPageShareSecrets: vi.fn(async () => undefined),
+  removeAgentHome: vi.fn(async () => undefined),
+  removeDeletedBotsFromLegacyTeamHome: vi.fn(async () => undefined),
+  toComputerRef: vi.fn(),
 }));
 
 function deferred() {
@@ -103,5 +115,64 @@ describe("deleteOrganization lease", () => {
     expect(prisma.artifact.findMany).not.toHaveBeenCalled();
     expect(prisma.bot.findMany).not.toHaveBeenCalled();
     expect(recordAuditEvent).not.toHaveBeenCalled();
+  });
+});
+
+describe("deleteAccountContent user-scoped purge rows", () => {
+  it("deletes connections (and their secrets) plus other user-scoped rows idempotently", async () => {
+    vi.mocked(claimSpacesLeavingWithAccount).mockResolvedValue({
+      claimId: "claim",
+      spaceIds: [],
+      takenOver: [],
+    });
+    vi.mocked(deletePageShareSecrets).mockResolvedValue([]);
+    const tx = {
+      connection: {
+        findMany: vi.fn(async () => [{ secretId: "sec-1" }, { secretId: null }]),
+        deleteMany: vi.fn(async () => ({ count: 2 })),
+      },
+      secret: { deleteMany: vi.fn(async () => ({ count: 1 })) },
+      modelOAuthSession: { deleteMany: vi.fn(async () => ({ count: 0 })) },
+      cloudAgent: { deleteMany: vi.fn(async () => ({ count: 0 })) },
+      sharedKeyWeekAllotment: { deleteMany: vi.fn(async () => ({ count: 0 })) },
+      messagingLinkCode: { deleteMany: vi.fn(async () => ({ count: 0 })) },
+      notificationPreference: { deleteMany: vi.fn(async () => ({ count: 0 })) },
+      agentSkillSpace: { deleteMany: vi.fn(async () => ({ count: 0 })) },
+      mcpServerSpace: { deleteMany: vi.fn(async () => ({ count: 0 })) },
+      capabilityInstallSpace: { deleteMany: vi.fn(async () => ({ count: 0 })) },
+    };
+    const prisma = {
+      $transaction: vi.fn(async (work: (client: typeof tx) => Promise<unknown>) => work(tx)),
+      botDeletion: { findMany: vi.fn(async () => []) },
+      space: { findMany: vi.fn(async () => []) },
+      bot: { findMany: vi.fn(async () => []) },
+      computer: { findMany: vi.fn(async () => []) },
+      artifact: { findMany: vi.fn(async () => []) },
+    };
+    await deleteAccountContent(
+      {
+        prisma: prisma as never,
+        sandbox: {} as never,
+        home: {} as never,
+        jobs: {} as never,
+        artifacts: {} as never,
+        dataDir: "/tmp",
+      },
+      "user-1",
+    );
+    expect(tx.connection.deleteMany).toHaveBeenCalledWith({ where: { userId: "user-1" } });
+    expect(tx.secret.deleteMany).toHaveBeenCalledWith({ where: { id: { in: ["sec-1"] } } });
+    for (const model of [
+      tx.modelOAuthSession,
+      tx.cloudAgent,
+      tx.sharedKeyWeekAllotment,
+      tx.messagingLinkCode,
+      tx.notificationPreference,
+      tx.agentSkillSpace,
+      tx.mcpServerSpace,
+      tx.capabilityInstallSpace,
+    ]) {
+      expect(model.deleteMany).toHaveBeenCalledWith({ where: { userId: "user-1" } });
+    }
   });
 });

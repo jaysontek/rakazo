@@ -104,6 +104,8 @@ function setup(options: Partial<AuthEnv> = {}, hasMembership = true) {
         provisionedUsers.has(where.userId) ? { id: `scim-${where.userId}` } : null,
       ),
     },
+    $queryRaw: vi.fn(async () => []),
+    securityEvent: { count: vi.fn(async () => 0), create: vi.fn(async () => ({})) },
   };
   prisma.$transaction = vi.fn(async (operations: (tx: unknown) => Promise<unknown>) =>
     operations(prisma),

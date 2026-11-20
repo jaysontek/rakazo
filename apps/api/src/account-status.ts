@@ -44,6 +44,22 @@ export async function setAccountActive(
   directoryProvisioning: boolean,
 ): Promise<"changed" | "unchanged" | "directory"> {
   return runAsSystem("change an account's status", async () => {
+    if (active) {
+      // Pending deletion stays off until a restore; reactivating here would bypass it.
+      const user = await deps.prisma.user.findUnique({
+        where: { id: userId },
+        select: { deactivatedAt: true, deletionRequestedAt: true },
+      });
+      if (user?.deletionRequestedAt) {
+        if (!user.deactivatedAt) {
+          await deps.prisma.user.updateMany({
+            where: { id: userId, deactivatedAt: null },
+            data: { deactivatedAt: new Date() },
+          });
+        }
+        return "unchanged";
+      }
+    }
     if (directoryProvisioning) {
       const [links, deleted] = await Promise.all([
         deps.prisma.scimUser.findMany({ where: { userId }, select: { active: true } }),
@@ -55,7 +71,9 @@ export async function setAccountActive(
       if (on ? !active : active && links.length + deleted > 0) return "directory";
     }
     const { count } = await deps.prisma.user.updateMany({
-      where: { id: userId, deactivatedAt: active ? { not: null } : null },
+      where: active
+        ? { id: userId, deactivatedAt: { not: null }, deletionRequestedAt: null }
+        : { id: userId, deactivatedAt: null },
       data: { deactivatedAt: active ? null : new Date() },
     });
     await finishStatusChange(deps, userId, active, count > 0, "operator");

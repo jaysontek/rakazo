@@ -377,6 +377,7 @@ function AccountActions({
   transferDisabled,
   canAddToSharedBudget,
   canDeleteAccount,
+  canImpersonate,
   canEditAllotment,
   canAdjustSpend,
   envPinned,
@@ -393,6 +394,7 @@ function AccountActions({
   transferDisabled: boolean;
   canAddToSharedBudget: boolean;
   canDeleteAccount: boolean;
+  canImpersonate: boolean;
   canEditAllotment: boolean;
   canAdjustSpend: boolean;
   envPinned: boolean;
@@ -414,9 +416,11 @@ function AccountActions({
         <MoreHorizontal className="size-4" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => onImpersonate(account)}>
-          <Trans>Impersonate</Trans>
-        </DropdownMenuItem>
+        {canImpersonate ? (
+          <DropdownMenuItem onClick={() => onImpersonate(account)}>
+            <Trans>Impersonate</Trans>
+          </DropdownMenuItem>
+        ) : null}
         {canAddToSharedBudget ? (
           <DropdownMenuItem disabled={addBusy} onClick={() => onAddToSharedBudget(account)}>
             <Trans>Add to shared budget</Trans>
@@ -555,6 +559,8 @@ function AccountsSection({
     enabled: interactive,
   });
   const catalog = catalogQuery.data ?? [];
+  const me = useQuery(useSpaceQueries().me.queryOptions());
+  const viewerUserId = me.data?.userId;
   const roster = accounts.filter((account) => account.sharedKeyBudget?.member);
   const [impersonate, setImpersonate] = useState<OpsAccount | null>(null);
   const [transferFrom, setTransferFrom] = useState<OpsAccount | null>(null);
@@ -759,12 +765,14 @@ function AccountsSection({
     const member = Boolean(account.sharedKeyBudget?.member);
     const envPinned = account.envPinned === true;
     const pendingDeletion = Boolean(account.deletionRequestedAt);
+    const isSelf = viewerUserId != null && account.userId === viewerUserId;
     return {
       account,
       canTransfer: member,
       transferDisabled: roster.length < 2,
       canAddToSharedBudget: pendingSharedBudgetApproval(account),
-      canDeleteAccount: !envPinned && !pendingDeletion,
+      canDeleteAccount: !envPinned && !pendingDeletion && !isSelf,
+      canImpersonate: !pendingDeletion && !isSelf,
       canEditAllotment: member,
       canAdjustSpend: member,
       envPinned,

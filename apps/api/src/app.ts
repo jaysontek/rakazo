@@ -164,7 +164,6 @@ import { cors } from "hono/cors";
 import { deleteAccountContent, finishStalledOrganizationDeletions } from "./account-deletion.js";
 import { mountAccountExportRoute } from "./account-export.js";
 import { mountAccountImportRoute } from "./account-import.js";
-import { accountPurgeSweep } from "./account-purge.js";
 import { settleDirectoryChange } from "./account-status.js";
 import { mountAppAssociation, nativePasskeys } from "./app-association.js";
 import { storeInboundAttachment } from "./artifacts.js";
@@ -609,8 +608,18 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
         onAccountChange: (change) => directoryChanges.getStore()?.push(change),
       })
     : undefined;
+  const sharedKeyEnrollmentPolicy = sharedKeyBudgetEnrollmentPolicyFromEnv({
+    signupsEnabled: env.signupsEnabled,
+    signupAllowlist: env.signupAllowlist,
+    singleAccount: Boolean(env.desktopStackToken),
+    directoryProvisioning: Boolean(directory),
+    adminEmails: env.adminEmails,
+    explicitUserIds: env.sharedKeyBudgetUserIds,
+    emailDomains: env.sharedKeyBudgetEmailDomains,
+  });
   const auth = createAuth(prisma, {
     directoryProvisioning: Boolean(directory),
+    sharedKeyEnrollmentPolicy,
     analytics,
     passwordAuth: env.passwordAuth,
     breachedPasswordCheck: env.breachedPasswordCheck,
@@ -738,15 +747,6 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
   const codexCatalog = new CodexCatalogCache();
   // One instance: chat runs submit videos and, in single-process mode, background polls finish them.
   const mediaGeneration = createMediaGenerationProvider();
-  const sharedKeyEnrollmentPolicy = sharedKeyBudgetEnrollmentPolicyFromEnv({
-    signupsEnabled: env.signupsEnabled,
-    signupAllowlist: env.signupAllowlist,
-    singleAccount: Boolean(env.desktopStackToken),
-    directoryProvisioning: Boolean(directory),
-    adminEmails: env.adminEmails,
-    explicitUserIds: env.sharedKeyBudgetUserIds,
-    emailDomains: env.sharedKeyBudgetEmailDomains,
-  });
   const executor = createRunExecutor({
     billingEnabled: modelCreditsEnabled,
     maxUploadSizeBytes: env.maxUploadSizeBytes,
@@ -902,25 +902,6 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
     (error) => getLogger().error("stalled organization deletion failed", error),
   );
 
-  const stopAccountPurge = startHourlySweep(
-    accountPurgeSweep(
-      {
-        prisma,
-        sandbox,
-        home,
-        jobs,
-        artifacts,
-        dataDir: env.dataDir,
-        messagingInstallations,
-        secrets,
-        billing,
-        pushTokens,
-      },
-      { enabled: env.accountPurgeEnabled },
-    ),
-    (error) => getLogger().error("account purge failed", error),
-  );
-
   const router = createRouter({
     speechSummary:
       env.voiceSummaryMinChars === undefined
@@ -990,6 +971,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
       opsDashboardAllowlist: env.opsDashboardAllowlist,
       sharedKeyMonthlyBudgetUsd: env.sharedKeyMonthlyBudgetUsd,
       sharedKeyGatedDeployment: sharedKeyEnrollmentPolicy.gatedDeployment,
+      sharedKeyEnrollmentPolicy,
       deploymentModelKey: env.deploymentModelKey ?? null,
       maxUploadSizeBytes: env.maxUploadSizeBytes,
       maxAttachmentsPerMessage: env.maxAttachmentsPerMessage,
@@ -1730,7 +1712,6 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
       await stopReferralEmails?.();
       await stopHomeRetention?.();
       await stopOrganizationDeletions();
-      await stopAccountPurge();
       await reconciler?.stop();
       await oauthTokenUpgrade;
       await mcpArgsMove;

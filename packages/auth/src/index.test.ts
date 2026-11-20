@@ -180,8 +180,10 @@ describe("signInCodeEmail", () => {
   });
 });
 
+const noSoftDeletedUsers = { $queryRaw: async () => [] } as never;
+
 describe("stored account names", () => {
-  const auth = createAuth({} as never, {
+  const auth = createAuth(noSoftDeletedUsers, {
     secret: "offline-auth-secret-at-least-32-characters",
     baseURL: "https://api.example.test",
     webOrigin: "https://app.example.test",
@@ -207,7 +209,7 @@ describe("stored account names", () => {
 });
 
 it("preserves readable numbered account names on writes", async () => {
-  const auth = createAuth({} as never, {
+  const auth = createAuth(noSoftDeletedUsers, {
     secret: "offline-auth-secret-at-least-32-characters",
     baseURL: "https://api.example.test",
     webOrigin: "https://app.example.test",
@@ -238,7 +240,13 @@ describe("bearer sessions", () => {
           }),
       },
     );
-    const prisma = new Proxy({}, { get: (_target, name) => (name === "then" ? undefined : model) });
+    const prisma = new Proxy(
+      {},
+      {
+        get: (_target, name) =>
+          name === "then" ? undefined : name === "$queryRaw" ? async () => [] : model,
+      },
+    );
     const auth = createAuth(prisma as never, {
       secret,
       baseURL: "https://api.example.test",

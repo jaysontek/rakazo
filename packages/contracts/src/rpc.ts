@@ -1499,20 +1499,36 @@ export const appContract = {
       .input(z.strictObject({ userId: Id }))
       .output(z.object({ ok: z.literal(true) })),
     /** Soft-delete an account: 30-day retention, then purge. Env-pinned ids are rejected. */
-    softDeleteAccount: oc.input(z.strictObject({ userId: Id })).output(
-      z.object({
-        ok: z.literal(true),
-        purgeAfter: z.string(),
-        priorSharedKeyBudgetMember: z.boolean(),
-      }),
-    ),
+    softDeleteAccount: oc
+      .input(z.strictObject({ userId: Id, emailConfirmation: z.string().min(1).max(320) }))
+      .output(
+        z.object({
+          ok: z.literal(true),
+          purgeAfter: z.string(),
+          priorSharedKeyBudgetMember: z.boolean(),
+        }),
+      ),
     /**
      * Admin restore of a soft-deleted account within the retention window.
      * Confirm by typing the account email exactly.
      */
     restoreAccount: oc
       .input(z.strictObject({ userId: Id, emailConfirmation: z.string().min(1).max(320) }))
-      .output(z.object({ ok: z.literal(true) })),
+      .output(
+        z.object({
+          ok: z.literal(true),
+          /** Prior shared-key membership could not be re-added under the normal bar. */
+          budgetReenroll: z.literal("restored_budget_reenroll_pending").optional(),
+        }),
+      ),
+    /** Retry shared-key re-enroll after restore when the first attempt was zero_slice/ineligible. */
+    retryAccountBudgetReenroll: oc.input(z.strictObject({ userId: Id })).output(
+      z.object({
+        ok: z.literal(true),
+        enrolled: z.boolean(),
+        reason: z.enum(["already_member", "ineligible", "zero_slice", "not_pending"]).optional(),
+      }),
+    ),
     /** Set tracked shared-key spend to an absolute USD value (stored as a delta). */
     setSharedKeyTrackedSpend: oc
       .input(

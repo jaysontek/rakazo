@@ -1641,6 +1641,7 @@ msgid "Clearing…"
 msgstr "クリア中…"
 
 #: src/components/ErrorBoundary.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/MessagingSettingsPanel.tsx
 #: src/pages/ModelSettingsOverlay.tsx
@@ -1851,6 +1852,10 @@ msgstr "アプリを接続するには、サーバーでプラグインカタロ
 #: src/pages/KnowledgeSection.tsx
 msgid "Confirm delete"
 msgstr "削除を確認"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Confirm email"
+msgstr ""
 
 #: src/components/ConfirmIdentityDialog.tsx
 msgid "Confirm it's you"
@@ -2204,6 +2209,10 @@ msgstr "スペースを作成できませんでした"
 msgid "Could not create your bot"
 msgstr "ボットを作成できませんでした"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Could not delete account"
+msgstr ""
+
 #: src/pages/shell/dialogs.tsx
 msgid "Could not delete bot"
 msgstr "ボットを削除できませんでした"
@@ -2403,6 +2412,10 @@ msgstr "テスト音声を再生できませんでした"
 msgid "Could not preview plugin"
 msgstr ""
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Could not re-add shared-budget membership"
+msgstr ""
+
 #: src/lib/model-connection-preflight.ts
 msgid "Could not reach the model server."
 msgstr "モデルサーバーに接続できませんでした。"
@@ -2439,10 +2452,6 @@ msgstr ""
 #: src/pages/PluginsOverlay.tsx
 msgid "Could not remove connector"
 msgstr "コネクタを削除できませんでした"
-
-#: src/pages/AdminOpsBudget.tsx
-msgid "Could not remove member"
-msgstr "メンバーを削除できませんでした"
 
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Could not remove plugin"
@@ -2485,6 +2494,10 @@ msgstr "チャートを表示できませんでした"
 #: src/pages/Auth.tsx
 msgid "Could not reset password"
 msgstr "パスワードをリセットできませんでした"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Could not restore account"
+msgstr ""
 
 #: src/pages/AdminOpsBudget.tsx
 msgid "Could not reverse adjustment"
@@ -2957,8 +2970,14 @@ msgstr "{0}を削除しますか？"
 
 #: src/components/AccountAccess.tsx
 #: src/components/AccountMenu.tsx
+#: src/pages/AdminOpsBudget.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Delete account"
 msgstr "アカウントを削除"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Delete account?"
+msgstr ""
 
 #: src/pages/GroupPanel.tsx
 msgid "Delete group"
@@ -2990,6 +3009,7 @@ msgid "deleted"
 msgstr "削除済み"
 
 #: src/components/PasskeySettings.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/OrganizationSettingsPanel.tsx
 #: src/pages/shell/dialogs.tsx
@@ -5392,6 +5412,10 @@ msgid "Pending admin approval"
 msgstr "管理者の承認待ち"
 
 #: src/pages/AdminOpsPage.tsx
+msgid "Pending deletion · purges on {purgeDate}"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
 msgid "Performance"
 msgstr ""
 
@@ -5804,7 +5828,6 @@ msgstr "再読み込み"
 #: src/components/TrustedLinkSitesSettings.tsx
 #: src/components/vault/LoginFieldsInput.tsx
 #: src/components/vault/VaultItemDetail.tsx
-#: src/pages/AdminOpsBudget.tsx
 #: src/pages/AdminOpsPage.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/ModelRoleSettings.tsx
@@ -5825,11 +5848,6 @@ msgstr "{0}を削除"
 msgid "Remove {0} from the group"
 msgstr "{0}をグループから外す"
 
-#. placeholder {0}: accountLabel(account)
-#: src/pages/AdminOpsBudget.tsx
-msgid "Remove {0} from the roster."
-msgstr "{0} を名簿から削除します。"
-
 #. placeholder {0}: accountLabel(removeTarget)
 #: src/pages/AdminOpsPage.tsx
 msgid "Remove {0}?"
@@ -5847,20 +5865,12 @@ msgstr "{site} を削除"
 msgid "Remove change trigger"
 msgstr "変更トリガーを削除"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Remove from budget"
-msgstr "予算から削除"
-
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/PluginsOverlay.tsx
 msgid "Remove from every space?"
 msgstr ""
-
-#: src/pages/AdminOpsBudget.tsx
-msgid "Remove from shared budget?"
-msgstr "共有予算から削除しますか？"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Remove Git event"
@@ -6052,9 +6062,15 @@ msgid "Restart to update"
 msgstr "再起動してアップデート"
 
 #: src/components/InstructionSettings.tsx
+#: src/pages/AdminOpsBudget.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/shell/archived-chats.tsx
 msgid "Restore"
 msgstr "復元"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Restore account?"
+msgstr ""
 
 #: src/components/ComputerMaintenanceActions.tsx
 msgid "Restore the last saved workspace."
@@ -6068,9 +6084,22 @@ msgstr "最後に保存されたワークスペースを復元します。コン
 msgid "Restored"
 msgstr "復元しました"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Restored. Shared-budget membership could not be re-added."
+msgstr ""
+
+#. placeholder {0}: accountLabel(account)
+#: src/pages/AdminOpsBudget.tsx
+msgid "Restores {0} with all data, bots, and prior shared-budget membership."
+msgstr ""
+
 #: src/components/ComputerUpdateProgress.tsx
 msgid "Restoring your workspace"
 msgstr "ワークスペースを復元中"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Restoring…"
+msgstr ""
 
 #: src/components/AccountAccess.tsx
 #: src/components/integrations/plugin-marketplace.tsx
@@ -6093,6 +6122,10 @@ msgstr "今すぐ再試行"
 #: src/pages/shell/use-computer.tsx
 msgid "Retry screen"
 msgstr "画面を再試行"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Retry shared budget"
+msgstr ""
 
 #. placeholder {0}: money(reverseTarget.amountUsd)
 #. placeholder {1}: nameFor(reverseTarget.toUserId)
@@ -6758,6 +6791,12 @@ msgstr "Slackが有効になっていません"
 #: src/components/composer/HoldToTalk.tsx
 msgid "Slide up to lock"
 msgstr "上にスライドしてロック"
+
+#. placeholder {0}: accountLabel(account)
+#. placeholder {1}: purgePreview.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric", })
+#: src/pages/AdminOpsBudget.tsx
+msgid "Soft-deletes {0}. Data stays for 30 days (purges {1}). Removed from the shared budget. A verified email code restores everything."
+msgstr ""
 
 #: src/components/integrations/skills-dialog.tsx
 #: src/pages/PluginsOverlay.tsx
@@ -7576,6 +7615,10 @@ msgstr "種類"
 #: src/pages/OrganizationSettingsPanel.tsx
 msgid "Type {name} to confirm"
 msgstr "確認のため{name}と入力してください"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Type the account email to confirm"
+msgstr ""
 
 #: src/components/teach/TeachRecordingChrome.tsx
 msgid "Type without recording"

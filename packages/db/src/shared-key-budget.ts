@@ -389,7 +389,7 @@ export async function listSharedKeyBudgetMembers(
   prisma: Pick<BudgetPrisma, "sharedKeyBudgetMember"> | Pick<BudgetTx, "sharedKeyBudgetMember">,
 ): Promise<Array<{ userId: string; joinedAt: Date }>> {
   return prisma.sharedKeyBudgetMember.findMany({
-    where: { user: { deactivatedAt: null } },
+    where: { user: { deactivatedAt: null, deletionRequestedAt: null } },
     select: { userId: true, joinedAt: true },
     orderBy: { joinedAt: "asc" },
   });
@@ -694,9 +694,15 @@ export async function userEligibleForSharedKeyBudget(
 ): Promise<boolean> {
   const user = await tx.user.findUnique({
     where: { id: userId },
-    select: { id: true, email: true, deactivatedAt: true, emailVerified: true },
+    select: {
+      id: true,
+      email: true,
+      deactivatedAt: true,
+      deletionRequestedAt: true,
+      emailVerified: true,
+    },
   });
-  if (!user || user.deactivatedAt != null) return false;
+  if (!user || user.deactivatedAt != null || user.deletionRequestedAt != null) return false;
   if (isHiddenOpsEmail(user.email)) return false;
   if (options.bypassEligibilityBar) return true;
   if (options.policy.explicitUserIds.includes(userId)) return true;
@@ -772,6 +778,7 @@ async function sharesNonPersonalOrgWithOpsAdmin(
         id: { in: grantHolders.map((row) => row.userId) },
         emailVerified: true,
         deactivatedAt: null,
+        deletionRequestedAt: null,
       },
       select: { id: true },
     });
@@ -787,6 +794,7 @@ async function sharesNonPersonalOrgWithOpsAdmin(
       id: { in: [...candidateAdminIds] },
       emailVerified: true,
       deactivatedAt: null,
+      deletionRequestedAt: null,
     },
     select: { email: true },
   });
@@ -901,23 +909,37 @@ export async function addSharedKeyBudgetMember(
 ): Promise<AddSharedKeyBudgetMemberResult> {
   return prisma.$transaction(async (tx) => {
     await lockSharedKeyBudget(tx, MEMBERS_LOCK);
-    const existing = await tx.sharedKeyBudgetMember.findUnique({
-      where: { userId },
-      select: { userId: true },
-    });
-    if (existing) {
-      await recomputeSharedKeyWeekAllotmentsTx(tx, joinedAt);
-      return { enrolled: false, reason: "already_member" };
-    }
-    const outcome = await enrollSharedKeyBudgetMemberTx(tx, userId, joinedAt, {
-      bypassEligibilityBar: options?.admin === true,
-      policy: options?.policy ?? STRICT_SHARED_KEY_ENROLLMENT_POLICY,
-      adminActorUserId: options?.admin ? options.actorUserId : undefined,
-      audit: options?.admin === true,
-    });
-    if (outcome === "enrolled") return { enrolled: true };
-    return { enrolled: false, reason: outcome };
+    return addSharedKeyBudgetMemberTx(tx, userId, joinedAt, options);
   });
+}
+
+/** {@link addSharedKeyBudgetMember} inside a transaction that already holds the members lock. */
+export async function addSharedKeyBudgetMemberTx(
+  tx: BudgetTx,
+  userId: string,
+  joinedAt: Date,
+  options?: {
+    admin?: boolean;
+    actorUserId?: string;
+    policy?: SharedKeyBudgetEnrollmentPolicy;
+  },
+): Promise<AddSharedKeyBudgetMemberResult> {
+  const existing = await tx.sharedKeyBudgetMember.findUnique({
+    where: { userId },
+    select: { userId: true },
+  });
+  if (existing) {
+    await recomputeSharedKeyWeekAllotmentsTx(tx, joinedAt);
+    return { enrolled: false, reason: "already_member" };
+  }
+  const outcome = await enrollSharedKeyBudgetMemberTx(tx, userId, joinedAt, {
+    bypassEligibilityBar: options?.admin === true,
+    policy: options?.policy ?? STRICT_SHARED_KEY_ENROLLMENT_POLICY,
+    adminActorUserId: options?.admin ? options.actorUserId : undefined,
+    audit: options?.admin === true,
+  });
+  if (outcome === "enrolled") return { enrolled: true };
+  return { enrolled: false, reason: outcome };
 }
 
 /**
@@ -942,21 +964,40 @@ export async function removeSharedKeyBudgetMember(
   }
   await prisma.$transaction(async (tx) => {
     await lockSharedKeyBudget(tx, MEMBERS_LOCK);
-    if (pinned.has(userId)) {
-      throw new Error("Cannot remove a member pinned by SHARED_KEY_BUDGET_USER_IDS");
-    }
-    const deleted = await tx.sharedKeyBudgetMember.deleteMany({ where: { userId } });
-    if ((deleted?.count ?? 0) > 0 && options?.actorUserId) {
-      await appendAuditEventTx(tx, {
-        action: "shared_key_budget.member.removed",
-        actor: { type: "user", id: options.actorUserId },
-        target: { type: "user", id: userId },
-        organizationId: DEPLOYMENT_AUDIT_ORGANIZATION_ID,
-        metadata: { userId },
-      });
-    }
-    await recomputeSharedKeyWeekAllotmentsTx(tx, now);
+    await removeSharedKeyBudgetMemberTx(tx, userId, now, options);
   });
+}
+
+/**
+ * {@link removeSharedKeyBudgetMember} inside a transaction that already holds the members
+ * lock. Returns whether a roster row was removed.
+ */
+export async function removeSharedKeyBudgetMemberTx(
+  tx: BudgetTx,
+  userId: string,
+  now: Date,
+  options?: {
+    envPinnedUserIds?: readonly string[];
+    actorUserId?: string;
+  },
+): Promise<boolean> {
+  const pinned = new Set((options?.envPinnedUserIds ?? []).map((id) => id.trim()).filter(Boolean));
+  if (pinned.has(userId)) {
+    throw new Error("Cannot remove a member pinned by SHARED_KEY_BUDGET_USER_IDS");
+  }
+  const deleted = await tx.sharedKeyBudgetMember.deleteMany({ where: { userId } });
+  const removed = (deleted?.count ?? 0) > 0;
+  if (removed && options?.actorUserId) {
+    await appendAuditEventTx(tx, {
+      action: "shared_key_budget.member.removed",
+      actor: { type: "user", id: options.actorUserId },
+      target: { type: "user", id: userId },
+      organizationId: DEPLOYMENT_AUDIT_ORGANIZATION_ID,
+      metadata: { userId },
+    });
+  }
+  await recomputeSharedKeyWeekAllotmentsTx(tx, now);
+  return removed;
 }
 
 /**
@@ -992,7 +1033,7 @@ export async function syncSharedKeyBudgetMembers(
   await prisma.$transaction(async (tx) => {
     await lockSharedKeyBudget(tx, MEMBERS_LOCK);
     const known = await tx.user.findMany({
-      where: { id: { in: wanted }, deactivatedAt: null },
+      where: { id: { in: wanted }, deactivatedAt: null, deletionRequestedAt: null },
       select: { id: true, email: true },
     });
     const knownIds = new Set(
@@ -1217,9 +1258,13 @@ export async function reserveSharedKeyBudget(
       // Fail closed if a roster member was deactivated after enroll.
       const activeUser = await tx.user.findUnique({
         where: { id: userId },
-        select: { deactivatedAt: true },
+        select: { deactivatedAt: true, deletionRequestedAt: true },
       });
-      if (!activeUser || activeUser.deactivatedAt != null) {
+      if (
+        !activeUser ||
+        activeUser.deactivatedAt != null ||
+        activeUser.deletionRequestedAt != null
+      ) {
         throw new SharedKeyBudgetNotEnrolledError();
       }
       if (!alreadyMember) {

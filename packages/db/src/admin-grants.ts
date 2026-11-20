@@ -80,10 +80,7 @@ export async function addAdminGrant(
   return found;
 }
 
-function isActiveVerified(user: {
-  emailVerified: boolean;
-  deactivatedAt: Date | null;
-}): boolean {
+function isActiveVerified(user: { emailVerified: boolean; deactivatedAt: Date | null }): boolean {
   return user.emailVerified && user.deactivatedAt == null;
 }
 
@@ -91,7 +88,7 @@ function isActiveVerified(user: {
  * Effective admins match `isAdmin`: verified env-email users count even when
  * deactivated; DB grants require verified and not deactivated.
  */
-async function countEffectiveAdmins(
+export async function countEffectiveAdmins(
   prisma: Pick<GrantPrisma, "adminGrant" | "user">,
   envEmails: readonly string[],
   exceptUserId: string,
@@ -123,6 +120,34 @@ async function countEffectiveAdmins(
   }
 
   return ids.size;
+}
+
+/**
+ * Why an admin may not soft-delete this account, or null when they may. The actor, hidden
+ * ops accounts, and the last admin are never deleted; any other admin (grant or
+ * RAKAZO_ADMIN_EMAILS) must lose admin access first.
+ */
+export async function accountDeletionRefusal(
+  prisma: Pick<GrantPrisma, "adminGrant" | "user">,
+  input: { targetUserId: string; actorUserId: string; envEmails: readonly string[] },
+): Promise<string | null> {
+  if (input.targetUserId === input.actorUserId) return "Cannot delete your own account";
+  const user = await prisma.user.findUnique({
+    where: { id: input.targetUserId },
+    select: { email: true },
+  });
+  if (!user) return "User not found";
+  if (isHiddenOpsEmail(user.email)) return "Cannot delete a hidden ops account";
+  if (
+    input.envEmails.map(normalizeEmail).includes(normalizeEmail(user.email)) ||
+    (await userHasAdminGrant(prisma, input.targetUserId))
+  ) {
+    return "Remove admin access before deleting this account";
+  }
+  if ((await countEffectiveAdmins(prisma, input.envEmails, input.targetUserId)) === 0) {
+    return "Cannot delete the last admin";
+  }
+  return null;
 }
 
 /**

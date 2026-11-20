@@ -1642,6 +1642,7 @@ msgid "Clearing…"
 msgstr "正在清空…"
 
 #: src/components/ErrorBoundary.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/MessagingSettingsPanel.tsx
 #: src/pages/ModelSettingsOverlay.tsx
@@ -1852,6 +1853,10 @@ msgstr "請在伺服器上設定外掛程式目錄，以連接應用程式。"
 #: src/pages/KnowledgeSection.tsx
 msgid "Confirm delete"
 msgstr "確認刪除"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Confirm email"
+msgstr ""
 
 #: src/components/ConfirmIdentityDialog.tsx
 msgid "Confirm it's you"
@@ -2205,6 +2210,10 @@ msgstr "無法建立空間"
 msgid "Could not create your bot"
 msgstr "無法建立你的機器人"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Could not delete account"
+msgstr ""
+
 #: src/pages/shell/dialogs.tsx
 msgid "Could not delete bot"
 msgstr "無法刪除機器人"
@@ -2404,6 +2413,10 @@ msgstr "無法播放測試片段"
 msgid "Could not preview plugin"
 msgstr ""
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Could not re-add shared-budget membership"
+msgstr ""
+
 #: src/lib/model-connection-preflight.ts
 msgid "Could not reach the model server."
 msgstr "無法連線到模型伺服器。"
@@ -2440,10 +2453,6 @@ msgstr ""
 #: src/pages/PluginsOverlay.tsx
 msgid "Could not remove connector"
 msgstr "無法移除連接器"
-
-#: src/pages/AdminOpsBudget.tsx
-msgid "Could not remove member"
-msgstr "無法移除成員"
 
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Could not remove plugin"
@@ -2486,6 +2495,10 @@ msgstr "無法渲染圖表"
 #: src/pages/Auth.tsx
 msgid "Could not reset password"
 msgstr "無法重設密碼"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Could not restore account"
+msgstr ""
 
 #: src/pages/AdminOpsBudget.tsx
 msgid "Could not reverse adjustment"
@@ -2958,8 +2971,14 @@ msgstr "刪除 {0}？"
 
 #: src/components/AccountAccess.tsx
 #: src/components/AccountMenu.tsx
+#: src/pages/AdminOpsBudget.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Delete account"
 msgstr "刪除帳號"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Delete account?"
+msgstr ""
 
 #: src/pages/GroupPanel.tsx
 msgid "Delete group"
@@ -2991,6 +3010,7 @@ msgid "deleted"
 msgstr "已刪除"
 
 #: src/components/PasskeySettings.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/OrganizationSettingsPanel.tsx
 #: src/pages/shell/dialogs.tsx
@@ -5393,6 +5413,10 @@ msgid "Pending admin approval"
 msgstr "等待管理員核准"
 
 #: src/pages/AdminOpsPage.tsx
+msgid "Pending deletion · purges on {purgeDate}"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
 msgid "Performance"
 msgstr ""
 
@@ -5805,7 +5829,6 @@ msgstr "重新載入"
 #: src/components/TrustedLinkSitesSettings.tsx
 #: src/components/vault/LoginFieldsInput.tsx
 #: src/components/vault/VaultItemDetail.tsx
-#: src/pages/AdminOpsBudget.tsx
 #: src/pages/AdminOpsPage.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/ModelRoleSettings.tsx
@@ -5826,11 +5849,6 @@ msgstr "移除 {0}"
 msgid "Remove {0} from the group"
 msgstr "將 {0} 移出群組"
 
-#. placeholder {0}: accountLabel(account)
-#: src/pages/AdminOpsBudget.tsx
-msgid "Remove {0} from the roster."
-msgstr "將 {0} 從名冊中移除。"
-
 #. placeholder {0}: accountLabel(removeTarget)
 #: src/pages/AdminOpsPage.tsx
 msgid "Remove {0}?"
@@ -5848,20 +5866,12 @@ msgstr "移除 {site}"
 msgid "Remove change trigger"
 msgstr "移除變化觸發器"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Remove from budget"
-msgstr "從預算中移除"
-
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/PluginsOverlay.tsx
 msgid "Remove from every space?"
 msgstr ""
-
-#: src/pages/AdminOpsBudget.tsx
-msgid "Remove from shared budget?"
-msgstr "從共用預算中移除？"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Remove Git event"
@@ -6053,9 +6063,15 @@ msgid "Restart to update"
 msgstr "重新啟動以更新"
 
 #: src/components/InstructionSettings.tsx
+#: src/pages/AdminOpsBudget.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/shell/archived-chats.tsx
 msgid "Restore"
 msgstr "還原"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Restore account?"
+msgstr ""
 
 #: src/components/ComputerMaintenanceActions.tsx
 msgid "Restore the last saved workspace."
@@ -6069,9 +6085,22 @@ msgstr "還原上次儲存的工作空間。電腦上未儲存的工作會遺失
 msgid "Restored"
 msgstr "已還原"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Restored. Shared-budget membership could not be re-added."
+msgstr ""
+
+#. placeholder {0}: accountLabel(account)
+#: src/pages/AdminOpsBudget.tsx
+msgid "Restores {0} with all data, bots, and prior shared-budget membership."
+msgstr ""
+
 #: src/components/ComputerUpdateProgress.tsx
 msgid "Restoring your workspace"
 msgstr "正在還原工作空間"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Restoring…"
+msgstr ""
 
 #: src/components/AccountAccess.tsx
 #: src/components/integrations/plugin-marketplace.tsx
@@ -6094,6 +6123,10 @@ msgstr "立即重試"
 #: src/pages/shell/use-computer.tsx
 msgid "Retry screen"
 msgstr "重新連線螢幕"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Retry shared budget"
+msgstr ""
 
 #. placeholder {0}: money(reverseTarget.amountUsd)
 #. placeholder {1}: nameFor(reverseTarget.toUserId)
@@ -6759,6 +6792,12 @@ msgstr "未啟用 Slack"
 #: src/components/composer/HoldToTalk.tsx
 msgid "Slide up to lock"
 msgstr "向上滑動以鎖定"
+
+#. placeholder {0}: accountLabel(account)
+#. placeholder {1}: purgePreview.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric", })
+#: src/pages/AdminOpsBudget.tsx
+msgid "Soft-deletes {0}. Data stays for 30 days (purges {1}). Removed from the shared budget. A verified email code restores everything."
+msgstr ""
 
 #: src/components/integrations/skills-dialog.tsx
 #: src/pages/PluginsOverlay.tsx
@@ -7577,6 +7616,10 @@ msgstr "類型"
 #: src/pages/OrganizationSettingsPanel.tsx
 msgid "Type {name} to confirm"
 msgstr "輸入 {name} 以確認"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Type the account email to confirm"
+msgstr ""
 
 #: src/components/teach/TeachRecordingChrome.tsx
 msgid "Type without recording"

@@ -10,7 +10,7 @@ import type { MessageBlock } from "@rakazo/contracts";
 import { ATTACHMENT_MAX_COUNT, AutomatedSenderPoliciesSchema } from "@rakazo/contracts";
 import { botMessageMaxHops, messageBlockForArtifact, promptTextForAttachments } from "@rakazo/core";
 import type { PrismaClient, ThreadEvents } from "@rakazo/db";
-import { clearEndedRunState, teamChatRunClientNonce } from "@rakazo/db";
+import { accountDeactivated, clearEndedRunState, teamChatRunClientNonce } from "@rakazo/db";
 import { getLogger } from "@rakazo/logging";
 import type { MessagingReceipts } from "./messaging-receipts.js";
 import type { TeamChatEngagementJudge } from "./team-chat-judge.js";
@@ -284,8 +284,14 @@ export class TeamChatBridge {
       throw new Error("Messaging workspace mismatch");
     if (this.deps.isAvailable && !(await this.deps.isAvailable()))
       throw new Error("Messaging workspace unavailable");
+    if (this.target && (await accountDeactivated(this.deps.prisma, this.target.userId))) {
+      throw new Error("Messaging account unavailable");
+    }
     await this.backfillThreadHistory(message);
     const conversation = await this.upsertConversation(message);
+    if (await accountDeactivated(this.deps.prisma, conversation.userId)) {
+      throw new Error("Messaging account unavailable");
+    }
     const now = new Date();
     const deferredUntil = new Date(now.getTime() + DEFERRED_RESERVATION_MS);
     const status =
@@ -895,6 +901,7 @@ export class TeamChatBridge {
   private async reconcile(): Promise<void> {
     const target = this.target;
     if (!target) return;
+    if (await accountDeactivated(this.deps.prisma, target.userId)) return;
     if (this.deps.isAvailable && !(await this.deps.isAvailable())) {
       if (this.timer) clearInterval(this.timer);
       this.timer = undefined;

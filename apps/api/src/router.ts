@@ -34,7 +34,12 @@ import type {
 } from "@rakazo/adapters";
 import type { Auth } from "@rakazo/auth";
 import type { NavLink } from "@rakazo/contracts";
-import type { BoardEvents, PrismaClient, ThreadEvents } from "@rakazo/db";
+import type {
+  BoardEvents,
+  PrismaClient,
+  SharedKeyBudgetEnrollmentPolicy,
+  ThreadEvents,
+} from "@rakazo/db";
 import type { BillingService } from "./billing.js";
 import { accountRoutes } from "./routes/account.js";
 import { availabilityRoutes } from "./routes/availability.js";
@@ -143,6 +148,8 @@ export interface RouterDeps {
      * autoEnrollMode=gated unless the deployment is already gated.
      */
     sharedKeyGatedDeployment?: boolean;
+    /** Enrollment bar for re-adding a restored account's prior shared-key membership. */
+    sharedKeyEnrollmentPolicy?: SharedKeyBudgetEnrollmentPolicy;
     /** Deployment default model API key (for the configured default provider). */
     deploymentModelKey?: string | null;
     phoneCallsEnabled?: boolean;

@@ -1,11 +1,9 @@
 import { removePiUserSessions } from "@rakazo/adapters";
 import type { PrismaClient } from "@rakazo/db";
 import {
-  assertStillClaimedForPurge,
   claimAccountForPurge,
+  finalizeAccountPurge,
   listAccountsDueForPurge,
-  personalOrganizationIds,
-  recordAuditEvent,
   recordSecurityEvent,
   runAsSystem,
 } from "@rakazo/db";
@@ -32,38 +30,63 @@ export type AccountPurgeCounts = {
 };
 
 /**
- * Prisma model names that hold a user-owned row (direct user relation).
- * The enumeration guard test fails if schema gains a User relation not listed here
- * and not covered by cascade-on-user-delete or deleteAccountContent.
+ * Prisma models with a `userId` column and/or a User relation that purge deletes
+ * (directly, via cascade from deleted spaces/bots/user, or in finalize).
+ * The enumeration guard fails when the schema gains one not listed here or in RETAINED.
  */
-export const ACCOUNT_PURGE_HANDLED_USER_RELATIONS = [
+export const ACCOUNT_PURGE_HANDLED_USER_MODELS = [
   "AccessGrant",
   "Account",
   "ActionApprovalRule",
   "ActionAutoReviewPreference",
   "AdminGrant",
+  "AgentHome",
+  "AgentImport",
   "AgentSecret",
+  "AgentSkill",
+  "AgentSkillSpace",
   "AiDataConsent",
+  "Artifact",
+  "Bot",
+  "BotMcpServer",
   "BotSecret",
   "BotSection",
+  "BrowserProfile",
   "CallPushDevice",
+  "CapabilityInstall",
+  "CapabilityInstallSpace",
+  "ChatGroup",
+  "CloudAgent",
+  "Computer",
   "ComputerRun",
+  "Connection",
   "EmailSend",
   "FeedbackReport",
   "Invitation",
+  "McpOAuthSession",
   "McpServer",
+  "McpServerSpace",
   "Member",
+  "MemoryDocument",
+  "MessagingIdentity",
   "MessagingInstallSession",
   "MessagingInstallation",
+  "MessagingLinkCode",
+  "ModelOAuthSession",
+  "NotificationPreference",
   "Page",
   "Passkey",
   "Payment",
   "PaymentWallet",
+  "Purchase",
   "PushToken",
+  "Routine",
+  "Run",
   "ScimIdentityTombstone",
   "ScimProjectionGrant",
   "ScimSubject",
   "ScimUser",
+  "ScratchpadItem",
   "Secret",
   "Session",
   "SharedKeyAllotmentTransfer",
@@ -71,9 +94,20 @@ export const ACCOUNT_PURGE_HANDLED_USER_RELATIONS = [
   "SharedKeyBudgetMember",
   "SharedKeyMemberOverride",
   "SharedKeySpendAdjustment",
+  "SharedKeyWeekAllotment",
   "SignupSurvey",
   "Space",
+  "SpaceMember",
+  "SpaceMemoryConfig",
+  "SpaceModelPreference",
+  "SpaceModelRoleChoice",
+  "SpaceSettingOverride",
+  "SpaceVoicePreference",
   "SpendingLimit",
+  "SteeringMessage",
+  "Task",
+  "TaughtSkill",
+  "Thread",
   "Ticket",
   "TicketComment",
   "TrustedLinkSite",
@@ -81,6 +115,7 @@ export const ACCOUNT_PURGE_HANDLED_USER_RELATIONS = [
   "UserActionApprovalRule",
   "UserActionAutoReviewPreference",
   "UserDevice",
+  "UserDeviceConnection",
   "UserModelCredential",
   "UserModelPreference",
   "UserModelRoleChoice",
@@ -89,6 +124,17 @@ export const ACCOUNT_PURGE_HANDLED_USER_RELATIONS = [
   "VaultCredential",
   "WebPushSubscription",
 ] as const;
+
+/** Models with userId / User relation that purge intentionally retains (with reason). */
+export const ACCOUNT_PURGE_RETAINED_USER_MODELS = {
+  BillingAuditEvent: "billing audit trail",
+  ModelCreditEntry: "billing credits ledger",
+  SecurityEvent: "security audit trail",
+  UsageRecord: "usage metering history",
+} as const;
+
+/** @deprecated Prefer ACCOUNT_PURGE_HANDLED_USER_MODELS */
+export const ACCOUNT_PURGE_HANDLED_USER_RELATIONS = ACCOUNT_PURGE_HANDLED_USER_MODELS;
 
 export async function countUserOwnedRows(
   prisma: PrismaClient,
@@ -125,6 +171,8 @@ export async function countUserOwnedRows(
 /**
  * Dry-run or live purge of soft-deleted accounts past purgeAfter.
  * When enabled is false, only logs counts (ids, no PII) and deletes nothing.
+ * One account failing is logged and the sweep moves on; a claim left by a crash goes
+ * stale and a later sweep takes it over.
  */
 export function accountPurgeSweep(
   deps: AccountPurgeDeps,
@@ -133,90 +181,74 @@ export function accountPurgeSweep(
   return (signal) =>
     runAsSystem("purge soft-deleted accounts past retention", async () => {
       const due = await listAccountsDueForPurge(deps.prisma);
-      const log = getLogger();
       for (const { id: userId } of due) {
         if (signal.aborted) return;
-        const counts = await countUserOwnedRows(deps.prisma, userId);
-        if (!options.enabled) {
-          log.info("account.purge.dry_run", {
-            "user.id": userId,
-            "purge.enabled": false,
-            "purge.tables": counts.tables,
-            "purge.storage": counts.storage,
-          });
-          continue;
-        }
-        const claimed = await claimAccountForPurge(deps.prisma, userId);
-        if (!claimed) {
-          log.info("account.purge.skipped", {
-            "user.id": userId,
-            reason: "not_claimable",
-          });
-          continue;
-        }
         try {
-          await deleteAccountContent(deps, userId);
-          if (!(await assertStillClaimedForPurge(deps.prisma, userId))) {
-            log.info("account.purge.aborted", {
-              "user.id": userId,
-              reason: "no_longer_claimed",
-            });
-            continue;
-          }
-          await finalizeAccountPurge(deps, userId);
-          await recordSecurityEvent({
-            type: "ops.account.purged",
-            userId,
-            metadata: { procedure: "account.purge" },
-          });
-          await recordAuditEvent({
-            action: "account.purged",
-            actor: { type: "system", label: "account-purge" },
-            target: { type: "user", id: userId },
-            metadata: { userId },
-          });
-          log.info("account.purge.completed", { "user.id": userId });
+          await purgeAccount(deps, userId, options.enabled);
         } catch (error) {
-          log.error("account.purge.failed", error, { "user.id": userId });
+          getLogger().error("account.purge.failed", error, { "user.id": userId });
         }
       }
     });
 }
 
-/** Delete auth leftovers and the user row after content teardown. Idempotent. */
-async function finalizeAccountPurge(deps: AccountPurgeDeps, userId: string): Promise<void> {
-  const organizationIds = await personalOrganizationIds(deps.prisma, userId);
-  await deps.prisma.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT id FROM "user" WHERE id = ${userId} FOR UPDATE`;
-    const user = await tx.user.findUnique({
-      where: { id: userId },
-      select: {
-        deletionRequestedAt: true,
-        purgeAfter: true,
-        purgeClaimedAt: true,
-      },
+/**
+ * Worker reconciler entry: starts a sweep at most once per interval and never holds up the
+ * reconciliation pass while accounts are torn down.
+ */
+export function accountPurgeReconciler(
+  deps: AccountPurgeDeps,
+  options: { enabled: boolean; signal: AbortSignal; intervalMs?: number; now?: () => number },
+): () => Promise<void> {
+  const sweep = accountPurgeSweep(deps, options);
+  const intervalMs = options.intervalMs ?? 60 * 60 * 1000;
+  const now = options.now ?? Date.now;
+  let lastRun: number | undefined;
+  let running: Promise<void> | undefined;
+  return async () => {
+    const at = now();
+    if (running || (lastRun !== undefined && at - lastRun < intervalMs)) return;
+    lastRun = at;
+    running = sweep(options.signal)
+      .catch((error) => getLogger().error("account purge failed", error))
+      .finally(() => {
+        running = undefined;
+      });
+  };
+}
+
+async function purgeAccount(deps: AccountPurgeDeps, userId: string, enabled: boolean) {
+  const log = getLogger();
+  if (!enabled) {
+    const counts = await countUserOwnedRows(deps.prisma, userId);
+    log.info("account.purge.dry_run", {
+      "user.id": userId,
+      "purge.enabled": false,
+      "purge.tables": counts.tables,
+      "purge.storage": counts.storage,
     });
-    if (
-      !user ||
-      user.deletionRequestedAt == null ||
-      user.purgeClaimedAt == null ||
-      !user.purgeAfter ||
-      user.purgeAfter.getTime() >= Date.now()
-    ) {
-      return;
-    }
-    await tx.messagingIdentity.deleteMany({ where: { userId } });
-    await tx.passkey.deleteMany({ where: { userId } });
-    await tx.session.deleteMany({ where: { userId } });
-    await tx.organization.deleteMany({ where: { id: { in: organizationIds } } });
-    await tx.user.deleteMany({ where: { id: userId } });
-  });
+    return;
+  }
+  const claimedAt = await claimAccountForPurge(deps.prisma, userId);
+  if (!claimedAt) {
+    log.info("account.purge.skipped", { "user.id": userId, reason: "not_claimable" });
+    return;
+  }
+  await deleteAccountContent(deps, userId);
+  if (!(await finalizeAccountPurge(deps.prisma, userId, claimedAt))) {
+    log.info("account.purge.aborted", { "user.id": userId, reason: "no_longer_claimed" });
+    return;
+  }
   await removePiUserSessions(deps.dataDir, userId).catch((error) =>
-    getLogger().error("account.purge.pi_sessions_failed", error, { "user.id": userId }),
+    log.error("account.purge.pi_sessions_failed", error, { "user.id": userId }),
   );
   await deps.pushTokens
     ?.remove(userId)
-    .catch((error) =>
-      getLogger().error("account.purge.push_token_failed", error, { "user.id": userId }),
-    );
+    .catch((error) => log.error("account.purge.push_token_failed", error, { "user.id": userId }));
+  await recordSecurityEvent({
+    type: "ops.account.purged",
+    userId,
+    metadata: { procedure: "account.purge", by: "account-purge" },
+  });
+  log.info("account.purge.completed", { "user.id": userId });
 }

@@ -118,11 +118,6 @@ export interface AppEnv {
   sharedKeyBudgetUserIds: string[];
   /** Exact email domains that auto-enroll on the shared key (SHARED_KEY_BUDGET_EMAIL_DOMAINS). */
   sharedKeyBudgetEmailDomains: string[];
-  /**
-   * Kill switch for permanent purge of soft-deleted accounts (RAKAZO_ACCOUNT_PURGE_ENABLED).
-   * Unset or any value other than exactly `true` keeps the hourly job in dry-run only.
-   */
-  accountPurgeEnabled: boolean;
   e2bApiKey: string | undefined;
   novitaApiKey: string | undefined;
   sandboxTemplate: string | undefined;
@@ -316,7 +311,6 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): AppEnv {
     sharedKeyBudgetEmailDomains: parseSharedKeyBudgetEmailDomains(
       source.SHARED_KEY_BUDGET_EMAIL_DOMAINS,
     ),
-    accountPurgeEnabled: source.RAKAZO_ACCOUNT_PURGE_ENABLED === "true",
     e2bApiKey: source.E2B_API_KEY,
     novitaApiKey: source.NOVITA_API_KEY,
     sandboxTemplate: source.SANDBOX_TEMPLATE,

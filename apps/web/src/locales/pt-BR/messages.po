@@ -1641,6 +1641,7 @@ msgid "Clearing…"
 msgstr "Limpeza"
 
 #: src/components/ErrorBoundary.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/MessagingSettingsPanel.tsx
 #: src/pages/ModelSettingsOverlay.tsx
@@ -1851,6 +1852,10 @@ msgstr ""
 #: src/pages/KnowledgeSection.tsx
 msgid "Confirm delete"
 msgstr "Confirmar exclusão"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Confirm email"
+msgstr ""
 
 #: src/components/ConfirmIdentityDialog.tsx
 msgid "Confirm it's you"
@@ -2204,6 +2209,10 @@ msgstr ""
 msgid "Could not create your bot"
 msgstr "Não foi possível criar o seu bot"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Could not delete account"
+msgstr ""
+
 #: src/pages/shell/dialogs.tsx
 msgid "Could not delete bot"
 msgstr "Não foi possível apagar"
@@ -2403,6 +2412,10 @@ msgstr "Não foi possível reproduzir um clipe de teste"
 msgid "Could not preview plugin"
 msgstr ""
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Could not re-add shared-budget membership"
+msgstr ""
+
 #: src/lib/model-connection-preflight.ts
 msgid "Could not reach the model server."
 msgstr "Não foi possível acessar o servidor do modelo."
@@ -2439,10 +2452,6 @@ msgstr ""
 #: src/pages/PluginsOverlay.tsx
 msgid "Could not remove connector"
 msgstr "Não foi possível remover o conector"
-
-#: src/pages/AdminOpsBudget.tsx
-msgid "Could not remove member"
-msgstr "Não foi possível remover o membro"
 
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Could not remove plugin"
@@ -2485,6 +2494,10 @@ msgstr "Não foi possível renderizar o gráfico"
 #: src/pages/Auth.tsx
 msgid "Could not reset password"
 msgstr "Não foi possível redefinir a senha"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Could not restore account"
+msgstr ""
 
 #: src/pages/AdminOpsBudget.tsx
 msgid "Could not reverse adjustment"
@@ -2957,8 +2970,14 @@ msgstr "Excluir {0}?"
 
 #: src/components/AccountAccess.tsx
 #: src/components/AccountMenu.tsx
+#: src/pages/AdminOpsBudget.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Delete account"
 msgstr "Excluir conta"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Delete account?"
+msgstr ""
 
 #: src/pages/GroupPanel.tsx
 msgid "Delete group"
@@ -2990,6 +3009,7 @@ msgid "deleted"
 msgstr "excluído"
 
 #: src/components/PasskeySettings.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/OrganizationSettingsPanel.tsx
 #: src/pages/shell/dialogs.tsx
@@ -5392,6 +5412,10 @@ msgid "Pending admin approval"
 msgstr "Aguardando aprovação do admin"
 
 #: src/pages/AdminOpsPage.tsx
+msgid "Pending deletion · purges on {purgeDate}"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
 msgid "Performance"
 msgstr ""
 
@@ -5804,7 +5828,6 @@ msgstr "Recarregar"
 #: src/components/TrustedLinkSitesSettings.tsx
 #: src/components/vault/LoginFieldsInput.tsx
 #: src/components/vault/VaultItemDetail.tsx
-#: src/pages/AdminOpsBudget.tsx
 #: src/pages/AdminOpsPage.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/ModelRoleSettings.tsx
@@ -5825,11 +5848,6 @@ msgstr "Remover {0}"
 msgid "Remove {0} from the group"
 msgstr ""
 
-#. placeholder {0}: accountLabel(account)
-#: src/pages/AdminOpsBudget.tsx
-msgid "Remove {0} from the roster."
-msgstr "Remover {0} da lista."
-
 #. placeholder {0}: accountLabel(removeTarget)
 #: src/pages/AdminOpsPage.tsx
 msgid "Remove {0}?"
@@ -5847,20 +5865,12 @@ msgstr "Remover {site}"
 msgid "Remove change trigger"
 msgstr "Remover gatilho de alteração"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Remove from budget"
-msgstr "Remover do orçamento"
-
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/PluginsOverlay.tsx
 msgid "Remove from every space?"
 msgstr ""
-
-#: src/pages/AdminOpsBudget.tsx
-msgid "Remove from shared budget?"
-msgstr "Remover do orçamento compartilhado?"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Remove Git event"
@@ -6052,9 +6062,15 @@ msgid "Restart to update"
 msgstr ""
 
 #: src/components/InstructionSettings.tsx
+#: src/pages/AdminOpsBudget.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/shell/archived-chats.tsx
 msgid "Restore"
 msgstr "Restaurar"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Restore account?"
+msgstr ""
 
 #: src/components/ComputerMaintenanceActions.tsx
 msgid "Restore the last saved workspace."
@@ -6068,8 +6084,21 @@ msgstr "Restaure o último espaço de trabalho salvo. O trabalho não salvo no c
 msgid "Restored"
 msgstr "Restaurado"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Restored. Shared-budget membership could not be re-added."
+msgstr ""
+
+#. placeholder {0}: accountLabel(account)
+#: src/pages/AdminOpsBudget.tsx
+msgid "Restores {0} with all data, bots, and prior shared-budget membership."
+msgstr ""
+
 #: src/components/ComputerUpdateProgress.tsx
 msgid "Restoring your workspace"
+msgstr ""
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Restoring…"
 msgstr ""
 
 #: src/components/AccountAccess.tsx
@@ -6092,6 +6121,10 @@ msgstr "Nova tentativa agora"
 
 #: src/pages/shell/use-computer.tsx
 msgid "Retry screen"
+msgstr ""
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Retry shared budget"
 msgstr ""
 
 #. placeholder {0}: money(reverseTarget.amountUsd)
@@ -6757,6 +6790,12 @@ msgstr ""
 
 #: src/components/composer/HoldToTalk.tsx
 msgid "Slide up to lock"
+msgstr ""
+
+#. placeholder {0}: accountLabel(account)
+#. placeholder {1}: purgePreview.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric", })
+#: src/pages/AdminOpsBudget.tsx
+msgid "Soft-deletes {0}. Data stays for 30 days (purges {1}). Removed from the shared budget. A verified email code restores everything."
 msgstr ""
 
 #: src/components/integrations/skills-dialog.tsx
@@ -7576,6 +7615,10 @@ msgstr ""
 #: src/pages/OrganizationSettingsPanel.tsx
 msgid "Type {name} to confirm"
 msgstr "Digite {name} para confirmar"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Type the account email to confirm"
+msgstr ""
 
 #: src/components/teach/TeachRecordingChrome.tsx
 msgid "Type without recording"

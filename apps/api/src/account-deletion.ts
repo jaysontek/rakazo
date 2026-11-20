@@ -79,6 +79,30 @@ export async function deleteAccountContent(
       removeDeletedBotsFromLegacyTeamHome(deps, spaceId, botIds),
     ),
   );
+
+  // User-scoped rows that survive space teardown and have no ON DELETE cascade from User.
+  // Idempotent: empty deleteMany is a no-op on retry after a mid-purge failure.
+  await deps.prisma.$transaction(async (tx) => {
+    const connections = await tx.connection.findMany({
+      where: { userId },
+      select: { secretId: true },
+    });
+    const secretIds = connections
+      .map((row) => row.secretId)
+      .filter((id): id is string => typeof id === "string" && id.length > 0);
+    await tx.connection.deleteMany({ where: { userId } });
+    if (secretIds.length > 0) {
+      await tx.secret.deleteMany({ where: { id: { in: secretIds } } });
+    }
+    await tx.modelOAuthSession.deleteMany({ where: { userId } });
+    await tx.cloudAgent.deleteMany({ where: { userId } });
+    await tx.sharedKeyWeekAllotment.deleteMany({ where: { userId } });
+    await tx.messagingLinkCode.deleteMany({ where: { userId } });
+    await tx.notificationPreference.deleteMany({ where: { userId } });
+    await tx.agentSkillSpace.deleteMany({ where: { userId } });
+    await tx.mcpServerSpace.deleteMany({ where: { userId } });
+    await tx.capabilityInstallSpace.deleteMany({ where: { userId } });
+  });
 }
 
 type OrganizationDeletionDeps = SpaceDeletionDeps & {

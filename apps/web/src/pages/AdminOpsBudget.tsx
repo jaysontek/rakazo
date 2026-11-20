@@ -1297,7 +1297,10 @@ export function SoftDeleteAccountDialog({
     setSaving(true);
     setError(null);
     try {
-      await rpc.ops.softDeleteAccount({ userId: account.userId });
+      await rpc.ops.softDeleteAccount({
+        userId: account.userId,
+        emailConfirmation: emailConfirm.trim(),
+      });
       onOpenChange(false);
       onChanged();
     } catch (err) {
@@ -1389,14 +1392,35 @@ export function RestoreAccountDialog({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [emailConfirm, setEmailConfirm] = useState("");
+  const [reenrollPending, setReenrollPending] = useState(false);
 
   useEffect(() => {
     setEmailConfirm("");
     setError(null);
+    setReenrollPending(false);
   }, [account]);
 
   const emailMatches =
     account != null && emailConfirm.trim().toLowerCase() === account.email.trim().toLowerCase();
+
+  async function retryReenroll() {
+    if (!account) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const result = await rpc.ops.retryAccountBudgetReenroll({ userId: account.userId });
+      if (result.enrolled || result.reason === "already_member") {
+        onOpenChange(false);
+        onChanged();
+        return;
+      }
+      setError(t`Could not re-add shared-budget membership`);
+    } catch (err) {
+      setError(errorText(err, t`Could not re-add shared-budget membership`));
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function confirm() {
     if (!account || !emailMatches) return;
@@ -1407,10 +1431,15 @@ export function RestoreAccountDialog({
     setSaving(true);
     setError(null);
     try {
-      await rpc.ops.restoreAccount({
+      const result = await rpc.ops.restoreAccount({
         userId: account.userId,
         emailConfirmation: emailConfirm.trim(),
       });
+      if (result.budgetReenroll === "restored_budget_reenroll_pending") {
+        setReenrollPending(true);
+        onChanged();
+        return;
+      }
       onOpenChange(false);
       onChanged();
     } catch (err) {
@@ -1436,7 +1465,11 @@ export function RestoreAccountDialog({
             ) : null}
           </AlertDialogDescription>
         </AlertDialogHeader>
-        {account ? (
+        {reenrollPending ? (
+          <p role="status" className="text-sm text-muted-foreground">
+            <Trans>Restored. Shared-budget membership could not be re-added.</Trans>
+          </p>
+        ) : account ? (
           <div className="space-y-2">
             <p id="ops-restore-email-hint" className="text-sm text-muted-foreground">
               <Trans>Type the account email to confirm</Trans>
@@ -1463,11 +1496,17 @@ export function RestoreAccountDialog({
         ) : null}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={saving}>
-            <Trans>Cancel</Trans>
+            {reenrollPending ? <Trans>Close</Trans> : <Trans>Cancel</Trans>}
           </AlertDialogCancel>
-          <AlertDialogAction disabled={saving || !emailMatches} onClick={() => void confirm()}>
-            {saving ? <Trans>Restoring…</Trans> : <Trans>Restore</Trans>}
-          </AlertDialogAction>
+          {reenrollPending ? (
+            <AlertDialogAction disabled={saving} onClick={() => void retryReenroll()}>
+              <Trans>Retry shared budget</Trans>
+            </AlertDialogAction>
+          ) : (
+            <AlertDialogAction disabled={saving || !emailMatches} onClick={() => void confirm()}>
+              {saving ? <Trans>Restoring…</Trans> : <Trans>Restore</Trans>}
+            </AlertDialogAction>
+          )}
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

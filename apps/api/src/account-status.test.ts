@@ -1,7 +1,7 @@
 import type * as Db from "@rakazo/db";
 import { describe, expect, it, vi } from "vitest";
 import type { AccountStatusDeps } from "./account-status.js";
-import { endDeactivatedAccess } from "./account-status.js";
+import { endDeactivatedAccess, setAccountActive } from "./account-status.js";
 import { revokeUserDevices } from "./user-devices.js";
 
 vi.mock("@rakazo/db", async (original) => ({
@@ -13,6 +13,52 @@ vi.mock("@rakazo/db", async (original) => ({
     },
   ),
 }));
+
+describe("turning an account back on", () => {
+  function depsFor(user: { deactivatedAt: Date | null; deletionRequestedAt: Date | null }) {
+    const updateMany = vi.fn(async () => ({ count: 1 }));
+    const deps = {
+      prisma: {
+        user: { findUnique: vi.fn(async () => user), updateMany },
+        session: { deleteMany: vi.fn(async () => ({ count: 0 })) },
+      },
+    } as unknown as AccountStatusDeps;
+    return { deps, updateMany };
+  }
+
+  it("refuses an account pending deletion and keeps it deactivated", async () => {
+    const { deps, updateMany } = depsFor({
+      deactivatedAt: new Date("2026-06-01T00:00:00.000Z"),
+      deletionRequestedAt: new Date("2026-06-01T00:00:00.000Z"),
+    });
+    await expect(setAccountActive(deps, "user-1", true, false)).resolves.toBe("unchanged");
+    expect(updateMany).not.toHaveBeenCalled();
+  });
+
+  it("puts the deactivation back if something cleared it while deletion is pending", async () => {
+    const { deps, updateMany } = depsFor({
+      deactivatedAt: null,
+      deletionRequestedAt: new Date("2026-06-01T00:00:00.000Z"),
+    });
+    await expect(setAccountActive(deps, "user-1", true, false)).resolves.toBe("unchanged");
+    expect(updateMany).toHaveBeenCalledExactlyOnceWith({
+      where: { id: "user-1", deactivatedAt: null },
+      data: { deactivatedAt: expect.any(Date) },
+    });
+  });
+
+  it("only reactivates an account that is not pending deletion", async () => {
+    const { deps, updateMany } = depsFor({
+      deactivatedAt: new Date("2026-06-01T00:00:00.000Z"),
+      deletionRequestedAt: null,
+    });
+    await expect(setAccountActive(deps, "user-1", true, false)).resolves.toBe("changed");
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { id: "user-1", deactivatedAt: { not: null }, deletionRequestedAt: null },
+      data: { deactivatedAt: null },
+    });
+  });
+});
 
 describe("ending a deactivated account's access", () => {
   it("tries every step when one fails, then reports the failure", async () => {

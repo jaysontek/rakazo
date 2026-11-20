@@ -236,6 +236,7 @@ export const IMPERSONATION_PROCEDURE_KIND = {
   "ops.removeAdminGrant": "ops",
   "ops.removeSharedKeyBudgetMember": "ops",
   "ops.restoreAccount": "ops",
+  "ops.retryAccountBudgetReenroll": "ops",
   "ops.requestLog": "ops",
   "ops.softDeleteAccount": "ops",
   "ops.reverseSharedKeyAllotmentTransfer": "ops",

@@ -62,8 +62,11 @@ model User {
   accountsDeleted             User[]                       @relation("UserDeletedBy")
   /// Whether the user was on the shared-key roster when soft-deleted (restored on restore).
   priorSharedKeyBudgetMember  Boolean                      @default(false)
-  /// Set when the purge worker claims the account; restore refuses once claimed.
+  /// Set when the purge worker claims the account; restore refuses while the claim is fresh.
   purgeClaimedAt              DateTime?
+  /// `deactivatedAt` as it was before soft deletion; restore puts it back. Set means only an
+  /// admin may restore, and the account stays deactivated.
+  deactivatedBeforeDeletion   DateTime?
   sessions                    Session[]
   accounts                    Account[]
   scimSubject                 ScimSubject?

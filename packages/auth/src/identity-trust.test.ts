@@ -75,6 +75,8 @@ function fixture({
   const prisma = {
     authData: data,
     $executeRaw: vi.fn(async () => 0),
+    $queryRaw: vi.fn(async () => []),
+    securityEvent: { count: vi.fn(async () => 0), create: vi.fn(async () => ({})) },
     $transaction: vi.fn(
       async (run: ((tx: typeof prisma) => Promise<unknown>) | Promise<unknown>[]) =>
         Array.isArray(run) ? Promise.all(run) : run(prisma),

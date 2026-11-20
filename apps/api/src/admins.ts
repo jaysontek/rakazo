@@ -5,7 +5,7 @@ type AdminDeps = Pick<RouterDeps, "prisma"> & { env: Pick<RouterDeps["env"], "ad
 
 /**
  * Effective admin: RAKAZO_ADMIN_EMAILS bootstrap (verified) OR a DB admin grant
- * (verified and not deactivated).
+ * (verified). Neither counts while the account is deactivated or pending deletion.
  */
 export async function isAdmin(deps: AdminDeps, userId: string): Promise<boolean> {
   const user = await deps.prisma.user.findUnique({
@@ -14,13 +14,15 @@ export async function isAdmin(deps: AdminDeps, userId: string): Promise<boolean>
       email: true,
       emailVerified: true,
       deactivatedAt: true,
+      deletionRequestedAt: true,
       adminGrant: { select: { userId: true } },
     },
   });
   if (!user?.emailVerified) return false;
+  if (user.deactivatedAt || user.deletionRequestedAt) return false;
   const envAdmins = deps.env.adminEmails ?? [];
   if (envAdmins.includes(user.email.toLowerCase())) return true;
-  return !user.deactivatedAt && user.adminGrant != null;
+  return user.adminGrant != null;
 }
 
 /** True when the user's email is listed in RAKAZO_ADMIN_EMAILS (UI cannot remove these). */

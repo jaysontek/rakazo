@@ -57,6 +57,9 @@ const DONE_TO_ACCOUNT = new Set<SecurityEventType>([
   "auth.account.purged",
   "ops.account.soft_deleted",
   "ops.account.restored",
+  "ops.account.restore.attempted",
+  "ops.account.restore.failed",
+  "ops.account.budget_reenrolled",
   "ops.account.purged",
 ]);
 const MAX_METADATA_KEYS = 16;

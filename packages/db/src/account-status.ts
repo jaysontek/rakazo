@@ -7,13 +7,19 @@ import type { ThreadEvents } from "./events.js";
 import { appendEventInTransaction, transientRunEventsWhere } from "./events.js";
 import { withTransactionRetry } from "./transaction-retry.js";
 
-/** Whether the account may not sign in or run work. A missing account counts as active. */
+/**
+ * Whether the account may not sign in or run work: deactivated or pending deletion.
+ * A missing account counts as active.
+ */
 export async function accountDeactivated(
   db: Pick<PrismaClient, "user">,
   userId: string,
 ): Promise<boolean> {
-  const user = await db.user.findUnique({ where: { id: userId }, select: { deactivatedAt: true } });
-  return Boolean(user?.deactivatedAt);
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { deactivatedAt: true, deletionRequestedAt: true },
+  });
+  return Boolean(user?.deactivatedAt || user?.deletionRequestedAt);
 }
 
 /**
