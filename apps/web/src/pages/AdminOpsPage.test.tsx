@@ -98,19 +98,16 @@ vi.mock("@rakazo/ui-web", () => {
       </div>
     ),
     CollapsibleContent: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
-    CollapsibleTrigger: ({
-      children,
-      onClick,
-      className,
-      ...props
-    }: ComponentProps<"button">) => (
+    CollapsibleTrigger: ({ children, onClick, className, ...props }: ComponentProps<"button">) => (
       <button
         type="button"
         className={className}
         onClick={(event) => {
           onClick?.(event);
           const root = (event.currentTarget as HTMLElement).closest("[data-open]");
-          const force = root?.querySelector<HTMLButtonElement>("[data-testid='collapsible-force-open']");
+          const force = root?.querySelector<HTMLButtonElement>(
+            "[data-testid='collapsible-force-open']",
+          );
           force?.click();
         }}
         {...props}
@@ -211,6 +208,9 @@ vi.mock("../lib/rpc", () => ({
       addAdminGrant: vi.fn(),
       removeAdminGrant: vi.fn(),
       reverseSharedKeyAllotmentTransfer: vi.fn(),
+    },
+    models: {
+      list: vi.fn(async () => []),
     },
   },
 }));

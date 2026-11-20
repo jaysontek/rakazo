@@ -465,7 +465,7 @@ msgstr "/ miesiąc"
 #: src/pages/AdminOpsBudget.tsx
 #: src/pages/AdminOpsPage.tsx
 msgid "+{0} held"
-msgstr ""
+msgstr "+{0} zarezerwowane"
 
 #: src/components/integrations/space-availability.tsx
 msgid "1 space"
@@ -3776,7 +3776,7 @@ msgstr "Odsłuchaj próbkę"
 
 #: src/components/ai/context.tsx
 msgid "Held"
-msgstr ""
+msgstr "Zarezerwowane"
 
 #: src/pages/VoiceSettingsOverlay.tsx
 msgid "Hi, this is how I'll sound when I read replies out loud."
@@ -4154,7 +4154,7 @@ msgstr "Jasny"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Limit reached"
-msgstr ""
+msgstr "Osiągnięto limit"
 
 #: src/pages/SpaceSearch.tsx
 msgid "Link"
@@ -6006,7 +6006,7 @@ msgstr "Limit odnawia się {reset}"
 
 #: src/components/ai/context.tsx
 msgid "Resets {resetLabel}"
-msgstr ""
+msgstr "Limit odnawia się {resetLabel}"
 
 #. placeholder {0}: resetCountdown(budget.resetsAt)
 #: src/pages/AdminOpsBudget.tsx
@@ -6790,7 +6790,7 @@ msgstr "Domyślne dla przestrzeni"
 
 #: src/pages/shell/bot-panel.tsx
 msgid "Space default ({spaceDefaultName})"
-msgstr ""
+msgstr "Domyślne dla przestrzeni ({spaceDefaultName})"
 
 #: src/pages/SettingsOverlay.tsx
 msgid "Spaces"
@@ -6836,7 +6836,7 @@ msgstr "Limit wydatków"
 
 #: src/components/ai/context.tsx
 msgid "Spent"
-msgstr ""
+msgstr "Wydane"
 
 #: src/components/AccountAccess.tsx
 msgid "SSO"
@@ -7895,7 +7895,7 @@ msgstr "Nadpisanie tygodniowego przydziału"
 
 #: src/components/ai/context.tsx
 msgid "Weekly limit reached for new runs · Resets {resetLabel}"
-msgstr ""
+msgstr "Tygodniowy limit uniemożliwia nowe uruchomienia · Limit odnawia się {resetLabel}"
 
 #: src/pages/AdminOpsBudget.tsx
 msgid "Weekly shared-key pool used"
@@ -8112,7 +8112,7 @@ msgstr "Po zakończeniu okresu próbnego plan zmieni się na {tierTargetLabel}."
 #. js-lingui-explicit-id
 #: src/lib/run-error.ts
 msgid "Your share of this week's shared API key budget is used up. It resets next week, or connect your own key in Models."
-msgstr ""
+msgstr "Twój udział w tygodniowym budżecie wspólnego klucza API jest wyczerpany. Limit odnawia się w przyszłym tygodniu albo podłącz własny klucz w Modelach."
 
 #: src/components/integrations/skills-dialog.tsx
 msgid "Your skills"

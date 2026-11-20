@@ -1,5 +1,5 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import type { OpsTeam, OpsTeamMember } from "@rakazo/contracts";
+import type { ModelCatalogEntry, OpsTeam, OpsTeamMember } from "@rakazo/contracts";
 import {
   Badge,
   buttonVariants,
@@ -83,13 +83,12 @@ export function AdminOpsTeamPage() {
   );
 }
 
-function TeamDashboard({ organizationId }: { organizationId: string }) {
+export function TeamDashboard({ organizationId }: { organizationId: string }) {
   const { t } = useLingui();
   const catalogQuery = useQuery({
     queryKey: ["models", "list"],
     queryFn: () => rpc.models.list(),
   });
-  const catalog = catalogQuery.data ?? [];
   const team = useQuery({
     queryKey: ["ops", "team", organizationId],
     queryFn: () => rpc.ops.team({ organizationId }),
@@ -110,10 +109,10 @@ function TeamDashboard({ organizationId }: { organizationId: string }) {
     );
   }
 
-  return <TeamView data={team.data} />;
+  return <TeamView data={team.data} catalog={catalogQuery.data ?? []} />;
 }
 
-export function TeamView({ data }: { data: OpsTeam }) {
+export function TeamView({ data, catalog = [] }: { data: OpsTeam; catalog?: ModelCatalogEntry[] }) {
   const { t } = useLingui();
   const queryClient = useQueryClient();
   const [busyUserId, setBusyUserId] = useState<string | null>(null);
@@ -252,8 +251,8 @@ export function TeamView({ data }: { data: OpsTeam }) {
             <Card size="sm">
               <CardHeader className="gap-2">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 w-full">
-                    <CardTitle className="min-w-0 w-full truncate">{memberLabel(member)}</CardTitle>
+                  <div className="min-w-0 flex-1">
+                    <CardTitle className="truncate">{memberLabel(member)}</CardTitle>
                     <CardDescription className="break-all">{member.email}</CardDescription>
                   </div>
                   <KeyBadge keyType={member.keyType} />

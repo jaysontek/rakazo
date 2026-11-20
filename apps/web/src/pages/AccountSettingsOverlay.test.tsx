@@ -324,10 +324,24 @@ it("shows usage totals and a per-model breakdown", async () => {
         />,
       ),
     );
-    expect([...container.querySelectorAll("dd")].map((node) => node.textContent)).toEqual([
+    const summary = container.querySelector("dl.grid");
+    expect(summary).toBeTruthy();
+    expect([...summary!.querySelectorAll("dd")].map((node) => node.textContent)).toEqual([
       "2",
       "1,234",
       "$0.50",
+    ]);
+    const compact = container.querySelector('[data-testid="usage-models-compact"]');
+    expect(compact).toBeTruthy();
+    expect(
+      [...compact!.querySelectorAll("li")].map((row) => ({
+        model: row.querySelector(".text-foreground")?.textContent,
+        provider: row.querySelector(".text-muted-foreground")?.textContent,
+        values: [...row.querySelectorAll("dd")].map((node) => node.textContent),
+      })),
+    ).toEqual([
+      { model: "model-a", provider: "openai", values: ["2", "1,000", "30", "$0.50"] },
+      { model: "model-b", provider: "local", values: ["1", "200", "4", "—"] },
     ]);
     expect(
       [...container.querySelectorAll("tbody tr")].map((row) =>

@@ -1795,6 +1795,12 @@ function RequestLogSection({
     queryFn: () => rpc.ops.requestLog({ limit: 40 }),
     enabled: interactive,
   });
+  const catalogQuery = useQuery({
+    queryKey: ["models", "list"],
+    queryFn: () => rpc.models.list(),
+    enabled: interactive,
+  });
+  const catalog = catalogQuery.data ?? [];
   const rows = interactive ? log.data : (fixtureRows ?? []);
 
   return (
@@ -1839,11 +1845,12 @@ function RequestLogSection({
                 {rows.map((row) => {
                   const active = selected?.id === row.id;
                   const clickable = Boolean(row.runId || row.threadId);
-                  const model = resolveModelDisplay(row.provider, row.model);
+                  const model = resolveModelDisplay(row.provider, row.model, catalog);
                   return (
                     <tr
                       key={row.id}
                       tabIndex={clickable ? 0 : undefined}
+                      role={clickable ? "button" : undefined}
                       aria-selected={active || undefined}
                       className={`border-b border-border/60 outline-none ${clickable ? "cursor-pointer focus-visible:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring/50" : ""} ${active ? "bg-muted/40" : ""}`}
                       onClick={() => {
@@ -1925,7 +1932,7 @@ function RequestLogSection({
                     <CardContent className="space-y-1 text-sm">
                       <div className="min-w-0">
                         {(() => {
-                          const model = resolveModelDisplay(row.provider, row.model);
+                          const model = resolveModelDisplay(row.provider, row.model, catalog);
                           if (!model) return "—";
                           return (
                             <span
