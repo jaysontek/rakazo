@@ -9,6 +9,16 @@ import {
   TeamChatStartupRetries,
 } from "./team-chat-startup.js";
 
+/** Active account for TeamChatBridge prisma stubs (soft-delete / deactivate gate). */
+function prismaForBridge(stub: Record<string, unknown> = {}): PrismaClient {
+  return {
+    ...stub,
+    user: {
+      findUnique: vi.fn(async () => ({ deactivatedAt: null, deletionRequestedAt: null })),
+    },
+  } as unknown as PrismaClient;
+}
+
 function message(overrides: Partial<MessagingInboundMessage> = {}): MessagingInboundMessage {
   return {
     type: "message",
@@ -116,11 +126,11 @@ describe("TeamChatBridge start cancellation", () => {
         }),
     );
     const bridge = new TeamChatBridge({
-      prisma: {
+      prisma: prismaForBridge({
         bot: { findFirst: blockedFindFirst },
         externalMessage: { findMany: vi.fn(), updateMany: vi.fn() },
         run: { findMany: vi.fn(async () => []) },
-      } as unknown as PrismaClient,
+      }),
       events: { sendUserMessage: vi.fn() },
       jobs: { enqueue: vi.fn() },
       send: vi.fn(),
@@ -157,7 +167,7 @@ describe("TeamChatBridge start cancellation", () => {
         return [];
       });
       const bridge = new TeamChatBridge({
-        prisma: {
+        prisma: prismaForBridge({
           bot: {
             findFirst: vi.fn(async () => ({
               id: "bot-1",
@@ -173,7 +183,7 @@ describe("TeamChatBridge start cancellation", () => {
             updateMany: vi.fn(async () => ({ count: 0 })),
           },
           run: { findMany: vi.fn(async () => []) },
-        } as unknown as PrismaClient,
+        }),
         events: { sendUserMessage: vi.fn() },
         jobs: { enqueue: vi.fn() },
         send: vi.fn(),
@@ -203,7 +213,7 @@ it("stops a disconnected installation's reconciliation timer and retains workspa
   const onUnavailable = vi.fn();
   const updateMany = vi.fn(async () => ({ count: 0 }));
   const bridge = new TeamChatBridge({
-    prisma: {
+    prisma: prismaForBridge({
       bot: {
         findFirst: vi.fn(async () => ({
           id: "bot-a",
@@ -216,7 +226,7 @@ it("stops a disconnected installation's reconciliation timer and retains workspa
       },
       externalMessage: { findMany: vi.fn(async () => []), updateMany },
       run: { findMany: vi.fn(async () => []) },
-    } as unknown as PrismaClient,
+    }),
     events: { sendUserMessage: vi.fn() },
     jobs: { enqueue: vi.fn() },
     send: vi.fn(),
