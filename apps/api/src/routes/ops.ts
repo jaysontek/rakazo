@@ -26,6 +26,7 @@ import {
   transferSharedKeyAllotment,
   updateSharedKeyBudgetSettings,
 } from "@rakazo/db";
+import { endDeactivatedAccess } from "../account-status.js";
 import {
   requireNotImpersonating,
   startImpersonation,
@@ -512,7 +513,18 @@ export function opsRoutes(ctx: RouterContext) {
             actorUserId: context.actor.userId,
             envPinnedUserIds: envPinnedSharedKeyUserIds(),
           });
-          if (deps.events) {
+          // Same teardown as directory/operator deactivate: sessions, devices, push, runs.
+          if (deps.devices) {
+            await endDeactivatedAccess(
+              {
+                prisma: deps.prisma,
+                pushTokens: deps.pushTokens,
+                devices: deps.devices,
+                events: deps.events,
+              },
+              input.userId,
+            ).catch(() => undefined);
+          } else {
             await cancelDeactivatedAccountRuns(deps.prisma, deps.events, input.userId).catch(
               () => undefined,
             );

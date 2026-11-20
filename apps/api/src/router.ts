@@ -57,6 +57,7 @@ import { routinesRoutes } from "./routes/routines.js";
 import { spacesRoutes } from "./routes/spaces.js";
 import { spendingLimitRoutes } from "./routes/spending-limit.js";
 import { threadsRoutes } from "./routes/threads.js";
+import type { DeviceStore } from "./user-devices.js";
 import type { VoiceDeps } from "./voice.js";
 
 export { nextConnectionLabel } from "./model-credentials.js";
@@ -66,6 +67,8 @@ export { callMarkerClientNonce } from "./routes/threads.js";
 
 export interface RouterDeps {
   pushTokens: PushTokenStore;
+  /** Paired computers / user devices; used when soft-deleting to revoke device sessions. */
+  devices?: DeviceStore;
   webPushSubscriptions?: WebPushSubscriptionStore;
   /** Present when VAPID is configured; clients use it for the public key. */
   webPush?: WebPushProvider;

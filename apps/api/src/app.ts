@@ -942,6 +942,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
     prisma,
     notifications,
     pushTokens,
+    devices: deviceSessions,
     webPushSubscriptions,
     webPush,
     events,
