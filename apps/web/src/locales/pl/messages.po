@@ -1855,7 +1855,7 @@ msgstr "Potwierdź usunięcie"
 
 #: src/pages/AdminOpsBudget.tsx
 msgid "Confirm email"
-msgstr ""
+msgstr "Potwierdź e-mail"
 
 #: src/components/ConfirmIdentityDialog.tsx
 msgid "Confirm it's you"
@@ -2211,7 +2211,7 @@ msgstr "Nie udało się utworzyć Twojego bota"
 
 #: src/pages/AdminOpsBudget.tsx
 msgid "Could not delete account"
-msgstr ""
+msgstr "Nie udało się usunąć konta"
 
 #: src/pages/shell/dialogs.tsx
 msgid "Could not delete bot"
@@ -2414,7 +2414,7 @@ msgstr "Nie udało się wyświetlić podglądu wtyczki"
 
 #: src/pages/AdminOpsBudget.tsx
 msgid "Could not re-add shared-budget membership"
-msgstr ""
+msgstr "Nie udało się ponownie dodać do wspólnego budżetu"
 
 #: src/lib/model-connection-preflight.ts
 msgid "Could not reach the model server."
@@ -2497,7 +2497,7 @@ msgstr "Nie udało się zresetować hasła"
 
 #: src/pages/AdminOpsBudget.tsx
 msgid "Could not restore account"
-msgstr ""
+msgstr "Nie udało się przywrócić konta"
 
 #: src/pages/AdminOpsBudget.tsx
 msgid "Could not reverse adjustment"
@@ -2977,7 +2977,7 @@ msgstr "Usuń konto"
 
 #: src/pages/AdminOpsBudget.tsx
 msgid "Delete account?"
-msgstr ""
+msgstr "Usunąć konto?"
 
 #: src/pages/GroupPanel.tsx
 msgid "Delete group"
@@ -5413,7 +5413,7 @@ msgstr "Oczekuje na zatwierdzenie administratora"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Pending deletion · purges on {purgeDate}"
-msgstr ""
+msgstr "Oczekuje na usunięcie · trwale {purgeDate}"
 
 #: src/pages/AdminOpsPage.tsx
 msgid "Performance"
@@ -6070,7 +6070,7 @@ msgstr "Przywróć"
 
 #: src/pages/AdminOpsBudget.tsx
 msgid "Restore account?"
-msgstr ""
+msgstr "Przywrócić konto?"
 
 #: src/components/ComputerMaintenanceActions.tsx
 msgid "Restore the last saved workspace."
@@ -6086,12 +6086,12 @@ msgstr "Przywrócono"
 
 #: src/pages/AdminOpsBudget.tsx
 msgid "Restored. Shared-budget membership could not be re-added."
-msgstr ""
+msgstr "Przywrócono. Nie udało się ponownie dodać do wspólnego budżetu."
 
 #. placeholder {0}: accountLabel(account)
 #: src/pages/AdminOpsBudget.tsx
 msgid "Restores {0} with all data, bots, and prior shared-budget membership."
-msgstr ""
+msgstr "Przywraca {0} wraz z danymi, botami i wcześniejszym udziałem we wspólnym budżecie."
 
 #: src/components/ComputerUpdateProgress.tsx
 msgid "Restoring your workspace"
@@ -6099,7 +6099,7 @@ msgstr "Przywracanie obszaru roboczego"
 
 #: src/pages/AdminOpsBudget.tsx
 msgid "Restoring…"
-msgstr ""
+msgstr "Przywracanie…"
 
 #: src/components/AccountAccess.tsx
 #: src/components/integrations/plugin-marketplace.tsx
@@ -6125,7 +6125,7 @@ msgstr "Ponów połączenie z ekranem"
 
 #: src/pages/AdminOpsBudget.tsx
 msgid "Retry shared budget"
-msgstr ""
+msgstr "Ponów wspólny budżet"
 
 #. placeholder {0}: money(reverseTarget.amountUsd)
 #. placeholder {1}: nameFor(reverseTarget.toUserId)
@@ -6796,7 +6796,7 @@ msgstr "Przesuń w górę, aby zablokować"
 #. placeholder {1}: purgePreview.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric", })
 #: src/pages/AdminOpsBudget.tsx
 msgid "Soft-deletes {0}. Data stays for 30 days (purges {1}). Removed from the shared budget. A verified email code restores everything."
-msgstr ""
+msgstr "Miękkie usunięcie {0}. Dane zostają na 30 dni (trwałe usunięcie {1}). Usunięte ze wspólnego budżetu. Zweryfikowany kod e-mail przywraca wszystko."
 
 #: src/components/integrations/skills-dialog.tsx
 #: src/pages/PluginsOverlay.tsx
@@ -7618,7 +7618,7 @@ msgstr "Wpisz {name}, aby potwierdzić"
 
 #: src/pages/AdminOpsBudget.tsx
 msgid "Type the account email to confirm"
-msgstr ""
+msgstr "Wpisz e-mail konta, aby potwierdzić"
 
 #: src/components/teach/TeachRecordingChrome.tsx
 msgid "Type without recording"
