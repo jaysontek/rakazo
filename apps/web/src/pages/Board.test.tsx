@@ -533,7 +533,9 @@ it("hides New ticket while impersonating and keeps it when not", async () => {
   const readonly = await renderBoard();
   try {
     expect(
-      [...readonly.container.querySelectorAll("button")].some((b) => b.textContent === "New ticket"),
+      [...readonly.container.querySelectorAll("button")].some(
+        (b) => b.textContent === "New ticket",
+      ),
     ).toBe(false);
   } finally {
     await readonly.cleanup();

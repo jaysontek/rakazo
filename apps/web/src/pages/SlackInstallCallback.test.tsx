@@ -8,6 +8,10 @@ import { afterEach, expect, it, vi } from "vitest";
 const complete = vi.hoisted(() => vi.fn());
 
 vi.mock("../lib/rpc", () => ({ rpc: { messaging: { installations: { complete } } } }));
+vi.mock("../lib/use-impersonating", () => ({
+  useIsImpersonating: () => false,
+  useImpersonating: () => null,
+}));
 vi.mock("../components/PageLoading", () => ({ PageLoading: () => <div>Loading</div> }));
 vi.mock("@lingui/react/macro", () => ({
   Trans: ({ children }: { children: ReactNode }) => children,

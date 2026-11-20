@@ -556,6 +556,8 @@ export function useComputerControls({
     showProgress: boolean;
     force?: boolean;
   }) {
+    // Impersonation is view-only; never start or force a boot from Retry / Wake.
+    if (readOnlyRef.current) return;
     setScreenUrlLoadedBotId(null);
     screenAwaitsRetry.current = false;
     const epoch = ++computerBootEpoch.current;
@@ -807,33 +809,35 @@ export function useComputerControls({
         </p>
       ) : null}
       <p className="text-destructive">{computerFailure}</p>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => {
-          if (!computerBot) return;
-          setScreenLoadError(null);
-          setScreenUrlLoadedBotId(null);
-          // An explicit retry clears any error and starts the screen's reconnects over;
-          // background screen reads clear only their own error.
-          screenAwaitsRetry.current = false;
-          resetScreenReconnect();
-          if (computer?.state === "running") {
-            setComputerError(null);
-            setComputerErrorFromScreen(false);
-            void refreshComputerScreen(computerBot.id);
-          } else
-            void bootComputer({
-              botId: computerBot.id,
-              takeControl: false,
-              showProgress: true,
-              force: true,
-            }).catch(() => undefined);
-        }}
-      >
-        <Trans>Retry screen</Trans>
-      </Button>
-      {screenFailure && computer?.state === "running" && computerBot ? (
+      {readOnly ? null : (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            if (!computerBot) return;
+            setScreenLoadError(null);
+            setScreenUrlLoadedBotId(null);
+            // An explicit retry clears any error and starts the screen's reconnects over;
+            // background screen reads clear only their own error.
+            screenAwaitsRetry.current = false;
+            resetScreenReconnect();
+            if (computer?.state === "running") {
+              setComputerError(null);
+              setComputerErrorFromScreen(false);
+              void refreshComputerScreen(computerBot.id);
+            } else
+              void bootComputer({
+                botId: computerBot.id,
+                takeControl: false,
+                showProgress: true,
+                force: true,
+              }).catch(() => undefined);
+          }}
+        >
+          <Trans>Retry screen</Trans>
+        </Button>
+      )}
+      {!readOnly && screenFailure && computer?.state === "running" && computerBot ? (
         <ComputerMaintenanceActions
           visibleRecover
           botId={computerBot.id}

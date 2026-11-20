@@ -63,7 +63,11 @@ test.describe("impersonation banner layout", () => {
 
     // Refetch the banner's me query without a full reload so the call stays up.
     await page.evaluate(async () => {
-      const { queryClient } = await import("/src/lib/query.ts");
+      // Vite serves this absolute path in e2e; TypeScript cannot resolve it as a module.
+      const { queryClient } = await import(
+        /* @vite-ignore */ // @ts-expect-error Vite absolute source URL
+        "/src/lib/query.ts"
+      );
       await queryClient.invalidateQueries({ queryKey: ["me"] });
     });
 
@@ -133,31 +137,92 @@ test.describe("impersonation banner layout", () => {
       await captureScreenshot(page, testInfo, `impersonation-after-${viewport.name}`);
     }
 
-    // Settings dialog: Stop must stay hittable above the overlay.
+    // Settings dialog: Stop and the section nav must stay hittable above/below the banner.
+    await page.setViewportSize({ width: 390, height: 844 });
     await page.getByTestId("user-menu-trigger").click();
     await page.getByRole("button", { name: "Settings", exact: true }).click();
-    const settings = page.locator("[data-settings-section], [role='dialog']").first();
+    const settings = page.getByTestId("user-settings");
     await expect(settings).toBeVisible();
-    const stopHitWithSettings = await page.evaluate(() => {
+    const settingsHits = await page.evaluate(() => {
       const stop = document.querySelector('[data-testid="impersonation-stop"]') as HTMLElement;
-      const box = stop.getBoundingClientRect();
-      const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
-      return Boolean(hit?.closest('[data-testid="impersonation-stop"]'));
+      const nav = document.querySelector('[data-testid="settings-nav"]') as HTMLElement;
+      const settingsEl = document.querySelector('[data-testid="user-settings"]') as HTMLElement;
+      const stopBox = stop.getBoundingClientRect();
+      const navBox = nav.getBoundingClientRect();
+      const settingsBox = settingsEl.getBoundingClientRect();
+      const bannerBottom =
+        document.querySelector('[data-testid="impersonation-banner"]')?.getBoundingClientRect()
+          .bottom ?? 0;
+      const hitStop = document.elementFromPoint(
+        stopBox.left + stopBox.width / 2,
+        stopBox.top + stopBox.height / 2,
+      );
+      const hitNav = document.elementFromPoint(
+        navBox.left + Math.min(24, navBox.width / 2),
+        navBox.top + Math.min(24, navBox.height / 2),
+      );
+      return {
+        stopHittable: Boolean(hitStop?.closest('[data-testid="impersonation-stop"]')),
+        navHittable: Boolean(hitNav?.closest('[data-testid="settings-nav"]')),
+        settingsTop: settingsBox.top,
+        bannerBottom,
+      };
     });
-    expect(stopHitWithSettings).toBe(true);
+    expect(settingsHits.stopHittable).toBe(true);
+    expect(settingsHits.navHittable).toBe(true);
+    expect(settingsHits.settingsTop).toBeGreaterThanOrEqual(settingsHits.bannerBottom - 1);
     await page.keyboard.press("Escape");
 
-    // Computer overlay is full-screen at z-30; banner at z-60 must stay on top.
+    // Computer overlay clears the banner; Close and Stop stay hittable.
     await page.setViewportSize({ width: 1440, height: 900 });
     await openBotPanelTab(page, "Computer");
     await page.getByTestId("computer-preview-open").click();
     await expect(page.getByTestId("computer-viewport")).toBeVisible();
-    const stopHitWithComputer = await page.evaluate(() => {
+    const computerHits = await page.evaluate(() => {
       const stop = document.querySelector('[data-testid="impersonation-stop"]') as HTMLElement;
-      const box = stop.getBoundingClientRect();
-      const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
-      return Boolean(hit?.closest('[data-testid="impersonation-stop"]'));
+      const close = document.querySelector('[data-testid="computer-overlay-close"]') as HTMLElement;
+      const bannerBottom =
+        document.querySelector('[data-testid="impersonation-banner"]')?.getBoundingClientRect()
+          .bottom ?? 0;
+      const stopBox = stop.getBoundingClientRect();
+      const closeBox = close.getBoundingClientRect();
+      const hitStop = document.elementFromPoint(
+        stopBox.left + stopBox.width / 2,
+        stopBox.top + stopBox.height / 2,
+      );
+      const hitClose = document.elementFromPoint(
+        closeBox.left + closeBox.width / 2,
+        closeBox.top + closeBox.height / 2,
+      );
+      return {
+        stopHittable: Boolean(hitStop?.closest('[data-testid="impersonation-stop"]')),
+        closeHittable: Boolean(hitClose?.closest('[data-testid="computer-overlay-close"]')),
+        closeTop: closeBox.top,
+        bannerBottom,
+      };
     });
-    expect(stopHitWithComputer).toBe(true);
+    expect(computerHits.stopHittable).toBe(true);
+    expect(computerHits.closeHittable).toBe(true);
+    expect(computerHits.closeTop).toBeGreaterThanOrEqual(computerHits.bannerBottom - 1);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    const mobileClose = await page.evaluate(() => {
+      const close = document.querySelector('[data-testid="computer-overlay-close"]') as HTMLElement;
+      const bannerBottom =
+        document.querySelector('[data-testid="impersonation-banner"]')?.getBoundingClientRect()
+          .bottom ?? 0;
+      const closeBox = close.getBoundingClientRect();
+      const hitClose = document.elementFromPoint(
+        closeBox.left + closeBox.width / 2,
+        closeBox.top + closeBox.height / 2,
+      );
+      return {
+        closeHittable: Boolean(hitClose?.closest('[data-testid="computer-overlay-close"]')),
+        closeTop: closeBox.top,
+        bannerBottom,
+      };
+    });
+    expect(mobileClose.closeHittable).toBe(true);
+    expect(mobileClose.closeTop).toBeGreaterThanOrEqual(mobileClose.bannerBottom - 1);
   });
 });

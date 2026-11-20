@@ -131,9 +131,7 @@ export function SidebarRoster({
               // biome-ignore lint/a11y/useSemanticElements: groups sidebar controls, not form fields; Move to remains the keyboard alternative.
               <div
                 role="group"
-                data-roster-drop={
-                  !readOnly && rosterDropKey === headerDropKey ? "true" : undefined
-                }
+                data-roster-drop={!readOnly && rosterDropKey === headerDropKey ? "true" : undefined}
                 className={`${
                   group.title && hasSpaceActions && !readOnly
                     ? "grid pt-3 pb-0.5"
@@ -176,9 +174,8 @@ export function SidebarRoster({
                       }
                       className={`flex min-w-0 items-center justify-between gap-2 rounded-lg px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring ${hasSpaceActions && !readOnly ? "col-start-1 row-start-1 w-full" : "flex-1"}`}
                       onClick={() => {
-                        if (group.emptySpaceId) {
-                          openSpaceChat(group.emptySpaceId, "/onboarding");
-                        }
+                        if (readOnly || !group.emptySpaceId) return;
+                        openSpaceChat(group.emptySpaceId, "/onboarding");
                       }}
                       onContextMenu={
                         readOnly
@@ -434,9 +431,7 @@ export function SidebarRoster({
                       );
                     }}
                     // Focus the row so closing the menu returns focus here.
-                    onContextMenu={
-                      readOnly ? undefined : (event) => event.currentTarget.focus()
-                    }
+                    onContextMenu={readOnly ? undefined : (event) => event.currentTarget.focus()}
                     className={`flex items-center ${
                       mini
                         ? "mx-auto size-12 justify-center rounded-xl"
@@ -576,9 +571,7 @@ export function SidebarRoster({
                   >
                     <ContextMenu
                       disabled={readOnly || item.chat.spaceId !== bootstrapMe?.spaceId}
-                      open={
-                        !readOnly && botMenu?.kind === item.kind && botMenu.id === item.chat.id
-                      }
+                      open={!readOnly && botMenu?.kind === item.kind && botMenu.id === item.chat.id}
                       // A sibling row's menu may already own the state; only clear our own.
                       onOpenChange={(open) => {
                         if (readOnly) return;

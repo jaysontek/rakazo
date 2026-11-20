@@ -44,6 +44,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AccountMenu } from "../components/AccountMenu";
 import { FoundModelPicker } from "../components/FoundModelPicker";
+import { ImpersonationBlockedPage } from "../components/ImpersonationBlockedPage";
 import {
   ModelPreflightFeedback,
   modelPreflightTestingLabel,
@@ -63,6 +64,7 @@ import {
 } from "../lib/model-connection-preflight";
 import { rpc } from "../lib/rpc";
 import { useSignOut } from "../lib/sign-out";
+import { useIsImpersonating } from "../lib/use-impersonating";
 import { useModelOAuthSignIn } from "../lib/use-model-oauth-signin";
 import { errorText } from "../lib/user-error";
 import { CompatibleKeyField } from "./model-settings/compatible-key-field";
@@ -143,6 +145,7 @@ async function ensureFirstBot(): Promise<{ id: string }> {
 
 export function OnboardingPage() {
   const { t } = useLingui();
+  const impersonating = useIsImpersonating();
   const navigate = useNavigate();
   const fieldId = useId();
   // The URL holds the survey and model steps, so /onboarding/survey and /onboarding/model open directly.
@@ -552,9 +555,11 @@ export function OnboardingPage() {
   }
 
   useEffect(() => {
-    if (step !== "bot") return;
+    if (impersonating || step !== "bot") return;
     void createFirstBot();
-  }, [step]);
+  }, [impersonating, step]);
+
+  if (impersonating) return <ImpersonationBlockedPage />;
 
   // Loading, and creating the first bot, both wait on one spinner until the chat opens.
   if (step === "loading" || (step === "bot" && !error)) return <PageLoading />;

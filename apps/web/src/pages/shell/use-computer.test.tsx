@@ -417,7 +417,7 @@ it("opens the computer view-only without boot or heartbeat while read-only", asy
   const heartbeat = vi.fn(async () => undefined);
   const status = vi.fn(async () => boot());
   const bot = { id: "bot-1", name: "Ada", color: "ink", status: "idle" } as const;
-  let controls: ReturnType<typeof useComputerControls>;
+  let controls!: ReturnType<typeof useComputerControls>;
   function Controls() {
     state = useComputerState({
       rpc: { computer: { screenUrl, status } } as never,

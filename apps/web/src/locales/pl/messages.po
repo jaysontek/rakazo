@@ -5594,27 +5594,27 @@ msgstr "Czytaj odpowiedzi na głos"
 #: src/pages/SettingsOverlay.tsx
 #: src/pages/shell/side-panel.tsx
 msgid "Read-only"
-msgstr ""
+msgstr "Tylko do odczytu"
 
 #: src/components/ImpersonationBanner.tsx
 msgid "Read-only · Viewing as <0>{targetEmail}</0>"
-msgstr ""
+msgstr "Tylko do odczytu · Wyświetlasz jako <0>{targetEmail}</0>"
 
 #: src/components/ImpersonationBanner.tsx
 msgid "Read-only · Viewing as <0>{targetEmail}</0> · Ends {endsAt}"
-msgstr ""
+msgstr "Tylko do odczytu · Wyświetlasz jako <0>{targetEmail}</0> · Kończy się {endsAt}"
 
 #: src/components/ImpersonationBanner.tsx
 msgid "Read-only · Viewing as <0>{targetName}</0>"
-msgstr ""
+msgstr "Tylko do odczytu · Wyświetlasz jako <0>{targetName}</0>"
 
 #: src/components/ImpersonationBanner.tsx
 msgid "Read-only · Viewing as <0>{targetName}</0> (<1>{targetEmail}</1>) · Ends {endsAt}"
-msgstr ""
+msgstr "Tylko do odczytu · Wyświetlasz jako <0>{targetName}</0> (<1>{targetEmail}</1>) · Kończy się {endsAt}"
 
 #: src/components/ImpersonationReadOnlyNotice.tsx
 msgid "Read-only while viewing as <0>{name}</0>"
-msgstr ""
+msgstr "Tylko do odczytu podczas wyświetlania jako <0>{name}</0>"
 
 #: src/pages/shell/import-status.ts
 msgid "Ready"
@@ -8097,7 +8097,7 @@ msgstr "Po zakończeniu okresu próbnego plan zmieni się na {tierTargetLabel}."
 #. js-lingui-explicit-id
 #: src/lib/run-error.ts
 msgid "Your share of this week's shared API key budget is used up. It resets next week, or connect your own key in Models."
-msgstr ""
+msgstr "Twój udział w tygodniowym budżecie wspólnego klucza API się wyczerpał. Odnowi się w przyszłym tygodniu, albo podłącz własny klucz w Modelach."
 
 #: src/components/integrations/skills-dialog.tsx
 msgid "Your skills"

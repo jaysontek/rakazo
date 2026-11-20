@@ -164,6 +164,7 @@ function OpenPage({
               visibility.isError ? t`Could not change who can view this page. Try again.` : null
             }
             onVisibilityChange={(next) => {
+              if (impersonating) return;
               if (pageId && next !== shownVisibility && !visibility.isPending) {
                 visibility.mutate({ pageId, visibility: next });
               }

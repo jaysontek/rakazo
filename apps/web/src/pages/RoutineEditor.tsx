@@ -240,35 +240,41 @@ export function RoutineList({
   onCreate,
   onEdit,
   onStop,
+  readOnly = false,
 }: {
   routines: Routine[];
   runningRoutineId?: string;
   onCreate: () => void;
   onEdit: (routine: Routine) => void;
   onStop: () => void;
+  /** Hide create/edit/stop while an admin is impersonating. */
+  readOnly?: boolean;
 }) {
   const { t } = useLingui();
   return (
     <div>
-      <div className="mb-2 flex justify-end">
-        <Button
-          variant="secondary"
-          size="icon-sm"
-          data-testid="routine-create-button"
-          aria-label={t`Create Routine`}
-          title={t`Create Routine`}
-          onClick={onCreate}
-        >
-          <Plus strokeWidth={1.9} />
-        </Button>
-      </div>
+      {readOnly ? null : (
+        <div className="mb-2 flex justify-end">
+          <Button
+            variant="secondary"
+            size="icon-sm"
+            data-testid="routine-create-button"
+            aria-label={t`Create Routine`}
+            title={t`Create Routine`}
+            onClick={onCreate}
+          >
+            <Plus strokeWidth={1.9} />
+          </Button>
+        </div>
+      )}
       {routines.map((routine) => (
         <RoutineListRow
           key={routine.id}
           routine={routine}
           running={runningRoutineId === routine.id}
-          onOpen={() => onEdit(routine)}
-          onStop={onStop}
+          readOnly={readOnly}
+          onOpen={readOnly ? undefined : () => onEdit(routine)}
+          onStop={readOnly ? undefined : onStop}
         />
       ))}
     </div>
@@ -280,52 +286,65 @@ function RoutineListRow({
   running,
   onOpen,
   onStop,
+  readOnly = false,
 }: {
   routine: Routine;
   running: boolean;
-  onOpen: () => void;
-  onStop: () => void;
+  onOpen?: () => void;
+  onStop?: () => void;
+  readOnly?: boolean;
 }) {
   const { i18n } = useLingui();
   const scheduleLabels = cronLabels(i18n.locale);
+  const rowBody = (
+    <>
+      <span className="grid h-5 w-5 place-items-center">
+        {routine.active ? (
+          <Clock size={16} strokeWidth={1.6} className="text-success" aria-hidden />
+        ) : (
+          <Pause size={14} className="text-muted-foreground" />
+        )}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[14.5px] font-medium text-foreground" dir="auto">
+          {routine.name}
+        </span>
+        <span className="flex min-w-0 gap-2 text-[12.5px] text-muted-foreground/80">
+          <span className="truncate">{routineTriggerSummary(routine, scheduleLabels)}</span>
+          {routine.modelProvider && routine.modelId ? (
+            <span className="truncate">{routine.modelId}</span>
+          ) : null}
+        </span>
+      </span>
+    </>
+  );
   return (
     <div className="flex w-full items-center gap-2 rounded-xl px-2.5 py-2.5 hover:bg-accent">
-      <button
-        type="button"
-        onClick={onOpen}
-        className="flex min-w-0 flex-1 items-center gap-3 text-start"
-      >
-        <span className="grid h-5 w-5 place-items-center">
-          {routine.active ? (
-            <Clock size={16} strokeWidth={1.6} className="text-success" aria-hidden />
-          ) : (
-            <Pause size={14} className="text-muted-foreground" />
-          )}
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[14.5px] font-medium text-foreground" dir="auto">
-            {routine.name}
-          </span>
-          <span className="flex min-w-0 gap-2 text-[12.5px] text-muted-foreground/80">
-            <span className="truncate">{routineTriggerSummary(routine, scheduleLabels)}</span>
-            {routine.modelProvider && routine.modelId ? (
-              <span className="truncate">{routine.modelId}</span>
-            ) : null}
-          </span>
-        </span>
-      </button>
+      {readOnly || !onOpen ? (
+        <div className="flex min-w-0 flex-1 items-center gap-3 text-start">{rowBody}</div>
+      ) : (
+        <button
+          type="button"
+          onClick={onOpen}
+          className="flex min-w-0 flex-1 items-center gap-3 text-start"
+        >
+          {rowBody}
+        </button>
+      )}
       {running ? (
         <>
           <span className="shrink-0 text-[12.5px] text-warning">
             <Trans>Running</Trans>
           </span>
-          <Button
-            size="xs"
-            onClick={onStop}
-            className="shrink-0 bg-warning/15 text-warning hover:bg-warning/25"
-          >
-            <Trans>Stop</Trans>
-          </Button>
+          {readOnly || !onStop ? null : (
+            <Button
+              size="xs"
+              onClick={onStop}
+              className="shrink-0 bg-warning/15 text-warning hover:bg-warning/25"
+            >
+              <Trans>Stop</Trans>
+            </Button>
+          )}
         </>
       ) : null}
     </div>

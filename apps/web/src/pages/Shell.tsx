@@ -372,7 +372,7 @@ function SpaceShell() {
       switch (shortcut.type) {
         case "new-group":
           // A space without bots has nobody to add, and the side panel needs a chat to open in.
-          if (!active && !activeGroup) return false;
+          if (bootstrapMe?.impersonating || (!active && !activeGroup)) return false;
           setPanel("create-group");
           return true;
         case "integrations":
@@ -1331,24 +1331,30 @@ function SpaceShell() {
               onOpenComputerSettings={() => openSettings("computer")}
               onOpen={() => void openComputer()}
               cleaningUpDisk={cleaningUpDisk}
-              onCleanUpDisk={() => {
-                const botId = active.id;
-                setCleaningUpDisk(true);
-                void rpc.threads
-                  .send({
-                    botId,
-                    clientNonce: newClientId(),
-                    text: t`Your computer's disk is nearly full. Free up space by removing build output and caches you no longer need.`,
-                  })
-                  .then(async () => {
-                    // The refresh must read the dismissal, or it would paint the warning again.
-                    await dismissDiskWarning(botId);
-                    void refreshThread(botId);
-                  })
-                  .catch((error: unknown) => composer.setSendError(errorText(error)))
-                  .finally(() => setCleaningUpDisk(false));
-              }}
-              onDismissDiskWarning={() => void dismissDiskWarning(active.id)}
+              onCleanUpDisk={
+                impersonating
+                  ? undefined
+                  : () => {
+                      const botId = active.id;
+                      setCleaningUpDisk(true);
+                      void rpc.threads
+                        .send({
+                          botId,
+                          clientNonce: newClientId(),
+                          text: t`Your computer's disk is nearly full. Free up space by removing build output and caches you no longer need.`,
+                        })
+                        .then(async () => {
+                          // The refresh must read the dismissal, or it would paint the warning again.
+                          await dismissDiskWarning(botId);
+                          void refreshThread(botId);
+                        })
+                        .catch((error: unknown) => composer.setSendError(errorText(error)))
+                        .finally(() => setCleaningUpDisk(false));
+                    }
+              }
+              onDismissDiskWarning={
+                impersonating ? undefined : () => void dismissDiskWarning(active.id)
+              }
             />
           ) : null
         }
@@ -1360,9 +1366,10 @@ function SpaceShell() {
                 ? (snapshot.run.routineId ?? undefined)
                 : undefined
             }
-            onCreate={impersonating ? () => undefined : () => startRoutine()}
-            onEdit={impersonating ? () => undefined : startRoutine}
-            onStop={impersonating ? () => undefined : () => void stopRun()}
+            onCreate={() => startRoutine()}
+            onEdit={startRoutine}
+            onStop={() => void stopRun()}
+            readOnly={impersonating}
           />
         }
         routineEditorProps={impersonating ? null : routineEditorProps}

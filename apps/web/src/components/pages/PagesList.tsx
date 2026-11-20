@@ -40,9 +40,7 @@ export function PagesList({
   /** Hide pin/rename/delete while still allowing open and search. */
   readOnly?: boolean;
 }) {
-  return (
-    <OwnerPages key={botId ?? groupId} botId={botId} groupId={groupId} readOnly={readOnly} />
-  );
+  return <OwnerPages key={botId ?? groupId} botId={botId} groupId={groupId} readOnly={readOnly} />;
 }
 
 function OwnerPages({

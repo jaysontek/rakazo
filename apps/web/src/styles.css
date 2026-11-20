@@ -16,6 +16,9 @@
 .h-impersonation-rest {
   height: calc(100svh - var(--impersonation-banner-height, 0px));
 }
+.h-impersonation-rest-dvh {
+  height: calc(100dvh - var(--impersonation-banner-height, 0px));
+}
 .top-impersonation-banner-3 {
   top: calc(var(--impersonation-banner-height, 0px) + 0.75rem);
 }
@@ -24,6 +27,20 @@
 }
 .top-impersonation-banner-16 {
   top: calc(var(--impersonation-banner-height, 0px) + 4rem);
+}
+/* Settings dialog: sit below the banner instead of vertical-centering into it.
+   Attribute selector beats DialogContent's top-1/2 / -translate-y-1/2 utilities. */
+[data-slot="dialog-content"][data-testid="user-settings"] {
+  top: calc(var(--impersonation-banner-height, 0px) + 1rem);
+  max-height: calc(100dvh - var(--impersonation-banner-height, 0px) - 2rem);
+  height: min(760px, calc(100dvh - var(--impersonation-banner-height, 0px) - 2rem));
+  transform: translate(-50%, 0);
+}
+@media (min-width: 640px) {
+  [data-slot="dialog-content"][data-testid="user-settings"] {
+    max-height: calc(100dvh - var(--impersonation-banner-height, 0px) - 5rem);
+    height: min(760px, calc(100dvh - var(--impersonation-banner-height, 0px) - 5rem));
+  }
 }
 @media (min-width: 768px) {
   .md\:top-impersonation-banner-4 {
