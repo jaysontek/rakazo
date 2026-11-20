@@ -1,4 +1,5 @@
 export * from "./account-export.js";
+export * from "./account-soft-delete.js";
 export * from "./account-status.js";
 export * from "./admin-grants.js";
 export * from "./approval-settings.js";

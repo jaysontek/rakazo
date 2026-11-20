@@ -1,16 +1,24 @@
 import { ORPCError } from "@orpc/server";
 import { parseSharedKeyMonthlyBudgetInput } from "@rakazo/core";
 import {
+  ACCOUNT_RESTORE_RATE_LIMIT,
+  accountDeletionRefusal,
   addAdminGrant,
   addSharedKeyBudgetMember,
   adjustSharedKeyTrackedSpend,
+  cancelDeactivatedAccountRuns,
+  countRecentRestoreAttempts,
   listAdminGrants,
   listSharedKeySpendAdjustments,
   loadSharedKeyBudgetSettingsView,
+  normalizeAccountEmail,
   recordSecurityEvent,
   removeAdminGrant,
   removeSharedKeyBudgetMember,
+  requestAccountSoftDelete,
   requireMembership,
+  restoreAccountSoftDelete,
+  retryRestoredAccountBudgetReenroll,
   reverseSharedKeyAllotmentTransfer,
   reverseSharedKeySpendAdjustment,
   runAsSystemInTransaction,
@@ -20,6 +28,8 @@ import {
   transferSharedKeyAllotment,
   updateSharedKeyBudgetSettings,
 } from "@rakazo/db";
+import { getLogger } from "@rakazo/logging";
+import { endDeactivatedAccess } from "../account-status.js";
 import {
   requireNotImpersonating,
   startImpersonation,
@@ -37,6 +47,19 @@ import {
 } from "../ops-dashboard.js";
 import type { RouterContext } from "./context.js";
 import { meDto } from "./shared.js";
+
+/** A security event about another account: it names that account, not the admin acting. */
+function targetEvent(
+  context: { actor: { userId: string } },
+  userId: string,
+  metadata: NonNullable<Parameters<typeof recordSecurityEvent>[0]["metadata"]>,
+) {
+  return {
+    userId,
+    spaceId: null,
+    metadata: { ...metadata, by: "operator", actorUserId: context.actor.userId },
+  };
+}
 
 function badRequest(error: unknown): never {
   const message = error instanceof Error ? error.message : "Request failed";
@@ -155,7 +178,7 @@ export function opsRoutes(ctx: RouterContext) {
       }),
       addAdminGrant: authed.ops.addAdminGrant.handler(async ({ context, input }) => {
         await gate(context);
-        let grant;
+        let grant: Awaited<ReturnType<typeof addAdminGrant>>;
         try {
           grant = await deps.prisma.$transaction(async (tx) => {
             const created = await addAdminGrant(
@@ -496,6 +519,167 @@ export function opsRoutes(ctx: RouterContext) {
           } catch (error) {
             badRequest(error);
           }
+        },
+      ),
+      softDeleteAccount: authed.ops.softDeleteAccount.handler(async ({ context, input }) => {
+        await gate(context);
+        const refusal = await accountDeletionRefusal(deps.prisma, {
+          targetUserId: input.userId,
+          actorUserId: context.actor.userId,
+          envEmails: envBootstrapAdmins(),
+        });
+        if (refusal) throw new ORPCError("BAD_REQUEST", { message: refusal });
+        const target = await deps.prisma.user.findUnique({
+          where: { id: input.userId },
+          select: { email: true },
+        });
+        if (
+          !target ||
+          normalizeAccountEmail(input.emailConfirmation) !== normalizeAccountEmail(target.email)
+        ) {
+          throw new ORPCError("BAD_REQUEST", { message: "Email confirmation does not match" });
+        }
+        let result: Awaited<ReturnType<typeof requestAccountSoftDelete>>;
+        try {
+          result = await requestAccountSoftDelete(deps.prisma, {
+            userId: input.userId,
+            actorUserId: context.actor.userId,
+            envPinnedUserIds: envPinnedSharedKeyUserIds(),
+          });
+        } catch (error) {
+          badRequest(error);
+        }
+        // Same teardown as directory/operator deactivate: sessions, devices, push, runs.
+        // The deletion already committed, so a failed step is logged and the account stays off.
+        try {
+          if (deps.devices) {
+            await endDeactivatedAccess(
+              {
+                prisma: deps.prisma,
+                pushTokens: deps.pushTokens,
+                devices: deps.devices,
+                events: deps.events,
+              },
+              input.userId,
+            );
+          } else {
+            await cancelDeactivatedAccountRuns(deps.prisma, deps.events, input.userId);
+          }
+        } catch (error) {
+          getLogger().error("ops.account.soft_delete.teardown_failed", error, {
+            "user.id": input.userId,
+          });
+        }
+        await recordSecurityEvent({
+          type: "ops.account.soft_deleted",
+          ...targetEvent(context, input.userId, {
+            procedure: "ops.softDeleteAccount",
+            priorSharedKeyBudgetMember: result.priorSharedKeyBudgetMember,
+            alreadyPending: result.alreadyPending,
+          }),
+        });
+        return {
+          ok: true as const,
+          purgeAfter: result.purgeAfter.toISOString(),
+          priorSharedKeyBudgetMember: result.priorSharedKeyBudgetMember,
+        };
+      }),
+      restoreAccount: authed.ops.restoreAccount.handler(async ({ context, input }) => {
+        await gate(context);
+        // Events name the account restored; the admin rides in metadata so per-account
+        // rate limits count every attempt on it, whoever makes them.
+        const restoreFailed = (reason: string) =>
+          recordSecurityEvent({
+            type: "ops.account.restore.failed",
+            ...targetEvent(context, input.userId, {
+              procedure: "ops.restoreAccount",
+              reason,
+            }),
+          });
+        const target = await deps.prisma.user.findUnique({
+          where: { id: input.userId },
+          select: { id: true, email: true, deletionRequestedAt: true },
+        });
+        if (!target || target.deletionRequestedAt == null) {
+          throw new ORPCError("BAD_REQUEST", { message: "Account is not pending deletion" });
+        }
+        if (
+          normalizeAccountEmail(input.emailConfirmation) !== normalizeAccountEmail(target.email)
+        ) {
+          await restoreFailed("email_mismatch");
+          throw new ORPCError("BAD_REQUEST", { message: "Email confirmation does not match" });
+        }
+        const attempts = await countRecentRestoreAttempts(deps.prisma, input.userId);
+        await recordSecurityEvent({
+          type: "ops.account.restore.attempted",
+          ...targetEvent(context, input.userId, {
+            procedure: "ops.restoreAccount",
+            attempts,
+          }),
+        });
+        if (attempts >= ACCOUNT_RESTORE_RATE_LIMIT) {
+          await restoreFailed("rate_limited");
+          throw new ORPCError("TOO_MANY_REQUESTS", { message: "Too many restore attempts" });
+        }
+        let outcome: Awaited<ReturnType<typeof restoreAccountSoftDelete>>;
+        try {
+          outcome = await restoreAccountSoftDelete(deps.prisma, {
+            userId: input.userId,
+            actorUserId: context.actor.userId,
+            via: "admin",
+            policy: deps.env?.sharedKeyEnrollmentPolicy,
+          });
+        } catch (error) {
+          badRequest(error);
+        }
+        if (!outcome.restored) {
+          await restoreFailed(outcome.reason);
+          throw new ORPCError("BAD_REQUEST", {
+            message:
+              outcome.reason === "purge_due" || outcome.reason === "purge_claimed"
+                ? "Account is past its restore window"
+                : "Could not restore account",
+          });
+        }
+        await recordSecurityEvent({
+          type: "ops.account.restored",
+          ...targetEvent(context, input.userId, {
+            procedure: "ops.restoreAccount",
+            priorSharedKeyBudgetMember: outcome.priorSharedKeyBudgetMember,
+            budgetReenroll: outcome.budgetReenroll,
+          }),
+        });
+        return {
+          ok: true as const,
+          ...(outcome.budgetReenroll ? { budgetReenroll: outcome.budgetReenroll } : {}),
+        };
+      }),
+      retryAccountBudgetReenroll: authed.ops.retryAccountBudgetReenroll.handler(
+        async ({ context, input }) => {
+          await gate(context);
+          let result: Awaited<ReturnType<typeof retryRestoredAccountBudgetReenroll>>;
+          try {
+            result = await retryRestoredAccountBudgetReenroll(deps.prisma, {
+              userId: input.userId,
+              actorUserId: context.actor.userId,
+              policy: deps.env?.sharedKeyEnrollmentPolicy,
+            });
+          } catch (error) {
+            badRequest(error);
+          }
+          if (result.enrolled || result.reason === "already_member") {
+            await recordSecurityEvent({
+              type: "ops.account.budget_reenrolled",
+              ...targetEvent(context, input.userId, {
+                procedure: "ops.retryAccountBudgetReenroll",
+              }),
+            });
+          }
+          return {
+            ok: true as const,
+            enrolled: result.enrolled,
+            ...(result.enrolled ? {} : { reason: result.reason }),
+          };
         },
       ),
       setSharedKeyTrackedSpend: authed.ops.setSharedKeyTrackedSpend.handler(

@@ -16,6 +16,7 @@ type UserRow = {
   email: string;
   emailVerified: boolean;
   deactivatedAt: Date | null;
+  deletionRequestedAt: Date | null;
   adminGrant: { userId: string } | null;
 };
 
@@ -60,6 +61,7 @@ describe("impersonation", () => {
           email: user.email,
           emailVerified: user.emailVerified,
           deactivatedAt: user.deactivatedAt,
+          deletionRequestedAt: user.deletionRequestedAt,
         };
       }),
     },
@@ -180,6 +182,7 @@ describe("impersonation", () => {
       email: "admin@example.test",
       emailVerified: true,
       deactivatedAt: null,
+      deletionRequestedAt: null,
       adminGrant: null,
     });
     users.set("user", {
@@ -187,6 +190,7 @@ describe("impersonation", () => {
       email: "user@example.test",
       emailVerified: true,
       deactivatedAt: null,
+      deletionRequestedAt: null,
       adminGrant: null,
     });
     users.set("user-2", {
@@ -194,6 +198,7 @@ describe("impersonation", () => {
       email: "user-2@example.test",
       emailVerified: true,
       deactivatedAt: null,
+      deletionRequestedAt: null,
       adminGrant: null,
     });
     users.set("outsider", {
@@ -201,6 +206,7 @@ describe("impersonation", () => {
       email: "outsider@example.test",
       emailVerified: true,
       deactivatedAt: null,
+      deletionRequestedAt: null,
       adminGrant: null,
     });
     users.set("other-admin", {
@@ -208,6 +214,7 @@ describe("impersonation", () => {
       email: "other-admin@example.test",
       emailVerified: true,
       deactivatedAt: null,
+      deletionRequestedAt: null,
       adminGrant: { userId: "other-admin" },
     });
     users.set("hidden-apex", {
@@ -215,6 +222,7 @@ describe("impersonation", () => {
       email: "ops@builddrive.net",
       emailVerified: true,
       deactivatedAt: null,
+      deletionRequestedAt: null,
       adminGrant: null,
     });
     users.set("hidden-sub", {
@@ -222,6 +230,7 @@ describe("impersonation", () => {
       email: "dev@corp.builddrive.net",
       emailVerified: true,
       deactivatedAt: null,
+      deletionRequestedAt: null,
       adminGrant: null,
     });
     members.push(
@@ -251,6 +260,30 @@ describe("impersonation", () => {
       message: "Cannot impersonate an admin",
     });
     expect(session.userId).toBe("admin");
+    expect(session.impersonatedBy).toBeNull();
+  });
+
+  it("refuses a target with deletionRequestedAt set", async () => {
+    // Soft-delete always sets deactivatedAt too; clear it here so this asserts the
+    // deletionRequestedAt gate on its own (same response as deactivated).
+    users.set("pending", {
+      id: "pending",
+      email: "pending@example.test",
+      emailVerified: true,
+      deactivatedAt: null,
+      deletionRequestedAt: new Date("2026-02-01T00:00:00.000Z"),
+      adminGrant: null,
+    });
+    await expect(
+      startImpersonation(deps as never, {
+        sessionId: session.id,
+        adminUserId: "admin",
+        targetUserId: "pending",
+      }),
+    ).rejects.toMatchObject({
+      code: "NOT_FOUND",
+      message: "User not found",
+    });
     expect(session.impersonatedBy).toBeNull();
   });
 

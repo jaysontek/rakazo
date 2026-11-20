@@ -16,6 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   Badge,
+  buttonVariants,
   Card,
   CardContent,
   CardDescription,
@@ -25,13 +26,12 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
+  cn,
   Input,
   NativeSelect,
   NativeSelectOption,
   Spinner,
   Switch,
-  buttonVariants,
-  cn,
 } from "@rakazo/ui-web";
 import { ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
@@ -97,13 +97,7 @@ function SettingLabel({
   );
 }
 
-function UsageBar({
-  percent,
-  label,
-}: {
-  percent: number;
-  label: string;
-}) {
+function UsageBar({ percent, label }: { percent: number; label: string }) {
   const value = Math.min(100, Math.max(0, Math.floor(percent)));
   return (
     <div className="space-y-1">
@@ -119,7 +113,10 @@ function UsageBar({
         aria-valuetext={`${value}%`}
         aria-label={label}
       >
-        <div className="h-full rounded-full bg-foreground transition-[width]" style={{ width: `${value}%` }} />
+        <div
+          className="h-full rounded-full bg-foreground transition-[width]"
+          style={{ width: `${value}%` }}
+        />
       </div>
     </div>
   );
@@ -380,7 +377,9 @@ function KpiRow({
         <CardContent className="space-y-1 text-xs text-muted-foreground">
           <div className="flex justify-between gap-2">
             <Trans>Shared</Trans>
-            <span className="tabular-nums text-foreground">{money(data.spend.sharedKeyCostUsd)}</span>
+            <span className="tabular-nums text-foreground">
+              {money(data.spend.sharedKeyCostUsd)}
+            </span>
           </div>
           <div className="flex justify-between gap-2">
             <Trans>Personal</Trans>
@@ -954,7 +953,7 @@ function SpendAdjustmentsPanel({
     if (row.scope === "team" || (!row.userId && !row.userIdSnapshot)) return t`Team`;
     const scopedId = row.userId ?? row.userIdSnapshot;
     const account = scopedId ? accountsById.get(scopedId) : undefined;
-    return account ? accountLabel(account) : scopedId ?? t`Team`;
+    return account ? accountLabel(account) : (scopedId ?? t`Team`);
   }
 
   const reversedIds = useMemo(() => {
@@ -1084,8 +1083,7 @@ function SpendAdjustmentsPanel({
                       <div className="tabular-nums">
                         {money(row.previousTrackedUsd)} → {money(row.newTrackedUsd)}
                         <span className="ms-2 text-muted-foreground">
-                          (
-                          {row.deltaUsd > 0 ? "+" : row.deltaUsd < 0 ? "−" : ""}
+                          ({row.deltaUsd > 0 ? "+" : row.deltaUsd < 0 ? "−" : ""}
                           {money(Math.abs(row.deltaUsd))})
                         </span>
                       </div>
@@ -1126,9 +1124,7 @@ function SpendAdjustmentsPanel({
               <Trans>Reverse this adjustment?</Trans>
             </AlertDialogTitle>
             <AlertDialogDescription>
-              <Trans>
-                Appends an opposite delta for {money(reverseTarget?.deltaUsd ?? 0)}.
-              </Trans>
+              <Trans>Appends an opposite delta for {money(reverseTarget?.deltaUsd ?? 0)}.</Trans>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <label className="space-y-1.5">
@@ -1225,9 +1221,7 @@ export function MemberOverrideDialog({
           <AlertDialogTitle>
             <Trans>Weekly allotment override</Trans>
           </AlertDialogTitle>
-          <AlertDialogDescription>
-            {account ? accountLabel(account) : null}
-          </AlertDialogDescription>
+          <AlertDialogDescription>{account ? accountLabel(account) : null}</AlertDialogDescription>
         </AlertDialogHeader>
         <label className="flex items-center gap-1 text-sm">
           <span className="text-muted-foreground" aria-hidden="true">
@@ -1268,7 +1262,7 @@ export function MemberOverrideDialog({
   );
 }
 
-export function RemoveMemberDialog({
+export function SoftDeleteAccountDialog({
   account,
   open,
   onOpenChange,
@@ -1284,9 +1278,18 @@ export function RemoveMemberDialog({
   const { t } = useLingui();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [emailConfirm, setEmailConfirm] = useState("");
+
+  useEffect(() => {
+    setEmailConfirm("");
+    setError(null);
+  }, [account]);
+
+  const emailMatches =
+    account != null && emailConfirm.trim().toLowerCase() === account.email.trim().toLowerCase();
 
   async function confirm() {
-    if (!account) return;
+    if (!account || !emailMatches) return;
     if (!interactive) {
       onOpenChange(false);
       return;
@@ -1294,29 +1297,62 @@ export function RemoveMemberDialog({
     setSaving(true);
     setError(null);
     try {
-      await rpc.ops.removeSharedKeyBudgetMember({ userId: account.userId });
+      await rpc.ops.softDeleteAccount({
+        userId: account.userId,
+        emailConfirmation: emailConfirm.trim(),
+      });
       onOpenChange(false);
       onChanged();
     } catch (err) {
-      setError(errorText(err, t`Could not remove member`));
+      setError(errorText(err, t`Could not delete account`));
     } finally {
       setSaving(false);
     }
   }
 
+  const purgePreview = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>
-            <Trans>Remove from shared budget?</Trans>
+          <AlertDialogTitle className="text-pretty">
+            <Trans>Delete account?</Trans>
           </AlertDialogTitle>
           <AlertDialogDescription>
             {account ? (
-              <Trans>Remove {accountLabel(account)} from the roster.</Trans>
+              <Trans>
+                Soft-deletes {accountLabel(account)}. Data stays for 30 days (purges{" "}
+                {purgePreview.toLocaleDateString(undefined, {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                })}
+                ). Removed from the shared budget. A verified email code restores everything.
+              </Trans>
             ) : null}
           </AlertDialogDescription>
         </AlertDialogHeader>
+        {account ? (
+          <div className="space-y-2">
+            <p id="ops-soft-delete-email-hint" className="text-sm text-muted-foreground">
+              <Trans>Type the account email to confirm</Trans>
+            </p>
+            <Input
+              id="ops-soft-delete-email"
+              name="ops-soft-delete-email"
+              type="email"
+              inputMode="email"
+              value={emailConfirm}
+              autoComplete="off"
+              spellCheck={false}
+              aria-labelledby="ops-soft-delete-email-hint"
+              aria-label={t`Confirm email`}
+              placeholder={`${account.email}…`}
+              onChange={(event) => setEmailConfirm(event.target.value)}
+            />
+          </div>
+        ) : null}
         {error ? (
           <p role="alert" className="text-sm text-destructive">
             {error}
@@ -1326,9 +1362,151 @@ export function RemoveMemberDialog({
           <AlertDialogCancel disabled={saving}>
             <Trans>Cancel</Trans>
           </AlertDialogCancel>
-          <AlertDialogAction disabled={saving} onClick={() => void confirm()}>
-            <Trans>Remove</Trans>
+          <AlertDialogAction
+            variant="destructive"
+            disabled={saving || !emailMatches}
+            onClick={() => void confirm()}
+          >
+            {saving ? <Trans>Deleting…</Trans> : <Trans>Delete account</Trans>}
           </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+export function RestoreAccountDialog({
+  account,
+  open,
+  onOpenChange,
+  interactive,
+  onChanged,
+}: {
+  account: OpsAccount | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  interactive: boolean;
+  onChanged: () => void;
+}) {
+  const { t } = useLingui();
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [emailConfirm, setEmailConfirm] = useState("");
+  const [reenrollPending, setReenrollPending] = useState(false);
+
+  useEffect(() => {
+    setEmailConfirm("");
+    setError(null);
+    setReenrollPending(false);
+  }, [account]);
+
+  const emailMatches =
+    account != null && emailConfirm.trim().toLowerCase() === account.email.trim().toLowerCase();
+
+  async function retryReenroll() {
+    if (!account) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const result = await rpc.ops.retryAccountBudgetReenroll({ userId: account.userId });
+      if (result.enrolled || result.reason === "already_member") {
+        onOpenChange(false);
+        onChanged();
+        return;
+      }
+      setError(t`Could not re-add shared-budget membership`);
+    } catch (err) {
+      setError(errorText(err, t`Could not re-add shared-budget membership`));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function confirm() {
+    if (!account || !emailMatches) return;
+    if (!interactive) {
+      onOpenChange(false);
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      const result = await rpc.ops.restoreAccount({
+        userId: account.userId,
+        emailConfirmation: emailConfirm.trim(),
+      });
+      if (result.budgetReenroll === "restored_budget_reenroll_pending") {
+        setReenrollPending(true);
+        onChanged();
+        return;
+      }
+      onOpenChange(false);
+      onChanged();
+    } catch (err) {
+      setError(errorText(err, t`Could not restore account`));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle className="text-pretty">
+            <Trans>Restore account?</Trans>
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            {account ? (
+              <Trans>
+                Restores {accountLabel(account)} with all data, bots, and prior shared-budget
+                membership.
+              </Trans>
+            ) : null}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        {reenrollPending ? (
+          <p role="status" className="text-sm text-muted-foreground">
+            <Trans>Restored. Shared-budget membership could not be re-added.</Trans>
+          </p>
+        ) : account ? (
+          <div className="space-y-2">
+            <p id="ops-restore-email-hint" className="text-sm text-muted-foreground">
+              <Trans>Type the account email to confirm</Trans>
+            </p>
+            <Input
+              id="ops-restore-email"
+              name="ops-restore-email"
+              type="email"
+              inputMode="email"
+              value={emailConfirm}
+              autoComplete="off"
+              spellCheck={false}
+              aria-labelledby="ops-restore-email-hint"
+              aria-label={t`Confirm email`}
+              placeholder={`${account.email}…`}
+              onChange={(event) => setEmailConfirm(event.target.value)}
+            />
+          </div>
+        ) : null}
+        {error ? (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        ) : null}
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={saving}>
+            {reenrollPending ? <Trans>Close</Trans> : <Trans>Cancel</Trans>}
+          </AlertDialogCancel>
+          {reenrollPending ? (
+            <AlertDialogAction disabled={saving} onClick={() => void retryReenroll()}>
+              <Trans>Retry shared budget</Trans>
+            </AlertDialogAction>
+          ) : (
+            <AlertDialogAction disabled={saving || !emailMatches} onClick={() => void confirm()}>
+              {saving ? <Trans>Restoring…</Trans> : <Trans>Restore</Trans>}
+            </AlertDialogAction>
+          )}
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
@@ -1409,9 +1587,7 @@ export function UserSpendAdjustDialog({
           <AlertDialogTitle>
             <Trans>Adjust tracked spend</Trans>
           </AlertDialogTitle>
-          <AlertDialogDescription>
-            {account ? accountLabel(account) : null}
-          </AlertDialogDescription>
+          <AlertDialogDescription>{account ? accountLabel(account) : null}</AlertDialogDescription>
         </AlertDialogHeader>
         <div className="space-y-3">
           <label className="space-y-1.5">

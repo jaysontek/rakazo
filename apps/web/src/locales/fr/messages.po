@@ -1641,6 +1641,7 @@ msgid "Clearing…"
 msgstr "Effacement en cours…"
 
 #: src/components/ErrorBoundary.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/MessagingSettingsPanel.tsx
 #: src/pages/ModelSettingsOverlay.tsx
@@ -1851,6 +1852,10 @@ msgstr "Configurez un catalogue de plugins sur le serveur pour connecter des app
 #: src/pages/KnowledgeSection.tsx
 msgid "Confirm delete"
 msgstr "Confirmer la suppression"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Confirm email"
+msgstr ""
 
 #: src/components/ConfirmIdentityDialog.tsx
 msgid "Confirm it's you"
@@ -2204,6 +2209,10 @@ msgstr "Impossible de créer l'espace"
 msgid "Could not create your bot"
 msgstr "Impossible de créer votre bot"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Could not delete account"
+msgstr ""
+
 #: src/pages/shell/dialogs.tsx
 msgid "Could not delete bot"
 msgstr "Impossible de supprimer le bot"
@@ -2403,6 +2412,10 @@ msgstr "Impossible de lire un extrait de test"
 msgid "Could not preview plugin"
 msgstr ""
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Could not re-add shared-budget membership"
+msgstr ""
+
 #: src/lib/model-connection-preflight.ts
 msgid "Could not reach the model server."
 msgstr "Impossible de joindre le serveur du modèle."
@@ -2439,10 +2452,6 @@ msgstr ""
 #: src/pages/PluginsOverlay.tsx
 msgid "Could not remove connector"
 msgstr "Impossible de retirer le connecteur"
-
-#: src/pages/AdminOpsBudget.tsx
-msgid "Could not remove member"
-msgstr "Impossible de retirer le membre"
 
 #: src/components/integrations/plugin-marketplace.tsx
 msgid "Could not remove plugin"
@@ -2485,6 +2494,10 @@ msgstr "Impossible d'afficher le graphique"
 #: src/pages/Auth.tsx
 msgid "Could not reset password"
 msgstr "Impossible de réinitialiser le mot de passe"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Could not restore account"
+msgstr ""
 
 #: src/pages/AdminOpsBudget.tsx
 msgid "Could not reverse adjustment"
@@ -2957,8 +2970,14 @@ msgstr "Supprimer {0} ?"
 
 #: src/components/AccountAccess.tsx
 #: src/components/AccountMenu.tsx
+#: src/pages/AdminOpsBudget.tsx
+#: src/pages/AdminOpsPage.tsx
 msgid "Delete account"
 msgstr "Supprimer le compte"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Delete account?"
+msgstr ""
 
 #: src/pages/GroupPanel.tsx
 msgid "Delete group"
@@ -2990,6 +3009,7 @@ msgid "deleted"
 msgstr "supprimé"
 
 #: src/components/PasskeySettings.tsx
+#: src/pages/AdminOpsBudget.tsx
 #: src/pages/Artifacts.tsx
 #: src/pages/OrganizationSettingsPanel.tsx
 #: src/pages/shell/dialogs.tsx
@@ -5392,6 +5412,10 @@ msgid "Pending admin approval"
 msgstr "En attente d'approbation admin"
 
 #: src/pages/AdminOpsPage.tsx
+msgid "Pending deletion · purges on {purgeDate}"
+msgstr ""
+
+#: src/pages/AdminOpsPage.tsx
 msgid "Performance"
 msgstr ""
 
@@ -5804,7 +5828,6 @@ msgstr "Recharger"
 #: src/components/TrustedLinkSitesSettings.tsx
 #: src/components/vault/LoginFieldsInput.tsx
 #: src/components/vault/VaultItemDetail.tsx
-#: src/pages/AdminOpsBudget.tsx
 #: src/pages/AdminOpsPage.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/ModelRoleSettings.tsx
@@ -5825,11 +5848,6 @@ msgstr "Retirer {0}"
 msgid "Remove {0} from the group"
 msgstr ""
 
-#. placeholder {0}: accountLabel(account)
-#: src/pages/AdminOpsBudget.tsx
-msgid "Remove {0} from the roster."
-msgstr "Retirer {0} de la liste."
-
 #. placeholder {0}: accountLabel(removeTarget)
 #: src/pages/AdminOpsPage.tsx
 msgid "Remove {0}?"
@@ -5847,20 +5865,12 @@ msgstr "Retirer {site}"
 msgid "Remove change trigger"
 msgstr "Supprimer le déclencheur de changement"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Remove from budget"
-msgstr "Retirer du budget"
-
 #: src/components/integrations/plugin-marketplace.tsx
 #: src/pages/KnowledgeSection.tsx
 #: src/pages/McpServersOverlay.tsx
 #: src/pages/PluginsOverlay.tsx
 msgid "Remove from every space?"
 msgstr ""
-
-#: src/pages/AdminOpsBudget.tsx
-msgid "Remove from shared budget?"
-msgstr "Retirer du budget partagé ?"
 
 #: src/pages/RoutineEditor.tsx
 msgid "Remove Git event"
@@ -6052,9 +6062,15 @@ msgid "Restart to update"
 msgstr "Redémarrez pour mettre à jour"
 
 #: src/components/InstructionSettings.tsx
+#: src/pages/AdminOpsBudget.tsx
+#: src/pages/AdminOpsPage.tsx
 #: src/pages/shell/archived-chats.tsx
 msgid "Restore"
 msgstr "Restaurer"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Restore account?"
+msgstr ""
 
 #: src/components/ComputerMaintenanceActions.tsx
 msgid "Restore the last saved workspace."
@@ -6068,9 +6084,22 @@ msgstr "Restaurez le dernier espace de travail enregistré. Les travaux non enre
 msgid "Restored"
 msgstr "Restauré"
 
+#: src/pages/AdminOpsBudget.tsx
+msgid "Restored. Shared-budget membership could not be re-added."
+msgstr ""
+
+#. placeholder {0}: accountLabel(account)
+#: src/pages/AdminOpsBudget.tsx
+msgid "Restores {0} with all data, bots, and prior shared-budget membership."
+msgstr ""
+
 #: src/components/ComputerUpdateProgress.tsx
 msgid "Restoring your workspace"
 msgstr "Restauration de votre espace de travail"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Restoring…"
+msgstr ""
 
 #: src/components/AccountAccess.tsx
 #: src/components/integrations/plugin-marketplace.tsx
@@ -6093,6 +6122,10 @@ msgstr "Réessayer maintenant"
 #: src/pages/shell/use-computer.tsx
 msgid "Retry screen"
 msgstr "Réessayer l'écran"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Retry shared budget"
+msgstr ""
 
 #. placeholder {0}: money(reverseTarget.amountUsd)
 #. placeholder {1}: nameFor(reverseTarget.toUserId)
@@ -6758,6 +6791,12 @@ msgstr "Slack non activé"
 #: src/components/composer/HoldToTalk.tsx
 msgid "Slide up to lock"
 msgstr "Glisser vers le haut pour verrouiller"
+
+#. placeholder {0}: accountLabel(account)
+#. placeholder {1}: purgePreview.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric", })
+#: src/pages/AdminOpsBudget.tsx
+msgid "Soft-deletes {0}. Data stays for 30 days (purges {1}). Removed from the shared budget. A verified email code restores everything."
+msgstr ""
 
 #: src/components/integrations/skills-dialog.tsx
 #: src/pages/PluginsOverlay.tsx
@@ -7576,6 +7615,10 @@ msgstr ""
 #: src/pages/OrganizationSettingsPanel.tsx
 msgid "Type {name} to confirm"
 msgstr "Saisissez {name} pour confirmer"
+
+#: src/pages/AdminOpsBudget.tsx
+msgid "Type the account email to confirm"
+msgstr ""
 
 #: src/components/teach/TeachRecordingChrome.tsx
 msgid "Type without recording"

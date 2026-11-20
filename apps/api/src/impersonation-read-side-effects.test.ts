@@ -1173,7 +1173,7 @@ describe("impersonation read side-effect audit", () => {
 
   it("walks every contract leaf and records zero side effects on every read", async () => {
     const contractPaths = contractProcedurePaths(appContract);
-    expect(contractPaths.length).toBe(314);
+    expect(contractPaths.length).toBe(317);
 
     const reads = Object.entries(IMPERSONATION_PROCEDURE_KIND)
       .filter(([, kind]) => kind === "read")
@@ -1285,7 +1285,7 @@ describe("impersonation read side-effect audit", () => {
       },
     });
 
-    expect(contractPaths.length).toBe(314);
+    expect(contractPaths.length).toBe(317);
 
     const completed: string[] = [];
     const allowedErrorHits: string[] = [];

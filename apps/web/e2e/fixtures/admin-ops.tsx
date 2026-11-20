@@ -58,7 +58,7 @@ const fixtureOverview: OpsOverview = {
       userId: "user_sam",
       email: "sam@example.test",
       name: "Sam Chen",
-      deactivated: false,
+      deactivated: true,
       modelProvider: "google",
       modelId: "gemini-2.5-flash",
       modelSource: "last used",
@@ -70,8 +70,8 @@ const fixtureOverview: OpsOverview = {
       personalKeyCostUsd: 0,
       sharedKeyBudget: {
         configured: true,
-        member: true,
-        weeklyCapUsd: 25,
+        member: false,
+        weeklyCapUsd: 0,
         spentUsd: 22,
         reservedUsd: 0,
         remainingUsd: 3,
@@ -87,7 +87,9 @@ const fixtureOverview: OpsOverview = {
       },
       pendingSharedBudgetApproval: false,
       envPinned: false,
-      allotmentOverrideUsd: 30,
+      allotmentOverrideUsd: null,
+      deletionRequestedAt: "2026-11-01T00:00:00.000Z",
+      purgeAfter: "2026-12-01T00:00:00.000Z",
     },
     {
       userId: "user_jordan",
@@ -461,7 +463,7 @@ function Fixture() {
             onChanged={() => undefined}
             selected={selected}
             onSelect={setSelected}
-            interactive={false}
+            interactive={params.get("interactive") === "1"}
             fixtureAgents={fixtureAgents}
             fixtureRequestLogRows={fixtureRequestLogRows}
           />

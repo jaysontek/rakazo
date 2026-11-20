@@ -76,9 +76,7 @@ async function writeImpersonationAudit(tx: TxClient, meta: ImpersonationAuditMet
           ...(meta.procedure ? { procedure: meta.procedure } : {}),
           ...(meta.reason ? { reason: meta.reason } : {}),
           ...(meta.count != null ? { count: meta.count } : {}),
-          ...(meta.previousTargetUserId
-            ? { previousTargetUserId: meta.previousTargetUserId }
-            : {}),
+          ...(meta.previousTargetUserId ? { previousTargetUserId: meta.previousTargetUserId } : {}),
           ...(meta.organizationId ? { organizationId: meta.organizationId } : {}),
         },
       },
@@ -123,7 +121,9 @@ export async function assertNonPersonalOrganization(
   }
   const unique = new Set(members.map((row) => row.userId));
   if (unique.size <= 1) {
-    throw new ORPCError("FORBIDDEN", { message: "Cannot impersonate within a Personal organization" });
+    throw new ORPCError("FORBIDDEN", {
+      message: "Cannot impersonate within a Personal organization",
+    });
   }
 }
 
@@ -152,9 +152,15 @@ async function assertImpersonationTarget(
   }
   const target = await deps.prisma.user.findUnique({
     where: { id: targetUserId },
-    select: { id: true, email: true, emailVerified: true, deactivatedAt: true },
+    select: {
+      id: true,
+      email: true,
+      emailVerified: true,
+      deactivatedAt: true,
+      deletionRequestedAt: true,
+    },
   });
-  if (!target || !target.emailVerified || target.deactivatedAt) {
+  if (!target?.emailVerified || target.deactivatedAt || target.deletionRequestedAt) {
     throw new ORPCError("NOT_FOUND", { message: "User not found" });
   }
   if (isHiddenOpsEmail(target.email)) {
@@ -372,7 +378,9 @@ export async function switchImpersonation(
     });
   }
   if (input.organizationId !== scopedOrganizationId) {
-    throw new ORPCError("FORBIDDEN", { message: "Organization does not match impersonation scope" });
+    throw new ORPCError("FORBIDDEN", {
+      message: "Organization does not match impersonation scope",
+    });
   }
   await assertNonPersonalOrganization(deps, scopedOrganizationId);
   await assertOrganizationMember(deps, scopedOrganizationId, input.targetUserId);
@@ -648,9 +656,7 @@ export async function recordImpersonationAuditStandalone(
           ...(meta.procedure ? { procedure: meta.procedure } : {}),
           ...(meta.reason ? { reason: meta.reason } : {}),
           ...(meta.count != null ? { count: meta.count } : {}),
-          ...(meta.previousTargetUserId
-            ? { previousTargetUserId: meta.previousTargetUserId }
-            : {}),
+          ...(meta.previousTargetUserId ? { previousTargetUserId: meta.previousTargetUserId } : {}),
           ...(meta.organizationId ? { organizationId: meta.organizationId } : {}),
         },
       },

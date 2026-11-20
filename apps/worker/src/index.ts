@@ -80,8 +80,10 @@ import {
   resolveSandboxProvider,
   ScriptedAgentRuntime,
   SpaceMemoryProviderResolver,
+  StripeBillingProvider,
   sandboxProviderOptionsFromEnv,
   shutdownPiTelemetry,
+  stripeBillingConfigFromEnv,
   UserDevices,
   userDeviceForwardSecret,
   WebPushProvider,
@@ -118,6 +120,8 @@ import {
 import { SERVICE_NAMES } from "@rakazo/logging";
 import { createRootLogger } from "@rakazo/logging/axiom";
 import { MarkdownMemoryStore } from "@rakazo/memory";
+import { accountPurgeEnabled, accountPurgeReconciler } from "../../api/src/account-purge.js";
+import { createBillingService } from "../../api/src/billing.js";
 
 const logger = await createRootLogger(SERVICE_NAMES.worker);
 
@@ -254,7 +258,7 @@ async function main() {
   const runs = new RunStarter(realtime, { signal: shutdown.signal });
   const jobs: JobPublisher =
     inMemoryJobs ?? new RunJobPublisher(prisma, new GraphileJobPublisher(pool, prisma), runs);
-  const { messaging } = installedMessaging(
+  const { messaging, installations: messagingInstallations } = installedMessaging(
     prisma,
     secrets,
     {
@@ -392,6 +396,21 @@ async function main() {
     mediaGeneration,
     maxUploadSizeBytes,
   });
+  // Purge cancels a deleted account's subscriptions the same way the API does.
+  const stripeBilling = stripeBillingConfigFromEnv({
+    stripeSecretKey: process.env.STRIPE_SECRET_KEY,
+    stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+    stripePriceId: process.env.STRIPE_PRICE_ID,
+  });
+  const purgeBilling = stripeBilling
+    ? createBillingService({
+        prisma,
+        provider: new StripeBillingProvider(stripeBilling),
+        sandbox,
+        webOrigin: process.env.WEB_ORIGIN ?? "",
+        managedModelsAvailable: deploymentModelConfigured,
+      })
+    : undefined;
   const reconciler = createJobReconciler({
     prisma,
     jobs,
@@ -420,6 +439,25 @@ async function main() {
     reconcileHomeStorage: homeStorageSweeper(home),
     reconcileIdleComputers: createIdleComputerSweeper({ prisma, jobs }),
     reconcileDeadJobs: inMemoryJobs ? undefined : createDeadJobPruner(pool),
+    // Always runs; without RAKAZO_ACCOUNT_PURGE_ENABLED=true it only logs what it would delete.
+    reconcileAccountPurge: accountPurgeReconciler(
+      {
+        prisma,
+        sandbox,
+        home,
+        jobs,
+        artifacts,
+        dataDir,
+        messagingInstallations,
+        secrets,
+        billing: purgeBilling,
+        pushTokens,
+      },
+      {
+        enabled: accountPurgeEnabled(process.env.RAKAZO_ACCOUNT_PURGE_ENABLED),
+        signal: shutdown.signal,
+      },
+    ),
   });
   let stopHealth: (() => Promise<void>) | undefined;
   let stopping = false;

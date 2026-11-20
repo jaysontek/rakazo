@@ -171,6 +171,8 @@ export type OpsAccountRow = {
   pendingSharedBudgetApproval: boolean;
   envPinned: boolean;
   allotmentOverrideUsd: number | null;
+  deletionRequestedAt: string | null;
+  purgeAfter: string | null;
 };
 
 type OpsResolvedModel = {
@@ -498,6 +500,8 @@ export async function loadOpsOverview(
           email: true,
           name: true,
           deactivatedAt: true,
+          deletionRequestedAt: true,
+          purgeAfter: true,
         },
         orderBy: { createdAt: "asc" },
       }),
@@ -679,6 +683,8 @@ export async function loadOpsOverview(
         pendingSharedBudgetApproval,
         envPinned: envPinnedIds.has(user.id),
         allotmentOverrideUsd: overrideByUser.get(user.id) ?? null,
+        deletionRequestedAt: user.deletionRequestedAt?.toISOString() ?? null,
+        purgeAfter: user.purgeAfter?.toISOString() ?? null,
       });
     }
     const visibleBots = bots.filter((bot) => !hiddenUserIds.has(bot.userId));

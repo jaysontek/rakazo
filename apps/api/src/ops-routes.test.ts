@@ -22,6 +22,9 @@ const userActor: Actor = {
 const users = [
   { id: "admin", email: "admin@example.test", emailVerified: true },
   { id: "user", email: "user@example.test", emailVerified: true },
+  { id: "granted", email: "granted@example.test", emailVerified: true },
+  { id: "boss", email: "Boss@Example.test", emailVerified: true },
+  { id: "hidden", email: "ops@builddrive.net", emailVerified: true },
 ];
 
 function makeDeps(allowlist = ["192.168.140.0/24"]): RouterDeps {
@@ -29,9 +32,7 @@ function makeDeps(allowlist = ["192.168.140.0/24"]): RouterDeps {
     user: {
       findUnique: async ({ where }: { where: { id: string } }) => {
         const user = users.find((row) => row.id === where.id);
-        return user
-          ? { ...user, deactivatedAt: null, adminGrant: null, name: user.email }
-          : null;
+        return user ? { ...user, deactivatedAt: null, adminGrant: null, name: user.email } : null;
       },
       findMany: async () => [],
     },
@@ -48,7 +49,8 @@ function makeDeps(allowlist = ["192.168.140.0/24"]): RouterDeps {
     },
     adminGrant: {
       findMany: async () => [],
-      findUnique: async () => null,
+      findUnique: async ({ where }: { where: { userId: string } }) =>
+        where.userId === "granted" ? { userId: "granted" } : null,
       upsert: async () => ({}),
       deleteMany: async () => ({ count: 0 }),
     },
@@ -132,7 +134,7 @@ function makeDeps(allowlist = ["192.168.140.0/24"]): RouterDeps {
   return {
     prisma,
     env: {
-      adminEmails: ["admin@example.test"],
+      adminEmails: ["admin@example.test", "boss@example.test"],
       opsDashboardAllowlist: allowlist,
       sharedKeyMonthlyBudgetUsd: 50,
       agentRuntime: "pi",
@@ -265,9 +267,9 @@ describe("ops dashboard routes", () => {
       code: "FORBIDDEN",
       message: "Admins only",
     });
-    await expect(
-      admin.ops.setSharedKeyMonthlyBudget({ monthlyCapUsd: 75 }),
-    ).resolves.toEqual({ monthlyCapUsd: 75 });
+    await expect(admin.ops.setSharedKeyMonthlyBudget({ monthlyCapUsd: 75 })).resolves.toEqual({
+      monthlyCapUsd: 75,
+    });
     await expect(admin.ops.setSharedKeyMonthlyBudget({ monthlyCapUsd: 0 })).rejects.toMatchObject({
       code: "BAD_REQUEST",
     });
@@ -288,9 +290,9 @@ describe("ops dashboard routes", () => {
     await expect(client.ops.setSharedKeyMonthlyBudget({ monthlyCapUsd: 10 })).rejects.toMatchObject(
       denied,
     );
-    await expect(
-      client.ops.addSharedKeyBudgetMember({ userId: "user" }),
-    ).rejects.toMatchObject(denied);
+    await expect(client.ops.addSharedKeyBudgetMember({ userId: "user" })).rejects.toMatchObject(
+      denied,
+    );
     await expect(client.preferences.update({ locale: "en" } as never)).rejects.toMatchObject(
       denied,
     );
@@ -298,9 +300,7 @@ describe("ops dashboard routes", () => {
   });
 
   it("lets an admin add a shared-key budget member and denies non-admins", async () => {
-    const add = vi
-      .spyOn(db, "addSharedKeyBudgetMember")
-      .mockResolvedValue({ enrolled: true });
+    const add = vi.spyOn(db, "addSharedKeyBudgetMember").mockResolvedValue({ enrolled: true });
     const deps = makeDeps();
     const admin = createRouterClient(createRouter(deps), {
       context: { actor: adminActor, clientIp: "192.168.140.10", sessionId: "session-admin" },
@@ -316,12 +316,10 @@ describe("ops dashboard routes", () => {
       ok: true,
       enrolled: true,
     });
-    expect(add).toHaveBeenCalledWith(
-      deps.prisma,
-      "user",
-      expect.any(Date),
-      { admin: true, actorUserId: "admin" },
-    );
+    expect(add).toHaveBeenCalledWith(deps.prisma, "user", expect.any(Date), {
+      admin: true,
+      actorUserId: "admin",
+    });
     add.mockRestore();
   });
 
@@ -374,6 +372,20 @@ describe("ops dashboard routes", () => {
         call: (c) => c.ops.removeSharedKeyBudgetMember({ userId: "user" }),
       },
       {
+        name: "softDeleteAccount",
+        call: (c) =>
+          c.ops.softDeleteAccount({ userId: "user", emailConfirmation: "user@example.test" }),
+      },
+      {
+        name: "restoreAccount",
+        call: (c) =>
+          c.ops.restoreAccount({ userId: "user", emailConfirmation: "user@example.test" }),
+      },
+      {
+        name: "retryAccountBudgetReenroll",
+        call: (c) => c.ops.retryAccountBudgetReenroll({ userId: "user" }),
+      },
+      {
         name: "setSharedKeyTrackedSpend",
         call: (c) =>
           c.ops.setSharedKeyTrackedSpend({ targetUsd: 1, reason: "test", userId: "user" }),
@@ -400,5 +412,143 @@ describe("ops dashboard routes", () => {
         whileImpersonating,
       );
     }
+  });
+
+  describe("account soft delete", () => {
+    const adminClient = (deps: RouterDeps) =>
+      createRouterClient(createRouter(deps), {
+        context: { actor: adminActor, clientIp: "192.168.140.10", sessionId: "session-admin" },
+      });
+    const withAdmins = (deps: RouterDeps) => {
+      // countEffectiveAdmins reads verified users to match RAKAZO_ADMIN_EMAILS.
+      (deps.prisma.user as unknown as { findMany: () => Promise<unknown[]> }).findMany =
+        async () => [
+          { id: "admin", email: "admin@example.test", emailVerified: true, deactivatedAt: null },
+        ];
+      return deps;
+    };
+
+    it("refuses the actor, admins, hidden ops accounts, and the last admin", async () => {
+      const remove = vi.spyOn(db, "requestAccountSoftDelete");
+      const deps = withAdmins(makeDeps());
+      const admin = adminClient(deps);
+      const del = (userId: string, emailConfirmation = `${userId}@example.test`) =>
+        admin.ops.softDeleteAccount({ userId, emailConfirmation });
+      await expect(del("admin")).rejects.toMatchObject({
+        code: "BAD_REQUEST",
+        message: "Cannot delete your own account",
+      });
+      await expect(del("granted")).rejects.toMatchObject({
+        message: "Remove admin access before deleting this account",
+      });
+      await expect(del("boss")).rejects.toMatchObject({
+        message: "Remove admin access before deleting this account",
+      });
+      await expect(del("hidden", "ops@builddrive.net")).rejects.toMatchObject({
+        message: "Cannot delete a hidden ops account",
+      });
+      (deps.prisma.user as unknown as { findMany: () => Promise<unknown[]> }).findMany =
+        async () => [];
+      await expect(del("user")).rejects.toMatchObject({ message: "Cannot delete the last admin" });
+      expect(remove).not.toHaveBeenCalled();
+    });
+
+    it("records the deleted account as the event subject and survives a failed teardown", async () => {
+      vi.spyOn(db, "requestAccountSoftDelete").mockResolvedValue({
+        purgeAfter: new Date("2026-07-01T00:00:00.000Z"),
+        priorSharedKeyBudgetMember: false,
+        alreadyPending: false,
+      });
+      vi.spyOn(db, "cancelDeactivatedAccountRuns").mockRejectedValue(new Error("queue down"));
+      const record = vi.spyOn(db, "recordSecurityEvent").mockResolvedValue();
+      const deps = withAdmins(makeDeps());
+      await expect(
+        adminClient(deps).ops.softDeleteAccount({
+          userId: "user",
+          emailConfirmation: "USER@example.test",
+        }),
+      ).resolves.toMatchObject({ ok: true, purgeAfter: "2026-07-01T00:00:00.000Z" });
+      expect(record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "ops.account.soft_deleted",
+          userId: "user",
+          metadata: expect.objectContaining({ actorUserId: "admin", by: "operator" }),
+        }),
+      );
+    });
+
+    it("refuses a soft delete whose email confirmation does not match", async () => {
+      const remove = vi.spyOn(db, "requestAccountSoftDelete");
+      const deps = withAdmins(makeDeps());
+      await expect(
+        adminClient(deps).ops.softDeleteAccount({
+          userId: "user",
+          emailConfirmation: "someone@example.test",
+        }),
+      ).rejects.toMatchObject({ message: "Email confirmation does not match" });
+      expect(remove).not.toHaveBeenCalled();
+    });
+
+    it("counts restore attempts against the restored account and reports a pending re-enroll", async () => {
+      const deps = makeDeps();
+      const findUnique = deps.prisma.user.findUnique as unknown as (args: {
+        where: { id: string };
+      }) => Promise<Record<string, unknown> | null>;
+      (deps.prisma.user as unknown as { findUnique: typeof findUnique }).findUnique = async (
+        args,
+      ) => {
+        const user = await findUnique(args);
+        return user && args.where.id === "user"
+          ? { ...user, deletionRequestedAt: new Date() }
+          : user;
+      };
+      const count = vi.spyOn(db, "countRecentRestoreAttempts").mockResolvedValue(0);
+      const record = vi.spyOn(db, "recordSecurityEvent").mockResolvedValue();
+      const restore = vi.spyOn(db, "restoreAccountSoftDelete").mockResolvedValue({
+        restored: true,
+        priorSharedKeyBudgetMember: true,
+        budgetReenroll: "restored_budget_reenroll_pending",
+      });
+      await expect(
+        adminClient(deps).ops.restoreAccount({
+          userId: "user",
+          emailConfirmation: "user@example.test",
+        }),
+      ).resolves.toEqual({ ok: true, budgetReenroll: "restored_budget_reenroll_pending" });
+      expect(count).toHaveBeenCalledWith(deps.prisma, "user");
+      expect(restore).toHaveBeenCalledWith(
+        deps.prisma,
+        expect.objectContaining({ userId: "user", actorUserId: "admin", via: "admin" }),
+      );
+      for (const type of ["ops.account.restore.attempted", "ops.account.restored"]) {
+        expect(record).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type,
+            userId: "user",
+            metadata: expect.objectContaining({ actorUserId: "admin" }),
+          }),
+        );
+      }
+    });
+
+    it("retries a pending re-enroll for admins only", async () => {
+      const retry = vi
+        .spyOn(db, "retryRestoredAccountBudgetReenroll")
+        .mockResolvedValue({ enrolled: false, reason: "zero_slice" });
+      const deps = makeDeps();
+      await expect(
+        adminClient(deps).ops.retryAccountBudgetReenroll({ userId: "user" }),
+      ).resolves.toEqual({ ok: true, enrolled: false, reason: "zero_slice" });
+      expect(retry).toHaveBeenCalledWith(
+        deps.prisma,
+        expect.objectContaining({ userId: "user", actorUserId: "admin" }),
+      );
+      const user = createRouterClient(createRouter(deps), {
+        context: { actor: userActor, clientIp: "192.168.140.10", sessionId: "session-user" },
+      });
+      await expect(user.ops.retryAccountBudgetReenroll({ userId: "user" })).rejects.toMatchObject({
+        code: "FORBIDDEN",
+      });
+    });
   });
 });

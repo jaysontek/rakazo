@@ -608,8 +608,18 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
         onAccountChange: (change) => directoryChanges.getStore()?.push(change),
       })
     : undefined;
+  const sharedKeyEnrollmentPolicy = sharedKeyBudgetEnrollmentPolicyFromEnv({
+    signupsEnabled: env.signupsEnabled,
+    signupAllowlist: env.signupAllowlist,
+    singleAccount: Boolean(env.desktopStackToken),
+    directoryProvisioning: Boolean(directory),
+    adminEmails: env.adminEmails,
+    explicitUserIds: env.sharedKeyBudgetUserIds,
+    emailDomains: env.sharedKeyBudgetEmailDomains,
+  });
   const auth = createAuth(prisma, {
     directoryProvisioning: Boolean(directory),
+    sharedKeyEnrollmentPolicy,
     analytics,
     passwordAuth: env.passwordAuth,
     breachedPasswordCheck: env.breachedPasswordCheck,
@@ -737,15 +747,6 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
   const codexCatalog = new CodexCatalogCache();
   // One instance: chat runs submit videos and, in single-process mode, background polls finish them.
   const mediaGeneration = createMediaGenerationProvider();
-  const sharedKeyEnrollmentPolicy = sharedKeyBudgetEnrollmentPolicyFromEnv({
-    signupsEnabled: env.signupsEnabled,
-    signupAllowlist: env.signupAllowlist,
-    singleAccount: Boolean(env.desktopStackToken),
-    directoryProvisioning: Boolean(directory),
-    adminEmails: env.adminEmails,
-    explicitUserIds: env.sharedKeyBudgetUserIds,
-    emailDomains: env.sharedKeyBudgetEmailDomains,
-  });
   const executor = createRunExecutor({
     billingEnabled: modelCreditsEnabled,
     maxUploadSizeBytes: env.maxUploadSizeBytes,
@@ -922,6 +923,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
     prisma,
     notifications,
     pushTokens,
+    devices: deviceSessions,
     webPushSubscriptions,
     webPush,
     events,
@@ -969,6 +971,7 @@ async function buildApp(overrides: CreateAppOverrides): Promise<AppHandles> {
       opsDashboardAllowlist: env.opsDashboardAllowlist,
       sharedKeyMonthlyBudgetUsd: env.sharedKeyMonthlyBudgetUsd,
       sharedKeyGatedDeployment: sharedKeyEnrollmentPolicy.gatedDeployment,
+      sharedKeyEnrollmentPolicy,
       deploymentModelKey: env.deploymentModelKey ?? null,
       maxUploadSizeBytes: env.maxUploadSizeBytes,
       maxAttachmentsPerMessage: env.maxAttachmentsPerMessage,

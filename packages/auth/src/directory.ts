@@ -17,9 +17,12 @@ export interface DirectoryAccountChange {
   changed: boolean;
 }
 
-/** Shared with the main auth config so both read and write the same user field. */
+/** Shared with the main auth config so both read and write the same user fields. */
 export const DEACTIVATED_AT_FIELD = {
   deactivatedAt: { type: "date", required: false, input: false },
+  deletionRequestedAt: { type: "date", required: false, input: false },
+  purgeAfter: { type: "date", required: false, input: false },
+  purgeClaimedAt: { type: "date", required: false, input: false },
 } as const satisfies NonNullable<BetterAuthOptions["user"]>["additionalFields"];
 
 /**
@@ -77,11 +80,26 @@ export async function createDirectory(
       return { action: "link", userId: existing.id, profile: "preserve" };
     },
     reconcileUser: async ({ userId, active }, { database }) => {
-      const user = await database.findOne<{ deactivatedAt: Date | null }>({
+      const user = await database.findOne<{
+        deactivatedAt: Date | null;
+        deletionRequestedAt: Date | null;
+      }>({
         model: "user",
         where: [{ field: "id", value: userId }],
       });
       if (!user) return;
+      // Soft-deleted accounts stay off until verified-email restore; directory must not clear them.
+      if (active && user.deletionRequestedAt) {
+        if (!user.deactivatedAt) {
+          await database.update({
+            model: "user",
+            where: [{ field: "id", value: userId }],
+            update: { deactivatedAt: new Date() },
+          });
+        }
+        options.onAccountChange({ userId, active: false, changed: !user.deactivatedAt });
+        return;
+      }
       const changed = active === Boolean(user.deactivatedAt);
       if (changed)
         await database.update({

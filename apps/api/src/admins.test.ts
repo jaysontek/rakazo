@@ -28,6 +28,19 @@ describe("isAdmin", () => {
       emailVerified: true,
       deactivatedAt: new Date(),
     },
+    {
+      id: "deactivated-env",
+      email: "off@example.test",
+      emailVerified: true,
+      deactivatedAt: new Date(),
+    },
+    {
+      id: "pending-deletion-env",
+      email: "gone@example.test",
+      emailVerified: true,
+      deactivatedAt: null,
+      deletionRequestedAt: new Date(),
+    },
   ];
   const grants = new Set(["granted", "deactivated-grant"]);
   const prisma = {
@@ -47,6 +60,15 @@ describe("isAdmin", () => {
     expect(await isAdmin(deps, "unverified")).toBe(false);
     expect(await isEnvBootstrapAdmin(deps, "verified")).toBe(true);
     expect(await isEnvBootstrapAdmin(deps, "unverified")).toBe(false);
+  });
+
+  it("refuses an environment admin that is deactivated or pending deletion", async () => {
+    const deps = {
+      prisma,
+      env: { adminEmails: ["off@example.test", "gone@example.test"] } as never,
+    };
+    expect(await isAdmin(deps, "deactivated-env")).toBe(false);
+    expect(await isAdmin(deps, "pending-deletion-env")).toBe(false);
   });
 
   it("accepts only active, verified database grants", async () => {
