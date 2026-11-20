@@ -156,8 +156,8 @@ function UsageBar({
   hardStopped?: boolean;
   status?: SharedKeyBudgetDisplayStatus;
 }) {
-  const value = Math.min(100, Math.max(0, Math.floor(percent)));
   const blocked = hardStopped || status === "blocked";
+  const value = blocked ? 100 : Math.min(100, Math.max(0, Math.floor(percent)));
   const warning = !blocked && status === "warning";
   return (
     <div className="space-y-1">
@@ -169,7 +169,11 @@ function UsageBar({
         </span>
         {blocked ? (
           <span className="text-destructive">
-            {hardStopped ? <Trans>Hard-stopped</Trans> : <Trans>Limit reached</Trans>}
+            {hardStopped ? (
+              <Trans>Hard-stopped</Trans>
+            ) : (
+              <Trans>Not enough left for a new run</Trans>
+            )}
           </span>
         ) : null}
       </div>

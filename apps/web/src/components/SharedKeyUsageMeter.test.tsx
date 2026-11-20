@@ -69,25 +69,42 @@ describe("SharedKeyUsageMeter", () => {
     });
   }
 
-  it("sets aria-valuenow from spent+reserved and shows a blocked notice without dollars", () => {
+  it("sets aria-valuenow to 100 when blocked by low headroom and shows the headroom notice", () => {
     render({
       kind: "shared_weekly",
       percentUsed: 50,
-      usedPercent: 75,
+      usedPercent: 100,
       reservedPercent: 25,
       spentPercent: 50,
       status: "blocked",
+      hardStopped: false,
       resetsAt: "2026-11-16T05:00:00.000Z",
       timezone: "America/New_York",
     });
     const bar = container.querySelector(
       '[data-testid="shared-key-usage-meter"] [role="progressbar"]',
     );
-    expect(bar?.getAttribute("aria-valuenow")).toBe("75");
+    expect(bar?.getAttribute("aria-valuenow")).toBe("100");
+    const notice = container.querySelector('[data-testid="shared-key-usage-blocked"]');
+    expect(notice?.textContent).toBe("Not enough left for a new run");
+    expect(container.textContent).not.toMatch(/\$/);
+  });
+
+  it("keeps the hard-stop notice when the allotment is fully used", () => {
+    render({
+      kind: "shared_weekly",
+      percentUsed: 100,
+      usedPercent: 100,
+      reservedPercent: 0,
+      spentPercent: 100,
+      status: "blocked",
+      hardStopped: true,
+      resetsAt: "2026-11-16T05:00:00.000Z",
+      timezone: "America/New_York",
+    });
     const notice = container.querySelector('[data-testid="shared-key-usage-blocked"]');
     expect(notice?.textContent).toMatch(/Weekly limit reached for new runs/);
     expect(notice?.textContent).toMatch(/Resets/);
-    expect(container.textContent).not.toMatch(/\$/);
   });
 
   it("renders a reserved segment when reservedPercent is set", () => {

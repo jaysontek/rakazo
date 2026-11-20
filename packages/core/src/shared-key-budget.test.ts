@@ -391,7 +391,7 @@ describe("shared-key weekly budget math", () => {
   });
 
   it("projects display percent including reserved and blocked headroom", () => {
-    // Real-shaped case: 85% spend-only, but headroom below worst-case → blocked for new runs.
+    // Real-shaped case: ~85% spend-only, but headroom below worst-case → blocked; meters show 100%.
     const blocked = projectSharedKeyBudgetDisplay({
       spentUsd: 0.9565,
       reservedUsd: 0,
@@ -401,7 +401,8 @@ describe("shared-key weekly budget math", () => {
     });
     expect(blocked.status).toBe("blocked");
     expect(blocked.hardStopped).toBe(false);
-    expect(blocked.usedPercent).toBeCloseTo((0.9565 / 1.1215) * 100, 5);
+    expect(blocked.usedPercent).toBe(100);
+    expect(blocked.spentPercent).toBeCloseTo((0.9565 / 1.1215) * 100, 5);
     expect(blocked.remainingUsd).toBeCloseTo(0.165, 3);
 
     const held = projectSharedKeyBudgetDisplay({
@@ -424,6 +425,38 @@ describe("shared-key weekly budget math", () => {
     expect(hardStopped.hardStopped).toBe(true);
     expect(hardStopped.status).toBe("blocked");
     expect(hardStopped.usedPercent).toBe(100);
+  });
+
+  it("projects a $0 allotment after transfer from a $0-spend sender as exhausted", () => {
+    // Transfer sets sender allotment to spent+reserved; $0 spend → weeklyCapUsd 0.
+    const drained = projectSharedKeyBudgetDisplay({
+      spentUsd: 0,
+      reservedUsd: 0,
+      weeklyCapUsd: 0,
+      hardStopEnabled: true,
+    });
+    expect(drained.status).toBe("blocked");
+    expect(drained.hardStopped).toBe(true);
+    expect(drained.usedPercent).toBe(100);
+    expect(drained.spentPercent).toBe(100);
+    expect(drained.percentUsed).toBe(100);
+    expect(drained.remainingUsd).toBe(0);
+  });
+
+  it("keeps 0% for feature-off and non-member projections", () => {
+    // Callers pass hardStopEnabled=false when the feature is off or the user is not a member.
+    expect(sharedKeyBudgetPercentUsed(0, 0)).toBe(0);
+    const featureOff = projectSharedKeyBudgetDisplay({
+      spentUsd: 0,
+      reservedUsd: 0,
+      weeklyCapUsd: 0,
+      hardStopEnabled: false,
+    });
+    expect(featureOff.status).toBe("ok");
+    expect(featureOff.hardStopped).toBe(false);
+    expect(featureOff.usedPercent).toBe(0);
+    expect(featureOff.percentUsed).toBe(0);
+    expect(featureOff.remainingUsd).toBe(0);
   });
 
   it("formats the America/New_York reset label for the account menu", () => {

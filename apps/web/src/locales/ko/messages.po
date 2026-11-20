@@ -4172,10 +4172,6 @@ msgstr "MEMORY.md와 함께 봇이 의미를 기준으로 사실을 저장하고
 msgid "Light"
 msgstr "라이트"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Limit reached"
-msgstr ""
-
 #: src/pages/SpaceSearch.tsx
 msgid "Link"
 msgstr ""
@@ -5025,6 +5021,11 @@ msgstr ""
 #: src/pages/AdminOpsPage.tsx
 msgid "Not eligible for the shared budget"
 msgstr "공유 예산 대상이 아닙니다"
+
+#: src/components/ai/context.tsx
+#: src/pages/AdminOpsPage.tsx
+msgid "Not enough left for a new run"
+msgstr ""
 
 #: src/pages/shell/agent-import.tsx
 msgid "Not imported"

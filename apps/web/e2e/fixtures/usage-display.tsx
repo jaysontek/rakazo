@@ -16,10 +16,11 @@ applyResolvedAppearance(theme);
 const usageLimit: UsageLimit = {
   kind: "shared_weekly",
   percentUsed: 85,
-  usedPercent: 85,
+  usedPercent: 100,
   reservedPercent: 0,
   spentPercent: 85,
   status: "blocked",
+  hardStopped: false,
   resetsAt: "2026-11-16T05:00:00.000Z",
   timezone: "America/New_York",
 };

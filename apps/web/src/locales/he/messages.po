@@ -4172,10 +4172,6 @@ msgstr "מאפשר לבוטים לשמור ולשלוף עובדות לפי מש
 msgid "Light"
 msgstr "בהיר"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Limit reached"
-msgstr ""
-
 #: src/pages/SpaceSearch.tsx
 msgid "Link"
 msgstr ""
@@ -5025,6 +5021,11 @@ msgstr ""
 #: src/pages/AdminOpsPage.tsx
 msgid "Not eligible for the shared budget"
 msgstr "לא זכאי לתקציב המשותף"
+
+#: src/components/ai/context.tsx
+#: src/pages/AdminOpsPage.tsx
+msgid "Not enough left for a new run"
+msgstr ""
 
 #: src/pages/shell/agent-import.tsx
 msgid "Not imported"

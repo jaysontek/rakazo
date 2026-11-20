@@ -4172,10 +4172,6 @@ msgstr "Lets bots save and recall facts by meaning, alongside MEMORY.md."
 msgid "Light"
 msgstr "Light"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Limit reached"
-msgstr "Limit reached"
-
 #: src/pages/SpaceSearch.tsx
 msgid "Link"
 msgstr "Link"
@@ -5025,6 +5021,11 @@ msgstr "Not configured"
 #: src/pages/AdminOpsPage.tsx
 msgid "Not eligible for the shared budget"
 msgstr "Not eligible for the shared budget"
+
+#: src/components/ai/context.tsx
+#: src/pages/AdminOpsPage.tsx
+msgid "Not enough left for a new run"
+msgstr "Not enough left for a new run"
 
 #: src/pages/shell/agent-import.tsx
 msgid "Not imported"

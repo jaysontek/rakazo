@@ -4172,10 +4172,6 @@ msgstr "MEMORY.md に加えて、ボットが意味に基づいて事実を保�
 msgid "Light"
 msgstr "ライト"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Limit reached"
-msgstr ""
-
 #: src/pages/SpaceSearch.tsx
 msgid "Link"
 msgstr ""
@@ -5025,6 +5021,11 @@ msgstr ""
 #: src/pages/AdminOpsPage.tsx
 msgid "Not eligible for the shared budget"
 msgstr "共有予算の対象外です"
+
+#: src/components/ai/context.tsx
+#: src/pages/AdminOpsPage.tsx
+msgid "Not enough left for a new run"
+msgstr ""
 
 #: src/pages/shell/agent-import.tsx
 msgid "Not imported"
