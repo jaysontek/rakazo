@@ -22,6 +22,7 @@ import { useNavigate } from "react-router-dom";
 import { authClient } from "../lib/auth";
 import { switchOrganization, useOrganizations } from "../lib/organizations";
 import { useQueryUserId, useSpaceQueries } from "../lib/query";
+import { useIsImpersonating } from "../lib/use-impersonating";
 import { DeleteAccountForm, hasDeleteRedirectError } from "./AccountAccess";
 
 /**
@@ -43,7 +44,8 @@ export function AccountMenu({
   const userId = useQueryUserId();
   const queries = useSpaceQueries();
   const me = useQuery({ ...queries.me.queryOptions(), enabled: Boolean(userId) });
-  const showAdminDashboard = me.data?.isAdmin === true && me.data?.impersonating == null;
+  const impersonating = useIsImpersonating();
+  const showAdminDashboard = me.data?.isAdmin === true && !impersonating;
   const { organizations, activeOrganizationId } = useOrganizations();
   // An SSO sign-in to confirm deletion returns here; reopen so its error is seen.
   const [deleting, setDeleting] = useState(hasDeleteRedirectError);
@@ -58,11 +60,11 @@ export function AccountMenu({
             <Button
               variant="ghost"
               size="icon"
-              className="fixed top-4 right-6 text-muted-foreground"
+              className="fixed top-impersonation-banner-4 right-6 text-muted-foreground"
             />
           }
         >
-          <CircleUserRound />
+          <CircleUserRound aria-hidden="true" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-auto min-w-48">
           {email ? (
@@ -73,7 +75,7 @@ export function AccountMenu({
               <DropdownMenuSeparator />
             </>
           ) : null}
-          {organizations.length > 1 ? (
+          {!impersonating && organizations.length > 1 ? (
             <>
               <DropdownMenuRadioGroup
                 value={activeOrganizationId}
@@ -100,12 +102,19 @@ export function AccountMenu({
               <Trans>Admin Dashboard</Trans>
             </DropdownMenuItem>
           ) : null}
-          <DropdownMenuItem onClick={onLogOut}>
-            <Trans>Log out</Trans>
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setDeleting(true)}>
-            <Trans>Delete account</Trans>
-          </DropdownMenuItem>
+          {impersonating ? null : (
+            <>
+              <DropdownMenuItem data-testid="account-menu-log-out" onClick={onLogOut}>
+                <Trans>Log out</Trans>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                data-testid="account-menu-delete-account"
+                onClick={() => setDeleting(true)}
+              >
+                <Trans>Delete account</Trans>
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
       <Dialog open={deleting} onOpenChange={setDeleting}>

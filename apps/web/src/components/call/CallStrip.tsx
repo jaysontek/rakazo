@@ -1,12 +1,6 @@
 import { useLingui } from "@lingui/react/macro";
 import type { VoiceInfo } from "@rakazo/contracts";
-import {
-  BotAvatar,
-  Button,
-  cn,
-  NativeSelect,
-  NativeSelectOption,
-} from "@rakazo/ui-web";
+import { BotAvatar, Button, cn, NativeSelect, NativeSelectOption } from "@rakazo/ui-web";
 import { Mic, MicOff, PhoneOff, Settings } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 import type { CallState } from "../../lib/call-session";

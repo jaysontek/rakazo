@@ -38,11 +38,11 @@ import {
   ComputersUnavailableHint,
   computersAreUnavailable,
 } from "../components/ComputersUnavailableHint";
-import { SharedKeyUsageMeter } from "../components/SharedKeyUsageMeter";
 import { DesktopUpdateSection } from "../components/DesktopUpdates";
 import { InstallAppSettings } from "../components/InstallAppSettings";
 import { PasskeySettings } from "../components/PasskeySettings";
 import { SettingsGroup, SettingsRow } from "../components/SettingsRows";
+import { SharedKeyUsageMeter } from "../components/SharedKeyUsageMeter";
 import { TrustedLinkSitesSettings } from "../components/TrustedLinkSitesSettings";
 import { WebPushSettings } from "../components/WebPushSettings";
 import { authClient } from "../lib/auth";
@@ -295,8 +295,12 @@ export function GeneralSettingsPanels({
         )}
       </SettingsGroup>
 
-      <InstallAppSettings />
-      <WebPushSettings />
+      {readOnly ? null : (
+        <>
+          <InstallAppSettings />
+          <WebPushSettings />
+        </>
+      )}
 
       <SettingsGroup title={<Trans>Preferences</Trans>}>
         <SettingsRow

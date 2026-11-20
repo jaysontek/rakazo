@@ -25,6 +25,21 @@ vi.mock("../lib/rpc", () => ({
   createSpaceRpc: () => api,
   selectedSpaceId: () => null,
 }));
+const impersonating = vi.hoisted(() => ({ current: false }));
+vi.mock("../lib/use-impersonating", () => ({
+  useIsImpersonating: () => impersonating.current,
+  useImpersonating: () =>
+    impersonating.current
+      ? {
+          targetName: "Ada",
+          targetEmail: "ada@example.com",
+          targetUserId: "u1",
+          adminUserId: "admin",
+          expiresAt: "2030-01-01T00:00:00.000Z",
+          impersonationSessionId: "imp_1",
+        }
+      : null,
+}));
 vi.mock("../lib/relative-time", () => ({ formatRelativeTime: () => "5m ago" }));
 vi.mock("./WindowChrome", () => ({ WindowChrome: () => null }));
 vi.mock("@lingui/react/macro", () => {
@@ -97,6 +112,7 @@ function ticket(
 let client: QueryClient;
 beforeEach(() => {
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  impersonating.current = false;
 });
 
 async function renderBoard(stream?: AsyncIterable<{ ticketId?: string }>, refusal?: unknown) {
@@ -498,5 +514,28 @@ it("does not repeat a posted comment a refresh already brought", async () => {
     expect(commentsText(page).split("New note")).toHaveLength(2);
   } finally {
     await page.cleanup();
+  }
+});
+
+it("hides New ticket while impersonating and keeps it when not", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  api.bots.list.mockResolvedValue([bot("bot-1", "Helper")]);
+  api.tickets.list.mockResolvedValue({ tickets: [] });
+  const enabled = await renderBoard();
+  try {
+    expect(
+      [...enabled.container.querySelectorAll("button")].some((b) => b.textContent === "New ticket"),
+    ).toBe(true);
+  } finally {
+    await enabled.cleanup();
+  }
+  impersonating.current = true;
+  const readonly = await renderBoard();
+  try {
+    expect(
+      [...readonly.container.querySelectorAll("button")].some((b) => b.textContent === "New ticket"),
+    ).toBe(false);
+  } finally {
+    await readonly.cleanup();
   }
 });

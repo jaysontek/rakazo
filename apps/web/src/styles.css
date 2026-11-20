@@ -4,6 +4,36 @@
 @source "../../packages/ui-web/src/**/*.{ts,tsx}";
 @source "./src/**/*.{ts,tsx}";
 
+:root {
+  /* Viewport offset below the banner (banner bottom); 0px when not impersonating. */
+  --impersonation-banner-height: 0px;
+}
+
+/* Fixed chrome sits below the impersonation banner without Tailwind [var(--…)] arbitrarys. */
+.top-impersonation-banner {
+  top: var(--impersonation-banner-height, 0px);
+}
+.h-impersonation-rest {
+  height: calc(100svh - var(--impersonation-banner-height, 0px));
+}
+.top-impersonation-banner-3 {
+  top: calc(var(--impersonation-banner-height, 0px) + 0.75rem);
+}
+.top-impersonation-banner-4 {
+  top: calc(var(--impersonation-banner-height, 0px) + 1rem);
+}
+.top-impersonation-banner-16 {
+  top: calc(var(--impersonation-banner-height, 0px) + 4rem);
+}
+@media (min-width: 768px) {
+  .md\:top-impersonation-banner-4 {
+    top: calc(var(--impersonation-banner-height, 0px) + 1rem);
+  }
+  .md\:top-impersonation-banner-16 {
+    top: calc(var(--impersonation-banner-height, 0px) + 4rem);
+  }
+}
+
 html,
 body,
 #root {

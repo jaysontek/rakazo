@@ -5,6 +5,7 @@ import type { ComponentProps, ReactNode } from "react";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { IMPERSONATION_BANNER_HEIGHT_VAR } from "../lib/impersonation-banner-height";
 
 const stopImpersonation = vi.fn();
 const switchImpersonation = vi.fn();
@@ -82,12 +83,40 @@ async function renderBanner() {
   }
 }
 
+const impersonatingPayload = {
+  adminUserId: "admin",
+  targetUserId: "u1",
+  targetName: "Ada",
+  targetEmail: "ada@example.com",
+  expiresAt: "2030-06-15T18:30:00.000Z",
+  impersonationSessionId: "imp_1_1",
+};
+
 beforeEach(() => {
   me.mockReset();
   stopImpersonation.mockReset();
   switchImpersonation.mockReset();
   hardSwitch.mockReset();
   syncTeammates.mockReset();
+  document.documentElement.style.removeProperty(IMPERSONATION_BANNER_HEIGHT_VAR);
+  class FakeResizeObserver {
+    callback: ResizeObserverCallback;
+    constructor(callback: ResizeObserverCallback) {
+      this.callback = callback;
+    }
+    observe() {
+      this.callback([], this as unknown as ResizeObserver);
+    }
+    disconnect() {}
+    unobserve() {}
+  }
+  vi.stubGlobal("ResizeObserver", FakeResizeObserver);
+  Object.defineProperty(HTMLElement.prototype, "getBoundingClientRect", {
+    configurable: true,
+    value() {
+      return { height: 48, width: 390, top: 0, left: 0, bottom: 48, right: 390, x: 0, y: 0 };
+    },
+  });
 });
 
 afterEach(() => {
@@ -95,20 +124,13 @@ afterEach(() => {
   host?.remove();
   root = null;
   host = null;
+  document.documentElement.style.removeProperty(IMPERSONATION_BANNER_HEIGHT_VAR);
+  vi.unstubAllGlobals();
 });
 
 describe("ImpersonationBanner", () => {
   it("shows read-only copy with expiry and stop", async () => {
-    me.mockResolvedValue({
-      impersonating: {
-        adminUserId: "admin",
-        targetUserId: "u1",
-        targetName: "Ada",
-        targetEmail: "ada@example.com",
-        expiresAt: "2030-06-15T18:30:00.000Z",
-        impersonationSessionId: "imp_1_1",
-      },
-    });
+    me.mockResolvedValue({ impersonating: impersonatingPayload });
     await renderBanner();
     const banner = host!.querySelector('[data-testid="impersonation-banner"]');
     expect(banner).not.toBeNull();
@@ -120,17 +142,45 @@ describe("ImpersonationBanner", () => {
     expect(host!.querySelector('[data-testid="impersonation-stop"]')).not.toBeNull();
   });
 
-  it("stops with a hard switch back to ops", async () => {
-    me.mockResolvedValue({
-      impersonating: {
-        adminUserId: "admin",
-        targetUserId: "u1",
-        targetName: "Ada",
-        targetEmail: "ada@example.com",
-        expiresAt: "2030-06-15T18:30:00.000Z",
-        impersonationSessionId: "imp_1_1",
+  it("uses a two-row mobile structure without a truncating status flex squeeze", async () => {
+    me.mockResolvedValue({ impersonating: impersonatingPayload });
+    await renderBanner();
+    const banner = host!.querySelector('[data-testid="impersonation-banner"]');
+    const status = host!.querySelector('[data-testid="impersonation-status"]');
+    expect(banner!.className).toContain("flex-col");
+    expect(status!.className).toContain("line-clamp-2");
+    expect(status!.className).not.toMatch(/(?:^|\s)truncate(?:\s|$)/);
+    const stop = host!.querySelector<HTMLButtonElement>('[data-testid="impersonation-stop"]');
+    const select = host!.querySelector<HTMLSelectElement>('[data-testid="impersonation-switch"]');
+    expect(stop).not.toBeNull();
+    expect(select).not.toBeNull();
+    expect(stop!.disabled).toBe(false);
+    expect(select!.disabled).toBe(false);
+    expect(stop!.className).toMatch(/min-h-10/);
+    expect(select!.className).toMatch(/min-h-10/);
+  });
+
+  it("publishes --impersonation-banner-height on the document element", async () => {
+    me.mockResolvedValue({ impersonating: impersonatingPayload });
+    Object.defineProperty(HTMLElement.prototype, "getBoundingClientRect", {
+      configurable: true,
+      value() {
+        return { height: 64, width: 390, top: 0, left: 0, bottom: 64, right: 390, x: 0, y: 0 };
       },
     });
+    await renderBanner();
+    expect(document.documentElement.style.getPropertyValue(IMPERSONATION_BANNER_HEIGHT_VAR)).toBe(
+      "64px",
+    );
+    act(() => root?.unmount());
+    root = null;
+    expect(document.documentElement.style.getPropertyValue(IMPERSONATION_BANNER_HEIGHT_VAR)).toBe(
+      "0px",
+    );
+  });
+
+  it("stops with a hard switch back to ops", async () => {
+    me.mockResolvedValue({ impersonating: impersonatingPayload });
     stopImpersonation.mockResolvedValue({ impersonating: null });
     await renderBanner();
     await act(async () => {
@@ -150,16 +200,7 @@ describe("ImpersonationBanner", () => {
   });
 
   it("switches teammates via ops.switchImpersonation", async () => {
-    me.mockResolvedValue({
-      impersonating: {
-        adminUserId: "admin",
-        targetUserId: "u1",
-        targetName: "Ada",
-        targetEmail: "ada@example.com",
-        expiresAt: "2030-06-15T18:30:00.000Z",
-        impersonationSessionId: "imp_1_1",
-      },
-    });
+    me.mockResolvedValue({ impersonating: impersonatingPayload });
     switchImpersonation.mockResolvedValue({ impersonating: { targetUserId: "u2" } });
     await renderBanner();
     const select = host!.querySelector<HTMLSelectElement>('[data-testid="impersonation-switch"]');

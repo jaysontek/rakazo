@@ -2,11 +2,20 @@ import { Trans, useLingui } from "@lingui/react/macro";
 import type {
   AgentSkillCatalogEntry,
   Bot,
+  MessageReaction,
   SpaceMemoryConfig,
   ThreadMessage,
   VoiceStatus,
 } from "@rakazo/contracts";
 import { DEFAULT_NEW_BOT_AVATAR_SET } from "@rakazo/contracts";
+
+const EMPTY_ASK_IDS = new Set<string>();
+const noopAnswer = async () => undefined;
+const noopMessage = (_message: ThreadMessage) => undefined;
+const noopQuote = (_message: ThreadMessage, _quote: string) => undefined;
+const noopReact = async (_message: ThreadMessage, _reaction: MessageReaction) => undefined;
+const noopRoutine = (_name: string, _prompt: string) => undefined;
+
 import {
   answerableAskMessageIds,
   channelMessageSender,
@@ -856,6 +865,7 @@ function SpaceShell() {
     updates: Boolean(desktopBridge()?.update),
   });
   const impersonating = Boolean(bootstrapMe?.impersonating);
+  const emptyAskIds = EMPTY_ASK_IDS;
   const paletteActions: CommandPaletteAction[] = [
     ...(impersonating
       ? []
@@ -1054,6 +1064,7 @@ function SpaceShell() {
             reorderRosterBot={roster.reorderRosterBot}
             activeSnapshot={activeSnapshot}
             botMenuContent={botMenuContent}
+            readOnly={impersonating}
           />
         }
         archived={
@@ -1065,6 +1076,7 @@ function SpaceShell() {
             refreshBots={refreshBots}
             setDeleteTarget={dialogs.setDeleteTarget}
             setDeleteGroupTarget={dialogs.setDeleteGroupTarget}
+            readOnly={impersonating}
           />
         }
         footerLogos={footerLogos}
@@ -1072,8 +1084,10 @@ function SpaceShell() {
         ticketBoardEnabled={Boolean(bootstrapMe?.ticketBoardEnabled)}
         navLinks={desktopBridge() ? [] : (bootstrapMe?.navLinks ?? [])}
         openSettings={openSettings}
-        openIntegrations={() => setOverlay({ kind: "integrations" })}
-        openSkills={() => setOverlay({ kind: "skills" })}
+        openIntegrations={
+          impersonating ? () => undefined : () => setOverlay({ kind: "integrations" })
+        }
+        openSkills={impersonating ? () => undefined : () => setOverlay({ kind: "skills" })}
         openSpaceChat={openSpaceChat}
       />
 
@@ -1143,37 +1157,38 @@ function SpaceShell() {
               olderCursor={activeSnapshot?.olderCursor ?? null}
               unreadAfterSeq={read.unreadAfterSeq}
               loadingOlder={loadingOlder}
-              answerableAskIds={answerableAskIds}
-              dismissableAskIds={dismissableAskIds}
+              answerableAskIds={impersonating ? emptyAskIds : answerableAskIds}
+              dismissableAskIds={impersonating ? emptyAskIds : dismissableAskIds}
               headerClearance={active && call?.botId === active.id ? "call" : "header"}
               running={transcriptRunning}
               workingBots={workingBots}
               userBubble={userBubble}
               onCallBack={
-                bootstrapMe?.phoneCallsEnabled && !inGroup && active
+                !impersonating && bootstrapMe?.phoneCallsEnabled && !inGroup && active
                   ? () => callBot(active)
                   : undefined
               }
               onLoadOlder={loadOlder}
               onOpenBot={openBot}
-              onAnswer={composer.answerMessage}
-              onReply={replyToMessage}
-              onMarkUnread={markMessageUnread}
-              onQuote={quoteMessage}
-              onReact={composer.reactToMessage}
+              onAnswer={impersonating ? noopAnswer : composer.answerMessage}
+              onReply={impersonating ? noopMessage : replyToMessage}
+              onMarkUnread={impersonating ? noopMessage : markMessageUnread}
+              onQuote={impersonating ? noopQuote : quoteMessage}
+              onReact={impersonating ? noopReact : composer.reactToMessage}
               onJumpToMessage={jumpToReplyMessage}
               onOpenPeerMessages={openPeerMessages}
               memberName={resolveTranscriptMemberName}
               peerBot={resolveTranscriptBot}
               onRefresh={refreshActiveThread}
               onBotChanged={refreshBots}
-              onAddRoutine={addSkillRoutine}
+              onAddRoutine={impersonating ? noopRoutine : addSkillRoutine}
               voiceReady={Boolean(voiceStatus?.ready)}
               speakingMessageId={speakingMessageId}
-              onSpeak={speakMessage}
+              onSpeak={impersonating ? undefined : speakMessage}
               onOpenComputer={computerControls.onOpenComputer}
-              onOpenImportSetup={openImportSetup}
+              onOpenImportSetup={impersonating ? undefined : openImportSetup}
               rpc={rpc}
+              readOnly={impersonating}
             />
           )}
         </div>
@@ -1333,12 +1348,12 @@ function SpaceShell() {
                 ? (snapshot.run.routineId ?? undefined)
                 : undefined
             }
-            onCreate={() => startRoutine()}
-            onEdit={startRoutine}
-            onStop={() => void stopRun()}
+            onCreate={impersonating ? () => undefined : () => startRoutine()}
+            onEdit={impersonating ? () => undefined : startRoutine}
+            onStop={impersonating ? () => undefined : () => void stopRun()}
           />
         }
-        routineEditorProps={routineEditorProps}
+        routineEditorProps={impersonating ? null : routineEditorProps}
         openBot={openBot}
         openCreatedBot={openCreatedBot}
         modelFocusRequest={modelFocusRequest}
@@ -1346,6 +1361,7 @@ function SpaceShell() {
         memoryProviderConfigured={memoryProviderConfig != null}
         setAgentSkills={setAgentSkills}
         onClearBot={(bot) => dialogs.setClearTarget({ kind: "bot", chat: bot })}
+        readOnly={impersonating}
       />
 
       <Suspense fallback={null}>

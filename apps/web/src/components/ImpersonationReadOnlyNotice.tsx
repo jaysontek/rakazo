@@ -9,9 +9,11 @@ export function ImpersonationReadOnlyNotice() {
   return (
     <p
       data-testid="impersonation-read-only-notice"
-      className="mb-3 text-sm text-muted-foreground"
+      className="mb-3 min-w-0 break-words text-sm text-muted-foreground"
     >
-      <Trans>Read-only while viewing as {name}</Trans>
+      <Trans>
+        Read-only while viewing as <span translate="no">{name}</span>
+      </Trans>
     </p>
   );
 }

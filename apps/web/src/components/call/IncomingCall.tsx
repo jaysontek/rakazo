@@ -194,7 +194,7 @@ export function IncomingCall({
       data-testid="incoming-call"
       role="alertdialog"
       aria-label={t`${bot.name} is calling you`}
-      className="fixed inset-0 z-50 flex flex-col items-center bg-background px-7 pt-[max(env(safe-area-inset-top),56px)] pb-[max(env(safe-area-inset-bottom),40px)] md:inset-auto md:end-4 md:top-16 md:w-[360px] md:items-stretch md:gap-4 md:rounded-[22px] md:border md:border-border md:bg-card md:p-[18px] md:shadow-lg"
+      className="fixed inset-0 z-50 flex flex-col items-center bg-background px-7 pt-[max(env(safe-area-inset-top),56px)] pb-[max(env(safe-area-inset-bottom),40px)] md:inset-auto md:end-4 md:top-impersonation-banner-16 md:w-[360px] md:items-stretch md:gap-4 md:rounded-[22px] md:border md:border-border md:bg-card md:p-[18px] md:shadow-lg"
     >
       <div className="flex flex-1 flex-col items-center justify-center gap-5 md:flex-none md:flex-row md:justify-start md:gap-3.5">
         <span className="relative grid size-32 shrink-0 place-items-center md:size-14">

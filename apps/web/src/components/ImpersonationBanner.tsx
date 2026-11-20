@@ -1,11 +1,11 @@
 import { Trans, useLingui } from "@lingui/react/macro";
-import {
-  buttonVariants,
-  NativeSelect,
-  NativeSelectOption,
-} from "@rakazo/ui-web";
+import { buttonVariants, NativeSelect, NativeSelectOption } from "@rakazo/ui-web";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  clearImpersonationBannerHeight,
+  publishImpersonationBannerHeight,
+} from "../lib/impersonation-banner-height";
 import { hardSwitchImpersonation } from "../lib/impersonation-switch";
 import {
   readImpersonationOrgId,
@@ -30,6 +30,7 @@ function formatExpiry(expiresAt: string, locale: string): string {
 export function ImpersonationBanner() {
   const { t, i18n } = useLingui();
   const queryClient = useQueryClient();
+  const bannerRef = useRef<HTMLDivElement>(null);
   const me = useQuery({
     queryKey: ["me", "impersonation-banner"],
     queryFn: () => rpc.me(),
@@ -48,9 +49,25 @@ export function ImpersonationBanner() {
     [impersonating],
   );
   const organizationId = impersonating ? readImpersonationOrgId() : null;
-  const switchable = Boolean(
-    organizationId && teammates.length > 1 && impersonating?.targetUserId,
-  );
+  const switchable = Boolean(organizationId && teammates.length > 1 && impersonating?.targetUserId);
+
+  useEffect(() => {
+    if (!impersonating) {
+      clearImpersonationBannerHeight();
+      return;
+    }
+    const el = bannerRef.current;
+    if (!el) return;
+    // Use bottom (not height) so fixed chrome clears the banner and #root safe-area inset.
+    const publish = () => publishImpersonationBannerHeight(el.getBoundingClientRect().bottom);
+    publish();
+    const observer = new ResizeObserver(publish);
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      clearImpersonationBannerHeight();
+    };
+  }, [impersonating, switchable, error]);
 
   if (!impersonating) return null;
 
@@ -91,57 +108,76 @@ export function ImpersonationBanner() {
 
   return (
     <div
-      role="status"
+      ref={bannerRef}
       data-testid="impersonation-banner"
-      className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-destructive/40 bg-destructive/10 px-4 py-2 text-sm text-destructive"
+      className="flex shrink-0 flex-col gap-2 border-b border-destructive/40 bg-destructive/10 px-4 py-2 text-sm text-destructive sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3 sm:gap-y-1"
     >
-      <span className="min-w-0 flex-1 truncate">
-        {targetName ? (
-          <Trans>
-            Read-only · Viewing as {targetName} ({targetEmail}) · Ends {endsAt}
-          </Trans>
-        ) : (
-          <Trans>
-            Read-only · Viewing as {targetEmail} · Ends {endsAt}
-          </Trans>
-        )}
-      </span>
-      {switchable ? (
-        <label className="flex items-center gap-2 text-destructive">
-          <span className="sr-only">
-            <Trans>Switch member</Trans>
-          </span>
-          <NativeSelect
-            size="sm"
-            data-testid="impersonation-switch"
-            aria-label={t`Switch member`}
-            disabled={busy}
-            value={impersonating.targetUserId}
-            onChange={(event) => void switchTo(event.target.value)}
-            className="max-w-[14rem] border-destructive/40 bg-background text-foreground"
-          >
-            {teammates.map((member) => (
-              <NativeSelectOption key={member.userId} value={member.userId}>
-                {member.name || member.email}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
-        </label>
-      ) : null}
-      {error ? (
-        <span role="alert" className="text-destructive">
-          {error}
-        </span>
-      ) : null}
-      <button
-        type="button"
-        className={buttonVariants({ variant: "outline", size: "sm" })}
-        disabled={busy}
-        data-testid="impersonation-stop"
-        onClick={() => void stop()}
+      <span
+        role="status"
+        data-testid="impersonation-status"
+        className="min-w-0 line-clamp-2 sm:flex-1 sm:truncate sm:line-clamp-none"
       >
-        {busy ? <Trans>Stopping…</Trans> : <Trans>Stop</Trans>}
-      </button>
+        <span className="sm:hidden">
+          {targetName ? (
+            <Trans>
+              Read-only · Viewing as <span translate="no">{targetName}</span>
+            </Trans>
+          ) : (
+            <Trans>
+              Read-only · Viewing as <span translate="no">{targetEmail}</span>
+            </Trans>
+          )}
+        </span>
+        <span className="hidden sm:inline">
+          {targetName ? (
+            <Trans>
+              Read-only · Viewing as <span translate="no">{targetName}</span> (
+              <span translate="no">{targetEmail}</span>) · Ends {endsAt}
+            </Trans>
+          ) : (
+            <Trans>
+              Read-only · Viewing as <span translate="no">{targetEmail}</span> · Ends {endsAt}
+            </Trans>
+          )}
+        </span>
+      </span>
+      <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:contents">
+        {switchable ? (
+          <div className="flex min-w-0 flex-1 items-center gap-2 text-destructive sm:flex-none">
+            <NativeSelect
+              size="sm"
+              name="impersonation-member"
+              data-testid="impersonation-switch"
+              aria-label={t`Switch member`}
+              disabled={busy}
+              value={impersonating.targetUserId}
+              onChange={(event) => void switchTo(event.target.value)}
+              className="h-10 min-h-10 w-full max-w-none border-destructive/40 bg-background text-foreground sm:h-8 sm:min-h-8 sm:max-w-[14rem]"
+            >
+              {teammates.map((member) => (
+                <NativeSelectOption key={member.userId} value={member.userId}>
+                  {member.name || member.email}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+          </div>
+        ) : null}
+        {error ? (
+          <span role="alert" className="min-w-0 break-words text-destructive">
+            {error}
+          </span>
+        ) : null}
+        <button
+          type="button"
+          className={`${buttonVariants({ variant: "outline", size: "sm" })} h-10 min-h-10 shrink-0 px-4 sm:h-8 sm:min-h-8`}
+          disabled={busy}
+          aria-busy={busy || undefined}
+          data-testid="impersonation-stop"
+          onClick={() => void stop()}
+        >
+          {busy ? <Trans>Working…</Trans> : <Trans>Stop</Trans>}
+        </button>
+      </div>
     </div>
   );
 }

@@ -277,6 +277,11 @@ function TicketDialog({
         </DialogHeader>
         {readOnly ? <ImpersonationReadOnlyNotice /> : null}
         <fieldset disabled={readOnly} className="min-w-0 disabled:opacity-80">
+          {readOnly ? (
+            <legend className="sr-only">
+              <Trans>Read-only</Trans>
+            </legend>
+          ) : null}
           <form
             className="space-y-3"
             onSubmit={(event) => {

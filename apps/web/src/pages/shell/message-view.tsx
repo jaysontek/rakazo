@@ -82,6 +82,7 @@ export const MessageView = memo(function MessageView({
   onMarkUnread,
   markedUnread = false,
   onReact,
+  readOnly = false,
 }: {
   artifactTarget: ArtifactTarget;
   canAnswer: boolean;
@@ -116,7 +117,7 @@ export const MessageView = memo(function MessageView({
   onAddRoutine: (name: string, prompt: string) => void;
   voiceReady: boolean;
   speaking: boolean;
-  onSpeak: (message: ThreadMessage) => void;
+  onSpeak?: (message: ThreadMessage) => void;
   onOpenComputer: (botId?: string) => void;
   /** Opens where an imported item's setup is finished. */
   onOpenImportSetup?: (target: ImportSetupTarget) => void;
@@ -126,6 +127,8 @@ export const MessageView = memo(function MessageView({
   onMarkUnread: (message: ThreadMessage) => void;
   markedUnread?: boolean;
   onReact: (message: ThreadMessage, reaction: MessageReaction) => Promise<void>;
+  /** Hide reply/react/unread while impersonating; copy stays available. */
+  readOnly?: boolean;
 }) {
   const { t } = useLingui();
   const isNarration =
@@ -175,7 +178,7 @@ export const MessageView = memo(function MessageView({
     },
     [mentions, onOpenBot, peerBot],
   );
-  const speak = () => onSpeak(message);
+  const speak = () => onSpeak?.(message);
   const replyBotId = message.replyPreview?.botId ?? replyParent?.botId;
   const speakerBot = message.botId ? peerBot?.(message.botId) : undefined;
   const speakerColorDef = useMemo(
@@ -230,6 +233,7 @@ export const MessageView = memo(function MessageView({
       onMarkUnread={onMarkUnread}
       markedUnread={markedUnread}
       onReact={onReact}
+      readOnly={readOnly}
     />
   );
   if (isNarration) {
@@ -290,7 +294,10 @@ export const MessageView = memo(function MessageView({
                 }
                 return null;
               })}
-              {!isLive && voiceReady && message.blocks.some((block) => block.kind === "text") ? (
+              {!isLive &&
+              onSpeak &&
+              voiceReady &&
+              message.blocks.some((block) => block.kind === "text") ? (
                 <Button
                   variant="text"
                   size="xs"
@@ -569,7 +576,7 @@ export const MessageView = memo(function MessageView({
                       {block.text}
                     </ChatMarkdown>
                   </div>
-                  {voiceReady ? (
+                  {onSpeak && voiceReady ? (
                     <Button
                       variant="text"
                       size="xs"

@@ -2,9 +2,11 @@ import { useLingui } from "@lingui/react/macro";
 import type { BotAvatarSet, SpaceMemoryConfig, UsageSummary } from "@rakazo/contracts";
 import { Button, Dialog, DialogClose, DialogContent, DialogTitle } from "@rakazo/ui-web";
 import { ChevronLeft, ChevronRight, XIcon } from "lucide-react";
+import type { ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApprovalRulesSettings } from "../components/ApprovalRulesSettings";
 import { computersAreUnavailable } from "../components/ComputersUnavailableHint";
+import { ImpersonationReadOnlyNotice } from "../components/ImpersonationReadOnlyNotice";
 import { SETTINGS_CONTENT_WIDTH, SettingsGroup, SettingsRow } from "../components/SettingsRows";
 import { VaultSettings } from "../components/VaultSettings";
 import { canChooseOwnComputer } from "../lib/computer-sandbox";
@@ -27,6 +29,27 @@ import { useSettingsNavItems } from "./settings-nav";
 import type { SettingsSpace } from "./shell/dialogs";
 import type { SettingsSection } from "./shell-overlay";
 import { VoiceSettingsOverlay } from "./VoiceSettingsOverlay";
+
+/** Disable mutation controls in a settings section while impersonating; keep nav/view working. */
+function ReadOnlySettingsSection({
+  readOnly,
+  children,
+}: {
+  readOnly: boolean;
+  children: ReactNode;
+}) {
+  const { t } = useLingui();
+  if (!readOnly) return children;
+  return (
+    <div data-testid="settings-read-only-section">
+      <ImpersonationReadOnlyNotice />
+      <fieldset disabled className="min-w-0 space-y-8 disabled:opacity-80">
+        <legend className="sr-only">{t`Read-only`}</legend>
+        {children}
+      </fieldset>
+    </div>
+  );
+}
 
 export function SettingsOverlay({
   space,
@@ -371,7 +394,7 @@ export function SettingsOverlay({
                         readOnly={readOnly}
                       />
                       {/* One space is just the app, so there is nothing to tell apart or manage. */}
-                      {spaces.length > 1 && onOpenSpace ? (
+                      {spaces.length > 1 && onOpenSpace && !readOnly ? (
                         <SettingsGroup title={t`Spaces`} data-testid="settings-spaces">
                           {spaces.map((option) => (
                             <SettingsRow
@@ -392,62 +415,102 @@ export function SettingsOverlay({
                           ))}
                         </SettingsGroup>
                       ) : null}
+                      {spaces.length > 1 && readOnly ? (
+                        <SettingsGroup title={t`Spaces`} data-testid="settings-spaces">
+                          {spaces.map((option) => (
+                            <SettingsRow
+                              key={option.id}
+                              label={<p className="break-words">{option.name}</p>}
+                            />
+                          ))}
+                        </SettingsGroup>
+                      ) : null}
                     </div>
                   ) : null}
                   {section === "space" && space ? (
-                    <SpaceSettingsPanel
-                      key={space.id}
-                      space={space}
-                      onRename={(name) => onRenameSpace?.(space.id, name) ?? Promise.resolve()}
-                      onDelete={() => onDeleteSpace?.(space.id) ?? Promise.resolve()}
-                      onClose={requestClose}
-                      onBusyChange={setVoiceBusy}
-                    />
+                    <ReadOnlySettingsSection readOnly={readOnly}>
+                      <SpaceSettingsPanel
+                        key={space.id}
+                        space={space}
+                        onRename={(name) => onRenameSpace?.(space.id, name) ?? Promise.resolve()}
+                        onDelete={() => onDeleteSpace?.(space.id) ?? Promise.resolve()}
+                        onClose={requestClose}
+                        onBusyChange={setVoiceBusy}
+                      />
+                    </ReadOnlySettingsSection>
                   ) : null}
                   {section === "organization" ? (
-                    <OrganizationSettingsPanel onBusyChange={setVoiceBusy} />
+                    <ReadOnlySettingsSection readOnly={readOnly}>
+                      <OrganizationSettingsPanel onBusyChange={setVoiceBusy} />
+                    </ReadOnlySettingsSection>
                   ) : null}
-                  {section === "confirmations" ? <ApprovalRulesSettings scope="account" /> : null}
-                  {section === "vault" ? <VaultSettings scope="account" /> : null}
-                  {section === "messaging" && messagingEnabled ? <MessagingSettingsPanel /> : null}
+                  {section === "confirmations" ? (
+                    <ReadOnlySettingsSection readOnly={readOnly}>
+                      <ApprovalRulesSettings scope="account" />
+                    </ReadOnlySettingsSection>
+                  ) : null}
+                  {section === "vault" ? (
+                    <ReadOnlySettingsSection readOnly={readOnly}>
+                      <VaultSettings scope="account" />
+                    </ReadOnlySettingsSection>
+                  ) : null}
+                  {section === "messaging" && messagingEnabled ? (
+                    <ReadOnlySettingsSection readOnly={readOnly}>
+                      <MessagingSettingsPanel />
+                    </ReadOnlySettingsSection>
+                  ) : null}
                   {section === "wallet" && paymentWalletProvider ? (
-                    <PaymentWalletSettingsPanel provider={paymentWalletProvider} />
+                    <ReadOnlySettingsSection readOnly={readOnly}>
+                      <PaymentWalletSettingsPanel provider={paymentWalletProvider} />
+                    </ReadOnlySettingsSection>
                   ) : null}
                   {section === "usage" ? (
                     <UsageSettingsPanel usage={usage} panelRef={usageRef} />
                   ) : null}
                   {section === "computer" && showComputer ? (
-                    <ComputerSettingsPanel
-                      sandboxProvider={sandboxProvider}
-                      onSandboxProviderChange={(next) => {
-                        onSandboxProviderChange?.(next);
-                        holdComputerRecovery();
-                      }}
-                      onRecoveryDismissed={releaseComputerRecovery}
-                      canConfigureComputers={canConfigureComputers}
-                    />
+                    <ReadOnlySettingsSection readOnly={readOnly}>
+                      <ComputerSettingsPanel
+                        sandboxProvider={sandboxProvider}
+                        onSandboxProviderChange={(next) => {
+                          onSandboxProviderChange?.(next);
+                          holdComputerRecovery();
+                        }}
+                        onRecoveryDismissed={releaseComputerRecovery}
+                        canConfigureComputers={canConfigureComputers}
+                      />
+                    </ReadOnlySettingsSection>
                   ) : null}
-                  {section === "billing" && billingEnabled ? <BillingSettingsPanel /> : null}
+                  {section === "billing" && billingEnabled ? (
+                    <ReadOnlySettingsSection readOnly={readOnly}>
+                      <BillingSettingsPanel />
+                    </ReadOnlySettingsSection>
+                  ) : null}
                   {section === "updates" && showUpdates ? <UpdatesSettingsPanel /> : null}
                   {section === "models" ? (
-                    <ModelSettingsOverlay embedded scope="account" onClose={requestClose} />
+                    <ReadOnlySettingsSection readOnly={readOnly}>
+                      <ModelSettingsOverlay embedded scope="account" onClose={requestClose} />
+                    </ReadOnlySettingsSection>
                   ) : null}
                   {section === "memory" ? (
-                    <MemorySettingsOverlay
-                      embedded
-                      onClose={requestClose}
-                      config={memoryConfig}
-                      onConfigChange={onMemoryConfigChange}
-                      onBusyChange={setMemoryBusy}
-                    />
+                    <ReadOnlySettingsSection readOnly={readOnly}>
+                      <MemorySettingsOverlay
+                        embedded
+                        onClose={requestClose}
+                        config={memoryConfig}
+                        onConfigChange={onMemoryConfigChange}
+                        onBusyChange={setMemoryBusy}
+                      />
+                    </ReadOnlySettingsSection>
                   ) : null}
                   {section === "voice" ? (
-                    <VoiceSettingsOverlay
-                      embedded
-                      scope="account"
-                      onClose={requestClose}
-                      onBusyChange={setVoiceBusy}
-                    />
+                    <ReadOnlySettingsSection readOnly={readOnly}>
+                      <VoiceSettingsOverlay
+                        embedded
+                        scope="account"
+                        onClose={requestClose}
+                        onBusyChange={setVoiceBusy}
+                      />
+                    </ReadOnlySettingsSection>
                   ) : null}
                 </div>
               </div>

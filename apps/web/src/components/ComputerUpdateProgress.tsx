@@ -54,7 +54,7 @@ export function ComputerUpdateProgress({ onCompleted }: { onCompleted: () => voi
   const selected = updates.find((update) => update.id === openId);
   return (
     <>
-      <div className="fixed top-3 left-1/2 z-50 flex -translate-x-1/2 flex-col gap-2">
+      <div className="fixed top-impersonation-banner-3 left-1/2 z-50 flex -translate-x-1/2 flex-col gap-2">
         {updates.map((update) => (
           <Button
             key={update.id}

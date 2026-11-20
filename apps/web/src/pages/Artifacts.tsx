@@ -702,7 +702,7 @@ function ArtifactCard({
             }}
             className="absolute bottom-3 end-3 bg-card text-muted-foreground opacity-0 hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100 group-focus-within:opacity-100"
           >
-            <Trash2 strokeWidth={1.9} />
+            <Trash2 strokeWidth={1.9} aria-hidden="true" />
           </Button>
         </IconTooltip>
       ) : null}
@@ -773,7 +773,7 @@ function ArtifactRow({
             }}
             className="absolute inset-y-0 end-2 my-auto text-muted-foreground opacity-0 hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100 group-focus-within:opacity-100"
           >
-            <Trash2 strokeWidth={1.9} />
+            <Trash2 strokeWidth={1.9} aria-hidden="true" />
           </Button>
         </IconTooltip>
       ) : null}

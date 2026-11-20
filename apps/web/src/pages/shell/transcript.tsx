@@ -99,6 +99,7 @@ export const Transcript = memo(function Transcript({
   onOpenComputer,
   onOpenImportSetup,
   rpc,
+  readOnly = false,
 }: {
   scrollRef: RefObject<HTMLDivElement | null>;
   scrollRequest: { messageId: string; nonce: number } | null;
@@ -146,10 +147,12 @@ export const Transcript = memo(function Transcript({
   onAddRoutine: (name: string, prompt: string) => void;
   voiceReady: boolean;
   speakingMessageId: string | null;
-  onSpeak: (message: ThreadMessage) => void;
+  onSpeak?: (message: ThreadMessage) => void;
   onOpenComputer: (botId?: string) => void;
   onOpenImportSetup?: (target: ImportSetupTarget) => void;
   rpc: ReturnType<typeof createSpaceRpc>;
+  /** Hide answer/react/reply/unread/routine/call-back while impersonating. */
+  readOnly?: boolean;
 }) {
   const { t } = useLingui();
   const [atEnd, setAtEnd] = useState(true);
@@ -558,7 +561,7 @@ export const Transcript = memo(function Transcript({
                 <VoiceChatCard
                   group={item}
                   revealMessageId={scrollRequest?.messageId}
-                  onCallBack={onCallBack}
+                  onCallBack={readOnly ? undefined : onCallBack}
                 />
               </div>
             );
@@ -605,8 +608,8 @@ export const Transcript = memo(function Transcript({
                       mentions={mentionView.mentions.get(message.id)}
                       pages={pageView.pages.get(message.id)}
                       isPageSuperseded={pageView.isSuperseded}
-                      canAnswer={answerableAskIds.has(message.id)}
-                      canDismiss={dismissableAskIds.has(message.id)}
+                      canAnswer={!readOnly && answerableAskIds.has(message.id)}
+                      canDismiss={!readOnly && dismissableAskIds.has(message.id)}
                       onOpenBot={onOpenBot}
                       onOpenPeerMessages={onOpenPeerMessages}
                       peerExchange={exchanges.lines.get(message.id)}
@@ -628,17 +631,18 @@ export const Transcript = memo(function Transcript({
                       onJumpToMessage={jumpToMessage}
                       onRefresh={onRefresh}
                       onBotChanged={onBotChanged}
-                      onAddRoutine={onAddRoutine}
+                      onAddRoutine={readOnly ? () => undefined : onAddRoutine}
                       voiceReady={voiceReady}
                       speaking={speakingMessageId === message.id}
-                      onSpeak={onSpeak}
+                      onSpeak={readOnly ? undefined : onSpeak}
                       onOpenComputer={onOpenComputer}
-                      onOpenImportSetup={onOpenImportSetup}
+                      onOpenImportSetup={readOnly ? undefined : onOpenImportSetup}
                       rpc={rpc}
                       showToolActivity={showToolActivity}
                       onReply={onReply}
                       onMarkUnread={onMarkUnread}
                       onReact={onReact}
+                      readOnly={readOnly}
                     />
                   </div>
                 </div>
@@ -672,7 +676,7 @@ export const Transcript = memo(function Transcript({
           <ActiveBotGlyph bots={workingBots} label={workingLabel} />
         ) : null}
       </div>
-      {quoteDraft ? (
+      {quoteDraft && !readOnly ? (
         <QuoteSelectionButton
           range={quoteDraft.range}
           onQuote={() => {

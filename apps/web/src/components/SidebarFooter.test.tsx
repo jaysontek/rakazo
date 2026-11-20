@@ -365,3 +365,38 @@ it("lists two organizations with the active one checked", async () => {
   await act(async () => rows[1]!.click());
   expect(onSwitch).toHaveBeenCalledWith(work);
 });
+
+it("hides Log out, Skills, and Connect apps while readOnly impersonating", async () => {
+  await act(async () =>
+    root.render(
+      <DesktopUpdatesProvider>
+        <SidebarFooter
+          name="Target"
+          initials="T"
+          email="user@example.test"
+          open
+          onOpenChange={() => {}}
+          onIntegrations={vi.fn()}
+          onSkills={vi.fn()}
+          onArtifacts={() => {}}
+          onSettings={() => {}}
+          onLogOut={() => {}}
+          signingOut={false}
+          logOutError={null}
+          readOnly
+        />
+      </DesktopUpdatesProvider>,
+    ),
+  );
+  const menu = document.querySelector('[data-slot="popover-content"]')?.textContent ?? "";
+  expect(menu).not.toContain("Log out");
+  expect(menu).not.toContain("Skills");
+  expect(menu).not.toContain("Connect apps");
+  expect(menu).toContain("Settings");
+  expect(menu).toContain("Artifacts");
+});
+
+it("shows Log out when not impersonating", async () => {
+  await render();
+  expect(document.querySelector('[data-slot="popover-content"]')?.textContent).toContain("Log out");
+});
