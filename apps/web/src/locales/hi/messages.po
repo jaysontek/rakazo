@@ -2348,6 +2348,14 @@ msgstr "साइन इन के विकल्प लोड नहीं ह
 msgid "Could not load skill"
 msgstr "स्किल लोड नहीं हो सकी"
 
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "Could not load team"
+msgstr "टीम लोड नहीं हो सकी"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not load teams"
+msgstr "टीमें लोड नहीं हो सकीं"
+
 #: src/pages/Artifacts.tsx
 msgid "Could not load this artifact."
 msgstr ""
@@ -5582,13 +5590,31 @@ msgstr "प्रतिक्रियाएँ"
 msgid "Read replies aloud"
 msgstr "उत्तर पढ़कर सुनाएं"
 
-#: src/components/ImpersonationBanner.tsx
-msgid "Read-only · Viewing as {targetEmail} · Ends {endsAt}"
-msgstr "केवल पढ़ने योग्य · {targetEmail} के रूप में देख रहे हैं · समाप्त {endsAt}"
+#: src/pages/Board.tsx
+#: src/pages/SettingsOverlay.tsx
+#: src/pages/shell/side-panel.tsx
+msgid "Read-only"
+msgstr ""
 
 #: src/components/ImpersonationBanner.tsx
-msgid "Read-only · Viewing as {targetName} ({targetEmail}) · Ends {endsAt}"
-msgstr "केवल पढ़ने योग्य · {targetName} ({targetEmail}) के रूप में देख रहे हैं · समाप्त {endsAt}"
+msgid "Read-only · Viewing as <0>{targetEmail}</0>"
+msgstr ""
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Read-only · Viewing as <0>{targetEmail}</0> · Ends {endsAt}"
+msgstr ""
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Read-only · Viewing as <0>{targetName}</0>"
+msgstr ""
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Read-only · Viewing as <0>{targetName}</0> (<1>{targetEmail}</1>) · Ends {endsAt}"
+msgstr ""
+
+#: src/components/ImpersonationReadOnlyNotice.tsx
+msgid "Read-only while viewing as <0>{name}</0>"
+msgstr ""
 
 #: src/pages/shell/import-status.ts
 msgid "Ready"
@@ -6910,7 +6936,6 @@ msgid "Stopped."
 msgstr "रोक दिया गया।"
 
 #: src/components/ComputerMaintenanceActions.tsx
-#: src/components/ImpersonationBanner.tsx
 msgid "Stopping…"
 msgstr ""
 
@@ -7950,6 +7975,7 @@ msgstr "काम जारी"
 msgid "Working instructions"
 msgstr "काम के निर्देश"
 
+#: src/components/ImpersonationBanner.tsx
 #: src/components/ToolActivityDisclosure.tsx
 #: src/lib/roster-status.ts
 #: src/pages/Auth.tsx
@@ -8068,6 +8094,11 @@ msgstr "ट्रायल खत्म होने पर आपका प्�
 msgid "Your plan becomes {tierTargetLabel} when your trial ends."
 msgstr "ट्रायल खत्म होने पर आपका प्लान {tierTargetLabel} हो जाएगा।"
 
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "Your share of this week's shared API key budget is used up. It resets next week, or connect your own key in Models."
+msgstr ""
+
 #: src/components/integrations/skills-dialog.tsx
 msgid "Your skills"
 msgstr ""
@@ -8095,9 +8126,3 @@ msgstr "आपके आवाज़ प्रोवाइडर ने कु�
 #: src/components/vault/VaultItemEditor.tsx
 msgid "ZIP or postal code"
 msgstr ""
-
-msgid "Could not load team"
-msgstr "टीम लोड नहीं हो सकी"
-
-msgid "Could not load teams"
-msgstr "टीमें लोड नहीं हो सकीं"

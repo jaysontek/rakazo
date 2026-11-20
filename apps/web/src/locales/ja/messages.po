@@ -2348,6 +2348,14 @@ msgstr "ログイン方法を読み込めませんでした"
 msgid "Could not load skill"
 msgstr "スキルを読み込めませんでした"
 
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "Could not load team"
+msgstr "チームを読み込めませんでした"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not load teams"
+msgstr "チーム一覧を読み込めませんでした"
+
 #: src/pages/Artifacts.tsx
 msgid "Could not load this artifact."
 msgstr "このアーティファクトを読み込めませんでした。"
@@ -5582,13 +5590,31 @@ msgstr "リアクション"
 msgid "Read replies aloud"
 msgstr "返信を読み上げる"
 
-#: src/components/ImpersonationBanner.tsx
-msgid "Read-only · Viewing as {targetEmail} · Ends {endsAt}"
-msgstr "読み取り専用 · {targetEmail} として表示中 · {endsAt} に終了"
+#: src/pages/Board.tsx
+#: src/pages/SettingsOverlay.tsx
+#: src/pages/shell/side-panel.tsx
+msgid "Read-only"
+msgstr ""
 
 #: src/components/ImpersonationBanner.tsx
-msgid "Read-only · Viewing as {targetName} ({targetEmail}) · Ends {endsAt}"
-msgstr "読み取り専用 · {targetName}（{targetEmail}）として表示中 · {endsAt} に終了"
+msgid "Read-only · Viewing as <0>{targetEmail}</0>"
+msgstr ""
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Read-only · Viewing as <0>{targetEmail}</0> · Ends {endsAt}"
+msgstr ""
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Read-only · Viewing as <0>{targetName}</0>"
+msgstr ""
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Read-only · Viewing as <0>{targetName}</0> (<1>{targetEmail}</1>) · Ends {endsAt}"
+msgstr ""
+
+#: src/components/ImpersonationReadOnlyNotice.tsx
+msgid "Read-only while viewing as <0>{name}</0>"
+msgstr ""
 
 #: src/pages/shell/import-status.ts
 msgid "Ready"
@@ -6910,7 +6936,6 @@ msgid "Stopped."
 msgstr "停止しました。"
 
 #: src/components/ComputerMaintenanceActions.tsx
-#: src/components/ImpersonationBanner.tsx
 msgid "Stopping…"
 msgstr ""
 
@@ -7950,6 +7975,7 @@ msgstr "作業中"
 msgid "Working instructions"
 msgstr "作業の指示"
 
+#: src/components/ImpersonationBanner.tsx
 #: src/components/ToolActivityDisclosure.tsx
 #: src/lib/roster-status.ts
 #: src/pages/Auth.tsx
@@ -8068,6 +8094,11 @@ msgstr "トライアル終了後、プランは年額 {annualPrice} になりま
 msgid "Your plan becomes {tierTargetLabel} when your trial ends."
 msgstr "トライアル終了後、プランは {tierTargetLabel} になります。"
 
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "Your share of this week's shared API key budget is used up. It resets next week, or connect your own key in Models."
+msgstr ""
+
 #: src/components/integrations/skills-dialog.tsx
 msgid "Your skills"
 msgstr ""
@@ -8095,9 +8126,3 @@ msgstr "音声プロバイダーのキーが拒否されました。"
 #: src/components/vault/VaultItemEditor.tsx
 msgid "ZIP or postal code"
 msgstr ""
-
-msgid "Could not load team"
-msgstr "チームを読み込めませんでした"
-
-msgid "Could not load teams"
-msgstr "チーム一覧を読み込めませんでした"

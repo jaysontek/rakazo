@@ -450,7 +450,15 @@ export const MessageView = memo(function MessageView({
           if (block.kind === "choice") {
             const botId = "botId" in artifactTarget ? artifactTarget.botId : message.botId;
             if (!botId) return null;
-            return <ChoiceCard key={i} botId={botId} block={block} onBotChanged={onBotChanged} />;
+            return (
+              <ChoiceCard
+                key={i}
+                botId={botId}
+                block={block}
+                onBotChanged={onBotChanged}
+                readOnly={readOnly}
+              />
+            );
           }
           if (block.kind === "app_connect") {
             const botId = "botId" in artifactTarget ? artifactTarget.botId : message.botId;
@@ -462,6 +470,7 @@ export const MessageView = memo(function MessageView({
                   threadId={message.threadId}
                   messageId={message.id}
                   block={block}
+                  readOnly={readOnly}
                 />
               </div>
             );
@@ -496,6 +505,7 @@ export const MessageView = memo(function MessageView({
                   botId={"botId" in artifactTarget ? artifactTarget.botId : message.botId}
                   block={block}
                   onOpen={onOpenImportSetup}
+                  readOnly={readOnly}
                 />
               </div>
             );
@@ -505,7 +515,12 @@ export const MessageView = memo(function MessageView({
             if (!botId) return null;
             return (
               <div key={i} className="flex justify-start">
-                <McpApprovalCard botId={botId} threadId={message.threadId} block={block} />
+                <McpApprovalCard
+                  botId={botId}
+                  threadId={message.threadId}
+                  block={block}
+                  readOnly={readOnly}
+                />
               </div>
             );
           }
@@ -629,7 +644,12 @@ export const MessageView = memo(function MessageView({
           if (block.kind === "skill_draft") {
             return (
               <div key={i} className="flex justify-start">
-                <SkillDraftCard block={block} onRefresh={onRefresh} onAddRoutine={onAddRoutine} />
+                <SkillDraftCard
+                  block={block}
+                  onRefresh={onRefresh}
+                  onAddRoutine={onAddRoutine}
+                  readOnly={readOnly}
+                />
               </div>
             );
           }

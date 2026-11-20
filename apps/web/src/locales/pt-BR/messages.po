@@ -2348,6 +2348,14 @@ msgstr "Não foi possível carregar as opções de login"
 msgid "Could not load skill"
 msgstr "Não foi possível carregar a habilidade"
 
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "Could not load team"
+msgstr "Não foi possível carregar a equipe"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not load teams"
+msgstr "Não foi possível carregar as equipes"
+
 #: src/pages/Artifacts.tsx
 msgid "Could not load this artifact."
 msgstr ""
@@ -5582,13 +5590,31 @@ msgstr "Reações"
 msgid "Read replies aloud"
 msgstr "Leia as respostas em voz alta"
 
-#: src/components/ImpersonationBanner.tsx
-msgid "Read-only · Viewing as {targetEmail} · Ends {endsAt}"
-msgstr "Somente leitura · Visualizando como {targetEmail} · Termina {endsAt}"
+#: src/pages/Board.tsx
+#: src/pages/SettingsOverlay.tsx
+#: src/pages/shell/side-panel.tsx
+msgid "Read-only"
+msgstr ""
 
 #: src/components/ImpersonationBanner.tsx
-msgid "Read-only · Viewing as {targetName} ({targetEmail}) · Ends {endsAt}"
-msgstr "Somente leitura · Visualizando como {targetName} ({targetEmail}) · Termina {endsAt}"
+msgid "Read-only · Viewing as <0>{targetEmail}</0>"
+msgstr ""
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Read-only · Viewing as <0>{targetEmail}</0> · Ends {endsAt}"
+msgstr ""
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Read-only · Viewing as <0>{targetName}</0>"
+msgstr ""
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Read-only · Viewing as <0>{targetName}</0> (<1>{targetEmail}</1>) · Ends {endsAt}"
+msgstr ""
+
+#: src/components/ImpersonationReadOnlyNotice.tsx
+msgid "Read-only while viewing as <0>{name}</0>"
+msgstr ""
 
 #: src/pages/shell/import-status.ts
 msgid "Ready"
@@ -6910,7 +6936,6 @@ msgid "Stopped."
 msgstr "Interrompido."
 
 #: src/components/ComputerMaintenanceActions.tsx
-#: src/components/ImpersonationBanner.tsx
 msgid "Stopping…"
 msgstr ""
 
@@ -7950,6 +7975,7 @@ msgstr "Trabalhando"
 msgid "Working instructions"
 msgstr "Instruções de trabalho"
 
+#: src/components/ImpersonationBanner.tsx
 #: src/components/ToolActivityDisclosure.tsx
 #: src/lib/roster-status.ts
 #: src/pages/Auth.tsx
@@ -8068,6 +8094,11 @@ msgstr "Quando seu teste terminar, seu plano passa a custar {annualPrice} / ano.
 msgid "Your plan becomes {tierTargetLabel} when your trial ends."
 msgstr "Seu plano passa a custar {tierTargetLabel} quando o teste terminar."
 
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "Your share of this week's shared API key budget is used up. It resets next week, or connect your own key in Models."
+msgstr ""
+
 #: src/components/integrations/skills-dialog.tsx
 msgid "Your skills"
 msgstr ""
@@ -8095,9 +8126,3 @@ msgstr "Seu provedor de voz recusou a chave."
 #: src/components/vault/VaultItemEditor.tsx
 msgid "ZIP or postal code"
 msgstr ""
-
-msgid "Could not load team"
-msgstr "Não foi possível carregar a equipe"
-
-msgid "Could not load teams"
-msgstr "Não foi possível carregar as equipes"

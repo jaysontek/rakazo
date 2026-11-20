@@ -34,7 +34,6 @@ const nightlySpecs = [
   "direct-mcp-integrations",
   "fetch-approval-card",
   "gallery",
-  "impersonation-banner",
   "knowledge-panel",
   "link-favicons",
   "load-failure",

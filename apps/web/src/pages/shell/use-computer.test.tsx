@@ -396,3 +396,60 @@ it("closes the computer view on Escape, but not on the Escape that ends an IME c
   await press();
   expect(state.computerOpen).toBe(false);
 });
+
+it("opens the computer view-only without boot or heartbeat while read-only", async () => {
+  const boot = vi.fn(async () => ({
+    botId: "bot-1",
+    mode: "team",
+    kind: "boat",
+    state: "running",
+    controlHolder: "none",
+    controlBotId: null,
+    takeoverRequested: false,
+    screenAvailable: true,
+    screenWidth: 1280,
+    screenHeight: 800,
+    homeRevision: null,
+    busyBotName: null,
+    canUpdate: false,
+    terminalAvailable: false,
+  }));
+  const heartbeat = vi.fn(async () => undefined);
+  const status = vi.fn(async () => boot());
+  const bot = { id: "bot-1", name: "Ada", color: "ink", status: "idle" } as const;
+  let controls: ReturnType<typeof useComputerControls>;
+  function Controls() {
+    state = useComputerState({
+      rpc: { computer: { screenUrl, status } } as never,
+      panel: null,
+      activeId: "bot-1",
+      activeBotId: { current: "bot-1" },
+    });
+    controls = useComputerControls({
+      rpc: { computer: { boot, heartbeat, status, screenUrl, release: vi.fn() } } as never,
+      state,
+      panel: null,
+      active: bot as never,
+      bots: [bot as never],
+      botsRef: { current: [bot as never] },
+      activeBotId: { current: "bot-1" },
+      activeGroupId: { current: undefined },
+      runStatus: undefined,
+      sandboxProvider: undefined,
+      refreshThread: vi.fn(async () => ({ computer: null }) as never),
+      refreshGroupThread: vi.fn(),
+      readOnly: true,
+    });
+    return null;
+  }
+  await act(async () => root.render(<Controls />));
+  await act(async () => {
+    await controls.openComputer("bot-1");
+  });
+  expect(state.computerOpen).toBe(true);
+  expect(boot).not.toHaveBeenCalled();
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(60_000);
+  });
+  expect(heartbeat).not.toHaveBeenCalled();
+});

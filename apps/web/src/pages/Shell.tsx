@@ -48,6 +48,7 @@ import { useParams } from "react-router-dom";
 import { ComputerUpdateProgress } from "../components/ComputerUpdateProgress";
 import { CallCard, InThreadCallStrip } from "../components/call/CallCard";
 import { IncomingCall } from "../components/call/IncomingCall";
+import { ImpersonationReadOnlyNotice } from "../components/ImpersonationReadOnlyNotice";
 import { PageLoading } from "../components/PageLoading";
 import { PageViewHost } from "../components/pages/PageViewHost";
 import type { ArtifactTarget } from "../lib/artifact-open";
@@ -341,6 +342,7 @@ function SpaceShell() {
           dialogs.setCommandPaletteOpen((open) => !open);
           return true;
         case "new":
+          if (bootstrapMe?.impersonating) return false;
           setCreateMenuOpen(true);
           return true;
         case "shortcuts":
@@ -374,6 +376,7 @@ function SpaceShell() {
           setPanel("create-group");
           return true;
         case "integrations":
+          if (bootstrapMe?.impersonating) return false;
           setOverlay({ kind: "integrations" });
           return true;
         case "chat-panel":
@@ -690,6 +693,7 @@ function SpaceShell() {
     sandboxProvider: bootstrapMe?.sandboxProvider,
     refreshThread,
     refreshGroupThread: (id) => refreshGroupThreadRef.current(id),
+    readOnly: Boolean(bootstrapMe?.impersonating),
   });
   const { computerBot, openComputer } = computerControls;
   const composer = useComposerActions({
@@ -889,23 +893,27 @@ function SpaceShell() {
             onSelect: () => dialogs.setNewSpaceOpen(true),
           },
         ] satisfies CommandPaletteAction[])),
-    {
-      id: "integrations",
-      label: t`Connect apps`,
-      icon: Plug,
-      onSelect: () => setOverlay({ kind: "integrations" }),
-    },
+    ...(impersonating
+      ? []
+      : ([
+          {
+            id: "integrations",
+            label: t`Connect apps`,
+            icon: Plug,
+            onSelect: () => setOverlay({ kind: "integrations" }),
+          },
+          {
+            id: "skills",
+            label: t`Skills`,
+            icon: ScrollText,
+            onSelect: () => setOverlay({ kind: "skills" }),
+          },
+        ] satisfies CommandPaletteAction[])),
     {
       id: "keyboard-shortcuts",
       label: t`Keyboard shortcuts`,
       icon: Keyboard,
       onSelect: () => setShortcutsOpen(true),
-    },
-    {
-      id: "skills",
-      label: t`Skills`,
-      icon: ScrollText,
-      onSelect: () => setOverlay({ kind: "skills" }),
     },
     ...settingsNavItems.map(({ id, label, icon }) => ({
       id: `settings-${id}`,
@@ -1010,7 +1018,7 @@ function SpaceShell() {
           if (active) void refreshThread(active.id);
         }}
       />
-      {bootstrapMe !== undefined ? (
+      {bootstrapMe !== undefined && !impersonating ? (
         <HostComputerPrompt initialMe={bootstrapMe ?? undefined} onMeUpdated={setBootstrapMe} />
       ) : null}
       <ShellSidebar
@@ -1135,8 +1143,10 @@ function SpaceShell() {
             <InThreadCallStrip onSettings={() => openSettings("voice")} />
           ) : null}
           {!active && !activeGroup && initialBotsLoaded ? (
-            <div className="grid flex-1 place-items-center">
-              {bootstrapMe?.impersonating ? null : (
+            <div className="grid flex-1 place-items-center px-6">
+              {impersonating ? (
+                <ImpersonationReadOnlyNotice />
+              ) : (
                 <Button onClick={() => dialogs.setCreateBotOpen(true)}>
                   <Plus size={16} aria-hidden="true" />
                   <Trans>New bot</Trans>
@@ -1272,11 +1282,13 @@ function SpaceShell() {
 
       <PageViewHost />
       <CallCard onSettings={() => openSettings("voice")} />
-      <IncomingCall
-        bots={bootstrapMe?.phoneCallsEnabled ? bots : []}
-        transcribe={voiceStatus ? Boolean(voiceStatus.transcribe) : undefined}
-        onAnswered={(botId) => navigate(`/app/${botId}`)}
-      />
+      {impersonating ? null : (
+        <IncomingCall
+          bots={bootstrapMe?.phoneCallsEnabled ? bots : []}
+          transcribe={voiceStatus ? Boolean(voiceStatus.transcribe) : undefined}
+          onAnswered={(botId) => navigate(`/app/${botId}`)}
+        />
+      )}
 
       <ShellSidePanel
         rpc={rpc}
@@ -1397,6 +1409,7 @@ function SpaceShell() {
           activeBotId={activeBotId.current}
           stdioEnabled={bootstrapMe?.mcpStdioEnabled === true}
           onConnectedAppsChange={setFooterLogos}
+          readOnly={impersonating}
         />
       </Suspense>
 
@@ -1463,6 +1476,7 @@ function SpaceShell() {
             await computerControls.refreshComputerFor(computerBot.id);
           }}
           onClose={() => setComputerOpen(false)}
+          readOnly={impersonating}
         />
       ) : null}
     </BotsSidebarLayout>

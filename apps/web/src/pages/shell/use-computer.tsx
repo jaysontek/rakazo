@@ -468,6 +468,7 @@ export function useComputerControls({
   sandboxProvider,
   refreshThread,
   refreshGroupThread,
+  readOnly = false,
 }: {
   rpc: ReturnType<typeof createSpaceRpc>;
   state: ComputerState;
@@ -481,6 +482,8 @@ export function useComputerControls({
   sandboxProvider: Me["sandboxProvider"] | undefined;
   refreshThread: (botId: string) => Promise<ThreadSnapshot>;
   refreshGroupThread: (groupId: string) => Promise<ThreadSnapshot>;
+  /** Skip boot and heartbeat while impersonating; opening stays view-only. */
+  readOnly?: boolean;
 }) {
   const { t } = useLingui();
   const {
@@ -534,6 +537,8 @@ export function useComputerControls({
   useEffect(() => () => window.clearTimeout(recoveryHoldTimer.current), []);
   const computerBot =
     (computerBotId ? bots.find((bot) => bot.id === computerBotId) : undefined) ?? active;
+  const readOnlyRef = useRef(readOnly);
+  readOnlyRef.current = readOnly;
   useEffect(() => {
     setScreenLoadError(null);
   }, [computerBot?.id, screenUrl]);
@@ -610,7 +615,7 @@ export function useComputerControls({
       autoBooted.current = null;
       return;
     }
-    if (!active) return;
+    if (!active || readOnlyRef.current) return;
     const botId = active.id;
     // Opening the panel is a fresh try at a screen that failed.
     screenAwaitsRetry.current = false;
@@ -635,7 +640,7 @@ export function useComputerControls({
     return () => {
       cancelled = true;
     };
-  }, [panel, active?.id]);
+  }, [panel, active?.id, readOnly]);
 
   useEffect(() => {
     setComputerOpen(false);
@@ -655,7 +660,7 @@ export function useComputerControls({
   // ends, or the open window is left on a stopped computer with nothing to press.
   const computerBlockedByRun = computerTakeoverBlocked(computer, runStatus);
   useEffect(() => {
-    if (computerBlockedByRun) return;
+    if (readOnlyRef.current || computerBlockedByRun) return;
     const botId = computer?.botId;
     if (!botId || !computerOpenRef.current || computerBotIdRef.current !== botId) return;
     if (activeBotId.current !== botId) return;
@@ -666,7 +671,7 @@ export function useComputerControls({
       showProgress: true,
       force: true,
     }).catch(() => undefined);
-  }, [computerBlockedByRun]);
+  }, [computerBlockedByRun, readOnly]);
 
   useEffect(() => {
     if (!computerOpen) return;
@@ -680,7 +685,12 @@ export function useComputerControls({
 
   useEffect(() => {
     const heartbeatBotId = computerBot?.id ?? active?.id;
-    if ((panel !== "computer" && !computerOpen) || !heartbeatBotId || computer?.state !== "running")
+    if (
+      readOnly ||
+      (panel !== "computer" && !computerOpen) ||
+      !heartbeatBotId ||
+      computer?.state !== "running"
+    )
       return;
     // A computer panel left open in a hidden window must not keep the computer awake.
     const ping = () => {
@@ -692,7 +702,7 @@ export function useComputerControls({
     const timer = window.setInterval(ping, 60_000);
     ping();
     return () => window.clearInterval(timer);
-  }, [panel, computerOpen, computerBot?.id, active?.id, computer?.state]);
+  }, [panel, computerOpen, computerBot?.id, active?.id, computer?.state, readOnly]);
 
   /** Open the computer view. Only an explicit Take control asks for the lease. */
   async function openComputer(botId?: string, takeControl = false) {
@@ -714,6 +724,15 @@ export function useComputerControls({
     const bootInFlight = bootsInFlight.current.has(id) || targetComputer?.state === "booting";
     setComputerOpen(true);
     computerVisible.current = true;
+    // Impersonation stays view-only: open the overlay without boot or takeover.
+    if (readOnlyRef.current) {
+      if (targetComputer?.state === "running") {
+        await refreshComputerScreen(id).catch(() => undefined);
+      } else {
+        await refreshComputerFor(id).catch(() => undefined);
+      }
+      return true;
+    }
     if (bootInFlight && !takeControl) {
       // An external boot may have finished since this snapshot was cached.
       if (!bootsInFlight.current.has(id)) await refreshComputerFor(id).catch(() => undefined);

@@ -2,6 +2,7 @@ import type { Bot } from "@rakazo/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { Outlet, useNavigate } from "react-router-dom";
 import { useSpaceQueries } from "../../lib/query";
+import { useIsImpersonating } from "../../lib/use-impersonating";
 import { CallCard } from "./CallCard";
 import { IncomingCall } from "./IncomingCall";
 
@@ -14,7 +15,9 @@ const NO_BOTS: Bot[] = [];
 export function CallLayout() {
   const navigate = useNavigate();
   const queries = useSpaceQueries();
-  const callsEnabled = useQuery(queries.me.queryOptions()).data?.phoneCallsEnabled === true;
+  const impersonating = useIsImpersonating();
+  const phoneCallsEnabled = useQuery(queries.me.queryOptions()).data?.phoneCallsEnabled === true;
+  const callsEnabled = !impersonating && phoneCallsEnabled;
   // Polled like the shell's roster, hidden tabs included, so a call rings here too.
   const bots = useQuery({
     ...queries.bots.list.queryOptions(),
@@ -32,11 +35,13 @@ export function CallLayout() {
         <Outlet />
       </div>
       <CallCard onSettings={() => navigate("/app?settings=voice")} />
-      <IncomingCall
-        bots={callsEnabled ? (bots ?? NO_BOTS) : NO_BOTS}
-        transcribe={voiceStatus ? Boolean(voiceStatus.transcribe) : undefined}
-        onAnswered={(botId) => navigate(`/app/${botId}`)}
-      />
+      {impersonating ? null : (
+        <IncomingCall
+          bots={callsEnabled ? (bots ?? NO_BOTS) : NO_BOTS}
+          transcribe={voiceStatus ? Boolean(voiceStatus.transcribe) : undefined}
+          onAnswered={(botId) => navigate(`/app/${botId}`)}
+        />
+      )}
     </div>
   );
 }

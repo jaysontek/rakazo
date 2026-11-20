@@ -63,8 +63,10 @@ export function ImpersonationBanner() {
     publish();
     const observer = new ResizeObserver(publish);
     observer.observe(el);
+    window.addEventListener("resize", publish);
     return () => {
       observer.disconnect();
+      window.removeEventListener("resize", publish);
       clearImpersonationBannerHeight();
     };
   }, [impersonating, switchable, error]);
@@ -110,7 +112,7 @@ export function ImpersonationBanner() {
     <div
       ref={bannerRef}
       data-testid="impersonation-banner"
-      className="flex shrink-0 flex-col gap-2 border-b border-destructive/40 bg-destructive/10 px-4 py-2 text-sm text-destructive sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3 sm:gap-y-1"
+      className="relative z-[60] flex shrink-0 flex-col gap-2 border-b border-destructive/40 bg-destructive/10 px-4 py-2 text-sm text-destructive sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3 sm:gap-y-1"
     >
       <span
         role="status"

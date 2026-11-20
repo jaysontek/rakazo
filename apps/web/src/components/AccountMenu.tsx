@@ -48,7 +48,8 @@ export function AccountMenu({
   const showAdminDashboard = me.data?.isAdmin === true && !impersonating;
   const { organizations, activeOrganizationId } = useOrganizations();
   // An SSO sign-in to confirm deletion returns here; reopen so its error is seen.
-  const [deleting, setDeleting] = useState(hasDeleteRedirectError);
+  // Impersonation never opens the delete dialog from a redirect error.
+  const [deleting, setDeleting] = useState(() => !impersonating && hasDeleteRedirectError());
   return (
     <>
       <DropdownMenu>
@@ -117,7 +118,7 @@ export function AccountMenu({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
-      <Dialog open={deleting} onOpenChange={setDeleting}>
+      <Dialog open={deleting && !impersonating} onOpenChange={setDeleting}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>

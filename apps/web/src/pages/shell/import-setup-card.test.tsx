@@ -92,6 +92,31 @@ describe("the import setup checklist", () => {
       { kind: "routine", routineId: "routine-1" },
     ]);
   });
+
+  it("hides Open actions while read-only", () => {
+    importSetupState.mockReturnValue(new Promise(() => undefined));
+    (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+    const container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    act(() =>
+      root!.render(
+        <ImportSetupCard
+          readOnly
+          onOpen={vi.fn()}
+          block={{
+            kind: "import_setup",
+            items: [
+              { kind: "model", title: "openrouter/example", provider: "openrouter" },
+              { kind: "routine", routineId: "routine-1", name: "morning" },
+            ],
+          }}
+        />,
+      ),
+    );
+    expect(container.textContent).toContain("Finish setting up");
+    expect(container.querySelector("button")).toBeNull();
+  });
 });
 
 describe("the checklist's live state", () => {

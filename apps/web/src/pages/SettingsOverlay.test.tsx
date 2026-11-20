@@ -309,6 +309,19 @@ it("shows Updates in the desktop app", async () => {
   }
 });
 
+it("hides Updates while readOnly even in the desktop app", async () => {
+  vi.stubGlobal("rakazoDesktop", { update: {} });
+  const { container, cleanup } = await render({ readOnly: true, section: "updates" });
+  try {
+    expect(updatesNav(container)).toBeNull();
+    expect(
+      container.querySelector("[data-settings-section]")?.getAttribute("data-settings-section"),
+    ).not.toBe("updates");
+  } finally {
+    await cleanup();
+  }
+});
+
 it("offers Wallet only when the deployment has a wallet provider", async () => {
   const { container, rerender, cleanup } = await render({ section: "wallet" });
   const shown = () =>
@@ -350,9 +363,11 @@ it("hides Manage space controls while readOnly but still lists spaces", async ()
     expect(container.querySelector('[data-testid="settings-spaces"]')?.textContent).toContain(
       "Acme",
     );
-    expect([...container.querySelectorAll("button")].some((b) => /Manage/.test(b.getAttribute("aria-label") ?? ""))).toBe(
-      false,
-    );
+    expect(
+      [...container.querySelectorAll("button")].some((b) =>
+        /Manage/.test(b.getAttribute("aria-label") ?? ""),
+      ),
+    ).toBe(false);
   } finally {
     await cleanup();
   }

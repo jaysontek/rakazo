@@ -42,6 +42,7 @@ import { Download, Settings, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { Suspense, useEffect, useId, useRef, useState } from "react";
 import { ErrorBoundary, SectionLoadFailed } from "../../components/ErrorBoundary";
+import { ImpersonationReadOnlyNotice } from "../../components/ImpersonationReadOnlyNotice";
 import { InstructionSettings } from "../../components/InstructionSettings";
 import { PagesList } from "../../components/pages/PagesList";
 import { botProfilePatch } from "../../lib/bot-profile-patch";
@@ -77,9 +78,11 @@ function advancedValues(bot: Bot) {
 export function ComputerModePicker({
   value,
   onChange,
+  disabled = false,
 }: {
   value: ComputerMode;
   onChange: (value: ComputerMode) => void;
+  disabled?: boolean;
 }) {
   return (
     <div className="grid grid-cols-2 gap-2">
@@ -88,6 +91,7 @@ export function ComputerModePicker({
           key={mode}
           variant="outline"
           pressed={value === mode}
+          disabled={disabled}
           onPressedChange={(pressed) => {
             if (pressed) onChange(mode);
           }}
@@ -115,6 +119,7 @@ export function BotSettings({
   onClear,
   focusModel = 0,
   onOpenConnections,
+  readOnly = false,
 }: {
   bot: Bot;
   tab?: BotPanelTab;
@@ -147,6 +152,8 @@ export function BotSettings({
   }) => Promise<void>;
   onExport: () => Promise<void>;
   onClear: () => void;
+  /** Disable mutation controls while keeping tabs and viewing interactive. */
+  readOnly?: boolean;
 }) {
   const { t } = useLingui();
   const ids = useId();
@@ -498,6 +505,7 @@ export function BotSettings({
     dailyCheckIns?: boolean;
     disabledBuiltinTools?: string[];
   }) {
+    if (readOnly) return Promise.resolve();
     // Serialize full-object auto-saves so an older in-flight request cannot
     // finish after a newer one and clobber fields. Always call through a ref so
     // queued work reads the latest field values, not a stale render closure.
@@ -521,6 +529,7 @@ export function BotSettings({
 
   return (
     <div data-testid="bot-settings">
+      {readOnly ? <ImpersonationReadOnlyNotice /> : null}
       <div data-testid="bot-profile-header" className="flex flex-col items-center pb-5 text-center">
         <div className="flex justify-center pb-4">
           <AvatarStudioPopover
@@ -529,6 +538,7 @@ export function BotSettings({
             status={bot.status}
             size={76}
             avatarSet={avatarSet}
+            disabled={readOnly}
             onChange={(newColor, nextAvatarSet) => {
               setColor(newColor);
               if (nextAvatarSet !== undefined) setAvatarSet(nextAvatarSet);
@@ -545,6 +555,7 @@ export function BotSettings({
           value={name}
           maxLength={BOT_NAME_MAX_LENGTH}
           className="text-xl font-semibold"
+          readOnly={readOnly}
           onCommit={(value) => {
             if (!value.trim()) return;
             setName(value.trim());
@@ -574,7 +585,7 @@ export function BotSettings({
           {routines}
         </TabsContent>
         <TabsContent value="pages" className="pt-4">
-          {tab === "pages" ? <PagesList botId={bot.id} /> : null}
+          {tab === "pages" ? <PagesList botId={bot.id} readOnly={readOnly} /> : null}
         </TabsContent>
         {/* Stays mounted so scratchpad and knowledge drafts survive a tab switch. */}
         <TabsContent value="settings" keepMounted data-testid="bot-settings-advanced">
@@ -595,6 +606,7 @@ export function BotSettings({
               <Switch
                 id={`${ids}-notify-finish`}
                 checked={notifyOnFinish}
+                disabled={readOnly}
                 aria-labelledby={`${ids}-notify-finish-label`}
                 onCheckedChange={(checked) => {
                   setNotifyOnFinish(checked);
@@ -603,21 +615,23 @@ export function BotSettings({
               />
             </div>
           </section>
-          <ErrorBoundary fallback={<SectionLoadFailed />}>
-            <Suspense fallback={null}>
-              <ScratchpadSection botId={bot.id} />
-            </Suspense>
-          </ErrorBoundary>
-          <ErrorBoundary fallback={<SectionLoadFailed />}>
-            <Suspense fallback={null}>
-              <KnowledgeSection botId={bot.id} />
-            </Suspense>
-          </ErrorBoundary>
+          <fieldset disabled={readOnly} className="min-w-0 disabled:opacity-80">
+            <ErrorBoundary fallback={<SectionLoadFailed />}>
+              <Suspense fallback={null}>
+                <ScratchpadSection botId={bot.id} />
+              </Suspense>
+            </ErrorBoundary>
+            <ErrorBoundary fallback={<SectionLoadFailed />}>
+              <Suspense fallback={null}>
+                <KnowledgeSection botId={bot.id} />
+              </Suspense>
+            </ErrorBoundary>
+          </fieldset>
           <div className="space-y-6 pt-6">
             <div ref={modelRef}>
               <div className="mb-2 flex items-center justify-between text-xs font-medium text-muted-foreground pe-1">
                 <Trans>Model</Trans>
-                {onOpenConnections ? (
+                {onOpenConnections && !readOnly ? (
                   <Button
                     variant="ghost"
                     size="icon-xs"
@@ -628,50 +642,57 @@ export function BotSettings({
                   </Button>
                 ) : null}
               </div>
-              <div className="rounded-xl bg-muted/50 p-4 space-y-3">
-                <div className="flex min-h-11 items-center justify-between gap-3">
-                  <label htmlFor={`${ids}-model`} className="sr-only">
-                    <Trans>Model</Trans>
-                  </label>
-                  <div className="min-w-0 w-full [&>div]:mt-0 [&>button]:mt-0">
-                    <ChatModelPicker
-                      id={`${ids}-model`}
-                      choices={modelChoices}
-                      value={selectedModelKey}
-                      onChange={(key) => {
-                        setModelKey(key);
-                        setThinkingLevel("");
-                      }}
-                    />
+              <fieldset disabled={readOnly} className="min-w-0 disabled:opacity-80">
+                <div className="rounded-xl bg-muted/50 p-4 space-y-3">
+                  <div className="flex min-h-11 items-center justify-between gap-3">
+                    <label htmlFor={`${ids}-model`} className="sr-only">
+                      <Trans>Model</Trans>
+                    </label>
+                    <div className="min-w-0 w-full [&>div]:mt-0 [&>button]:mt-0">
+                      <ChatModelPicker
+                        id={`${ids}-model`}
+                        choices={modelChoices}
+                        value={selectedModelKey}
+                        onChange={(key) => {
+                          if (readOnly) return;
+                          setModelKey(key);
+                          setThinkingLevel("");
+                        }}
+                      />
+                    </div>
                   </div>
-                </div>
-                {thinkingOptions.length ? (
-                  <label
-                    htmlFor={`${ids}-thinking`}
-                    className="flex min-h-11 items-center justify-between gap-3 text-sm text-foreground"
-                  >
-                    <Trans>Thinking</Trans>
-                    <NativeSelect
-                      id={`${ids}-thinking`}
-                      className="max-w-2/3"
-                      value={thinkingLevel}
-                      onChange={(event) => setThinkingLevel(event.target.value)}
+                  {thinkingOptions.length ? (
+                    <label
+                      htmlFor={`${ids}-thinking`}
+                      className="flex min-h-11 items-center justify-between gap-3 text-sm text-foreground"
                     >
-                      <NativeSelectOption value="">
-                        {t`Default (${thinkingLevelLabel(defaultThinkingLevel)})`}
-                      </NativeSelectOption>
-                      {thinkingOptions.map((level) => (
-                        <NativeSelectOption key={level} value={level}>
-                          {thinkingLevelLabel(level)}
+                      <Trans>Thinking</Trans>
+                      <NativeSelect
+                        id={`${ids}-thinking`}
+                        className="max-w-2/3"
+                        value={thinkingLevel}
+                        onChange={(event) => setThinkingLevel(event.target.value)}
+                      >
+                        <NativeSelectOption value="">
+                          {t`Default (${thinkingLevelLabel(defaultThinkingLevel)})`}
                         </NativeSelectOption>
-                      ))}
-                    </NativeSelect>
-                  </label>
-                ) : null}
-              </div>
+                        {thinkingOptions.map((level) => (
+                          <NativeSelectOption key={level} value={level}>
+                            {thinkingLevelLabel(level)}
+                          </NativeSelectOption>
+                        ))}
+                      </NativeSelect>
+                    </label>
+                  ) : null}
+                </div>
+              </fieldset>
             </div>
             <SettingsGroup label={t`Computer`} plain>
-              <ComputerModePicker value={computerMode} onChange={setComputerMode} />
+              <ComputerModePicker
+                value={computerMode}
+                onChange={setComputerMode}
+                disabled={readOnly}
+              />
               {memoryProviderConfigured ? (
                 <div className="mt-4 text-sm text-foreground">
                   <Trans>Memory scope</Trans>
@@ -688,6 +709,7 @@ export function BotSettings({
                         variant="outline"
                         size="sm"
                         pressed={memoryScope === option.value}
+                        disabled={readOnly}
                         onPressedChange={(pressed) => {
                           if (pressed) setMemoryScope(option.value);
                         }}
@@ -711,6 +733,7 @@ export function BotSettings({
                 <Switch
                   id={`${ids}-auto-speak`}
                   checked={autoSpeak}
+                  disabled={readOnly}
                   onCheckedChange={(checked) => setAutoSpeak(checked)}
                 />
               </label>
@@ -724,6 +747,7 @@ export function BotSettings({
                     id={`${ids}-voice`}
                     className="max-w-2/3"
                     value={voiceId}
+                    disabled={readOnly}
                     onChange={(event) => setVoiceId(event.target.value)}
                   >
                     <NativeSelectOption value="">{t`Account default`}</NativeSelectOption>
@@ -744,7 +768,7 @@ export function BotSettings({
                 <Switch
                   id={`${ids}-daily-check-ins`}
                   checked={dailyCheckIns}
-                  disabled={saving}
+                  disabled={readOnly || saving}
                   onCheckedChange={(checked) => {
                     setDailyCheckIns(checked);
                     void enqueueSave({ dailyCheckIns: checked });
@@ -758,7 +782,7 @@ export function BotSettings({
                 <Switch
                   id={`${ids}-cross-space`}
                   checked={crossSpaceCommunication}
-                  disabled={saving}
+                  disabled={readOnly || saving}
                   onCheckedChange={(checked) => {
                     setCrossSpaceCommunication(checked);
                     void enqueueSave({ crossSpaceCommunication: checked });
@@ -772,7 +796,7 @@ export function BotSettings({
                 <Switch
                   id={`${ids}-fleet-management`}
                   checked={fleetManagement}
-                  disabled={saving}
+                  disabled={readOnly || saving}
                   onCheckedChange={(checked) => {
                     setFleetManagement(checked);
                     void enqueueSave({ fleetManagement: checked });
@@ -780,13 +804,16 @@ export function BotSettings({
                 />
               </div>
             </SettingsGroup>
-            <InstructionSettings key={bot.id} bot={bot} />
+            <fieldset disabled={readOnly} className="min-w-0 disabled:opacity-80">
+              <InstructionSettings key={bot.id} bot={bot} />
+            </fieldset>
             <SettingsGroup label={t`How other bots see it`} plain>
               <Textarea
                 id={`${ids}-description`}
                 aria-label={t`How other bots see it`}
                 value={description}
                 maxLength={BOT_DESCRIPTION_MAX_LENGTH}
+                disabled={readOnly}
                 onChange={(e) => setDescription(e.target.value)}
                 onBlur={() => void enqueueSave()}
                 placeholder={t`What this bot is for`}
@@ -802,6 +829,7 @@ export function BotSettings({
                       id={`${ids}-disabled-tools`}
                       aria-label={t`Disable a tool`}
                       value=""
+                      disabled={readOnly}
                       onChange={(event) => disableBuiltinTool(event.target.value)}
                       className="w-full"
                     >
@@ -825,6 +853,7 @@ export function BotSettings({
                         id={`${ids}-disabled-${toolName}`}
                         variant="ghost"
                         size="icon-xs"
+                        disabled={readOnly}
                         aria-label={t`Enable ${humanizeTool(toolName)}`}
                         title={t`Enable ${humanizeTool(toolName)}`}
                         onClick={() => {
@@ -840,28 +869,30 @@ export function BotSettings({
                 </div>
               </section>
             </SettingsGroup>
-            <div className="overflow-hidden rounded-xl bg-muted/50 px-4">
-              <button
-                type="button"
-                className="flex min-h-12 w-full items-center justify-between text-sm"
-                onClick={() => {
-                  setError(null);
-                  onExport().catch((err: unknown) => setError(errorText(err)));
-                }}
-              >
-                <Trans>Export</Trans>
-                <Download className="size-4 text-muted-foreground" />
-              </button>
-              <button
-                type="button"
-                className="min-h-12 w-full border-t border-border text-start text-sm text-destructive"
-                onClick={onClear}
-              >
-                <Trans>Clear conversation</Trans>
-              </button>
-            </div>
+            {readOnly ? null : (
+              <div className="overflow-hidden rounded-xl bg-muted/50 px-4">
+                <button
+                  type="button"
+                  className="flex min-h-12 w-full items-center justify-between text-sm"
+                  onClick={() => {
+                    setError(null);
+                    onExport().catch((err: unknown) => setError(errorText(err)));
+                  }}
+                >
+                  <Trans>Export</Trans>
+                  <Download className="size-4 text-muted-foreground" />
+                </button>
+                <button
+                  type="button"
+                  className="min-h-12 w-full border-t border-border text-start text-sm text-destructive"
+                  onClick={onClear}
+                >
+                  <Trans>Clear conversation</Trans>
+                </button>
+              </div>
+            )}
           </div>
-          {dirty ? (
+          {dirty && !readOnly ? (
             <Button
               className="sticky bottom-0 mt-5 w-full"
               disabled={saving}
@@ -907,6 +938,7 @@ function InlineProfileField({
   maxLength,
   className,
   onCommit,
+  readOnly = false,
 }: {
   label: string;
   editLabel: string;
@@ -914,6 +946,7 @@ function InlineProfileField({
   maxLength: number;
   className: string;
   onCommit: (value: string) => void;
+  readOnly?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
@@ -922,6 +955,13 @@ function InlineProfileField({
     if (cancelled.current) return;
     setEditing(false);
     if (draft.trim() !== value.trim()) onCommit(draft);
+  }
+  if (readOnly) {
+    return (
+      <span className={`min-w-0 max-w-full break-words px-2 ${className}`} dir="auto">
+        {value}
+      </span>
+    );
   }
   return editing ? (
     <Input

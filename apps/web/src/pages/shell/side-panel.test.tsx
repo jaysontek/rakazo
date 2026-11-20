@@ -39,7 +39,11 @@ vi.mock("../ResizableSidePanel", () => ({
 
 vi.mock("../GroupPanel", () => ({
   CreateGroupForm: () => <div data-testid="create-group-form" />,
-  GroupSettings: () => <div data-testid="group-settings" />,
+  GroupSettings: ({ readOnly }: { readOnly?: boolean }) => (
+    <div data-testid="group-settings">
+      {readOnly ? <p data-testid="impersonation-read-only-notice">notice</p> : null}
+    </div>
+  ),
 }));
 
 vi.mock("./agent-import", () => ({
@@ -47,7 +51,29 @@ vi.mock("./agent-import", () => ({
 }));
 
 vi.mock("./bot-panel", () => ({
-  BotSettings: () => <div data-testid="bot-settings">Bot settings</div>,
+  BotSettings: ({
+    onTabChange,
+    readOnly,
+  }: {
+    onTabChange?: (tab: string) => void;
+    readOnly?: boolean;
+  }) => (
+    <div data-testid="bot-settings">
+      {readOnly ? <p data-testid="impersonation-read-only-notice">notice</p> : null}
+      <button data-testid="tab-computer" type="button" onClick={() => onTabChange?.("computer")}>
+        Computer
+      </button>
+      <button data-testid="tab-routines" type="button" onClick={() => onTabChange?.("routines")}>
+        Routines
+      </button>
+      <button data-testid="tab-pages" type="button" onClick={() => onTabChange?.("pages")}>
+        Pages
+      </button>
+      <button data-testid="tab-advanced" type="button" onClick={() => onTabChange?.("settings")}>
+        Advanced
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock("../RoutineEditor", () => ({
@@ -119,14 +145,41 @@ afterEach(() => {
 });
 
 describe("ShellSidePanel readOnly", () => {
-  it("shows a disabled fieldset and notice while impersonating", async () => {
+  it("shows the notice and keeps bot tab triggers interactive while impersonating", async () => {
     await renderPanel({ readOnly: true });
     expect(host!.querySelector('[data-testid="impersonation-read-only-notice"]')).not.toBeNull();
-    expect(host!.querySelector("fieldset[disabled]")).not.toBeNull();
+    expect(host!.querySelector("fieldset[disabled]")).toBeNull();
     expect(host!.querySelector('[data-testid="bot-settings"]')).not.toBeNull();
+    expect(host!.querySelector<HTMLButtonElement>('[data-testid="tab-computer"]')?.disabled).toBe(
+      false,
+    );
+    expect(host!.querySelector<HTMLButtonElement>('[data-testid="tab-routines"]')?.disabled).toBe(
+      false,
+    );
   });
 
-  it("does not wrap BotSettings when not impersonating", async () => {
+  it("forwards bot tab changes while readOnly", async () => {
+    const setPanel = vi.fn();
+    await renderPanel({ readOnly: true, setPanel });
+    await act(async () => {
+      host!.querySelector<HTMLButtonElement>('[data-testid="tab-computer"]')?.click();
+    });
+    expect(setPanel).toHaveBeenCalledWith("computer");
+    await act(async () => {
+      host!.querySelector<HTMLButtonElement>('[data-testid="tab-routines"]')?.click();
+    });
+    expect(setPanel).toHaveBeenCalledWith("routines");
+    await act(async () => {
+      host!.querySelector<HTMLButtonElement>('[data-testid="tab-pages"]')?.click();
+    });
+    expect(setPanel).toHaveBeenCalledWith("pages");
+    await act(async () => {
+      host!.querySelector<HTMLButtonElement>('[data-testid="tab-advanced"]')?.click();
+    });
+    expect(setPanel).toHaveBeenCalledWith("settings");
+  });
+
+  it("does not show the notice when not impersonating", async () => {
     await renderPanel({ readOnly: false });
     expect(host!.querySelector('[data-testid="impersonation-read-only-notice"]')).toBeNull();
     expect(host!.querySelector("fieldset[disabled]")).toBeNull();

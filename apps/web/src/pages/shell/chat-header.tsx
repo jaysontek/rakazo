@@ -6,6 +6,7 @@ import { useState } from "react";
 import { IconTooltip } from "../../components/IconTooltip";
 import { InviteDialog } from "../../components/InviteDialog";
 import { useBilling } from "../../components/SubscriptionGate";
+import { useIsImpersonating } from "../../lib/use-impersonating";
 
 /** The floating header over the transcript: navigation, the chat's name, and invite. */
 export function ChatHeader({
@@ -27,6 +28,7 @@ export function ChatHeader({
 }) {
   const { t } = useLingui();
   const referral = useBilling().status?.referral;
+  const impersonating = useIsImpersonating();
   const [inviteOpen, setInviteOpen] = useState(false);
   return (
     <div className="pointer-events-none absolute inset-x-0 top-0 z-10 grid grid-cols-[1fr_minmax(0,auto)_1fr] items-center gap-2 px-3 py-[13px] md:px-[22px] [&_button]:pointer-events-auto">
@@ -68,7 +70,7 @@ export function ChatHeader({
         </span>
       </Button>
       <div className="flex items-center justify-self-end gap-2">
-        {referral && !inGroup && active ? (
+        {referral && !impersonating && !inGroup && active ? (
           <IconTooltip label={t`Invite a friend`}>
             <Button
               variant="floating"
@@ -82,7 +84,7 @@ export function ChatHeader({
           </IconTooltip>
         ) : null}
       </div>
-      {referral ? (
+      {referral && !impersonating ? (
         <InviteDialog referral={referral} open={inviteOpen} onOpenChange={setInviteOpen} />
       ) : null}
     </div>

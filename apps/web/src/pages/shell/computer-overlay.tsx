@@ -45,6 +45,8 @@ type ComputerOverlayProps = {
   onRefreshTeaching: () => Promise<void>;
   onRefreshComputer: () => Promise<void>;
   onClose: () => void;
+  /** Hide mutation controls while impersonating; the screen stays viewable. */
+  readOnly?: boolean;
 };
 
 export function ComputerOverlay({
@@ -72,6 +74,7 @@ export function ComputerOverlay({
   onRefreshTeaching,
   onRefreshComputer,
   onClose,
+  readOnly = false,
 }: ComputerOverlayProps) {
   return (
     <div className="fixed inset-0 z-30 bg-background">
@@ -121,7 +124,7 @@ export function ComputerOverlay({
             ) : null}
           </div>
           <div className="flex items-center gap-3">
-            {composerRunning ? (
+            {!readOnly && composerRunning ? (
               <Button
                 type="button"
                 variant="outline"
@@ -134,7 +137,7 @@ export function ComputerOverlay({
                 <Trans>Stop</Trans>
               </Button>
             ) : null}
-            {recordingSkill ? (
+            {readOnly ? null : recordingSkill ? (
               <TeachStopButton busy={teachBusy} onStop={onStopTeaching} />
             ) : hasControl ? (
               <ComputerReleaseActions
@@ -152,7 +155,7 @@ export function ComputerOverlay({
                 <Trans>Take control</Trans>
               </Button>
             ) : null}
-            {!recordingSkill ? (
+            {!readOnly && !recordingSkill ? (
               <TeachComputerOverlayControl
                 key={bot.id}
                 botId={bot.id}
@@ -161,7 +164,7 @@ export function ComputerOverlay({
                 onRefresh={onRefreshTeaching}
               />
             ) : null}
-            {!recordingSkill ? (
+            {!readOnly && !recordingSkill ? (
               <ComputerMaintenanceActions
                 botId={bot.id}
                 computer={computer}
@@ -227,9 +230,11 @@ export function ComputerOverlay({
                         ? t`Computer is asleep`
                         : t`Computer is stopped`}
                     </p>
-                    <Button variant="outline" size="sm" onClick={onStart}>
-                      <Trans>Start</Trans>
-                    </Button>
+                    {readOnly ? null : (
+                      <Button variant="outline" size="sm" onClick={onStart}>
+                        <Trans>Start</Trans>
+                      </Button>
+                    )}
                   </div>
                 ) : (
                   computerLabel(computer?.mode, bot.name)

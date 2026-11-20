@@ -30,11 +30,30 @@ const SEARCH_FROM = 8;
  * The pages a bot or group built, pinned ones in their own group on top, then the newest. Each
  * bot or group gets its own list, so one's pages never stand in while another's load.
  */
-export function PagesList({ botId, groupId }: { botId?: string; groupId?: string }) {
-  return <OwnerPages key={botId ?? groupId} botId={botId} groupId={groupId} />;
+export function PagesList({
+  botId,
+  groupId,
+  readOnly = false,
+}: {
+  botId?: string;
+  groupId?: string;
+  /** Hide pin/rename/delete while still allowing open and search. */
+  readOnly?: boolean;
+}) {
+  return (
+    <OwnerPages key={botId ?? groupId} botId={botId} groupId={groupId} readOnly={readOnly} />
+  );
 }
 
-function OwnerPages({ botId, groupId }: { botId?: string; groupId?: string }) {
+function OwnerPages({
+  botId,
+  groupId,
+  readOnly = false,
+}: {
+  botId?: string;
+  groupId?: string;
+  readOnly?: boolean;
+}) {
   const { t } = useLingui();
   const queries = useSpaceQueries();
   const queryClient = useQueryClient();
@@ -164,37 +183,39 @@ function OwnerPages({ botId, groupId }: { botId?: string; groupId?: string }) {
           </span>
         </button>
       )}
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          aria-label={t`Actions for ${page.title}`}
-          className="me-1 grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-popup-open:bg-accent"
-        >
-          <MoreHorizontal className="size-4" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-44">
-          <DropdownMenuItem onClick={() => openPage(page.id)}>
-            <Trans>Open</Trans>
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setRenaming({ id: page.id, draft: page.title })}>
-            <Trans>Rename</Trans>
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => openPage(page.id, { share: true })}>
-            <Trans>Share</Trans>
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            disabled={pin.isPending}
-            onClick={() => {
-              rename.reset();
-              pin.mutate({ pageId: page.id, pinned: !page.pinned });
-            }}
+      {readOnly ? null : (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            aria-label={t`Actions for ${page.title}`}
+            className="me-1 grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring data-popup-open:bg-accent"
           >
-            {page.pinned ? <Trans>Unpin</Trans> : <Trans>Pin</Trans>}
-          </DropdownMenuItem>
-          <DropdownMenuItem variant="destructive" onClick={() => setDeleting(page)}>
-            <Trans>Delete</Trans>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+            <MoreHorizontal className="size-4" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuItem onClick={() => openPage(page.id)}>
+              <Trans>Open</Trans>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setRenaming({ id: page.id, draft: page.title })}>
+              <Trans>Rename</Trans>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => openPage(page.id, { share: true })}>
+              <Trans>Share</Trans>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              disabled={pin.isPending}
+              onClick={() => {
+                rename.reset();
+                pin.mutate({ pageId: page.id, pinned: !page.pinned });
+              }}
+            >
+              {page.pinned ? <Trans>Unpin</Trans> : <Trans>Pin</Trans>}
+            </DropdownMenuItem>
+            <DropdownMenuItem variant="destructive" onClick={() => setDeleting(page)}>
+              <Trans>Delete</Trans>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
     </li>
   );
   return (

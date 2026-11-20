@@ -21,10 +21,12 @@ export function ChoiceCard({
   botId,
   block,
   onBotChanged,
+  readOnly = false,
 }: {
   botId: string;
   block: Extract<MessageBlock, { kind: "choice" }>;
   onBotChanged: () => Promise<void>;
+  readOnly?: boolean;
 }) {
   const { t } = useLingui();
   const [pending, setPending] = useState(false);
@@ -33,6 +35,7 @@ export function ChoiceCard({
   const dismissed = locallyDismissed || block.answerId === "_dismissed";
 
   async function choose(optionId: string) {
+    if (readOnly) return;
     setPending(true);
     setError(null);
     try {
@@ -45,6 +48,7 @@ export function ChoiceCard({
   }
 
   async function dismiss() {
+    if (readOnly) return;
     setPending(true);
     setError(null);
     try {
@@ -62,7 +66,7 @@ export function ChoiceCard({
   return (
     <div className="flex justify-start">
       <BuiCard className="relative w-[420px] max-w-full px-[18px] py-[14px]">
-        {!block.answerId ? (
+        {!readOnly && !block.answerId ? (
           <Button
             variant="ghost"
             size="icon-sm"
@@ -86,7 +90,7 @@ export function ChoiceCard({
               key={option.id}
               letter={option.letter}
               selected={block.answerId === option.id}
-              disabled={Boolean(block.answerId) || pending}
+              disabled={readOnly || Boolean(block.answerId) || pending}
               onClick={() => void choose(option.id)}
             >
               <OnboardingFocusOptionLabel
@@ -142,11 +146,13 @@ export function AppConnectCard({
   threadId,
   messageId,
   block,
+  readOnly = false,
 }: {
   botId: string;
   threadId: string;
   messageId?: string;
   block: Extract<MessageBlock, { kind: "app_connect" }>;
+  readOnly?: boolean;
 }) {
   const { t } = useLingui();
   const [busy, setBusy] = useState(false);
@@ -157,6 +163,7 @@ export function AppConnectCard({
   useEffect(() => () => connectionAttempt.current?.abort(), []);
 
   async function authorize() {
+    if (readOnly) return;
     connectionAttempt.current?.abort();
     const controller = new AbortController();
     connectionAttempt.current = controller;
@@ -222,7 +229,7 @@ export function AppConnectCard({
         </span>
         {status === "connected" ? (
           <SuccessPop label={t`Connected`} />
-        ) : (
+        ) : readOnly ? null : (
           <Button disabled={busy} onClick={() => void authorize()}>
             {busy ? t`Waiting…` : t`Connect`}
           </Button>
@@ -329,10 +336,12 @@ export function McpApprovalCard({
   botId,
   threadId,
   block,
+  readOnly = false,
 }: {
   botId: string | undefined;
   threadId: string | undefined;
   block: Extract<MessageBlock, { kind: "mcp_approval" }>;
+  readOnly?: boolean;
 }) {
   const { t } = useLingui();
   const { name, serverId, transport, endpoint, needsOAuth, status: savedStatus } = block;
@@ -352,8 +361,8 @@ export function McpApprovalCard({
     savedStatus === "connected" || savedStatus === "dismissed" ? savedStatus : localStatus;
 
   async function authorize() {
-    if (!botId || busy) {
-      if (!botId) setError(errorDetails(t`This server cannot be assigned without a bot.`));
+    if (readOnly || !botId || busy) {
+      if (!readOnly && !botId) setError(errorDetails(t`This server cannot be assigned without a bot.`));
       return;
     }
     setBusy(true);
@@ -378,7 +387,7 @@ export function McpApprovalCard({
   }
 
   async function dismiss() {
-    if (busy) return;
+    if (readOnly || busy) return;
     setBusy(true);
     setError(null);
     try {
@@ -418,18 +427,20 @@ export function McpApprovalCard({
               <ErrorNotice error={error} />
             </div>
           ) : null}
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Button disabled={state !== "pending" || busy} onClick={() => void authorize()}>
-              {state === "connecting" ? t`Connecting…` : needsOAuth ? t`Authorize` : t`Approve`}
-            </Button>
-            <Button
-              variant="secondary"
-              disabled={state !== "pending" || busy}
-              onClick={() => void dismiss()}
-            >
-              <Trans>Not now</Trans>
-            </Button>
-          </div>
+          {readOnly ? null : (
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button disabled={state !== "pending" || busy} onClick={() => void authorize()}>
+                {state === "connecting" ? t`Connecting…` : needsOAuth ? t`Authorize` : t`Approve`}
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={state !== "pending" || busy}
+                onClick={() => void dismiss()}
+              >
+                <Trans>Not now</Trans>
+              </Button>
+            </div>
+          )}
         </>
       ) : null}
       {state === "connected" ? (

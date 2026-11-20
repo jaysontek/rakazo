@@ -328,8 +328,9 @@ export function GeneralSettingsPanels({
                   aria-labelledby={botStyleLabelId}
                   data-testid="bot-style-select"
                   value={[botAvatarSet]}
+                  disabled={readOnly}
                   onValueChange={([next]) => {
-                    if (!next || next === botAvatarSet) return;
+                    if (readOnly || !next || next === botAvatarSet) return;
                     setBotStyleError(null);
                     onBotAvatarSetChange(next as BotAvatarSet).catch(() =>
                       setBotStyleError(t`Couldn't update bot style`),
@@ -521,10 +522,15 @@ export function GeneralSettingsPanels({
         />
       </SettingsGroup>
 
-      <TrustedLinkSitesSettings />
-      <ComputerDeviceSettings />
+      {readOnly ? null : (
+        <>
+          <TrustedLinkSitesSettings />
+          <ComputerDeviceSettings />
+        </>
+      )}
 
-      {showPassword || passkeysSupported || canLinkSso ? (
+      {/* Hide password, SSO, passkeys, export/import and delete while impersonating. */}
+      {readOnly ? null : showPassword || passkeysSupported || canLinkSso ? (
         <SettingsGroup title={<Trans>Security</Trans>}>
           {showPassword ? <ChangePasswordRow email={email} /> : null}
           {canLinkSso ? <LinkSsoRow /> : null}
@@ -532,10 +538,12 @@ export function GeneralSettingsPanels({
         </SettingsGroup>
       ) : null}
 
-      <SettingsGroup title={<Trans>Data</Trans>} data-testid="account-data">
-        <AccountDataSettings onImported={onAccountImported} onImportAgent={onImportAgent} />
-        <AccountAccess onSecurity={setAccountSecurity} />
-      </SettingsGroup>
+      {readOnly ? null : (
+        <SettingsGroup title={<Trans>Data</Trans>} data-testid="account-data">
+          <AccountDataSettings onImported={onAccountImported} onImportAgent={onImportAgent} />
+          <AccountAccess onSecurity={setAccountSecurity} />
+        </SettingsGroup>
+      )}
     </div>
   );
 }
@@ -678,7 +686,8 @@ export function ComputerSettingsPanel({
   );
 }
 
-export function UpdatesSettingsPanel() {
+export function UpdatesSettingsPanel({ readOnly = false }: { readOnly?: boolean }) {
+  if (readOnly) return null;
   return (
     <div className="space-y-5">
       <DesktopUpdateSection />

@@ -122,45 +122,36 @@ export function ShellSidePanel({
         )
       ) : null}
       {panel === "group-settings" && activeGroup ? (
-        <fieldset disabled={readOnly} className="min-w-0 disabled:opacity-80">
-          {readOnly ? (
-            <>
-              <legend className="sr-only">
-                <Trans>Read-only</Trans>
-              </legend>
-              <ImpersonationReadOnlyNotice />
-            </>
-          ) : null}
-          <GroupSettings
-            key={activeGroup.id}
-            group={activeGroup}
-            bots={bots}
-            pages={<PagesList groupId={activeGroup.id} />}
-            onSave={async (input) => {
-              if (readOnly) return;
-              const updated = await rpc.groups.update({ groupId: activeGroup.id, ...input });
-              setGroups((current) =>
-                current.map((group) => (group.id === updated.id ? updated : group)),
-              );
-              void Promise.all([refreshBots(), refreshGroupThread(activeGroup.id)]).catch(
-                () => undefined,
-              );
-            }}
-            onRemove={async () => {
-              if (readOnly) return;
-              await rpc.groups.remove({ groupId: activeGroup.id });
-              discardChatAttachments(activeGroup.id);
-              const remainingGroups = groups.filter((group) => group.id !== activeGroup.id);
-              setGroups(remainingGroups);
-              setPanel(null);
-              navigate(firstThreadRoute(bots, remainingGroups), { replace: true });
-              await refreshBots().catch(() => undefined);
-            }}
-            onClose={() => setPanel(null)}
-            onOpenBot={openBot}
-            covered={computerOpen}
-          />
-        </fieldset>
+        <GroupSettings
+          key={activeGroup.id}
+          group={activeGroup}
+          bots={bots}
+          readOnly={readOnly}
+          pages={<PagesList groupId={activeGroup.id} readOnly={readOnly} />}
+          onSave={async (input) => {
+            if (readOnly) return;
+            const updated = await rpc.groups.update({ groupId: activeGroup.id, ...input });
+            setGroups((current) =>
+              current.map((group) => (group.id === updated.id ? updated : group)),
+            );
+            void Promise.all([refreshBots(), refreshGroupThread(activeGroup.id)]).catch(
+              () => undefined,
+            );
+          }}
+          onRemove={async () => {
+            if (readOnly) return;
+            await rpc.groups.remove({ groupId: activeGroup.id });
+            discardChatAttachments(activeGroup.id);
+            const remainingGroups = groups.filter((group) => group.id !== activeGroup.id);
+            setGroups(remainingGroups);
+            setPanel(null);
+            navigate(firstThreadRoute(bots, remainingGroups), { replace: true });
+            await refreshBots().catch(() => undefined);
+          }}
+          onClose={() => setPanel(null)}
+          onOpenBot={openBot}
+          covered={computerOpen}
+        />
       ) : null}
       {panel === "import-agent" ? (
         readOnly ? (
@@ -176,60 +167,51 @@ export function ShellSidePanel({
         )
       ) : null}
       {botTab && active ? (
-        <fieldset disabled={readOnly} className="min-w-0 disabled:opacity-80">
-          {readOnly ? (
-            <>
-              <legend className="sr-only">
-                <Trans>Read-only</Trans>
-              </legend>
-              <ImpersonationReadOnlyNotice />
-            </>
-          ) : null}
-          <BotSettings
-            key={active.id}
-            bot={active}
-            tab={botTab}
-            onTabChange={(tab: BotPanelTab) => {
-              setPanel(tab);
-              if (tab === "computer") void refreshThread(active.id).catch(() => undefined);
-            }}
-            computer={computerPanel}
-            routines={routinesPanel}
-            focusModel={modelFocusRequest}
-            onOpenConnections={() => openSettings("models")}
-            memoryProviderConfigured={memoryProviderConfigured}
-            onSkillsChange={setAgentSkills}
-            onSave={async ({ computerMode, ...patch }) => {
-              if (readOnly) return;
-              if (computerMode !== undefined && computerMode !== active.computerMode) {
-                await rpc.bots.setComputer({
-                  botId: active.id,
-                  mode: computerMode,
-                });
-              }
-              const updated = await rpc.bots.update({ botId: active.id, ...patch });
-              setBots((current) => current.map((bot) => (bot.id === updated.id ? updated : bot)));
-              // Persistence succeeded; a failed navigation refresh must not undo the tool edit.
-              await refreshBots().catch(() => undefined);
-            }}
-            onExport={async () => {
-              if (readOnly) return;
-              const manifest = await rpc.export.bot({ botId: active.id });
-              const blob = new Blob([JSON.stringify(manifest, null, 2)], {
-                type: "application/json",
+        <BotSettings
+          key={active.id}
+          bot={active}
+          tab={botTab}
+          readOnly={readOnly}
+          onTabChange={(tab: BotPanelTab) => {
+            setPanel(tab);
+            if (tab === "computer") void refreshThread(active.id).catch(() => undefined);
+          }}
+          computer={computerPanel}
+          routines={routinesPanel}
+          focusModel={modelFocusRequest}
+          onOpenConnections={() => openSettings("models")}
+          memoryProviderConfigured={memoryProviderConfigured}
+          onSkillsChange={setAgentSkills}
+          onSave={async ({ computerMode, ...patch }) => {
+            if (readOnly) return;
+            if (computerMode !== undefined && computerMode !== active.computerMode) {
+              await rpc.bots.setComputer({
+                botId: active.id,
+                mode: computerMode,
               });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement("a");
-              a.href = url;
-              a.download = `${active.name.toLowerCase().replace(/\s+/g, "-")}-export.json`;
-              a.click();
-              URL.revokeObjectURL(url);
-            }}
-            onClear={() => {
-              if (!readOnly) onClearBot(active);
-            }}
-          />
-        </fieldset>
+            }
+            const updated = await rpc.bots.update({ botId: active.id, ...patch });
+            setBots((current) => current.map((bot) => (bot.id === updated.id ? updated : bot)));
+            // Persistence succeeded; a failed navigation refresh must not undo the tool edit.
+            await refreshBots().catch(() => undefined);
+          }}
+          onExport={async () => {
+            if (readOnly) return;
+            const manifest = await rpc.export.bot({ botId: active.id });
+            const blob = new Blob([JSON.stringify(manifest, null, 2)], {
+              type: "application/json",
+            });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `${active.name.toLowerCase().replace(/\s+/g, "-")}-export.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+          }}
+          onClear={() => {
+            if (!readOnly) onClearBot(active);
+          }}
+        />
       ) : null}
       {panel === "routine" && routineEditorProps ? (
         <fieldset disabled={readOnly} className="min-w-0 disabled:opacity-80">

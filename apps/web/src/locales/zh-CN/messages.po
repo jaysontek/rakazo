@@ -2348,6 +2348,14 @@ msgstr "无法加载登录选项"
 msgid "Could not load skill"
 msgstr "无法加载技能"
 
+#: src/pages/AdminOpsTeamPage.tsx
+msgid "Could not load team"
+msgstr "无法加载团队"
+
+#: src/pages/AdminOpsPage.tsx
+msgid "Could not load teams"
+msgstr "无法加载团队列表"
+
 #: src/pages/Artifacts.tsx
 msgid "Could not load this artifact."
 msgstr "无法加载此产物。"
@@ -5582,13 +5590,31 @@ msgstr "表情回应"
 msgid "Read replies aloud"
 msgstr "朗读回复"
 
-#: src/components/ImpersonationBanner.tsx
-msgid "Read-only · Viewing as {targetEmail} · Ends {endsAt}"
-msgstr "只读 · 正在以 {targetEmail} 身份查看 · {endsAt} 结束"
+#: src/pages/Board.tsx
+#: src/pages/SettingsOverlay.tsx
+#: src/pages/shell/side-panel.tsx
+msgid "Read-only"
+msgstr ""
 
 #: src/components/ImpersonationBanner.tsx
-msgid "Read-only · Viewing as {targetName} ({targetEmail}) · Ends {endsAt}"
-msgstr "只读 · 正在以 {targetName}（{targetEmail}）身份查看 · {endsAt} 结束"
+msgid "Read-only · Viewing as <0>{targetEmail}</0>"
+msgstr ""
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Read-only · Viewing as <0>{targetEmail}</0> · Ends {endsAt}"
+msgstr ""
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Read-only · Viewing as <0>{targetName}</0>"
+msgstr ""
+
+#: src/components/ImpersonationBanner.tsx
+msgid "Read-only · Viewing as <0>{targetName}</0> (<1>{targetEmail}</1>) · Ends {endsAt}"
+msgstr ""
+
+#: src/components/ImpersonationReadOnlyNotice.tsx
+msgid "Read-only while viewing as <0>{name}</0>"
+msgstr ""
 
 #: src/pages/shell/import-status.ts
 msgid "Ready"
@@ -6910,7 +6936,6 @@ msgid "Stopped."
 msgstr "已停止。"
 
 #: src/components/ComputerMaintenanceActions.tsx
-#: src/components/ImpersonationBanner.tsx
 msgid "Stopping…"
 msgstr "正在停止…"
 
@@ -7950,6 +7975,7 @@ msgstr "工作中"
 msgid "Working instructions"
 msgstr "工作指令"
 
+#: src/components/ImpersonationBanner.tsx
 #: src/components/ToolActivityDisclosure.tsx
 #: src/lib/roster-status.ts
 #: src/pages/Auth.tsx
@@ -8068,6 +8094,11 @@ msgstr "试用结束后，你的套餐将变为每年 {annualPrice}。"
 msgid "Your plan becomes {tierTargetLabel} when your trial ends."
 msgstr "试用结束后，你的方案将变为 {tierTargetLabel}。"
 
+#. js-lingui-explicit-id
+#: src/lib/run-error.ts
+msgid "Your share of this week's shared API key budget is used up. It resets next week, or connect your own key in Models."
+msgstr ""
+
 #: src/components/integrations/skills-dialog.tsx
 msgid "Your skills"
 msgstr "你的技能"
@@ -8095,9 +8126,3 @@ msgstr "你的语音提供方拒绝了该密钥。"
 #: src/components/vault/VaultItemEditor.tsx
 msgid "ZIP or postal code"
 msgstr ""
-
-msgid "Could not load team"
-msgstr "无法加载团队"
-
-msgid "Could not load teams"
-msgstr "无法加载团队列表"

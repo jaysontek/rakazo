@@ -52,7 +52,8 @@ vi.mock("@tanstack/react-query", () => ({
 
 vi.mock("@rakazo/ui-web", () => ({
   Button: (props: ComponentProps<"button">) => <button type="button" {...props} />,
-  Dialog: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+  Dialog: ({ open, children }: { open?: boolean; children?: ReactNode }) =>
+    open ? <div data-testid="account-delete-dialog">{children}</div> : null,
   DialogContent: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
   DialogHeader: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
   DialogTitle: ({ children }: { children?: ReactNode }) => <h2>{children}</h2>,
@@ -81,9 +82,11 @@ vi.mock("lucide-react", () => ({
   CircleUserRound: () => null,
 }));
 
+const deleteRedirect = vi.hoisted(() => ({ current: false }));
+
 vi.mock("./AccountAccess", () => ({
   DeleteAccountForm: () => null,
-  hasDeleteRedirectError: () => false,
+  hasDeleteRedirectError: () => deleteRedirect.current,
 }));
 
 import { AccountMenu } from "./AccountMenu";
@@ -106,6 +109,7 @@ async function renderMenu() {
 
 beforeEach(() => {
   impersonating.current = false;
+  deleteRedirect.current = false;
 });
 
 afterEach(() => {
@@ -128,5 +132,13 @@ describe("AccountMenu", () => {
     await renderMenu();
     expect(host!.querySelector('[data-testid="account-menu-log-out"]')).not.toBeNull();
     expect(host!.querySelector('[data-testid="account-menu-delete-account"]')).not.toBeNull();
+  });
+
+  it("ignores a delete redirect error while impersonating", async () => {
+    impersonating.current = true;
+    deleteRedirect.current = true;
+    await renderMenu();
+    expect(host!.querySelector('[data-testid="account-menu-delete-account"]')).toBeNull();
+    expect(host!.querySelector('[data-testid="account-delete-dialog"]')).toBeNull();
   });
 });

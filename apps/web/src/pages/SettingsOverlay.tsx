@@ -137,7 +137,7 @@ export function SettingsOverlay({
     (requestedSection === "billing" && !billingEnabled) ||
     (requestedSection === "messaging" && !messagingEnabled) ||
     (requestedSection === "wallet" && !paymentWalletProvider) ||
-    (requestedSection === "updates" && !showUpdates)
+    (requestedSection === "updates" && (!showUpdates || readOnly))
       ? "general"
       : requestedSection;
   const panelBusy = memoryBusy || voiceBusy;
@@ -175,7 +175,7 @@ export function SettingsOverlay({
     wallet: Boolean(paymentWalletProvider),
     computer: showComputer,
     billing: billingEnabled,
-    updates: showUpdates,
+    updates: showUpdates && !readOnly,
   });
 
   useEffect(() => {
@@ -485,7 +485,9 @@ export function SettingsOverlay({
                       <BillingSettingsPanel />
                     </ReadOnlySettingsSection>
                   ) : null}
-                  {section === "updates" && showUpdates ? <UpdatesSettingsPanel /> : null}
+                  {section === "updates" && showUpdates && !readOnly ? (
+                    <UpdatesSettingsPanel />
+                  ) : null}
                   {section === "models" ? (
                     <ReadOnlySettingsSection readOnly={readOnly}>
                       <ModelSettingsOverlay embedded scope="account" onClose={requestClose} />

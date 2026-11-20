@@ -6,6 +6,7 @@ import { pageMutationOptions } from "../../lib/page-actions";
 import type { PageSession } from "../../lib/pages";
 import { PAGE_PARAM, useMedia, usePageDocument, usePageSession } from "../../lib/pages";
 import { useSpaceQueries } from "../../lib/query";
+import { useIsImpersonating } from "../../lib/use-impersonating";
 import { errorCode } from "../../lib/user-error";
 import { PageNotice } from "./PageNotice";
 import { PageView } from "./PageView";
@@ -48,6 +49,7 @@ function OpenPage({
   const compact = useMedia(COARSE);
   const sheet = useMedia(SHEET);
   const { t } = useLingui();
+  const impersonating = useIsImpersonating();
   const [, setSearchParams] = useSearchParams();
   const queries = useSpaceQueries();
   const queryClient = useQueryClient();
@@ -139,7 +141,7 @@ function OpenPage({
       }
       renameError={rename.isError ? t`Could not rename this page. Try again.` : null}
       onRename={
-        rename.isPending || !data
+        impersonating || rename.isPending || !data
           ? undefined
           : (title) => {
               if (pageId) rename.mutate({ pageId, title });
@@ -166,6 +168,7 @@ function OpenPage({
                 visibility.mutate({ pageId, visibility: next });
               }
             }}
+            readOnly={impersonating}
           />
         ) : null
       }

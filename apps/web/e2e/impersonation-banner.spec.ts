@@ -1,6 +1,6 @@
 import type { Route } from "@playwright/test";
 import { expect, test } from "@playwright/test";
-import { captureScreenshot, completeOnboarding, signup } from "./helpers";
+import { captureScreenshot, completeOnboarding, openBotPanelTab, rpc, signup } from "./helpers";
 
 const viewports = [
   { name: "desktop-1440x900", width: 1440, height: 900 },
@@ -28,7 +28,7 @@ async function mockImpersonation(route: Route, path: "me" | "bootstrap") {
 }
 
 test.describe("impersonation banner layout", () => {
-  test("banner clears the sidebar and call dock without page overflow @nightly", async ({
+  test("banner clears the sidebar and call dock without page overflow", async ({
     page,
   }, testInfo) => {
     const stamp = Date.now();
@@ -44,44 +44,32 @@ test.describe("impersonation banner layout", () => {
       await captureScreenshot(page, testInfo, `impersonation-before-${viewport.name}`);
     }
 
+    // Start the call while writable — the composer call button is disabled under
+    // impersonation, and call-session state lives in the page module across SPA
+    // remounts (but not full reloads).
+    await rpc(page, "voice/connect", { provider: "scripted", apiKey: "fake-call-voice-key" });
+    await page.goto("/app");
+    await page.waitForURL(/\/app\/[^/]+$/);
+    const callButton = page.getByTestId("call-button");
+    await expect(callButton).toHaveAttribute("data-voice-ready", "");
+    await callButton.click();
+    await expect(page.getByTestId("call-view")).toBeVisible();
+
     await page.route("**/rpc/me", (route) => mockImpersonation(route, "me"));
     await page.route("**/rpc/bootstrap", (route) => mockImpersonation(route, "bootstrap"));
-    await page.route("**/rpc/voice/connect", async (route) => {
-      await route.fulfill({
-        json: {
-          json: { provider: "scripted", ready: true, voiceId: "voice-1", transcribe: false },
-        },
-      });
-    });
-    await page.route("**/rpc/voice/status", async (route) => {
-      await route.fulfill({
-        json: {
-          json: { provider: "scripted", ready: true, voiceId: "voice-1", transcribe: false },
-        },
-      });
-    });
     await page.route("**/rpc/ops/stopImpersonation", async (route) => {
       await route.fulfill({ json: { json: { impersonating: null } } });
     });
 
-    await page.reload();
-    await page.waitForURL(/\/app\/[^/]+$/);
+    // Refetch the banner's me query without a full reload so the call stays up.
+    await page.evaluate(async () => {
+      const { queryClient } = await import("/src/lib/query.ts");
+      await queryClient.invalidateQueries({ queryKey: ["me"] });
+    });
+
     const banner = page.getByTestId("impersonation-banner");
     await expect(banner).toBeVisible();
     await expect(page.getByTestId("impersonation-stop")).toBeVisible();
-
-    // Start a call so CallCard / InThreadCallStrip are in play with the banner.
-    await page.evaluate(async () => {
-      const res = await fetch("/rpc/voice/connect", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ json: { provider: "scripted", apiKey: "fake" } }),
-      });
-      if (!res.ok) throw new Error(`voice connect ${res.status}`);
-    });
-    const callButton = page.getByTestId("call-button");
-    await expect(callButton).toHaveAttribute("data-voice-ready", "");
-    await callButton.click();
     await expect(page.getByTestId("call-view")).toBeVisible();
 
     for (const viewport of viewports) {
@@ -145,23 +133,31 @@ test.describe("impersonation banner layout", () => {
       await captureScreenshot(page, testInfo, `impersonation-after-${viewport.name}`);
     }
 
-    // Settings dialog stays below the banner (dialog portals to body; top edge clear).
+    // Settings dialog: Stop must stay hittable above the overlay.
     await page.getByTestId("user-menu-trigger").click();
     await page.getByRole("button", { name: "Settings", exact: true }).click();
     const settings = page.locator("[data-settings-section], [role='dialog']").first();
     await expect(settings).toBeVisible();
-    const settingsTop = await settings.evaluate((el) => el.getBoundingClientRect().top);
-    const bannerBottom = await banner.evaluate((el) => el.getBoundingClientRect().bottom);
-    expect(settingsTop).toBeGreaterThanOrEqual(0);
-    // Dialog may be centered; ensure banner Stop remains hittable above it.
-    const stopHit = await page.evaluate(() => {
+    const stopHitWithSettings = await page.evaluate(() => {
       const stop = document.querySelector('[data-testid="impersonation-stop"]') as HTMLElement;
       const box = stop.getBoundingClientRect();
       const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
       return Boolean(hit?.closest('[data-testid="impersonation-stop"]'));
     });
-    expect(stopHit).toBe(true);
-    expect(bannerBottom).toBeGreaterThan(0);
+    expect(stopHitWithSettings).toBe(true);
     await page.keyboard.press("Escape");
+
+    // Computer overlay is full-screen at z-30; banner at z-60 must stay on top.
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await openBotPanelTab(page, "Computer");
+    await page.getByTestId("computer-preview-open").click();
+    await expect(page.getByTestId("computer-viewport")).toBeVisible();
+    const stopHitWithComputer = await page.evaluate(() => {
+      const stop = document.querySelector('[data-testid="impersonation-stop"]') as HTMLElement;
+      const box = stop.getBoundingClientRect();
+      const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+      return Boolean(hit?.closest('[data-testid="impersonation-stop"]'));
+    });
+    expect(stopHitWithComputer).toBe(true);
   });
 });

@@ -16,6 +16,12 @@ vi.mock("@lingui/react/macro", () => ({
 }));
 vi.mock("../../lib/query", () => ({
   useSpaceQueries: () => ({
+    me: {
+      queryOptions: () => ({
+        queryKey: ["me"],
+        queryFn: async () => ({ impersonating: null }),
+      }),
+    },
     pages: {
       get: {
         // Like the server: the link only when asked for.
@@ -33,6 +39,10 @@ vi.mock("../../lib/query", () => ({
       },
     },
   }),
+}));
+vi.mock("../../lib/use-impersonating", () => ({
+  useIsImpersonating: () => false,
+  useImpersonating: () => null,
 }));
 vi.mock("../../lib/page-actions", () => ({
   pageMutationOptions: () => ({ rename: {}, setVisibility: {} }),

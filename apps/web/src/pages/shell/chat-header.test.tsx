@@ -9,6 +9,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 const billing = vi.hoisted(() => ({ status: null as Partial<BillingStatus> | null }));
+const impersonating = vi.hoisted(() => ({ current: false }));
 const writeText = vi.hoisted(() => vi.fn(async () => undefined));
 
 vi.mock("@lingui/react/macro", () => ({
@@ -43,6 +44,9 @@ vi.mock("../../components/IconTooltip", () => ({
 }));
 vi.mock("../../components/SubscriptionGate", () => ({
   useBilling: () => ({ status: billing.status, showPlans: () => undefined }),
+}));
+vi.mock("../../lib/use-impersonating", () => ({
+  useIsImpersonating: () => impersonating.current,
 }));
 
 import { InThreadCallStrip } from "../../components/call/CallCard";
@@ -80,6 +84,7 @@ afterEach(() => {
   act(() => root.unmount());
   container.remove();
   billing.status = null;
+  impersonating.current = false;
   writeText.mockClear();
 });
 
@@ -125,6 +130,13 @@ it("shows no gift when the account cannot invite", () => {
 it("shows the gift only in a bot chat, as mobile does", () => {
   billing.status = { referral: { url: "https://example.test/sign-up?ref=abc", rewards: 0 } };
   renderHeader({ inGroup: true });
+  expect(gift()).toBeNull();
+});
+
+it("hides Invite a friend while impersonating", () => {
+  impersonating.current = true;
+  billing.status = { referral: { url: "https://example.test/sign-up?ref=abc", rewards: 0 } };
+  renderHeader();
   expect(gift()).toBeNull();
 });
 
