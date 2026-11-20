@@ -70,10 +70,12 @@ describePostgres("account soft-delete helpers (PostgreSQL)", { timeout: 120_000 
     });
     expect(row.deactivatedBeforeDeletion?.toISOString()).toBe(deactivatedAt.toISOString());
 
+    const restoreNow = new Date("2026-02-10T00:00:00.000Z");
     const otp = await restoreAccountSoftDelete(system, {
       userId: target.id,
       actorUserId: target.id,
       via: "otp",
+      now: restoreNow,
     });
     expect(otp).toEqual({ restored: false, reason: "admin_only" });
 
@@ -81,6 +83,7 @@ describePostgres("account soft-delete helpers (PostgreSQL)", { timeout: 120_000 
       userId: target.id,
       actorUserId: admin.id,
       via: "admin",
+      now: restoreNow,
     });
     expect(adminRestore.restored).toBe(true);
     const after = await system.user.findUniqueOrThrow({
