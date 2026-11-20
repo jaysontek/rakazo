@@ -132,7 +132,7 @@ export function ComposerError({
       ref={runErrorRef}
       role="alert"
       data-testid="composer-error"
-      className={`mb-3 flex items-center gap-2 rounded-[14px] border px-4 py-2 text-[13px] animate-in fade-in-0 slide-in-from-bottom-1 duration-150 motion-reduce:animate-none ${warning ? "border-warning/40 bg-warning/10 text-warning" : "border-destructive/40 bg-destructive/10 text-destructive"}`}
+      className={`mb-3 flex items-center gap-2 rounded-[14px] border px-4 py-2 text-[13px] animate-in fade-in-0 slide-in-from-bottom-1 duration-150 motion-reduce:animate-none ${warning ? "border-warning bg-card text-warning" : "border-destructive bg-card text-destructive"}`}
     >
       <div className="min-w-0 flex-1">
         {isModelRequiredSendError(sendError) ? (

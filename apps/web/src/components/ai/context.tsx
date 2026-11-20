@@ -26,6 +26,7 @@ type BudgetContextValue = {
   reservedPercent: number;
   resetLabel: string;
   blocked: boolean;
+  hardStopped: boolean;
   warning: boolean;
 };
 
@@ -43,6 +44,7 @@ export type ContextProps = {
   reservedPercent: number;
   resetLabel: string;
   blocked?: boolean;
+  hardStopped?: boolean;
   warning?: boolean;
   children: ReactNode;
   className?: string;
@@ -54,6 +56,7 @@ export function Context({
   reservedPercent,
   resetLabel,
   blocked = false,
+  hardStopped = false,
   warning = false,
   children,
   className,
@@ -65,9 +68,10 @@ export function Context({
       reservedPercent,
       resetLabel,
       blocked,
+      hardStopped,
       warning,
     }),
-    [usedPercent, spentPercent, reservedPercent, resetLabel, blocked, warning],
+    [usedPercent, spentPercent, reservedPercent, resetLabel, blocked, hardStopped, warning],
   );
   return (
     <BudgetContext.Provider value={value}>
@@ -132,8 +136,9 @@ export function ContextUsageBar({ className }: { className?: string }) {
     : warning
       ? "bg-warning/50"
       : "bg-muted-foreground/50";
-  const spentWidth = Math.min(100, Math.max(0, spentPercent));
-  const reservedWidth = Math.min(100 - spentWidth, Math.max(0, reservedPercent));
+  // When blocked, meters show a full bar even if raw spend is only mid-80s (low headroom).
+  const spentWidth = blocked ? usedPercent : Math.min(100, Math.max(0, spentPercent));
+  const reservedWidth = blocked ? 0 : Math.min(100 - spentWidth, Math.max(0, reservedPercent));
 
   return (
     <div
@@ -187,15 +192,22 @@ export function ContextUsageBreakdown({ className }: { className?: string }) {
 }
 
 export function ContextContentFooter({ className, ...props }: ComponentProps<"div">) {
-  const { resetLabel, blocked } = useBudgetContext();
+  const { resetLabel, blocked, hardStopped } = useBudgetContext();
   if (!blocked) return null;
   return (
     <p
       data-testid="shared-key-usage-blocked"
-      className={cn("text-[12.5px] text-destructive", className)}
+      className={cn(
+        "rounded-md border border-destructive/40 bg-card px-2 py-1 text-[12.5px] text-destructive",
+        className,
+      )}
       {...props}
     >
-      <Trans>Weekly limit reached for new runs · Resets {resetLabel}</Trans>
+      {hardStopped ? (
+        <Trans>Weekly limit reached for new runs · Resets {resetLabel}</Trans>
+      ) : (
+        <Trans>Not enough left for a new run</Trans>
+      )}
     </p>
   );
 }

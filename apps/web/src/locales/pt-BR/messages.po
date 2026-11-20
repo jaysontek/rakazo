@@ -4172,10 +4172,6 @@ msgstr "Permite que os bots salvem e recuperem fatos pelo significado, além do 
 msgid "Light"
 msgstr "Claro"
 
-#: src/pages/AdminOpsPage.tsx
-msgid "Limit reached"
-msgstr ""
-
 #: src/pages/SpaceSearch.tsx
 msgid "Link"
 msgstr ""
@@ -5025,6 +5021,11 @@ msgstr ""
 #: src/pages/AdminOpsPage.tsx
 msgid "Not eligible for the shared budget"
 msgstr "Não elegível para o orçamento compartilhado"
+
+#: src/components/ai/context.tsx
+#: src/pages/AdminOpsPage.tsx
+msgid "Not enough left for a new run"
+msgstr ""
 
 #: src/pages/shell/agent-import.tsx
 msgid "Not imported"

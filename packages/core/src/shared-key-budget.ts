@@ -755,6 +755,19 @@ export function projectSharedKeyBudgetDisplay(input: {
   const reservedUsd = Number.isFinite(input.reservedUsd) ? Math.max(0, input.reservedUsd) : 0;
   const weeklyCapUsd = Number.isFinite(input.weeklyCapUsd) ? Math.max(0, input.weeklyCapUsd) : 0;
   const hardStopEnabled = input.hardStopEnabled !== false;
+  // Enabled member with a $0 allotment (e.g. transferred away after $0 spend) is exhausted.
+  // Callers pass hardStopEnabled=false for feature-off / non-member so those stay 0%.
+  if (hardStopEnabled && weeklyCapUsd === 0) {
+    return {
+      percentUsed: 100,
+      spentPercent: 100,
+      reservedPercent: 0,
+      usedPercent: 100,
+      remainingUsd: 0,
+      hardStopped: true,
+      status: "blocked",
+    };
+  }
   const committed = spentUsd + reservedUsd;
   const remainingUsd = Math.max(0, weeklyCapUsd - committed);
   const percentUsed = sharedKeyBudgetPercentUsed(spentUsd, weeklyCapUsd);
@@ -784,7 +797,8 @@ export function projectSharedKeyBudgetDisplay(input: {
     percentUsed,
     spentPercent,
     reservedPercent,
-    usedPercent,
+    // When blocked (hard stop or low headroom), meters show 100% used; dollars stay truthful.
+    usedPercent: blocked ? 100 : usedPercent,
     remainingUsd,
     hardStopped,
     status,

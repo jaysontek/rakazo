@@ -1309,6 +1309,8 @@ export const UsageLimitSchema = z.discriminatedUnion("kind", [
     /** Spent-only segment as percent of cap. */
     spentPercent: z.number().min(0).max(100).optional(),
     status: SharedKeyBudgetDisplayStatusSchema.optional(),
+    /** True when spent+reserved meets/exceeds the cap (vs low-headroom blocked). */
+    hardStopped: z.boolean().optional(),
     resetsAt: z.string(),
     timezone: z.string().min(1),
   }),

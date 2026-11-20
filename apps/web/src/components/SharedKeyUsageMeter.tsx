@@ -39,13 +39,14 @@ export function SharedKeyUsageMeter({
   const usedRaw = limit.usedPercent ?? limit.percentUsed;
   const reservedRaw = limit.reservedPercent ?? 0;
   const spentRaw = limit.spentPercent ?? Math.max(0, usedRaw - reservedRaw);
-  // Floor so 99.5% never displays as 100% while still showing 100 when exhausted.
-  const usedPercent = Math.min(100, Math.max(0, Math.floor(usedRaw)));
-  const spentPercent = Math.min(100, Math.max(0, Math.floor(spentRaw)));
-  const reservedPercent = Math.min(100, Math.max(0, Math.floor(reservedRaw)));
   const status = limit.status ?? "ok";
   const blocked = status === "blocked";
+  const hardStopped = limit.hardStopped === true;
   const warning = status === "warning";
+  // Floor so 99.5% never displays as 100% while still showing 100 when exhausted/blocked.
+  const usedPercent = blocked ? 100 : Math.min(100, Math.max(0, Math.floor(usedRaw)));
+  const spentPercent = Math.min(100, Math.max(0, Math.floor(spentRaw)));
+  const reservedPercent = Math.min(100, Math.max(0, Math.floor(reservedRaw)));
   const reset = formatSharedKeyBudgetResetAt(limit.resetsAt, i18n.locale || "en-US");
   const tone = blocked ? "text-destructive" : warning ? "text-warning" : "text-foreground";
 
@@ -56,6 +57,7 @@ export function SharedKeyUsageMeter({
       reservedPercent={reservedPercent}
       resetLabel={reset}
       blocked={blocked}
+      hardStopped={hardStopped}
       warning={warning}
       className={`space-y-1.5 px-2.5 py-2 ${className}`}
     >

@@ -341,6 +341,7 @@ export type UsageLimitView =
       reservedPercent?: number;
       spentPercent?: number;
       status?: "ok" | "warning" | "blocked";
+      hardStopped?: boolean;
       resetsAt: string;
       timezone: string;
     }
@@ -378,6 +379,7 @@ export async function resolveUsageLimitView(
       reservedPercent: projection.reservedPercent,
       spentPercent: projection.spentPercent,
       status: projection.status,
+      hardStopped: projection.hardStopped,
       resetsAt: status.resetsAt,
       timezone: status.timezone,
     };
